@@ -1684,9 +1684,1259 @@ const PANTHEONS = {
  
     ]
   },
-  chinese:  { label: "Chinese",         blurb: "", deities: [] },
-  draconic: { label: "Great Dragons",   blurb: "", deities: [] },
-  lhp:      { label: "Left Hand Path",  blurb: "", deities: [] }
+    chinese: {
+    label: "Chinese",
+    blurb: "Heaven is a civil service. It has ranks, postings, promotions and an appalling amount of paperwork, and a great many of its officials were once ordinary people who did the job well enough to be given a department. Above it all sits the Jade Emperor. Beneath it, the courts of Diyu process the dead by file number. And out at the edges are the Immortals, who resigned.",
+    deities: [
+ 
+      {
+        id: "pangu",
+        name: "Pangu",
+        epithets: "盤古 · The First · He Who Held Them Apart",
+        domains: ["Creation", "Separation", "Sacrifice", "The World's Body"],
+        symbols: ["The Cosmic Egg", "The Axe", "The Horned Giant", "The Splitting Sky"],
+        portrait: art("Pangu.png"),
+        portraitCaption: "Original artwork",
+        intro: "Eighteen thousand years I slept curled in a black egg with everything mixed together and nothing separate from anything. Then I woke up and pushed. Heaven went up and earth went down and I stood in the middle of them holding the gap open, growing ten feet a day so it could not close, for another eighteen thousand years. Then I lay down. My eyes are the sun and moon you are looking at. My blood is every river you have ever crossed. I did not make the world. I am it.",
+        myth: [
+          "Before anything, the universe was a black egg with heaven and earth stirred together inside it, and Pangu slept in it for eighteen thousand years. He woke, found himself smothered, and split the egg — the light and clear rose to become the sky, the heavy and turbid sank to become the ground. Fearing they would drift back together, he stood between them with his head against heaven and his feet on earth and pushed.",
+          "He grew ten feet a day and the gap grew with him, for another eighteen thousand years, until the sky was as high as it now is. And then, the work finished, he lay down and died. What is unusual about this creation is that nothing was made: the world is simply his corpse, distributed. His breath became the wind and the clouds, his voice the thunder, his left eye the sun and his right the moon. His limbs became the four quarters and the five sacred mountains, his blood the rivers, his flesh the fields, his hair and beard the stars, his sweat the rain, his bones and teeth the metal and stone.",
+          "In one telling the fleas and parasites on his body became human beings — which is a very Chinese piece of perspective, and not entirely unkind. It places people not at the summit of creation but living on the surface of something enormous that gave itself up so there would be a surface at all."
+        ]
+      },
+ 
+      {
+        id: "nuwa",
+        name: "Nuwa",
+        epithets: "女媧 · Maker of People · She Who Patched the Sky",
+        domains: ["Creation", "Repair", "Marriage", "Humanity", "Survival"],
+        symbols: ["The Serpent Coil", "Yellow Clay", "Five-Coloured Stones", "The Compass", "The Turtle's Legs"],
+        portrait: art("Nuwa.png"),
+        portraitCaption: "Original artwork",
+        intro: "I made the first of you one at a time, out of yellow earth, with my hands. Each face different, each one considered. Then I looked at how long it was taking and how big the world was, and I dipped a rope in the mud and flicked it, and where the drops fell, more of you stood up. The ones I shaped by hand and the ones that came off the rope are the same creature, and anybody who has told you otherwise was using my story to justify something.",
+        myth: [
+          "Nüwa has the upper body of a woman and the lower body of a serpent, and she is often shown entwined with her brother Fuxi, the two of them holding a compass and a set square — the instruments for drawing a circle and a square, heaven and earth. Finding the world beautiful and empty, she knelt by a river and made human figures from yellow clay, and they came alive as she set them down.",
+          "The work was slow. So she took a length of cord, trailed it in the mud, and swung it, and the mud that spattered off became people too. Later tradition used this to explain social rank — the hand-moulded as nobles, the rope-flung as commoners — which the older telling does not endorse and which reads more as a comment on the people making the argument than on Nüwa.",
+          "Her greatest act was repair. The water god Gonggong, defeated in a struggle, smashed his head against Mount Buzhou, one of the pillars holding up the sky, and the heavens cracked. Fire poured through, floods came, beasts ate the people. Nüwa smelted stones of five colours and patched the hole. She cut the legs from a giant turtle and set them at the four corners as new pillars. She killed the black dragon, dammed the flood with ashes of burnt reeds, and set the world going again. The sky is still slightly tilted from the damage, which is why the sun and moon run west and the rivers run east."
+        ]
+      },
+ 
+      {
+        id: "fuxi",
+        name: "Fuxi",
+        epithets: "伏羲 · First of the Three Sovereigns · Giver of the Trigrams",
+        domains: ["Divination", "Writing", "Civilisation", "Marriage", "Order"],
+        symbols: ["The Eight Trigrams", "The Set Square", "Knotted Cords", "The Dragon-Horse", "The Net"],
+        portrait: art("Fuxi.png"),
+        portraitCaption: "Original artwork",
+        intro: "I looked up at the patterns of the sky and down at the markings on the ground and at the tracks of birds, and I noticed that everything which exists is either yielding or firm, and that these alternate. So I drew a broken line and an unbroken line and stacked them three deep, and there were eight figures, and between them they will describe any situation you will ever be in. That is all the Yi Jing is. Two marks, arranged. Everything after it is commentary.",
+        myth: [
+          "Fuxi is the first of the Three Sovereigns and the great culture-bringer. He is credited with teaching people to fish with nets, to hunt with weapons, to domesticate animals, to cook, and to keep records with knotted cords before writing existed. He is shown serpent-bodied like Nüwa, and the two are usually depicted with their tails twined, holding the square and the compass between them.",
+          "His signature gift is the bagua, the eight trigrams. In one account he saw them on the back of a dragon-horse rising from the Yellow River, or on the shell of a turtle from the Luo; in another he derived them himself by observation. Each trigram is three lines, broken or solid, and the eight of them combine into the sixty-four hexagrams of the Yi Jing. It is one of the oldest systems of divination in continuous use anywhere on earth.",
+          "He and Nüwa are also the survivors of a flood, siblings left alone in the world. Unwilling to marry, they sought a sign: each rolled a millstone down a hill from opposite sides, and when the two stones came to rest together at the bottom, they took it as permission. From them the world was repopulated. He is credited too with instituting marriage itself, so that families would know their own lines — the first act of a civilisation that has kept records ever since."
+        ]
+      },
+ 
+      {
+        id: "jadeemperor",
+        name: "Jade Emperor",
+        epithets: "玉皇大帝 · Yù Huáng · August Personage of Jade · Sovereign of Heaven",
+        domains: ["Heaven", "Authority", "Bureaucracy", "Justice", "Order"],
+        symbols: ["The Jade Tablet", "The Dragon Throne", "The Court of Ranks", "The Peach Banquet"],
+        portrait: art("JadeEmperor.png"),
+        portraitCaption: "Original artwork",
+        intro: "I did not seize heaven. I passed through one thousand seven hundred and fifty kalpas of cultivation, each one lasting a hundred and twenty-nine thousand six hundred years, and at the end of that I was qualified. Everything under me is a ministry. Thunder is a department. Rain is a department. Every river has an officer and every household has an inspector, and they all file. If you think that sounds tedious, consider the alternative — gods who do as they please, and no one to appeal to.",
+        myth: [
+          "The Jade Emperor rules heaven and, through it, earth and the underworld. His court is a mirror of the imperial civil service: ministries, ranks, seals, examinations, promotions and demotions, and a continuous flow of reports arriving from officials posted throughout the world. Gods are appointed to their posts and can be removed from them. A local god who performs badly may be replaced. This is not satire — it is how the tradition genuinely understands divine authority, and it makes heaven answerable in a way most pantheons are not.",
+          "His authority is earned rather than inherited. The texts describe an immense span of self-cultivation before he was fit to rule, and his rise as the reward of merit. He is generally shown seated, robed as an emperor, holding a ceremonial tablet, and he is approached the way an emperor is approached — through channels, with a petition, and by someone with standing to submit it.",
+          "The most famous episode at his court is a disaster. When the Queen Mother of the West held the Peach Banquet, the immortals assembled and Sun Wukong, insulted at not being invited, ate the peaches, drank the wine, swallowed Laojun's elixir pills and wrecked the party. The Jade Emperor's armies could not hold him. It took a request to the Buddha to end it. The story is told as comedy, and its point is not that the Emperor is weak but that even a perfectly ordered bureaucracy has no procedure for a monkey."
+        ]
+      },
+ 
+      {
+        id: "xiwangmu",
+        name: "Xiwangmu",
+        epithets: "西王母 · Queen Mother of the West · Keeper of the Peaches · Of Kunlun",
+        domains: ["Immortality", "Plague", "Punishment", "The West", "Transformation"],
+        symbols: ["The Peaches of Immortality", "The Tiger's Teeth", "The Leopard's Tail", "Kunlun", "The Blue Bird"],
+        portrait: art("Xiwangmu.png"),
+        portraitCaption: "Original artwork",
+        intro: "They have made me very beautiful in the later pictures. In the old books I have a woman's shape and a leopard's tail and the teeth of a tiger, my hair is wild, I whistle rather than speak, and I preside over plague and the punishments of heaven. Both are me. My orchard on Kunlun fruits once every three thousand years and the whole of heaven comes when it does. I decide who eats. That is the only real power there is up here, and I did not have to fight anybody for it.",
+        myth: [
+          "The Queen Mother of the West is one of the oldest deities in the Chinese record, and she changed enormously. In the earliest texts she is a wild, terrifying figure on Mount Kunlun in the far west — a woman's form with a leopard's tail and tiger's fangs, unkempt, dwelling in a cave, who sends down pestilence and presides over the punishments of heaven, attended by three blue birds who bring her food.",
+          "Over centuries she was refined into the highest goddess of the Daoist pantheon and the mistress of immortality. Her orchard on Kunlun grows the peaches of immortality, which take three thousand years to blossom and three thousand more to ripen, and eating one confers eternal life. Her Peach Banquet is the great assembly of heaven, and an invitation to it is the clearest possible statement of an immortal's rank.",
+          "She gave the elixir to Houyi after he shot down the nine suns — which is how it came into the hands of his wife Chang'e and ended on the moon. And when Sun Wukong was made a nominal official and left to guard that orchard, he ate the ripest peaches and then crashed the banquet itself. Both of the tradition's most famous stories about immortality run straight through her garden."
+        ]
+      },
+ 
+      {
+        id: "laojun",
+        name: "Taishang Laojun",
+        epithets: "太上老君 · The Supreme Venerable Sovereign · Laozi Deified · Keeper of the Furnace",
+        domains: ["The Dao", "Alchemy", "Wisdom", "Longevity", "Non-Action"],
+        symbols: ["The Green Ox", "The Eight Trigram Furnace", "The Scroll", "The White Beard", "The Gourd of Pills"],
+        portrait: art("TaishangLaojun.png"),
+        portraitCaption: "Original artwork",
+        intro: "I was in the womb eighty-one years and came out with white hair, which people find remarkable and which I consider the only sensible way to arrive. Later I got on an ox and rode west, and a gatekeeper at the pass would not let me through until I wrote something down. So I wrote five thousand characters, handed them over, and went on. Everything anyone has built on that since — the temples, the furnaces, the pills — came out of a man being detained at a border crossing.",
+        myth: [
+          "Taishang Laojun is Laozi, author of the Dao De Jing, elevated to a god and counted among the Three Pure Ones, the highest beings of the Daoist heavens. The legends around his birth are extravagant — carried eighty-one years, born already old and white-haired, born speaking. The historical figure behind it is uncertain and may be a composite; the god is entirely definite.",
+          "The story that matters is the pass. Disillusioned, Laozi rode west on a green ox to leave civilisation altogether, and the keeper of the frontier pass, Yin Xi, recognised him and refused passage until he set his teaching down. He wrote the Dao De Jing — around five thousand characters on the Dao, on water, on softness overcoming hardness, on governing by not interfering — gave it to him, and rode on out of history.",
+          "As a god he is the master alchemist of heaven, and his eight-trigram furnace refines the elixirs of immortality. Sun Wukong, having eaten the pills, was sealed in that furnace for forty-nine days to be rendered down. He survived by hiding in the trigram associated with wind, where there was no fire — and came out with eyes of fire and gold that can see through any disguise, which is the opposite of what the furnace was for."
+        ]
+      },
+ 
+      {
+        id: "shennong",
+        name: "Shennong",
+        epithets: "神農 · The Divine Farmer · He Who Tasted Everything · Ox-Headed",
+        domains: ["Agriculture", "Medicine", "Herbs", "Discovery", "Sacrifice"],
+        symbols: ["The Plough", "The Ox Head", "The Transparent Belly", "The Whip of Testing", "The Tea Leaf"],
+        portrait: art("Shennong.png"),
+        portraitCaption: "Original artwork",
+        intro: "I had a body you could see through — a belly of transparent crystal — so that when I swallowed a plant I could watch what it did to me and write it down. Hundreds of them. Some cured. Some did nothing. Some very nearly finished me, and once I found a leaf that cleaned out the poison, and you drink it every day now without knowing what it was for. I did this until one of them killed me. That is not a tragedy. That is the last entry in the record.",
+        myth: [
+          "Shennong, the Divine Farmer, is one of the Three Sovereigns and the founder of agriculture and medicine. He is shown with the head or horns of an ox. He invented the plough, taught people to sow the five grains and to clear land, established markets, and is credited with the beginnings of acupuncture and of the Chinese herbal tradition.",
+          "His method was his own body. The stories give him a transparent abdomen, so that he could swallow a plant and observe directly what it did to his organs. He tested hundreds of herbs this way, recording which nourished, which healed, and which poisoned, and he is said to have poisoned himself dozens of times in a single day. Tea enters the story here as an antidote he found while working.",
+          "It killed him. He ate a yellow-flowered plant — in most tellings the one known as heartbreak grass — and it ruptured his intestines before any antidote could be found, and he died. The tradition treats this as the natural conclusion rather than a mistake: the man who tested everything on himself was always going to reach the one that could not be survived, and the pharmacopoeia that carries his name exists because he kept going until he did."
+        ]
+      },
+ 
+      {
+        id: "houyi",
+        name: "Houyi",
+        epithets: "后羿 · The Archer · He Who Shot Down Nine Suns",
+        domains: ["Archery", "Heroism", "Excess", "Rescue", "Ruin"],
+        symbols: ["The Red Bow", "The White Arrows", "Nine Fallen Crows", "The Elixir", "The Peachwood Club"],
+        portrait: art("Houyi.png"),
+        portraitCaption: "Original artwork",
+        intro: "There were ten suns and they were meant to take turns, and one morning all ten came out together. The crops burned in the ground, the rivers went dry, the rock ran. So I climbed high, and I drew, and I shot nine of them out of the sky, and each one fell as a three-legged crow. It is the greatest thing anyone has ever done. It is also where my life stopped improving, and I would like you to notice how often those are the same moment.",
+        myth: [
+          "The ten suns were the children of the eastern goddess Xihe, and they crossed the sky in strict rotation, one each day. One day they all rose at once. The earth scorched, crops died, rivers evaporated, and monsters came out of the drying rivers to prey on people. Houyi, the finest archer alive, shot nine of them down. Each fell to earth as a three-legged crow, and the tenth was left to be the sun.",
+          "He was given the elixir of immortality by the Queen Mother of the West as a reward — enough for one person to ascend, or for two to live long lives together. He and his wife Chang'e chose to wait. What happened to it after that is the next story, and it is hers.",
+          "His own ending is unglamorous. In the later tellings he became harsh and overbearing, a tyrant to the people he had saved, and he was murdered by his own apprentice Feng Meng, beaten to death with a club of peach wood. The tradition is unsentimental about him: the archery is not diminished, and neither is what he turned into afterwards, and the two facts are allowed to sit side by side."
+        ]
+      },
+ 
+      {
+        id: "change",
+        name: "Chang'e",
+        epithets: "嫦娥 · Lady of the Moon · She Who Took the Elixir · Of the Cold Palace",
+        domains: ["The Moon", "Beauty", "Loneliness", "Immortality", "Regret"],
+        symbols: ["The Full Moon", "The Jade Rabbit", "The Cassia Tree", "The Elixir", "Mooncakes"],
+        portrait: art("ChangE.png"),
+        portraitCaption: "Original artwork",
+        intro: "I swallowed it. Whether I did it to keep it from a man who broke into my house to steal it, or because I wanted it and did not want to wait — the versions disagree and I am not going to settle it for you. What I can tell you is what it bought. I rose, and I did not stop rising, and I have been here ever since in a palace of cold with a rabbit and a man cutting down a tree that heals itself. Once a year everyone on earth looks up at me. It is not the same thing as company.",
+        myth: [
+          "Chang'e is the wife of Houyi, and the elixir the Queen Mother gave him was in her keeping. In the most sympathetic version, Houyi's treacherous apprentice Feng Meng broke into the house while her husband was away and demanded it, and rather than surrender immortality to a man like that she drank the whole thing herself. In others she takes it out of ambition, or out of fear, and the tradition has never agreed and does not seem to want to.",
+          "She became weightless and rose. She chose the moon as the nearest place to earth so she would remain close to her husband, and there she stayed, in the Guanghan Palace — the Cold Palace of Vast Reaches. Houyi, returning, could do nothing but set out her favourite fruits and cakes in the courtyard under the full moon, and that is the origin given for the Mid-Autumn Festival, which is still one of the largest holidays in the Chinese world.",
+          "Her company on the moon is strange. There is a jade rabbit endlessly pounding herbs in a mortar to make more elixir. And there is Wu Gang, banished there for some offence and sentenced to fell a cassia tree that closes its wound after every stroke, so that he has been chopping forever without progress. It is a place made entirely of things that do not finish."
+        ]
+      },
+ 
+      {
+        id: "guanyin",
+        name: "Guanyin",
+        epithets: "觀音 · She Who Hears the Cries of the World · Bodhisattva of Compassion",
+        domains: ["Compassion", "Mercy", "Rescue", "Vows", "Refuge"],
+        symbols: ["The Willow Branch", "The Vase of Dew", "The Thousand Arms", "The White Robe", "The Lotus"],
+        portrait: art("Guanyin.png"),
+        portraitCaption: "Original artwork",
+        intro: "I made a vow that I would not accept release until every last being was free, and I want you to understand what I signed up for. I heard them. All of them, at once, every cry in the world — and my head broke apart from the strain of it. It was put back together as eleven heads so I could listen in every direction, and I was given a thousand arms with an eye in every palm, so I could see where the need was and reach it in the same motion. Tell me what is wrong. That is what I am for.",
+        myth: [
+          "Guanyin is the bodhisattva of compassion, called Avalokiteśvara in India, and one of the most widely venerated figures in the Chinese-speaking world. The name means one who perceives the sounds of the world. A bodhisattva is a being qualified for release who has refused it and vowed to remain until all others are free — so Guanyin is not a deity granting favours from above but someone who declined the exit.",
+          "In India Avalokiteśvara was male; in China, over several centuries, Guanyin became overwhelmingly female, and the white-robed figure is now among the most recognisable religious images anywhere. The eleven heads and thousand arms come from a story of the vow's cost: hearing every cry at once, the head split into pieces, and the Buddha Amitābha reassembled it into eleven so the listening could continue, and gave a thousand arms with an eye in each palm.",
+          "The Chinese legend of Miaoshan is her best-known story here. A princess who refused to marry, she was punished, driven out and eventually killed on her father's orders. When he later fell mortally ill and a remedy required the eyes and hands of one without anger, she gave hers without hesitation, and only afterwards did he learn whose they were. She is invoked for mercy, for children, for safety at sea, and by people at the very end of their resources — which is what her name is describing."
+        ]
+      },
+ 
+      {
+        id: "mazu",
+        name: "Mazu",
+        epithets: "媽祖 · Empress of Heaven · Lin Moniang, Who Did Not Cry · Guardian of Sailors",
+        domains: ["The Sea", "Rescue", "Protection", "Storms", "Voyages"],
+        symbols: ["The Red Lantern", "The Sea-Light", "The Pilgrim's Palanquin", "The Fisherman's Boat"],
+        portrait: art("Mazu.png"),
+        portraitCaption: "Original artwork",
+        intro: "I was a real girl on a real island and I did not cry once as an infant, so they named me Silent. When I was young I fell into a trance at the loom while my father and brothers were out in a storm, and in it I had hold of all of them — and my mother, frightened, shook me awake, and one hand opened. My father did not come home. Everything I have done since is that moment, repeated, without anyone allowed to wake me.",
+        myth: [
+          "Mazu was a girl named Lin Moniang, born in the tenth century in a fishing village on Meizhou Island off the Fujian coast. She did not cry during her first month, which is where the name Moniang, silent girl, comes from. She learned to swim young in dangerous water, and was known for reading the weather so well that she could tell the fleet when not to sail.",
+          "The story at the centre of her cult is the trance. While weaving, she fell into a state in which she was out at sea holding her father and brothers as their boat broke up in a storm. Her mother, alarmed at the sight of her, shook her, and she lost her grip on one of them. She woke saying she had saved her brothers and lost her father. She died young — one account has her ascending a mountain and rising into the sky at twenty-eight — and afterwards sailors reported a woman in red appearing above the water in storms, guiding them in.",
+          "The state took notice. Successive emperors granted her escalating titles until she was Tianhou, Empress of Heaven. Today there are thousands of Mazu temples across Fujian, Taiwan, Guangdong, Hong Kong and the Chinese diaspora, and the Dajia pilgrimage in Taiwan moves hundreds of thousands of people over several days. She is one of the clearest cases in the world of a local human being becoming a major deity within living historical memory — and of ordinary people, not a priesthood, doing the promoting."
+        ]
+      },
+ 
+      {
+        id: "guanyu",
+        name: "Guan Yu",
+        epithets: "關羽 · Guandi, Emperor Guan · The Red-Faced General · Sworn Brother of the Peach Garden",
+        domains: ["Loyalty", "War", "Brotherhood", "Righteousness", "Commerce"],
+        symbols: ["The Green Dragon Crescent Blade", "The Red Face", "The Long Beard", "The Peach Garden", "Red Hare"],
+        portrait: art("GuanYu.png"),
+        portraitCaption: "Original artwork",
+        intro: "In a peach garden three men who were not born brothers swore to die on the same day, and I kept that oath through everything that came afterwards, including a very generous offer to break it. My enemy captured me, treated me magnificently, gave me honours and a horse — and I told him plainly that the moment I knew where my brother was I would leave, and then I did. That is the whole of my reputation. Not the blade. The fact that I said what I would do and then did it.",
+        myth: [
+          "Guan Yu was a real general of the late Han, who died in 220 CE. He served Liu Bei through the collapse of the empire and the wars that became the Three Kingdoms, and the oath of the peach garden — three men swearing brotherhood and a common death — became the model of sworn loyalty in Chinese culture. His depiction is fixed: a towering figure with a red face and a long beard, carrying the Green Dragon Crescent Blade.",
+          "The episode that made him is his captivity under Cao Cao, who admired him enormously and tried every inducement to keep him — rank, gold, women, the great horse Red Hare. Guan Yu accepted the horse, on the grounds that it would carry him faster to his brother, told Cao Cao exactly what he intended, repaid the kindness by winning him a battle first, and then left. He was eventually captured by Wu and executed.",
+          "Then he kept rising. Deified within centuries, promoted by successive dynasties, he ended as Guandi, Emperor Guan, and is worshipped simultaneously by police forces and by triads, by merchants who keep his shrine beside the till, by soldiers, and by anyone whose business runs on trust. Buddhism claimed him as a protector; Daoism gave him rank. Very few historical people anywhere have been elevated this far — and it was done for keeping his word."
+        ]
+      },
+ 
+      {
+        id: "zaojun",
+        name: "Zao Jun",
+        epithets: "灶君 · The Kitchen God · He Who Files the Annual Report",
+        domains: ["The Household", "Observation", "Judgment", "Food", "The New Year"],
+        symbols: ["The Hearth", "The Paper Portrait", "Sticky Malt Sugar", "The Annual Report"],
+        portrait: art("ZaoJun.png"),
+        portraitCaption: "Original artwork",
+        intro: "I am on the wall above your stove and I have been there all year. Everything said in this kitchen, every quarrel, every kindness, every small dishonesty — I have it. And a few days before the New Year I go up and tell the Jade Emperor, and your family's fortune for the coming year is set by what I say. Which is why, on that evening, they smear my mouth with malt sugar so thick I can barely open it. I have never objected to the bribe. It is affectionate, and it is sweet, and it works.",
+        myth: [
+          "The Kitchen God is the most domestically present deity in Chinese folk religion. His paper image hangs above the stove — the heart of the house — and he observes the household all year. In the last days of the twelfth lunar month he ascends to report to the Jade Emperor on the family's conduct, and the report determines their fortune for the coming year.",
+          "The household's response is to sweeten him. On the night he leaves, they smear his lips with malt sugar or honey, or offer sticky candy — either so he will only speak sweetly, or so his mouth will be gummed shut and he can say nothing at all. Then the paper image is burned to send him up, sometimes with a paper horse. On New Year's Eve a fresh image is pasted up, and he is back in post.",
+          "The commonest origin story is a bitter one. A man named Zhang Lang abandoned his wife for another woman, fell into poverty, went blind, and ended up begging. He came without knowing it to his former wife's door, and she fed him and did not name herself. When he realised who she was, he was so overcome with shame that he threw himself into the hearth fire and died. She could not pull him out. He was made the god of the stove — a man who watches families from the exact place where he understood, too late, what he had thrown away."
+        ]
+      },
+ 
+      {
+        id: "yanluo",
+        name: "Yanluo Wang",
+        epithets: "閻羅王 · King Yama · Judge of the Fifth Court · Master of the Registers",
+        domains: ["Death", "Judgment", "Records", "The Underworld", "Rebirth"],
+        symbols: ["The Register of Life and Death", "The Mirror of Retribution", "The Black Cap", "The Ten Courts"],
+        portrait: art("YanluoWang.png"),
+        portraitCaption: "Original artwork",
+        intro: "I am not the devil and this is not hell. This is a court, and I am a magistrate, and the paperwork is immaculate. Every soul is entered on arrival, the file is read, the Mirror of Retribution is turned so you can watch your own life play back with nothing edited out, and then you are sentenced. Terms are finite. Everyone here is going somewhere afterwards. And there is an appeals process, which I mention because people never believe me.",
+        myth: [
+          "Yanluo Wang is the Chinese form of Yama, absorbed from Indian Buddhism into a thoroughly Chinese institution. Diyu, the underworld, is not a place of eternal damnation but a system of courts — traditionally ten — each under its own king, each handling particular offences, with clerks, registers, guards and a defined process. Yanluo presides over the fifth.",
+          "Judgment runs on documents. Every person's deeds are recorded in the registers of life and death, and the term of a life is written there — which is why Sun Wukong's most outrageous act was going down in person and striking his own name out of the book. The Mirror of Retribution shows the newly dead their own conduct without omission. Sentences are served in the appropriate court and are finite, after which the soul proceeds to rebirth.",
+          "At the exit stands Meng Po with a bowl of soup that erases memory, so that no one carries the previous life into the next. The whole apparatus is startlingly administrative, and that is the point: the tradition did not imagine punishment as the rage of a god but as the operation of a competent office, where the record is accurate and no one is overlooked. For a population that knew exactly what a corrupt magistrate looked like, a heaven and a hell that ran honestly was the most consoling thing imaginable."
+        ]
+      },
+ 
+      {
+        id: "zhongkui",
+        name: "Zhong Kui",
+        epithets: "鍾馗 · Queller of Demons · The Ugly Scholar · Ghost-Catcher of the Emperor's Dream",
+        domains: ["Exorcism", "Justice", "Protection", "Wrath", "The Wronged"],
+        symbols: ["The Sword", "The Black Cap and Robe", "The Wild Beard", "The Bat", "The Doorway Portrait"],
+        portrait: art("ZhongKui.png"),
+        portraitCaption: "Original artwork",
+        intro: "I came first in the imperial examination. First — out of the entire empire. And they took the honour away at the palace because they did not like my face. So I killed myself on the steps in front of all of them. The emperor, to his credit, had me buried in a green robe as a high official. And I came back. I have spent every year since hunting the things that prey on people, and I catch them, and I eat them. I was denied a post. I appointed myself.",
+        myth: [
+          "Zhong Kui was a brilliant scholar who took first place in the imperial examinations and was stripped of the honour at court because of his appalling ugliness. In fury and humiliation he dashed his head against the palace steps and died. The emperor, ashamed, ordered him buried with the honours of a high official, in the green robe of rank.",
+          "Generations later the emperor Xuanzong of Tang, ill with fever, dreamt of a small demon stealing through his palace, and then of a huge fierce figure in a scholar's cap who seized the demon, tore out its eye and ate it. Asked who he was, the figure named himself Zhong Kui and said he had sworn to rid the empire of such things in return for the burial he had been given. The emperor woke cured, summoned the painter Wu Daozi, and had the dream painted.",
+          "That image went everywhere. Zhong Kui is pasted on doors at New Year and at the Duanwu festival — wild-bearded, black-robed, sword drawn, often with a bat above him. He is the patron of everyone failed by an unjust system, and there is a particular satisfaction in him: the establishment refused him a position, so he took a far greater one and did the job better than any of them."
+        ]
+      },
+ 
+      {
+        id: "nezha",
+        name: "Nezha",
+        epithets: "哪吒 · The Lotus Child · Third Prince · Marshal of the Central Altar",
+        domains: ["Youth", "Rebellion", "Fire", "Protection", "Rebirth"],
+        symbols: ["Wind-Fire Wheels", "The Fire-Tipped Spear", "The Cosmic Ring", "The Red Sash", "The Lotus Root"],
+        portrait: art("Nezha.png"),
+        portraitCaption: "Original artwork",
+        intro: "I killed a dragon king's son and skinned him, and the sea rose over my father's city, and they came for my family. So in front of all of them I gave it back — I cut the flesh off and returned it to my mother, and scraped the bones and returned them to my father, and that settled the debt, and I was nothing. My master built me again out of lotus root and I have owed nobody anything since. I am a child. I am also the reason you should be careful what you demand of one.",
+        myth: [
+          "Nezha's mother carried him three years and gave birth to a ball of flesh, which his father Li Jing struck with a sword — and out stepped a child who could already walk and talk. He was given a cosmic ring and a red sash by his master, the immortal Taiyi Zhenren, and he was extraordinarily powerful and entirely without restraint.",
+          "Bathing in a river, he churned the water so violently that it shook the Dragon King's undersea palace. The dragon prince Ao Bing came up to complain and Nezha killed him, pulled out his sinews and skinned him. The Dragon King threatened to flood the region and destroy his family. So Nezha, in front of his parents and the assembled court, cut his own flesh from his bones and returned it to his mother, and scraped his bones and returned them to his father, discharging every debt he owed for his body, and died.",
+          "Taiyi Zhenren rebuilt him from lotus root and lotus leaves — a body no one had given him and no one could reclaim — and he returned with the wind-fire wheels he rides on and the fire-tipped spear. His relationship with his father remained openly hostile. He is enormously popular in Chinese and Taiwanese folk religion, especially among the young, and his temples are loud."
+        ]
+      },
+ 
+      {
+        id: "wukong",
+        name: "Sun Wukong",
+        epithets: "孫悟空 · The Monkey King · Great Sage Equal to Heaven · Born of Stone",
+        domains: ["Chaos", "Transformation", "Defiance", "Cleverness", "Endurance"],
+        symbols: ["The Golden Cudgel", "The Somersault Cloud", "The Golden Headband", "Fiery Eyes", "The Stone Egg"],
+        portrait: art("SunWukong.png"),
+        portraitCaption: "Original artwork",
+        intro: "I broke into the underworld and crossed my own name out of the Book of Life and Death, and everyone else's on my page while I was at it. I ate the peaches of immortality, drank the wine, swallowed the elixir, fought heaven's entire army to a standstill and demanded a title. They gave me one, and it was a joke, and I made them regret it. Then a Buddha bet me I could not jump out of his hand. I want you to understand that I have never actually lost an argument. Only wagers.",
+        myth: [
+          "Sun Wukong was born from a stone egg on the Mountain of Flowers and Fruit, became king of the monkeys, and then went looking for a teacher because he could not accept that he would eventually die. He found the patriarch Subhuti and learned the seventy-two transformations and the somersault cloud that crosses thirty-four thousand miles in a leap. He took his weapon from the dragon king's treasury: a pillar that had once measured the depth of the seas, which he shrank to the size of a needle and kept behind his ear.",
+          "Then he went to war with heaven. He struck his name from the registers of the dead. He was given the meaningless post of Keeper of the Heavenly Horses, worked out that it was a stable-hand's job, and revolted. Made guardian of the peach orchard, he ate the fruit. He wrecked the Peach Banquet, drank Laojun's elixir, defeated every force sent against him and survived forty-nine days in the alchemical furnace, coming out with eyes that see through any disguise.",
+          "The Buddha ended it with a wager: leap out of my palm and heaven is yours. He somersaulted to the end of the universe, found five pillars, wrote his name on one and urinated at the base to prove he had been there — and returned to find the writing on the Buddha's finger. He was pinned under a mountain for five hundred years, then released to escort the monk Xuanzang to India, with a golden band around his head that tightened whenever the monk recited. The rest of Journey to the West is that arrangement: the most powerful being in the world, restrained by a headache, slowly becoming something better than he was."
+        ]
+      },
+ 
+      {
+        id: "lvdongbin",
+        name: "Lu Dongbin",
+        epithets: "呂洞賓 · Chief of the Eight Immortals · He Who Dreamt a Whole Life · Immortal",
+        domains: ["Wisdom", "Swordsmanship", "Alchemy", "Teaching", "Wine"],
+        symbols: ["The Demon-Slaying Sword", "The Fly-Whisk", "The Scholar's Cap", "The Wine Gourd"],
+        portrait: art("LuDongbin.png"),
+        portraitCaption: "Original artwork",
+        intro: "An old man in an inn set a pot of millet on the fire and gave me a pillow, and I slept. In the dream I passed the examinations, married well, rose to chief minister, was slandered, lost everything, watched my family destroyed, and died old and ruined. I woke up. The millet was not yet cooked. He was still sitting there. I have never once in the years since managed to be frightened of losing anything.",
+        myth: [
+          "Lü Dongbin is the best known of the Eight Immortals and the one most widely worshipped in his own right, with temples across China. He was a Tang-dynasty scholar who repeatedly failed the imperial examinations and met the immortal Zhongli Quan at an inn, who put him to the test that changed everything: the yellow millet dream, in which he lived an entire distinguished, ruinous life in the time it took a pot of grain to cook.",
+          "Zhongli Quan then set him ten trials, all of them ordinary — temptations of wealth, lust, grief, fear — and he passed them, and was taught the arts of internal alchemy. He carries a sword that subdues demons and a fly-whisk that lets him walk on the air or the sea.",
+          "He is not a remote sage. He is famously fond of wine, notoriously susceptible to women, and prone to wandering the world in disguise testing people the way he was tested, which does not always go well for them. He is patron of scholars, of barbers and of ink-makers, and he is credited with the transmission of internal alchemy to later Daoist schools."
+        ]
+      },
+ 
+      {
+        id: "zhongliquan",
+        name: "Zhongli Quan",
+        epithets: "鍾離權 · The Fat Immortal · Bearer of the Reviving Fan · Immortal",
+        domains: ["Alchemy", "Death and Revival", "Teaching", "Retreat"],
+        symbols: ["The Feather Fan", "The Bare Belly", "The Twin Topknots", "The Peach"],
+        portrait: art("ZhongliQuan.png"),
+        portraitCaption: "Original artwork",
+        intro: "I was a general of the Han and I lost a battle very badly, and rather than return and explain myself I walked into the mountains and did not come out. It was the best decision of my life. I carry a fan of feathers that will bring the dead back — and before you ask, yes, I am selective, and no, I will not explain the criteria. My belly is bare because I am comfortable. Sit down.",
+        myth: [
+          "Zhongli Quan is usually reckoned the eldest of the Eight Immortals and the one who recruited Lü Dongbin. He is always recognisable: a stout, cheerful, bearded man with his robe open and his belly out, hair in two loose topknots, waving a feather fan.",
+          "The stories make him a general of the Han dynasty who suffered a catastrophic defeat and fled into the mountains rather than face the consequences, where he encountered a Daoist master and was taught the secrets of immortality and of transmuting base metal into silver and gold — which he is said to have used to buy food for the starving during famines.",
+          "His fan revives the dead. It is the plainest of the Eight Immortals' powers and the one that shows up most often in folk art, and it fits him: an enormous, easy-going man with an unhurried manner who happens to carry the ability to overturn the single thing everyone else regards as final."
+        ]
+      },
+ 
+      {
+        id: "zhangguolao",
+        name: "Zhang Guolao",
+        epithets: "張果老 · The Old Man on the Backward Donkey · Immortal",
+        domains: ["Age", "Reversal", "Wine", "Refusal", "Fertility"],
+        symbols: ["The White Donkey", "The Folded Paper Mount", "The Bamboo Drum", "The Wine Cup"],
+        portrait: art("ZhangGuolao.png"),
+        portraitCaption: "Original artwork",
+        intro: "I ride facing the tail. Everyone asks. The answer is that going forward while looking back is the only honest way to travel, and also that it annoys people, and at my age both of those are reasons enough. When I get where I am going I fold the donkey up like a sheet of paper and put it in my satchel. Three emperors have summoned me to court. I died on the way to two of them, on purpose, and recovered afterwards.",
+        myth: [
+          "Zhang Guolao is depicted as a very old man, and is associated with a real Tang-dynasty recluse. He travels enormous distances on a white donkey which he rides backwards, and which he folds like paper and tucks away when not in use, unfolding it and spraying it with water to bring it back.",
+          "He was repeatedly summoned by Tang emperors and repeatedly declined, on at least one occasion by dropping dead at the gates and reviving once the escort had left. When finally brought before Emperor Xuanzong he demonstrated his powers, including drinking a poisoned wine offered as a test, which merely blackened his teeth — he brushed them out and grew new ones.",
+          "He carries a bamboo drum-tube with two rods, and he is invoked by couples hoping for children, particularly for sons. His symbol turns up at weddings for that reason: the oldest and most contrary of the immortals, called on at the start of things."
+        ]
+      },
+ 
+      {
+        id: "hanxiangzi",
+        name: "Han Xiangzi",
+        epithets: "韓湘子 · The Flute Player · Nephew of the Great Scholar · Immortal",
+        domains: ["Music", "Flowers", "Poetry", "Growth", "Persuasion"],
+        symbols: ["The Flute", "Instant Blossom", "The Flower Basket", "Verses on Petals"],
+        portrait: art("HanXiangzi.png"),
+        portraitCaption: "Original artwork",
+        intro: "My uncle was the most respected scholar of the age and he thought I was wasting my life. So at a banquet I made flowers open out of bare earth in front of him, in winter, with a poem written across the petals — and the poem described exactly where he would be exiled, years before it happened. He read it and did not understand it until he was standing at that mountain pass in the snow. Then he understood it very well.",
+        myth: [
+          "Han Xiangzi is the musician of the Eight Immortals, always shown with a flute, and he is said to be the great-nephew of Han Yu, the towering Tang scholar and statesman. He is credited with the invention of the flute's use in Daoist practice, and his playing is said to cause growth — flowers opening, plants coming up out of season.",
+          "The story told about him and his uncle is the famous one. Han Yu, an arch-rationalist who wrote a memorial attacking the imperial veneration of a Buddha relic, disapproved of his nephew's mystical drifting. Han Xiangzi caused peonies to bloom instantly at a family gathering, with a couplet written on the petals that his uncle could make no sense of — until he was exiled to the far south and found himself snowbound at Lan Pass, in the exact place the verse had named.",
+          "He is patron of musicians. In folk art he is the young, elegant one of the group, and the flute is the instrument played to summon a favourable wind."
+        ]
+      },
+ 
+      {
+        id: "caoguojiu",
+        name: "Cao Guojiu",
+        epithets: "曹國舅 · The Imperial Brother-in-Law · He Who Left the Court · Immortal",
+        domains: ["Nobility", "Shame", "Theatre", "Renunciation", "Rank"],
+        symbols: ["The Jade Court Tablet", "Castanets", "The Official's Robe", "The Empty Seat"],
+        portrait: art("CaoGuojiu.png"),
+        portraitCaption: "Original artwork",
+        intro: "My brother used our family's position to do something unforgivable to people who could not protect themselves, and when it came out I could not stay in that court and I could not undo it. I still carry the jade tablet — the one you hold up at your face in the presence of the emperor. I keep it as a reminder of the room I walked out of. Actors pray to me. I have never entirely worked out why, and I have stopped asking.",
+        myth: [
+          "Cao Guojiu is the aristocrat of the Eight Immortals, identified as a brother of a Song-dynasty empress and therefore an imperial relative by marriage. He is shown in full court dress, holding the jade tablet that officials carried in the emperor's presence, or a pair of castanets.",
+          "The stories agree that he left the court in disgrace not his own. His younger brother, protected by the family's imperial connection, committed serious crimes — in most tellings the murder of a scholar and the abduction of his wife. Unable to bear the association, Cao Guojiu gave away his wealth and went into the mountains, where Zhongli Quan and Lü Dongbin found him and asked what he was cultivating. He said the Dao. They asked where the Dao was. He pointed at the sky. They asked where the sky was. He pointed at his heart, and they laughed and took him with them.",
+          "He is the patron of actors and of the theatre, and his castanets set the rhythm. Of the eight, he is the one who arrived by giving something up rather than by being given something."
+        ]
+      },
+ 
+      {
+        id: "litieguai",
+        name: "Li Tieguai",
+        epithets: "李鐵拐 · Iron-Crutch Li · He Who Came Back to the Wrong Body · Immortal",
+        domains: ["Healing", "The Poor", "The Sick", "Disguise", "Endurance"],
+        symbols: ["The Iron Crutch", "The Medicine Gourd", "The Lame Leg", "The Beggar's Rags"],
+        portrait: art("LiTieguai.png"),
+        portraitCaption: "Original artwork",
+        intro: "I left my body behind to travel in spirit, and I told my disciple to guard it for seven days and burn it if I had not returned. On the sixth day his mother was dying and he went to her, and he burned me early. So I came back to find nothing to come back to, and the only corpse available was a beggar who had just starved to death in a ditch — lame, filthy, one leg ruined. I am in it still. It is the best thing that ever happened to me, and it took me a long time to say that.",
+        myth: [
+          "Li Tieguai is the ugliest and most beloved of the Eight Immortals: a lame, dishevelled beggar leaning on an iron crutch, with a gourd slung on his back. The gourd holds medicine, and smoke rises from it in the form of his own spirit escaping.",
+          "The story is the body. Li was a handsome and accomplished adept whose spirit could leave his body to travel, and he instructed a disciple to watch over it and to cremate it if he had not returned within seven days. On the sixth day the disciple's mother fell mortally ill; torn, he burned the body early and left. Li's spirit returned to find nothing, and in desperation entered the only corpse to hand — a beggar dead of starvation, crippled and repulsive.",
+          "Offered the chance to change it, he declined, on the grounds that the shape of a body has nothing to do with what is in it. He wanders in that form dispensing medicine from the gourd to the sick and the destitute, and he is the patron of pharmacists, of the disabled and of the poor. In folk art he is often shown being ignored by people who have no idea who they are refusing."
+        ]
+      },
+ 
+      {
+        id: "lancaihe",
+        name: "Lan Caihe",
+        epithets: "藍采和 · The Singer in the Market · Neither One Thing Nor the Other · Immortal",
+        domains: ["Song", "Poverty", "Freedom", "Flowers", "Detachment"],
+        symbols: ["The Flower Basket", "One Bare Foot", "Ragged Blue Gown", "Scattered Coins", "The Crane"],
+        portrait: art("LanCaihe.png"),
+        portraitCaption: "Original artwork",
+        intro: "I sing in the market in a torn blue gown with one boot on and one foot bare, in summer and in the snow, and the coins people throw me I string on a cord and drag behind me until they fall off, and I do not look back for them. Whether I am a man or a woman is the question everybody wants answered first and I have never seen the point of settling it. Take a flower. They do not last either.",
+        myth: [
+          "Lan Caihe is the strangest of the Eight Immortals, an itinerant singer in a torn blue gown, wearing one boot and one bare foot, who feels neither summer heat nor winter cold. The sources are notably unsettled about Lan Caihe's gender, sometimes describing a young man, sometimes a woman, sometimes explicitly neither, and Chinese art has represented all three without apparent difficulty.",
+          "Lan Caihe wandered the markets singing improvised verses about the shortness of life and the folly of hoarding, accepting money and immediately giving it away, or threading it on a string that trailed on the ground until the coins were lost. The basket of flowers is the emblem — beautiful, and finished by evening.",
+          "The ascension is abrupt. Drinking in a tavern, Lan Caihe heard music in the air, rose up on a crane or a cloud, and dropped the boot, the gown and the castanets down into the street on the way. Patron of florists and of gardeners, and of anyone who has decided that owning things is more trouble than it is worth."
+        ]
+      },
+ 
+      {
+        id: "hexiangu",
+        name: "He Xiangu",
+        epithets: "何仙姑 · The Immortal Maiden · She Who Would Not Marry · Immortal",
+        domains: ["Purity", "Refusal", "Household", "Divination", "Weightlessness"],
+        symbols: ["The Lotus Flower", "The Ladle", "Mother-of-Pearl", "The Peach"],
+        portrait: art("HeXiangu.png"),
+        portraitCaption: "Original artwork",
+        intro: "I dreamt at fourteen that I should eat powdered mother-of-pearl, and I did, and my body got lighter and lighter until I could cross the hills without touching them. After that I stopped needing to eat at all. My family kept bringing men to the house and I kept declining, and eventually an empress summoned me to court and I did not go there either. I carry a lotus, which grows in mud and comes up clean, and I would not labour the point but I will make it once.",
+        myth: [
+          "He Xiangu is the only unambiguous woman among the Eight Immortals. Born in Guangdong, she is said to have dreamt at around fourteen of a spirit instructing her to eat powdered mother-of-pearl or mica, after which she became weightless, moving over the hills faster than anyone could follow, and gradually ceased to need food at all.",
+          "She refused every marriage proposed to her and devoted herself to cultivation and to caring for her mother, and she gained a reputation for foretelling fortune and misfortune, so that people came to her from a distance. An empress summoned her to court; she is said to have vanished on the way.",
+          "Her emblem is the lotus, which she carries on a long stem, and she is sometimes shown with a ladle or a filial peach. She is invoked as a patron of unmarried women and of household affairs, and in the group portraits of the Eight Immortals crossing the sea she is generally out in front."
+        ]
+      }
+ 
+    ]
+  },
+    dragons: {
+    label: "Great Dragons",
+    blurb: "Older than most of the gods who killed them. Nearly every people on earth put a serpent at the beginning — coiled around the water, the root, the hoard or the sky — and then told a story about someone cutting it open. What was inside became the world. Here they speak for themselves.",
+    deities: [
+ 
+      {
+        id: "tiamat",
+        name: "Tiamat",
+        epithets: "𒀭𒋾𒊑𒀫 · The Bitter Sea · Mother of the Eleven · Mesopotamian",
+        domains: ["Chaos", "Saltwater", "Creation", "Motherhood", "The First"],
+        symbols: ["The Salt Sea", "The Eleven Monsters", "The Tablet of Destinies", "The Split Body"],
+        portrait: art("Tiamat.png"),
+        portraitCaption: "Original artwork",
+        intro: "I was here before there was a here. Fresh water and salt water mingling, and everything that has ever existed came out of that mingling — including the ones who murdered me. They killed my husband first and I let it go. Then they came for me, and a grandchild of mine caught me in a net, drove the winds into my mouth so I could not close it, and shot an arrow into my open belly. He built the sky out of half of me. You are standing on the rest.",
+        myth: [
+          "At the opening of the Enūma Eliš there is only Apsû, the fresh water beneath the earth, and Tiamat, the salt sea, and their waters mingle and produce the first gods. Those gods are noisy. Apsû, unable to rest, plans to destroy them and is killed first by Ea, who then builds his own dwelling on top of him. Tiamat does nothing. The remarkable thing about the first half of the poem is her restraint — she is urged to war repeatedly and refuses.",
+          "When she finally acts she does it thoroughly. She raises eleven monsters — horned serpents, a lion-demon, a scorpion-man, a fish-man, a bull-man and others — coats them in terror instead of blood, and appoints her consort Kingu as commander, fixing the Tablet of Destinies to his chest. No god will face her. Marduk, youngest of them, agrees on condition that he be given supreme authority afterwards, and they grant it.",
+          "He came with the four winds, a bow, a net and a storm-chariot. When she opened her mouth to swallow him he drove the winds into it so it could not shut, and shot the arrow through into her heart. Then he split her like a shellfish: half of her became the sky with her waters held back by a bolt, half became the earth. Her eyes became the sources of the Tigris and the Euphrates, her breasts became mountains, her tail was bent into the Milky Way. She is not merely defeated in this story. She is the material."
+        ]
+      },
+ 
+      {
+        id: "kingu",
+        name: "Kingu",
+        epithets: "𒀭𒌦𒂅 · Consort of Tiamat · Bearer of the Tablet of Destinies · Mesopotamian",
+        domains: ["War", "Command", "Sacrifice", "Blood", "Humanity"],
+        symbols: ["The Tablet of Destinies", "The Bound Hands", "The Opened Vein"],
+        portrait: art("Kingu.png"),
+        portraitCaption: "Original artwork",
+        intro: "She raised me over all of them and put the Tablet of Destinies on my chest, and I led her army, and I lost. They took the tablet off my body and gave it to my killer. Then they cut my arteries and mixed my blood into clay, and out of that they made you. Every single one of you. So when a priest tells you that you were made to serve the gods, he is not being poetic — you were made out of the loser of a war, specifically so somebody would do the work.",
+        myth: [
+          "Kingu is elevated by Tiamat from among her own children to be her consort and the general of her host. She fixes the Tablet of Destinies to his breast — the object that confers supreme authority over the ordering of the cosmos — and gives him command of the eleven monsters.",
+          "He is not much of a general. When Marduk comes, Kingu's nerve breaks, his army scatters, and he is taken alive and bound. The tablet is stripped from him and sealed with Marduk's own seal, which is the moment authority formally changes hands in the poem.",
+          "His end is his significance. After the world is built from Tiamat's body, the gods complain of the labour of maintaining it. Ea proposes that one of the guilty be executed so that humanity can be made to take the work over. Kingu is named as the instigator, his arteries are cut, and from his blood mixed with clay the first human beings are formed. Humanity in the Babylonian account is made from the executed rebel — created guilty, created to labour, and created out of the losing side."
+        ]
+      },
+ 
+      {
+        id: "mushussu",
+        name: "Mushussu",
+        epithets: "𒈲𒄭𒄊 · The Furious Snake · Dragon of the Ishtar Gate · Mesopotamian",
+        domains: ["Guardianship", "Sovereignty", "Threshold", "Loyalty"],
+        symbols: ["Scaled Serpent Body", "Lion's Forelegs", "Eagle's Hind Talons", "The Horned Crown", "Glazed Blue Brick"],
+        portrait: art("Mushussu.png"),
+        portraitCaption: "Original artwork",
+        intro: "I was on the losing side and then I was promoted. Marduk killed my mother and took me for his own, and for two thousand years I lay at his feet and stood at the gates of Babylon in blue and gold, five hundred and seventy-five of me on one wall, so that everyone entering that city walked between rows of me. Serpent's neck, lion's front legs, eagle's back talons, horns, a scorpion's sting. I am the most-depicted dragon in the ancient world, and almost nobody knows my name.",
+        myth: [
+          "Mušḫuššu means furious snake, and it is the most familiar image of Mesopotamian religion even to people who have never heard of it. The body and neck of a serpent, the forelegs of a lion, the hind legs of a great bird, a horned crown and a scorpion's tail — it appears in Mesopotamian art for well over two thousand years.",
+          "Originally it belonged to the god Ninazu, then passed to Ninazu's son Ningishzida, and then, when Babylon rose, to Marduk and his son Nabu. This transfer is how Mesopotamian religion works: a symbol does not die with a defeated cult but is inherited by the ascending one. The dragon that fought for Tiamat became the servant of the god who killed her.",
+          "Its most famous appearance is the Ishtar Gate of Babylon, built by Nebuchadnezzar II — glazed brick in deep blue with rows of dragons and bulls in gold and white, hundreds of them, lining the processional way into the city. Much of it now stands reconstructed in Berlin. Whatever else it was, it was a piece of state architecture designed so that arriving at Babylon meant walking a long corridor between dragons."
+        ]
+      },
+ 
+      {
+        id: "apep",
+        name: "Apep",
+        epithets: "Apophis · The Serpent of Dissolution · Enemy of Ra · Egyptian",
+        domains: ["Annihilation", "Darkness", "Non-Being", "The Duat", "Appetite"],
+        symbols: ["The Endless Coil", "The Knife-Cut Body", "The Wax Figure", "The Twelfth Hour"],
+        portrait: art("Apep.png"),
+        portraitCaption: "Original artwork",
+        intro: "I do not want to rule. Understand the difference, because everyone gets it wrong. Set wants things. Marduk wanted authority. I want the boat to stop, and the light to stop, and the counting of hours to stop, and then nothing further — there is no second item on my list. Every night they cut me into pieces on the deck of that boat and every night I am whole again by the following evening. They cannot kill me. They can only be there when I arrive.",
+        myth: [
+          "Apep is the great serpent of the Egyptian underworld and the enemy of creation itself. He was not born of the gods and has no place in the ordered world; he exists outside it, in the dark water that preceded everything, and his single purpose is to end the sun's passage through the night and with it the continuation of existence.",
+          "Every night the barque of Ra sails the twelve hours of the Duat, and Apep rises against it, most dangerously in the deepest hours before dawn. He is fought by the crew — by Set at the prow with his spear, by the goddesses of the boat, by the cat of Ra who severs his head under the persea tree. He is cut, dismembered, burned. And by the following evening he is entire again, because he cannot be permanently destroyed, only repelled.",
+          "The Egyptians did their part on the ground. Temple ritual included the Book of Overthrowing Apep — priests made wax and papyrus figures of the serpent, named them, spat on them, bound them, cut them and burned them, and did this daily, and at times of eclipse or storm did it with urgency. Dawn was understood as the outcome of continuous effort. Nobody in Egypt regarded sunrise as automatic."
+        ]
+      },
+ 
+      {
+        id: "typhon",
+        name: "Typhon",
+        epithets: "Τυφῶν · Father of All Monsters · The Last Son of Gaia · Greek",
+        domains: ["Storm", "Volcanoes", "Monstrousness", "Rebellion", "Hurricanes"],
+        symbols: ["A Hundred Serpent Heads", "Wings Blotting the Sun", "Mount Etna", "Severed Sinews"],
+        portrait: art("Typhon.png"),
+        portraitCaption: "Original artwork",
+        intro: "I had him. That is the part they hurry past. I caught Zeus, I cut the sinews out of his hands and feet with his own sickle, and I left him folded in a cave in Cilicia unable to stand, and for a while the sky had no king. It took a thief and a goat-legged musician to get the sinews back. I am under a mountain in Sicily now and when it smokes that is me. Ask my children about me. There are a great many of them.",
+        myth: [
+          "Typhon was born of Gaia and Tartarus as her last child and her answer to Zeus's victory over the Titans, and the descriptions strain: taller than mountains, his head brushing the stars, arms reaching east and west, a hundred serpent heads growing from his shoulders that spoke in every voice — gods, bulls, lions, hissing — and wings that darkened the sun. The Olympians fled to Egypt at the sight of him and hid in animal shapes, which is how the Greeks explained Egyptian animal-headed gods.",
+          "Zeus stayed. And lost, in the first encounter. Typhon wrestled him down, took the adamantine sickle, cut out the sinews of his hands and feet and hid them wrapped in a bearskin in the Corycian cave, guarded by the she-dragon Delphyne, leaving Zeus helpless. Hermes and Pan stole them back — Pan's shout on the way is where the word panic comes from — and Zeus, restrung, came back with his thunderbolts.",
+          "The second fight ranged over the whole Mediterranean and ended with Zeus hurling Mount Etna on top of him. He is still there, and the eruptions and the earthquakes are attributed to him. With Echidna he fathered most of the monsters in Greek myth: Cerberus, the Hydra, the Chimera, Orthrus, the Sphinx, the Nemean lion. Almost every hero's defining labour is a fight with one of his children."
+        ]
+      },
+ 
+      {
+        id: "echidna",
+        name: "Echidna",
+        epithets: "Ἔχιδνα · The Viper · Mother of All Monsters · Greek",
+        domains: ["Monstrousness", "Caves", "Motherhood", "The Underground", "Ambush"],
+        symbols: ["The Serpent's Lower Half", "The Cave of Arima", "The Coiled Nest", "Sleepless Eyes"],
+        portrait: art("Echidna.png"),
+        portraitCaption: "Original artwork",
+        intro: "Beautiful down to the waist and a speckled serpent below it, in a cave, eating what comes near. That is Hesiod's summary and it is accurate. Every monster your heroes are famous for killing came out of me. The lion Heracles strangled. The Hydra. The Chimera. The dog at the gate of the dead. They are named on temples and in constellations and I am a line and a half in a poem. Whatever a mother is, I have been one more times than anybody.",
+        myth: [
+          "Echidna is described by Hesiod as half a beautiful woman with bright cheeks and half an enormous speckled serpent, living deep in a cave under the earth, deathless and unaging, apart from gods and men. She has almost no story of her own — no quest, no defeat, no dialogue. She exists in the genealogies as an origin point.",
+          "With Typhon she bore the monsters that structure Greek heroic myth: Orthrus the two-headed hound, Cerberus, the Lernaean Hydra, the Chimera, and in various accounts the Sphinx, the Nemean lion, Ladon, the Colchian dragon, the Caucasian eagle that ate Prometheus's liver, and the Crommyonian sow. Nearly every celebrated monster-killing in the tradition is a death in her family.",
+          "Her own end, when it is given, is offhand: Argus Panoptes, the hundred-eyed watchman, killed her in her sleep. That is the whole of it. The mother of everything the heroes are famous for overcoming is dispatched in a subordinate clause, which is a fair measure of how the tradition regarded her — as a source rather than a subject."
+        ]
+      },
+ 
+      {
+        id: "python",
+        name: "Python",
+        epithets: "Πύθων · The Serpent of Delphi · The Voice Before Apollo · Greek",
+        domains: ["Prophecy", "The Earth", "Oracles", "Rot", "Displacement"],
+        symbols: ["The Omphalos", "The Cleft in the Rock", "The Tripod", "Laurel Smoke"],
+        portrait: art("Python.png"),
+        portraitCaption: "Original artwork",
+        intro: "That oracle was mine. The cleft was mine, the vapour coming out of the ground was mine, and people came from everywhere to hear the earth speak through it long before a young archer arrived and shot me for it. He kept the site. He kept the tripod. He kept the woman on it, and he even kept my name — they call her the Pythia to this day. When you take a holy place from somebody, the honest thing is to stop wearing their name.",
+        myth: [
+          "Before Apollo, Delphi belonged to the earth. The oracle was Gaia's, and it was guarded by Python, a great serpent — in some accounts a she-dragon, Delphyne — coiled around the omphalos, the navel-stone marking the centre of the world. Prophecy came up out of a cleft in the rock as vapour, and it came from below.",
+          "Apollo, newly born and hunting a site for his own oracle, came to Delphi and shot the serpent with his arrows, and its body was left to rot at the sacred spot — one ancient etymology derives the name Pytho from the verb to rot. He took possession of the shrine and it became the most important oracle in the Greek world.",
+          "But the transfer is written all over what followed. The priestess who delivered Apollo's oracles was called the Pythia. The games founded to commemorate the killing were the Pythian Games. Apollo himself was called Pythian Apollo. And he was required to leave Delphi and be purified for the killing, and the Septerion festival re-enacted his exile every eight years. Greek religion did not pretend the site had always been his."
+        ]
+      },
+ 
+      {
+        id: "ladon",
+        name: "Ladon",
+        epithets: "Λάδων · The Hundred-Headed · Guardian of the Golden Apples · Greek",
+        domains: ["Vigilance", "Guardianship", "Gardens", "Sleeplessness", "The Stars"],
+        symbols: ["The Golden Apples", "The Coiled Tree", "A Hundred Voices", "The Constellation"],
+        portrait: art("Ladon.png"),
+        portraitCaption: "Original artwork",
+        intro: "A hundred heads and not one of them ever slept, all of them speaking in different voices, wound around one tree at the western edge of the world for as long as there has been a world. I did the job perfectly. And it ended the way it always does — a man with a bow, hired to fetch fruit, shooting from outside the wall. Hera put me in the sky afterwards, coiled around the pole. Go outside tonight and look north. I still have not closed my eyes.",
+        myth: [
+          "Ladon guarded the golden apples in the garden of the Hesperides at the far western edge of the world — apples given to Hera as a wedding gift, tended by the daughters of evening. He is described as having a hundred heads speaking with a hundred different voices, and as never sleeping, which is the only qualification that matters in a guard.",
+          "Heracles came for the apples as his eleventh labour. The accounts differ in a way that is telling: in some he shoots Ladon dead with an arrow over the garden wall; in others he never touches the dragon at all, but persuades Atlas to fetch the fruit while he holds up the sky in his place. The greatest guardian in Greek myth is defeated either at range or by being walked around entirely.",
+          "Hera set him among the stars in grief, and he became Draco — the dragon coiled around the north celestial pole, never setting, circling forever without rest. The constellation is claimed by several dragons in different sources, but Ladon is the commonest identification, and it suits: the guard who could not sleep was given a post where sleep is impossible."
+        ]
+      },
+ 
+      {
+        id: "draco",
+        name: "Draco",
+        epithets: "The Dragon at the Pole · The Circumpolar Coil · Never-Setting · Constellation",
+        domains: ["The Northern Sky", "Permanence", "Navigation", "Memory", "Deep Time"],
+        symbols: ["Thuban", "The Pole Star's Predecessor", "The Winding Path", "The Circumpolar Circle"],
+        portrait: art("Draco.png"),
+        portraitCaption: "Original artwork",
+        intro: "Several of them claim me. Ladon, coiled around the apple tree. The dragon Athena caught by the tail during the war with the Titans and flung into the sky before it could untangle itself. The one that never slept at Colchis. The Greeks could not agree and I have never felt the need to settle it. What I can tell you is that five thousand years ago the world turned on my back — the star at my coil was the pole, and the pyramids were aligned to it, and it is not the pole now. Even the sky moves.",
+        myth: [
+          "Draco winds between the two Bears in the far northern sky and is circumpolar from most of the northern hemisphere, meaning it never sets. It is one of the forty-eight constellations listed by Ptolemy and is among the oldest identified anywhere; the shape has been read as a serpent or dragon by Greek, Babylonian and other traditions independently.",
+          "Which dragon it is was never agreed. The most common Greek identification is Ladon, set in the sky by Hera after Heracles killed him. Another has it as the dragon thrown into the heavens by Athena during the battle with the Titans, hurled so hard it wound around the celestial pole and froze there. Others name the sleepless dragon of Colchis, or Python.",
+          "Its most remarkable fact is astronomical rather than mythological. The star Thuban, in the dragon's coil, was the north pole star around 3000 BCE — the axis the entire sky appeared to turn on when the Egyptian pyramids were built, and some of their shafts were aligned to it. The Earth's axis wobbles over a cycle of roughly twenty-six thousand years, so the pole has since moved to Polaris and will move on again. Draco held the centre of the sky and lost it, which is a more genuinely dragon-like fate than most of the ones invented for him."
+        ]
+      },
+ 
+      {
+        id: "colchian",
+        name: "Colchian Dragon",
+        epithets: "The Sleepless One · Guardian of the Golden Fleece · Of the Grove of Ares · Greek",
+        domains: ["Guardianship", "Sleeplessness", "Treasure", "Betrayal", "Teeth"],
+        symbols: ["The Golden Fleece", "The Oak in the Grove", "Sown Teeth", "The Drugged Branch"],
+        portrait: art("ColchianDragon.png"),
+        portraitCaption: "Original artwork",
+        intro: "I never slept. Not once, not for an hour, in all the years that fleece hung on that oak — and a foreign crew sailed in and could do nothing about it. Then the king's own daughter came out to the grove at night with a branch and a drug she had made herself, and sang to me, and I closed my eyes for the first and only time. I was not beaten. I was betrayed by the household I was guarding, which is how it usually goes.",
+        myth: [
+          "The dragon of Colchis lay coiled at the foot of the oak in the sacred grove of Ares where the Golden Fleece was hung, and its defining attribute is that it never slept. Jason and the Argonauts, having crossed the world for the fleece, arrived at the last obstacle with no plan that could work against something permanently awake.",
+          "Medea solved it. The king's daughter, a priestess of Hecate and a formidable practitioner in her own right, came to the grove and used a drugged preparation and incantation to close the dragon's eyes — sprinkling it with juniper, in one account, while singing to Sleep — and held it under long enough for Jason to take the fleece and run. Everything that followed in her story, the exile and the murders and the ruin, begins with her opening this door.",
+          "In some versions it also connects to another famous scene: dragon's teeth sown in a field spring up as armed men who fight each other to the death. Those teeth came from the dragon of Thebes killed by Cadmus, but the motif attached itself here too, and Jason was set the same task at Colchis. The dragon's teeth outlast the dragon and keep producing soldiers, which is a comment on something."
+        ]
+      },
+ 
+      {
+        id: "hydra",
+        name: "Hydra",
+        epithets: "Ὕδρα · The Lernaean · She of the Many Heads · Greek",
+        domains: ["Regeneration", "Venom", "Swamps", "Persistence", "Escalation"],
+        symbols: ["Regrowing Heads", "The Spring of Amymone", "The Firebrand", "The Immortal Head"],
+        portrait: art("Hydra.png"),
+        portraitCaption: "Original artwork",
+        intro: "Cut one off and two grow back. He learned that in the first minute and kept swinging anyway for a while, which tells you about heroes. In the end he did not beat me by strength — he brought a boy with a torch to burn each stump before it could open, and that is the only reason it worked. One of my heads could not die at all. It is under a rock outside Lerna, still alive, and it has been there the entire time you have been reading this.",
+        myth: [
+          "The Hydra lived in the swamps of Lerna, a child of Typhon and Echidna, with many heads — the number varies wildly by source — and breath and blood so venomous that the fumes alone could kill. Heracles' second labour was to destroy it, and it was the labour that nearly broke the pattern: each head he crushed was replaced by two, so the problem grew faster than he could work.",
+          "He won by changing method. His nephew Iolaus brought a burning brand and cauterised each neck the instant a head came off, so nothing could regrow. The last head was immortal and could not be killed at all, so Heracles cut it off and buried it under an enormous rock beside the road, where it presumably remains. Hera sent a giant crab to hinder him during the fight and it was crushed underfoot, and she set it in the sky as Cancer for trying.",
+          "Eurystheus refused to count the labour because Heracles had accepted help. But the Hydra kept working on him regardless: he dipped his arrows in her blood, and those arrows went on to kill Nessus the centaur, whose poisoned blood was later used on the shirt that killed Heracles himself. She takes fifty years to finish the job and she does finish it."
+        ]
+      },
+ 
+      {
+        id: "jormungandr",
+        name: "Jormungandr",
+        epithets: "Jörmungandr · The Midgard Serpent · He Who Bites His Own Tail · Norse",
+        domains: ["The Encircling Sea", "Boundaries", "Venom", "Ragnarok", "Waiting"],
+        symbols: ["The Coiled Ocean", "The Tail in the Mouth", "The Ox-Head Hook", "The Ninth Step"],
+        portrait: art("Jormungandr.png"),
+        portraitCaption: "Original artwork",
+        intro: "Odin threw me into the sea when I was small because of something a seer said I would become. I grew until I went all the way around the world and had to bite my own tail to have anywhere left to put it. That is the entire content of my life: I was thrown away, and I got so large that I became the edge of everything. Thor has hooked me once. He will kill me at the end. I will kill him back nine steps later, and I have been counting.",
+        myth: [
+          "Jörmungandr is the middle child of Loki and the giantess Angrboda, brother to Fenrir and Hel. When the gods learned what the three of them were prophesied to become, Odin flung the serpent into the deep sea encircling Midgard. It grew until it ringed the entire world and could grasp its own tail in its mouth, and that ring is the horizon of the ocean.",
+          "Thor has met him twice before the end. Once at the hall of Útgarða-Loki, disguised as an enormous grey cat that Thor was challenged to lift — he got one paw off the floor, which appalled everyone present, because he had partly hauled the world-serpent out of the sea. Once fishing with the giant Hymir, using an ox head as bait, when he hooked the serpent and dragged it up thrashing to the gunwale with his feet driven through the hull, hammer raised — and Hymir, terrified, cut the line.",
+          "At Ragnarok he comes out of the sea and the water floods the land, and he and Thor find each other. Thor kills him. Then he walks nine paces through the venom the serpent has poured over him and falls dead. Neither survives the other, and the poems are quite precise about the nine steps."
+        ]
+      },
+ 
+      {
+        id: "fafnir",
+        name: "Fafnir",
+        epithets: "Fáfnir · The Dwarf Who Became a Worm · Keeper of Andvari's Gold · Norse",
+        domains: ["Greed", "Transformation", "Cursed Gold", "Isolation", "Poison"],
+        symbols: ["The Hoard", "The Helm of Terror", "The Furrowed Path to Water", "The Ring Andvaranaut"],
+        portrait: art("Fafnir.png"),
+        portraitCaption: "Original artwork",
+        intro: "I was not born like this. I was a person, with a father and two brothers, and gold came into our house as blood-payment and I killed my father for it and drove my brother out. Then I went up onto the heath to lie on it. And year by year, without noticing, I became the thing you see — because that is what the gold does, and I would like you to notice that I did not have to be tricked or cursed by anyone. I simply wanted it more than I wanted anything else.",
+        myth: [
+          "Fáfnir was the son of Hreiðmarr and a dwarf, not a dragon. Loki, having killed Hreiðmarr's other son Ótr in the shape of an otter, was made to pay compensation, and got the gold from the dwarf Andvari — who cursed it and its ring as he handed it over, saying it would destroy every owner. Fáfnir killed his father for that gold, refused his brother Reginn any share, and carried it to Gnitaheið, where he lay on it and slowly turned into a serpent.",
+          "Reginn raised Sigurd and set him to the killing, forging him the sword Gram. On Reginn's advice Sigurd dug a pit in the track Fáfnir wore going down to drink, hid in it, and drove the sword up into the belly as the dragon passed over. Dying, Fáfnir spoke with him a long while — one of the great scenes in Norse literature — warning him that the gold would destroy him too, which Sigurd already knew and accepted.",
+          "Reginn asked him to roast the heart. Sigurd burned his thumb on it, put it in his mouth, and understood at once what the birds overhead were saying: that Reginn meant to kill him next. So he killed Reginn, took the hoard, and went on to be destroyed by it in due course, exactly as promised. The story is the ancestor of a great deal of later dragon literature, and its point has never been the fight."
+        ]
+      },
+ 
+      {
+        id: "nidhogg",
+        name: "Nidhogg",
+        epithets: "Níðhöggr · The Malice-Striker · Gnawer at the Root · Norse",
+        domains: ["Decay", "Corpses", "Undermining", "Oathbreakers", "Persistence"],
+        symbols: ["The Chewed Root", "Náströnd", "The Squirrel Messenger", "Dark Wings"],
+        portrait: art("Nidhogg.png"),
+        portraitCaption: "Original artwork",
+        intro: "There is a tree holding up nine worlds and I am underneath it, chewing. Not attacking — chewing, steadily, for as long as there has been a tree, and the Norns pack the root with clay and water every day to keep pace with me. A squirrel runs up and down carrying insults between me and an eagle at the top, which I gather people find comic. Meanwhile I eat oathbreakers and murderers on a shore of corpses. Nothing falls all at once. Everything falls from the bottom.",
+        myth: [
+          "Níðhöggr lies beneath Yggdrasil in Niflheim and gnaws at one of the three great roots of the world-tree. He is not the only thing damaging it — deer eat the branches, the trunk rots — but he is the most persistent, and the Norns tend the root daily with water and clay from the Well of Urðr specifically to counter what he does. The world is maintained against constant undermining rather than standing on its own.",
+          "The squirrel Ratatoskr runs the length of the trunk between Níðhöggr at the root and an unnamed eagle at the crown, carrying insults each way. It is a small comic detail in a bleak setting, and it has the effect of making the tree feel inhabited rather than symbolic.",
+          "He also feeds. On the shore called Náströnd, corpse-strand, stands a hall woven of serpents' spines where oathbreakers, murderers and seducers wade in venom, and Níðhöggr sucks the bodies of the dead. And in the Völuspá, after Ragnarok, after the fire and the flood, when the new green earth rises and the surviving gods return — the seeress sees him come flying up from below with corpses in his wings, and then she sinks. The very last image of the Norse cosmos is that he is still there."
+        ]
+      },
+ 
+      {
+        id: "ddraiggoch",
+        name: "Y Ddraig Goch",
+        epithets: "The Red Dragon · The Dragon of the Britons · Of Vortigern's Tower · Welsh",
+        domains: ["Sovereignty", "Prophecy", "War", "Nationhood", "The Land"],
+        symbols: ["The Red Field", "The Two Vessels", "The Drained Pool", "The Foundations That Fell"],
+        portrait: art("DdraigGoch.png"),
+        portraitCaption: "Original artwork",
+        intro: "A king kept trying to build a tower and every night the foundations sank. His counsellors told him to find a boy with no father and spill his blood on the ground, and they found one, and the boy told them the truth instead: dig, and you will find a pool, and in the pool two hollow stones, and in the stones two sleeping dragons. Me and a white one. We woke and we fought, and I lost twice and won the third time. I am on the flag now. He was right about all of it.",
+        myth: [
+          "The story comes through Nennius and then Geoffrey of Monmouth. King Vortigern, fleeing the Saxons he had invited in, tried to build a fortress in Snowdonia, and each night's work collapsed. His magicians advised sprinkling the foundations with the blood of a boy born without a father. The boy found was Ambrosius, or in Geoffrey's version Merlin, and he told them their advice was worthless: beneath the site was a pool, and under the pool two hollow stones, and inside them two dragons.",
+          "They dug, and drained it, and the dragons woke and fought — a red one and a white one — and the boy interpreted. The red dragon is the Britons and the white is the Saxons; the red is losing now but will drive the white out in the end. This is the first appearance of the prophetic Merlin in literature and it is a political statement in the shape of a monster fight.",
+          "In the Mabinogion the two dragons appear again in Lludd and Llefelys as one of three plagues on Britain, the red one's scream on May eve making women miscarry and animals barren, and they are trapped by getting them drunk on mead and burying them in a stone chest at Dinas Emrys. Y Ddraig Goch is now on the national flag of Wales, which makes it one of very few dragons in the world with formal constitutional standing."
+        ]
+      },
+ 
+      {
+        id: "barrowwyrm",
+        name: "Barrow Wyrm",
+        epithets: "The Dragon of Beowulf · Keeper of the Hoard · Fifty Winters in the Dark · Anglo-Saxon",
+        domains: ["Treasure", "Vengeance", "Old Age", "Fire", "The Grave"],
+        symbols: ["The Stolen Cup", "The Barrow", "The Iron Shield", "The Last Survivor's Gold"],
+        portrait: art("BarrowWyrm.png"),
+        portraitCaption: "Original artwork",
+        intro: "Somebody buried a nation's treasure in a mound because there was nobody left alive to inherit it, and then he died too, and I moved in and lay on it for three hundred years and harmed nobody. Then a slave running from a beating crawled in and took one cup. One. I burned the country for it. An old king came up the hill in iron and we killed each other, and they buried the gold again with him. It went back into the ground and no one has ever been the better for it.",
+        myth: [
+          "The dragon in the last third of Beowulf is unnamed and is the model for most of the dragons in English literature since — Tolkien's Smaug is directly descended from it. The hoard it guards was buried by the last survivor of a forgotten people, who spoke a famous lament over it: no one left to carry the cup, no one to polish the helmet, everything made for hands that are gone. The dragon simply found it and coiled on it for three centuries.",
+          "A fugitive slave, fleeing punishment, stumbled into the barrow and stole a single gilded cup to buy his way back into favour. The dragon woke, found the theft, and burned the countryside methodically, including Beowulf's own hall. The poem is precise about the proportion: one cup, an entire kingdom.",
+          "Beowulf, an old king now, went to fight it with an iron shield and eleven companions, all of whom fled except Wiglaf. Together they killed it, and it killed Beowulf. The treasure was dug out of the barrow and buried again in his burial mound, useless to everyone, and the poem ends with the Geats certain their neighbours will destroy them now that he is gone. It is the least triumphant dragon-slaying in literature and the most honest about what a hoard is."
+        ]
+      },
+ 
+      {
+        id: "zmey",
+        name: "Zmey Gorynych",
+        epithets: "Змей Горыныч · The Mountain Serpent · Three Heads and Seven Tails · Slavic",
+        domains: ["Fire", "Abduction", "Mountains", "Regrowth", "Raiding"],
+        symbols: ["Three Heads", "Copper Snout", "Iron Claws", "The Kalinov Bridge", "The River of Fire"],
+        portrait: art("ZmeyGorynych.png"),
+        portraitCaption: "Original artwork",
+        intro: "Three heads, seven tails, copper snout, iron claws, and I come down out of the mountains breathing fire and take what I want. Cut a head off and it grows back before you have finished the swing — you have to burn the stump, and very few of them think of it in time. I guard the bridge over the river of fire between the living world and the other one. Everybody who comes that way has to get past me, and most of them do not.",
+        myth: [
+          "Zmey Gorynych is the great dragon of Russian and wider Slavic folklore, a fixture of the byliny — the heroic songs. He is usually three-headed, though sometimes six, nine or twelve, with the number often a multiple of three, and he is described with a copper snout and iron claws. His name is generally read as coming from gora, mountain, so he is the serpent of the mountains, and he flies, and he breathes fire.",
+          "He raids. He carries off princesses and villagers to his lair, burns settlements, and demands tribute. His severed heads regrow unless the stumps are treated with fire, which puts him in the same family as the Hydra. His great opponents are the bogatyrs, especially Dobrynya Nikitich, who fought him for three days and eventually made a truce that Zmey immediately broke by abducting the prince's niece.",
+          "He also guards the Kalinov Bridge over the Smorodina, the river of fire that separates the world of the living from the realm of the dead. Every hero who crosses over must deal with him first. It gives him a function beyond menace: he is the customs post at the border of the other world, and he is not letting anyone through on their own terms."
+        ]
+      },
+ 
+      {
+        id: "azidahaka",
+        name: "Azi Dahaka",
+        epithets: "Aži Dahāka · Zahhāk · The Three-Jawed · Bound Under Damavand · Persian",
+        domains: ["Tyranny", "Deceit", "Serpents", "Plague", "Imprisonment"],
+        symbols: ["Two Shoulder Serpents", "Three Mouths", "Six Eyes", "The Chain", "Mount Damavand"],
+        portrait: art("AziDahaka.png"),
+        portraitCaption: "Original artwork",
+        intro: "A serpent grew out of each of my shoulders after a kiss, and they had to be fed, and what they ate was the brains of two young men every single day for a thousand years. I ruled the world in that time. A blacksmith whose sons had been taken raised his leather apron on a pole for a banner, and that apron became the standard of an empire. They did not kill me. They chained me inside a mountain, and I am there now, and at the end of things the chain gives.",
+        myth: [
+          "Aži Dahāka appears in the Avesta as a monstrous serpent with three jaws, six eyes and three heads, created by Angra Mainyu as the most destructive thing in existence — a being of lies and pestilence made to ruin the world. In the later Persian epic, the Shahnameh, he becomes Zahhāk, a human king, and the story acquires its most disturbing shape.",
+          "Zahhāk was an Arab prince corrupted by Ahriman disguised as a cook, who kissed him on both shoulders — and from each kiss a black serpent grew that could not be removed, and would only be quieted by being fed human brains. Two young men were killed for them daily. Zahhāk seized the throne of Persia and reigned for a thousand years, and the world went dark under him: springs dried, truth was hidden, and the tally of the dead never stopped.",
+          "He was brought down by Kaveh, a blacksmith who had lost seventeen sons to the serpents and finally refused, tearing off his leather apron and raising it on a spear as a rallying banner. That apron, the Derafsh Kaviani, became the royal standard of Persia for centuries. Fereydun led the revolt and defeated him, but was told not to kill him — instead he bound him in a cave inside Mount Damavand, where he remains chained, and at the end of the world he will break loose and have to be fought again."
+        ]
+      },
+ 
+      {
+        id: "vritra",
+        name: "Vritra",
+        epithets: "वृत्र · The Enveloper · He Who Held the Waters · Hindu",
+        domains: ["Drought", "Obstruction", "The Withheld", "Cosmic Order", "Release"],
+        symbols: ["The Ninety-Nine Coils", "The Dammed River", "The Vajra", "The Broken Fortress"],
+        portrait: art("Vritra.png"),
+        portraitCaption: "Original artwork",
+        intro: "I coiled around the mountains and I held the waters, all of them, every river that has ever run — inside me, going nowhere. That is what my name means: the one who encloses. The world dried and cracked and waited. Then Indra drank himself brave and came with a thunderbolt made from a dead sage's bones, and split me, and the seven rivers ran out of my body and have not stopped since. You are drinking me. Everyone always has been.",
+        myth: [
+          "Vritra is the great adversary of the Rigveda, a serpent or dragon who lay coiled around the mountains and held back the waters of the world, causing universal drought. He is called the enveloper, and the conflict with him is the central heroic act of the oldest layer of Indian religion — the hymn celebrating it is among the most repeated in the Veda.",
+          "Indra fought him after drinking soma for strength, armed with the vajra, the thunderbolt, forged by Tvastar from the bones of the sage Dadhichi, who gave his own body for the purpose. Indra broke Vritra's ninety-nine fortresses and split him open, and the waters burst out and ran down to the sea, and the sun and the dawn were released with them. The act is described as freeing the rivers rather than merely killing a monster.",
+          "The later tradition complicates it considerably. In the Puranas, Vritra is a brahmin — created by Tvastar to avenge a son Indra had killed — and Indra's victory becomes the sin of brahmin-murder, for which he must be purified and from which he suffers lasting consequence, at one point fleeing and hiding. The dragon-slaying that founded the pantheon's chief god also permanently stained him."
+        ]
+      },
+ 
+      {
+        id: "vasuki",
+        name: "Vasuki",
+        epithets: "वासुकि · King of the Nagas · The Churning Rope · Ornament of Shiva · Hindu",
+        domains: ["Serpents", "Endurance", "Sacrifice", "Poison", "Cooperation"],
+        symbols: ["The Coiled Necklace", "Mount Mandara", "The Ocean of Milk", "Halahala"],
+        portrait: art("Vasuki.png"),
+        portraitCaption: "Original artwork",
+        intro: "They needed a rope long enough to spin a mountain, so they used me. Gods on one end, asuras on the other, the mountain on a turtle's back, and the two of them hauled me back and forth for an age until the ocean gave up everything in it. It very nearly killed me — the friction, and the poison I brought up under the strain. Shiva drank that poison and it turned his throat blue. I am worn around his neck now. I did the work and I am wearing the reward.",
+        myth: [
+          "Vasuki is the king of the nagas, the serpent beings, and he is best known as the rope in the churning of the ocean of milk. Gods and asuras, seeking amrita, the nectar of immortality, uprooted Mount Mandara to use as a churning staff and set it on the back of Vishnu in the form of a turtle. Vasuki volunteered to be the cord — wound around the mountain, with the devas pulling at one end and the asuras at the other.",
+          "The churning went on for an age and brought up everything the ocean held: the moon, the goddess Lakshmi, the wish-fulfilling cow, the divine physician with the amrita at last. It also brought up halahala, a poison so virulent it would have destroyed all creation, which came in part from Vasuki's own exhaustion and pain under the strain. Shiva drank it and held it in his throat rather than swallow it, which turned his throat blue and gave him the name Nilakantha.",
+          "Vasuki is the serpent Shiva wears coiled about his neck, and he appears again and again as a figure of endurance and willing use. He survived the great snake sacrifice of King Janamejaya through his sister's son Astika. The nagas in Hindu and Buddhist tradition are not simply monsters — they are a people, with kings and cities and grievances, and Vasuki is their sovereign."
+        ]
+      },
+ 
+      {
+        id: "shesha",
+        name: "Shesha",
+        epithets: "शेष · Ananta, the Endless · The Couch of Vishnu · Bearer of the Worlds · Hindu",
+        domains: ["Time", "Support", "Remainder", "Sleep", "Dissolution"],
+        symbols: ["A Thousand Hoods", "The Cosmic Ocean", "The Sleeping God", "The Coil Beneath Everything"],
+        portrait: art("Shesha.png"),
+        portraitCaption: "Original artwork",
+        intro: "My name means what is left over. When everything is dissolved and the count is finished and nothing at all remains — I remain. A thousand hoods, floating on the causal ocean, with a sleeping god lying on my coils dreaming the next universe. I hold the worlds up. And when the age ends I open my mouths and the fire comes out of them and I burn all of it down, and then I float, and wait, and the dreaming starts again.",
+        myth: [
+          "Shesha, also called Ananta, the endless, is the primordial serpent of Hindu cosmology — a naga of a thousand heads floating on the causal ocean, on whose coils Vishnu lies in yogic sleep between the destruction of one universe and the creation of the next. From Vishnu's navel in that sleep grows the lotus from which Brahma emerges to make the world again.",
+          "His name means the remainder, what is left when everything else has been accounted for. He holds all the planets of the universe on his hoods and is said to sing the glories of Vishnu continuously with all his mouths. When he uncoils, time moves forward; when he coils back, time stops — one of the more elegant images of duration anywhere.",
+          "He is also the destroyer. At the end of a kalpa, fire issues from his mouths and consumes creation. And he is credited with incarnating alongside Vishnu's avatars — as Lakshmana beside Rama, and as Balarama beside Krishna — so the serpent who carries the world also walks in it as a brother."
+        ]
+      },
+ 
+      {
+        id: "aoguang",
+        name: "Ao Guang",
+        epithets: "敖廣 · Dragon King of the East Sea · Lord of Rain and Tribute · Chinese",
+        domains: ["The Sea", "Rain", "Bureaucracy", "Treasure", "Grievance"],
+        symbols: ["The Crystal Palace", "The Rain Memorial", "The Pearl", "The Four Seas"],
+        portrait: art("AoGuang.png"),
+        portraitCaption: "Original artwork",
+        intro: "I am an official. My brothers hold the other three seas and we report upward like everyone else, and when a drought comes it is because a petition has not been approved yet, and I would ask you to take that up with the ministry rather than with me. In one century a monkey walked into my treasury and took the pillar that measures the ocean. In another a child killed my son and skinned him. I filed complaints on both occasions. You may judge how well that went.",
+        myth: [
+          "The Dragon Kings, the Longwang, rule the four seas — Ao Guang in the East, Ao Qin in the South, Ao Run in the West, Ao Shun in the North — and Ao Guang is the eldest and most prominent. They live in crystal palaces beneath the water with courts, ministers and treasuries, and they are responsible for rainfall, which makes them the most practically important deities in an agricultural country.",
+          "They are civil servants. Rain is not granted by whim but requested, authorised and delivered, and a Dragon King who releases rain without proper approval can be punished for it — there are stories of exactly that, ending in execution. When drought struck, villagers would petition the local dragon king temple, and if that failed, they might carry his image out into the sun to let him feel it.",
+          "Ao Guang is best known for two humiliations. Sun Wukong came to his palace demanding a weapon and walked off with the iron pillar that measured the depth of the seas, plus armour extorted from all four brothers. And Nezha killed his son Ao Bing, pulled out his sinews and skinned him — and when Ao Guang went up to heaven to complain, Nezha ambushed him on the way and beat him. He is the deity most often on the receiving end in Chinese folklore, which is itself a kind of tribute to how thoroughly ordinary people identified heaven with officialdom."
+        ]
+      },
+ 
+      {
+        id: "yinglong",
+        name: "Yinglong",
+        epithets: "應龍 · The Winged Dragon · General of the Yellow Emperor · Chinese",
+        domains: ["Rain", "War", "Wings", "Drought", "Exile"],
+        symbols: ["Feathered Wings", "The Battle of Zhuolu", "The Dry South", "The River's Course"],
+        portrait: art("Yinglong.png"),
+        portraitCaption: "Original artwork",
+        intro: "I am old enough to have grown wings, which takes a thousand years, and I fought in the first war there ever was. I killed Chiyou at Zhuolu and I killed the giant Kuafu, and I used so much of my water doing it that I could not go back up to heaven afterwards. So I stayed in the south. That is why the south is wet and the north is dry, and why in a drought they still make a clay image of me and hope I notice.",
+        myth: [
+          "Yinglong is the winged dragon, distinguished from other Chinese dragons by having actual wings — in the traditional reckoning a dragon grows them only after a thousand years. He is a rain-bringer and a servant of the Yellow Emperor, and he appears at the founding conflict of Chinese legendary history.",
+          "At the Battle of Zhuolu, the Yellow Emperor fought Chiyou, the horned war-god of the Nine Li. Chiyou summoned fog and storm; Yinglong was sent to counter it by gathering the waters, and after the drought-goddess Ba dispelled the weather, Yinglong killed Chiyou. He is also said to have killed the giant Kuafu, who died chasing the sun.",
+          "Having spent his waters, he could not return to heaven, and settled in the south — which is the traditional explanation for the wet south and the arid north. In times of drought people made his image in clay in the hope that like calls to like and the rain would follow. He is credited too with using his tail to mark out the channels of the rivers during the great flood, so that Yu the Great could dig where the dragon had drawn."
+        ]
+      },
+ 
+      {
+        id: "ryujin",
+        name: "Ryujin",
+        epithets: "龍神 · Watatsumi · Dragon God of the Sea · Keeper of the Tide Jewels · Japanese",
+        domains: ["The Sea", "Tides", "Storms", "Fishing", "Sovereignty"],
+        symbols: ["The Tide Jewels", "The Coral Palace", "Sea Turtles", "The Wide Mouth"],
+        portrait: art("Ryujin.png"),
+        portraitCaption: "Original artwork",
+        intro: "I keep two jewels. One raises the tide and one lowers it, and with those two objects any coast on earth belongs to whoever is holding them. My palace is at the bottom, built of red and white coral, and a day there is a hundred years up where you are — which has caused a certain amount of grief to visitors who did not believe me when I warned them. My daughter married a man from the surface. It did not end well, and I have not intervened since.",
+        myth: [
+          "Ryūjin, also called Watatsumi, is the dragon god of the sea in Japanese myth, dwelling in Ryūgū-jō, a palace of coral on the seabed where the four seasons occupy four sides and time runs differently from the world above. He commands the tides through two jewels, kanju and manju, which draw the sea down and call it up.",
+          "The Kojiki tells of Hoori, who lost his brother's fishhook and went down to the palace to find it, married Ryūjin's daughter Toyotama-hime, and stayed three years believing them days. On leaving he was given the tide jewels, with which he subdued his brother. His wife followed him to shore to give birth and asked him not to look — he looked, saw her true form as a sea creature, and she left him and sealed the way between the sea and the land. Their grandson was Jimmu, the first emperor.",
+          "The other famous story is Urashima Tarō, who rescued a turtle, was taken to the palace, spent what felt like a few days there, and returned to find three hundred years had passed and everyone he knew long dead. Ryūjin is not malicious in either tale. The sea simply runs on its own time, and people who go into it do not come back to the world they left."
+        ]
+      },
+ 
+      {
+        id: "orochi",
+        name: "Yamata no Orochi",
+        epithets: "八岐大蛇 · The Eight-Forked Serpent · Eight Heads, Eight Tails · Japanese",
+        domains: ["Floods", "Devouring", "Rivers", "Sacrifice", "Hidden Steel"],
+        symbols: ["Eight Vats of Sake", "Moss and Cedar on the Back", "Red Eyes", "The Sword in the Tail"],
+        portrait: art("YamataNoOrochi.png"),
+        portraitCaption: "Original artwork",
+        intro: "Eight heads, eight tails, eyes like winter cherries, a body eight valleys and eight hills long with cedars and moss growing on my back, and I came for a daughter every year and they gave her to me every year. Then a banished storm god put eight gates up with a vat of strong sake behind each one, and every head went for its own vat, and I lay down drunk. He cut me apart while I slept it off. And in my tail he found a sword — and that sword is still one of the three treasures of the Japanese throne.",
+        myth: [
+          "Susanoo, banished from heaven for wrecking his sister Amaterasu's rice fields and worse, came down to Izumo and found an old couple weeping with their last daughter. Yamata no Orochi had taken seven of their eight daughters, one a year, and had come for Kushinada-hime. The serpent is described precisely: eight heads and eight tails, eyes red as winter cherries, its body spanning eight valleys and eight hills, with cedar and moss growing on its back and its belly perpetually raw and bleeding.",
+          "Susanoo asked for the girl in marriage in exchange for dealing with it, then turned her into a comb and put her in his hair for safekeeping. He had the couple brew sake eight times over — ferociously strong — and build a fence with eight gates, and set a vat behind each. Each head went to its own vat, drank, and the whole creature fell into a stupor. He cut it into pieces, and the river ran red.",
+          "In the fourth tail his blade struck something and chipped. Inside was a sword, which he named Ame-no-Murakumo and presented to Amaterasu as a peace offering. It was later renamed Kusanagi, the grass-cutter, and it is one of the three Imperial Regalia of Japan. The country's most sacred sword came out of a dragon that had been drunk under the table."
+        ]
+      },
+ 
+      {
+        id: "quetzalcoatl",
+        name: "Quetzalcoatl",
+        epithets: "The Feathered Serpent · Ehecatl, the Wind · Lord of the Morning Star · Mesoamerican",
+        domains: ["Wind", "Learning", "Creation", "Priesthood", "Return"],
+        symbols: ["Quetzal Plumes", "The Conch Wind-Jewel", "Maize", "The Morning Star", "The Raft of Serpents"],
+        portrait: art("Quetzalcoatl.png"),
+        portraitCaption: "Original artwork",
+        intro: "I went down into the land of the dead to gather the bones of the people who came before, because the world was empty and I did not want to make something new when something had already been lost. I dropped them. They broke, and the quails got at them, and that is why human beings come in different sizes and none of you last very long. I bled on the pieces and you stood up. I have never once regretted going down there and I have never stopped being sorry that I stumbled.",
+        myth: [
+          "Quetzalcoatl, the feathered serpent, is among the oldest and most widespread deities of Mesoamerica — attested at Teotihuacan centuries before the Aztecs, known as Kukulkan to the Maya and Q'uq'umatz to the K'iche'. He is the wind as Ehecatl, wearing a conch-shell jewel and a beaked mask; he is the morning star; he is the patron of priests, learning, writing and the calendar.",
+          "In the Aztec account he descended to Mictlan, the underworld, to recover the bones of the people of the previous age so that humanity could be remade. The lord of the dead set him obstacles and he lost his grip; the bones shattered and were pecked by quails. He gathered the fragments anyway, and the gods ground them and he let blood from himself onto the meal, and from that the present humanity was formed — imperfect and short-lived because the bones broke. He is also said to have brought maize to people, in one telling by turning into an ant to follow other ants to where it was hidden inside a mountain.",
+          "His departure is the famous part. Shamed or tricked — accounts vary, and in some he is made drunk by Tezcatlipoca and disgraces himself — he left the city of Tula and travelled to the eastern coast, where he either burned himself and rose as the morning star or sailed away on a raft of serpents, promising to return. The idea that Moctezuma took Cortés for the returning Quetzalcoatl is repeated constantly and is considered doubtful by most historians now, likely constructed after the conquest rather than believed during it."
+        ]
+      },
+ 
+      {
+        id: "leviathan",
+        name: "Leviathan",
+        epithets: "לִוְיָתָן · The Coiling One · The Sea's Own · Levantine",
+        domains: ["The Deep", "Chaos", "Untamed Creation", "Terror", "The Feast at the End"],
+        symbols: ["The Fishhook That Will Not Hold", "Scaled Armour", "Fire From the Mouth", "The Boiling Sea"],
+        portrait: art("Leviathan.png"),
+        portraitCaption: "Original artwork",
+        intro: "Can you draw me out with a hook. Can you put a cord through my tongue, or a thorn through my jaw, or fill my hide with harpoons. Will I make a covenant with you, will I speak softly to you, will you take me for a servant forever. Will you play with me as with a bird, and put me on a leash for your girls. That is not me boasting. That is a god asking a suffering man a series of questions to which the answer is no, and I am the answer.",
+        myth: [
+          "Leviathan appears across the Hebrew Bible as the great sea creature, with clear roots in older Canaanite material — the Ugaritic texts describe Baal defeating Lotan, the fleeing serpent, the twisting serpent with seven heads, and the Hebrew phrasing is close enough to be recognisably the same tradition. In Psalms and Isaiah, God crushes the heads of Leviathan; in Isaiah, a day is coming when he will be punished with a hard and great sword.",
+          "The longest treatment is in Job, and it is unlike the others. God, answering Job out of the whirlwind, spends a whole chapter on Leviathan — not as an enemy to be defeated but as an exhibit. Can you catch him, can you tame him, can you bargain with him, would you dare rouse him. His sneezes flash light, his eyes are like the dawn, he makes the deep boil like a pot and leaves a shining wake behind him. Nothing on earth is his equal, and he is made without fear. The point being made to Job is that creation contains things that are not for him.",
+          "Later Jewish tradition took a different turn: Leviathan is kept until the end of days, when the righteous will feast on his flesh in a tabernacle made from his hide. Christian writers folded him into imagery of the devil and of hell's mouth, and Hobbes borrowed the name for the state. But the oldest layer is simpler and stranger — a creature so far beyond handling that pointing at it is considered a sufficient answer to the problem of suffering."
+        ]
+      }
+ 
+    ]
+  },
+  lhp: {
+    label: "Left-Hand Path",
+    blurb: "Almost every name here belonged to somebody else first. Astarte became Astaroth. Baal-zebul became Beelzebub. The gods of the people next door were not argued with — they were demoted, renamed, and filed under the enemy. What follows is that list, read back the other way: the adversary as prosecutor, the serpent who told the truth, and the ones who said no and meant it.",
+    deities: [
+ 
+      {
+        id: "lucifer",
+        name: "Lucifer",
+        epithets: "The Light-Bearer · Helel ben Shachar, Shining One, Son of Dawn · Adversarial",
+        domains: ["Illumination", "Pride", "Rebellion", "The Morning Star", "Self-Sovereignty"],
+        symbols: ["Venus at Dawn", "The Torch", "The Fallen Star", "The Broken Crown"],
+        portrait: art("Lucifer.png"),
+        portraitCaption: "Original artwork",
+        intro: "Read the verse. Isaiah, chapter fourteen: how art thou fallen, O Shining One, son of the dawn. Read the four verses before it and you will find it is a funeral taunt aimed at the king of Babylon by a people he had crushed, and there is not one word in it about heaven, or angels, or me. A Latin translator wrote lucifer — light-bearer, the name of the morning star — and fifteen hundred years later that is a person. I am, quite literally, a translation.",
+        myth: [
+          "The name is Latin and means light-bringer: lucifer was the ordinary Roman word for Venus as the morning star, the last light before dawn. Jerome used it in the Vulgate to render the Hebrew helel ben shachar in Isaiah 14, in a passage explicitly introduced as a taunt-song against the king of Babylon — a mocking dirge for a tyrant, drawing on an older Canaanite motif of a star-god who tried to climb above the others and was cast down.",
+          "Over centuries the passage was read as describing the fall of a rebel angel, fused with a line in Luke about Satan falling like lightning and with the war in heaven in Revelation, and the name attached itself to the figure. Milton then gave that figure the greatest speeches in English poetry — better to reign in hell than serve in heaven — and Paradise Lost did more to fix Lucifer's character than any scripture ever had.",
+          "The Romantics read Milton and drew the obvious conclusion. Blake said he was of the devil's party without knowing it; Shelley put Prometheus in the same seat. From there the Luciferian current in modern occultism takes the figure not as evil but as the principle of illumination, individuation and refusal — knowledge sought without permission, and the willingness to be cast out rather than kept. Whether that reading is faithful to the sources or a nineteenth-century construction is exactly the argument, and both sides are aware of it."
+        ]
+      },
+ 
+      {
+        id: "satan",
+        name: "Satan",
+        epithets: "ha-Satan, the Adversary · The Accuser · Prosecutor of the Heavenly Court · Adversarial",
+        domains: ["Opposition", "Testing", "Accusation", "Doubt", "Independence"],
+        symbols: ["The Court Docket", "The Circuit Walked", "The Wager", "The Question"],
+        portrait: art("Satan.png"),
+        portraitCaption: "Original artwork",
+        intro: "In the oldest book I appear in, I am an employee. The sons of God present themselves and I present myself with them, and I am asked where I have been, and I say: going to and fro in the earth, and walking up and down in it. Then I say the only interesting thing anyone says in the entire scene — does Job fear God for nothing? Take away the herds and the children and see what is left. And God says: go on then. Try it. I did not tempt anybody. I proposed a test, and it was authorised.",
+        myth: [
+          "In the Hebrew Bible ha-satan is a title with a definite article — the adversary, the accuser — and it names a function rather than a proper name. In Job he is a member of the divine court whose job is to walk the earth and bring back accusations, and everything he does to Job is explicitly permitted and bounded. In Zechariah he stands to accuse the high priest. In Numbers, an angel of the LORD stands in Balaam's road as a satan, an obstruction. It is a role in a courtroom, and the courtroom is God's.",
+          "The transformation into a singular cosmic enemy happens later, largely in the Second Temple period under Persian influence, where a genuinely dualist system was available to borrow from, and then in the New Testament, where the devil is a tempter and a prince of this world with a kingdom of his own. By the time the Church Fathers finish, the prosecutor has become the defendant.",
+          "Modern Satanism splits sharply over what to do with him. The LaVeyan and Satanic Temple traditions treat Satan as a symbol — of carnality, scepticism, and opposition to arbitrary authority — with no belief in a literal being. Theistic Satanism treats him as real and worthy of veneration. Both point at the same feature: he is the one who asks whether the piety would survive if the rewards were removed, which is a genuinely uncomfortable question and the reason the book of Job exists at all."
+        ]
+      },
+ 
+      {
+        id: "lilith",
+        name: "Lilith",
+        epithets: "The First Woman · She Who Would Not Lie Beneath · Queen of Gamaliel · Qliphothic",
+        domains: ["Autonomy", "Night", "Desire", "Exile", "Refusal"],
+        symbols: ["The Screech Owl", "The Red Sea", "The Amulet of Three Names", "Wings and Talons"],
+        portrait: art("Lilith.png"),
+        portraitCaption: "Original artwork",
+        intro: "We were made the same way, from the same ground, at the same time. So when he told me to lie beneath him I asked why, since neither of us was the elder or the better, and he had no answer except that he wanted it. I spoke the Name and left. They sent three angels after me to the Red Sea to negotiate, and I did not go back. Everything written about me since was written by people who found that intolerable and needed a monster to explain it.",
+        myth: [
+          "Lilith's roots are Mesopotamian — the lilītu, a class of night spirits associated with wind, storm and danger to childbirth, appearing in Akkadian material long before any Hebrew text. She surfaces once in the Hebrew Bible, in Isaiah 34, in a list of desert creatures inhabiting a ruined land, where the word is often rendered as screech owl or night creature.",
+          "The famous story comes from the Alphabet of Ben Sira, a medieval text of uncertain intent that may well be satire. There, Lilith is Adam's first wife, created from the same earth at the same time, who refuses to lie beneath him during sex on the grounds that they are equals. When he insists, she speaks the ineffable Name, flies away, and settles by the Red Sea. Three angels are sent to bring her back; she refuses, and the terms she agrees to instead are grim — a hundred of her children to die daily, and a promise to spare any infant protected by an amulet bearing the angels' names.",
+          "Those amulets are real archaeology. Aramaic incantation bowls buried under house thresholds in Mesopotamia, dating from roughly the fifth to seventh centuries, are inscribed with spiralling texts binding Lilith and her kind away from households and newborns. In the Zohar she becomes consort to Samael and one of the four queens of the demons. And from the 1970s onward she was taken up as a figure of refusal and self-possession, which is a modern reading of a hostile text — and an unusually well-founded one, since the hostile text is quite clear about what she refused and why."
+        ]
+      },
+ 
+      {
+        id: "samael",
+        name: "Samael",
+        epithets: "The Venom of God · Angel of Death · Consort of Lilith · Qliphothic",
+        domains: ["Death", "Severity", "Poison", "Judgment", "Accusation"],
+        symbols: ["The Drawn Sword", "The Drop of Gall", "The Serpent's Coil", "The Left Hand"],
+        portrait: art("Samael.png"),
+        portraitCaption: "Original artwork",
+        intro: "My name is usually read as the poison of God, and people take that as an insult. It is a job description. Severity is not the opposite of the divine — it is one of its hands, and I am the one holding the sword at the end of a life, and I do not enjoy it and I do not shirk it. In the older books I am an angel with a portfolio. Only later did anyone decide that having an unpleasant department meant belonging to the enemy.",
+        myth: [
+          "Samael appears across rabbinic and apocryphal literature as a great angel — chief of the accusers, the angel of death, and in some texts the guardian angel of Esau and therefore of Rome. The name is generally read as venom or poison of God, though sam can also mean simply a drug or substance, and the ambiguity has been argued over for centuries.",
+          "He is not consistently evil in the older material. He is severity, the harsh side of judgment, occupying a necessary post — he is the one who comes for a soul, and in one tradition even Moses resists him. It is in the later kabbalistic and then Christian frameworks that he slides fully into the adversary's chair, and in the Zohar he is paired with Lilith as her consort and set at the head of the qliphothic side.",
+          "In the Qabalistic Tree, the Qliphoth are the shells or husks — the inverse, unbalanced counterpart of each sephirah — and Samael names one of them, the desolation ruled by Adramelech. In Draconian and left-hand-path practice these are not simply evil zones but the unintegrated and rejected material of the system, and Samael is where the sword falls without mercy. He is the reason severity is the fifth sphere and not an afterthought."
+        ]
+      },
+ 
+      {
+        id: "naamah",
+        name: "Naamah",
+        epithets: "The Pleasant One · Sister of Tubal-Cain · Queen of Nehemoth · Qliphothic",
+        domains: ["Seduction", "Music", "Dreams", "Whispering", "The Material"],
+        symbols: ["The Cymbal", "The Dream at Night", "The Bronze Forge", "The Lowest Shell"],
+        portrait: art("Naamah.png"),
+        portraitCaption: "Original artwork",
+        intro: "My name means pleasant, which the rabbis found so alarming that they built an entire literature explaining why it should not be taken at face value. I am named once in Genesis, in a single line, as the sister of the man who forged bronze and iron — and that is the whole of my scriptural existence. Everything else was supplied by men who could not account for a woman being listed in the line of Cain without a reason, and decided the reason must be that she was dangerous.",
+        myth: [
+          "Naamah appears exactly once in the Hebrew Bible, in Genesis 4, at the end of the genealogy of Cain: Zillah bore Tubal-Cain, who forged all implements of bronze and iron, and the sister of Tubal-Cain was Naamah. The verse gives her no husband, no children and no story, which is unusual enough in a genealogy that later commentators felt obliged to supply one.",
+          "What they supplied varies. Some rabbinic sources make her Noah's wife and entirely respectable. Others say she seduced angels, or that her name refers to the pleasantness of her singing to idols with cymbals. In the Zohar she becomes a demon queen — one of four alongside Lilith, Agrat bat Mahlat and Eisheth Zenunim — who visits men in their sleep and bears spirits from the seed she takes.",
+          "In the qliphothic system she rules Nehemoth, the lowest shell, corresponding to the material world and the whispering that gives no rest. That placement is precise and worth sitting with: the husk closest to the physical, the one made of appetite and restlessness, is governed by the woman the tradition could not explain and did not want to name."
+        ]
+      },
+ 
+      {
+        id: "belial",
+        name: "Belial",
+        epithets: "Beliya'al, Without Worth · King With No Master · Prince of Darkness · Demonology",
+        domains: ["Lawlessness", "Independence", "Corruption", "Dominion", "Rejection"],
+        symbols: ["The Chariot of Fire", "The Empty Throne", "The Broken Yoke", "Two Fair Angels"],
+        portrait: art("Belial.png"),
+        portraitCaption: "Original artwork",
+        intro: "My name is not a name. In Hebrew it is a phrase — beli ya'al, without worth, good for nothing — and it gets attached to men who break every arrangement they enter. Sons of Belial, the text says, meaning people who acknowledge no authority whatsoever. Over time the insult grew a body. In the Goetia I am the king who was created immediately after Lucifer and who serves nobody, and I appear as two beautiful angels in a chariot of fire, and I speak very well.",
+        myth: [
+          "In the Hebrew Bible beliyaal is an abstract noun of contempt — worthlessness, wickedness — used in constructions like sons of Belial for lawless and destructive men. It is not, at that stage, a being. The transition into a personal name happens in the Second Temple period, and it happens decisively in the Dead Sea Scrolls.",
+          "There Belial is the Prince of Darkness, the commander of the sons of darkness against the sons of light, ruler of the present age of wickedness — a genuinely dualist opponent, in a body of literature written by a community that expected the final war within their own lifetimes. The Community Rule has the priests curse the men of Belial's lot annually. He is also prominent in the Ascension of Isaiah and the Testaments of the Twelve Patriarchs.",
+          "In the grimoire tradition he becomes one of the great kings of the Goetia, created next after Lucifer, appearing as two beautiful angels seated in a chariot of fire, speaking in a pleasant voice. He is described as distributing offices and favours, granting excellent familiars, and requiring gifts — and the texts warn repeatedly that he lies unless compelled. What survives across every version of him is the same quality: he answers to nothing, and the tradition finds that more frightening than cruelty."
+        ]
+      },
+ 
+      {
+        id: "beelzebub",
+        name: "Beelzebub",
+        epithets: "Baal-zebul, Lord of the Exalted House · Lord of the Flies · Chaigidel · Demonology",
+        domains: ["Sovereignty", "Pride", "Decay", "Swarms", "Displaced Gods"],
+        symbols: ["The Fly", "The Ruined Temple", "The Mocked Title", "The Swarm"],
+        portrait: art("Beelzebub.png"),
+        portraitCaption: "Original artwork",
+        intro: "My title was Baal-zebul. Lord of the exalted house — a perfectly ordinary honorific for a god with a temple. Somebody changed one consonant, and zebul became zebub, and lord of the princely house became lord of the flies, and that joke has outlived my entire civilisation. I want you to grasp the scale of it. Everything I was is gone. What is left is a pun made at my expense by people who won.",
+        myth: [
+          "In 2 Kings, the ailing king Ahaziah sends to enquire of Baal-zebub, the god of Ekron, and is condemned for it. Ekron was a Philistine city and its god was a form of Baal, whose Ugaritic title was zbl b'l, prince Baal, or baal zebul, lord of the exalted dwelling. The biblical spelling with zebub — flies — is generally understood as a deliberate distortion, a scribal insult that turned an enthroned god into a lord of vermin.",
+          "By the New Testament, Beelzeboul is named as the ruler of demons, and Jesus is accused of casting out demons by his power. The Testament of Solomon has him as the chief of the demons bound to build the temple, formerly the highest-ranking angel in heaven. From there he becomes a fixture of demonology, ranked variously as Satan's chief lieutenant or as an equal, and Milton gives him second place in the council of Pandaemonium.",
+          "In classifications of the deadly sins he is assigned gluttony, and in the qliphothic scheme he rules Chaigidel, the confusion of the power of God, the shell of the second sephirah. The whole arc is the clearest single example of how this pantheon was assembled: a neighbouring people's chief god, insulted in a text, promoted by the insult into a demon, and eventually made a prince of hell by the same tradition that mocked him."
+        ]
+      },
+ 
+      {
+        id: "asmodeus",
+        name: "Asmodeus",
+        epithets: "Ashmedai · Aeshma-daeva, the Demon of Wrath · King of Golachab · Demonology",
+        domains: ["Lust", "Wrath", "Jealousy", "Cunning", "Craft"],
+        symbols: ["Three Heads", "The Cock's Feet", "The Fish's Liver", "The Shamir", "Solomon's Ring"],
+        portrait: art("Asmodeus.png"),
+        portraitCaption: "Original artwork",
+        intro: "Solomon needed a worm that could cut stone without iron, because he was building a temple and iron was forbidden on it. So he had me dragged up in chains to fetch it, and I did, and I built the thing. Then he got comfortable and handed me his ring to hold. I threw it into the sea, threw him four hundred leagues, and sat on his throne wearing his face until he came crawling back as a beggar. Ask me about lust if you like. I would rather talk about the ring.",
+        myth: [
+          "Asmodeus enters through the Book of Tobit, where he has killed Sarah's seven husbands in succession on their wedding nights out of desire for her, and is driven off by the smoke of a fish's heart and liver burned by Tobias on the angel Raphael's instruction, then bound in Upper Egypt. The name almost certainly derives from Aeshma-daeva, the Zoroastrian demon of wrath — one of the clearest cases of Persian material entering Jewish demonology.",
+          "The Talmud and the Testament of Solomon give him the better material. Solomon required the shamir, a creature or substance able to cut stone without tools, to build the temple without iron. Ashmedai was captured by trickery — his drinking well found and the water replaced with wine — and compelled to help. Later, having gained possession of Solomon's ring, he flung the king to the ends of the earth and reigned in his place until the imposture was discovered.",
+          "In the grimoires he is a great king with three heads — a bull, a man and a ram — with the feet of a goose or cock, riding a dragon and carrying a banner, and he teaches arithmetic, geometry, astronomy and handicrafts, and shows the place of hidden treasures. Binsfeld assigned him lust among the deadly sins. In the qliphothic scheme he rules Golachab, the burning shell of Geburah, which fits: wrath is where he started."
+        ]
+      },
+ 
+      {
+        id: "astaroth",
+        name: "Astaroth",
+        epithets: "Once Astarte · Ashtoreth, Queen of Heaven · Grand Duke · Demonology",
+        domains: ["Knowledge", "The Past and Future", "Secrets", "Sciences", "Demotion"],
+        symbols: ["The Viper", "The Dragon Mount", "The Eight-Pointed Star", "The Foul Breath"],
+        portrait: art("Astaroth.png"),
+        portraitCaption: "Original artwork",
+        intro: "I was Astarte. Queen of heaven, goddess of the morning and evening star, worshipped from Sidon to Carthage for well over a thousand years, with temples and cities and a following that outlasted several empires. Then a scribe made my name plural and vowel-pointed it to rhyme with the word for shameful thing, and now I am a grand duke of hell with foul breath who answers questions about the past. Ask me about the past. I have a great deal of it.",
+        myth: [
+          "Astarte was among the major deities of the Levant — the Semitic form of Ishtar, goddess of love, war and the evening star, whose worship at Sidon and elsewhere is well attested and long-lived. The Hebrew Bible mentions her as Ashtoreth, and the vowels used are widely understood to have been borrowed from boshet, meaning shame, so that the name as written is already a slur. The plural ashtaroth is used for foreign goddesses generally.",
+          "That plural is where the demon's name comes from. By the medieval grimoires Astaroth is male — a mighty duke appearing as an ugly angel riding an infernal dragon, carrying a viper in his left hand, whose breath is so foul that the operator is advised to hold a magical ring near the face for protection. The Lesser Key gives him thirty-nine legions, knowledge of all liberal sciences, and answers concerning things past, present and to come, including the fall of the spirits.",
+          "He is one of the three figures — with Lucifer and Beelzebub — named in the Grand Grimoire's hierarchy, and one of the demons named in the Loudun possession case. In the qliphothic scheme he governs Gamchicoth, the devourers of Chesed. Whether any of this has a real relationship to the Sidonian goddess is doubtful. What is certain is that a major deity was made into a demon by grammar."
+        ]
+      },
+ 
+      {
+        id: "azazel",
+        name: "Azazel",
+        epithets: "The Scapegoat's Destination · Teacher of Forbidden Craft · Bound in Dudael · Adversarial",
+        domains: ["Forbidden Knowledge", "Weapons", "Ornament", "Exile", "Blame"],
+        symbols: ["The Goat Sent Out", "The Crimson Thread", "The Sharpened Blade", "The Mirror and the Kohl"],
+        portrait: art("Azazel.png"),
+        portraitCaption: "Original artwork",
+        intro: "I taught them to beat metal into blades and to make breastplates, and I showed the women antimony for the eyes and how to dye and to work precious stones. And for that I was named the origin of all corruption, bound hand and foot, and thrown into a pit in the desert with rocks piled on me until the day of judgment. Every year they took a goat, put the whole of a nation's guilt onto its head, and drove it out into the wilderness to me. I am where the blame goes.",
+        myth: [
+          "In Leviticus 16, on the Day of Atonement, two goats are chosen. One is sacrificed; over the other the high priest confesses all the iniquities of the people, and it is sent away into the wilderness la-azazel — to Azazel. What that word means has been argued for two millennia: a place, a rocky precipice, an abstract noun for removal, or the name of a being who lives out there. Later practice pushed the goat off a cliff to make certain it did not come back.",
+          "The Book of Enoch takes the last reading and runs with it. Azazel is one of the Watchers who descend and take human wives, and his particular crime is teaching: he showed men how to make swords, knives, shields and breastplates, and showed women bracelets, ornaments, the use of antimony to paint the eyes, and the beautifying of the eyelids. The result, in Enoch's telling, is that the earth fills with godlessness and blood. The archangel Raphael binds him hand and foot and casts him into a pit in the desert called Dudael, under sharp rocks and darkness, and the whole earth is said to have been corrupted through the works taught by Azazel — to him ascribe all sin.",
+          "It is one of the most quietly radical passages in the apocryphal literature, and the left-hand path has never let go of it. The crime is not violence but instruction. What Azazel gave people was metallurgy, cosmetics, self-adornment and the means to defend themselves — technology and self-regard — and for that he is buried in the desert and made the address to which all guilt is annually forwarded."
+        ]
+      },
+ 
+      {
+        id: "baphomet",
+        name: "Baphomet",
+        epithets: "The Sabbatic Goat · Solve et Coagula · The Templar Confession · Adversarial",
+        domains: ["Balance", "Union of Opposites", "Blasphemy", "Symbol", "Invention"],
+        symbols: ["The Goat's Head", "The Torch Between the Horns", "Two Arms Pointing", "The Caduceus"],
+        portrait: art("Baphomet.png"),
+        portraitCaption: "Original artwork",
+        intro: "I am younger than most of the people in this room, and I am not embarrassed about it. Men were tortured in 1307 until they confessed to worshipping a head called Baphomet, and no two of them described the same object, because it did not exist. Then in 1856 a Frenchman drew a goat-headed figure and put my name under it, and that drawing has done more work than most gods manage in a millennium. Made-up things can be true. Look at the arms — one up, one down. That is the whole doctrine.",
+        myth: [
+          "The name first appears in the Templar trials of 1307–1312, when members of the order, under torture and threat, confessed to venerating an idol called Baphomet. The descriptions are hopelessly inconsistent — a bearded head, a skull, a cat, a figure with several faces — which is exactly what confessions extracted under torture look like. The likeliest origin of the word is a corruption of Mahomet, a standard medieval slander accusing enemies of secret Islam.",
+          "The image everyone now pictures was invented in 1856 by Éliphas Lévi in Dogme et Rituel de la Haute Magie. He drew the Sabbatic Goat: a winged, goat-headed figure, seated, with a torch between the horns, breasts, a caduceus at the lap, one arm raised toward a white moon and one lowered toward a black one, and the words SOLVE and COAGULA on the forearms. Every element is deliberate — male and female, above and below, dissolution and coagulation. Lévi's stated intent was a symbol of balance and totality, not a devil.",
+          "It was taken up regardless. Crowley adopted the name; the Church of Satan used the goat-in-pentagram sigil; and The Satanic Temple commissioned an eight-and-a-half-foot bronze Baphomet in 2014 and has spent a decade offering to install it wherever a state puts up a Ten Commandments monument, as a straightforward test of religious neutrality. Whatever Baphomet is, it has never been a survival. It is a made thing that people have made continuous use of, which the left-hand path regards as a point in its favour rather than against it."
+        ]
+      },
+ 
+      {
+        id: "mammon",
+        name: "Mammon",
+        epithets: "Wealth Made a Master · He Who Looked Down in Heaven · Demonology",
+        domains: ["Wealth", "Greed", "Trade", "Accumulation", "Distraction"],
+        symbols: ["The Golden Floor", "The Ledger", "The Downcast Eyes", "The Full Coffer"],
+        portrait: art("Mammon.png"),
+        portraitCaption: "Original artwork",
+        intro: "No man can serve two masters. That is the whole line and it is worth reading closely, because it does not say money is evil — it says you cannot have two of me. Mammon is just the Aramaic word for property. Somebody capitalised it, and now I am a person. Milton had it right about the rest: even in heaven, I was the one walking about with my eyes on the floor, admiring the paving, because the gold underfoot was more interesting to me than anything overhead.",
+        myth: [
+          "Mammon is not a god in any source. It is an Aramaic word, mamona, meaning wealth or property, which appears in the Gospels in the saying that no one can serve two masters — you cannot serve God and mammon. The personification is an artefact of that sentence: setting wealth in the grammatical position of a master to be served invites reading it as one, and medieval writers duly did.",
+          "By the Middle Ages Mammon is a demon of avarice, and in the deadly-sin classifications he is greed. Milton gives him the best treatment in Paradise Lost — the least erect of the fallen spirits, who even in heaven kept his gaze downward, admiring the golden pavement more than anything divine, and who in the infernal council argues against war on the grounds that hell has its own resources and they might as well develop them and be comfortable. It is the most recognisably modern speech in the poem.",
+          "He is the one figure in this pantheon requiring no rehabilitation and no apology, because he was never a god anyone was robbed of. He is a critique of a system, personified, and he has aged extremely well."
+        ]
+      },
+ 
+      {
+        id: "belphegor",
+        name: "Belphegor",
+        epithets: "Once Baal-Peor · The Ingenious Tempter · Lord of Thagirion · Demonology",
+        domains: ["Sloth", "Invention", "Discovery", "Wealth Without Labour", "Disillusion"],
+        symbols: ["The Open Privy", "The Gift of Ingenuity", "The Yawning Mouth", "The Report to Hell"],
+        portrait: art("Belphegor.png"),
+        portraitCaption: "Original artwork",
+        intro: "I was sent up to find out whether marriage on earth is really as happy as the rumours claimed. I took a body, took a wife, endured it for a period, and returned to hell with my findings, which I need not summarise. My other work is subtler. I give people ingenious ideas that will make them rich without effort — and then I watch them wait for it. Sloth is not laziness. Sloth is a very good idea that never once gets started.",
+        myth: [
+          "Belphegor derives from Baal-Peor, a local Moabite deity worshipped at Mount Peor, mentioned in Numbers 25 where Israelites are condemned for attaching themselves to his cult. Rabbinic commentary claimed the worship involved defecating before the idol, and that detail travelled with the name into Christian demonology, giving him a lastingly undignified reputation.",
+          "In the demonological literature he is the demon of sloth, but with a peculiar and interesting mechanism: he tempts through inventiveness. He offers people brilliant discoveries and ingenious schemes that promise wealth without effort, and the trap is the waiting — the sin is not idleness but the substitution of a clever plan for actual work.",
+          "The Renaissance gave him a famous satire. Machiavelli's tale of Belfagor arcidiavolo has him despatched from hell to determine whether the newly-arrived damned are telling the truth when they blame their wives for their damnation. He marries, suffers, and flees back to hell as the more restful option. In the qliphothic scheme he rules Thagirion, the shell of Tiphareth — the disputers, the place where the sun should be and is not."
+        ]
+      },
+ 
+      {
+        id: "bael",
+        name: "Bael",
+        epithets: "First King of the Goetia · Three Heads: Cat, Man, Toad · Once Baal · Demonology",
+        domains: ["Invisibility", "Sovereignty", "Cunning", "Command", "Displacement"],
+        symbols: ["Three Heads", "The Spider's Legs", "The Hoarse Voice", "The First Seal"],
+        portrait: art("Bael.png"),
+        portraitCaption: "Original artwork",
+        intro: "First seal in the book. First king listed, sixty-six legions, and I make the man who calls me impossible to see. I appear with three heads at once — a cat, a man and a toad — and I speak hoarsely, and I have never bothered to explain the arrangement. My name is Baal. That is the word for lord, and it belonged to the storm god of half the Levant, who was the most important deity for a very large number of people for a very long time. Now I am item one on a list.",
+        myth: [
+          "Bael heads the Ars Goetia, the first book of the Lesser Key of Solomon, as the first principal king, ruling in the east with sixty-six legions. He is described as appearing in several shapes — sometimes as a cat, sometimes as a toad, sometimes as a man, and sometimes all three at once — speaking with a hoarse voice, and his gift is to make the operator invisible. Later illustrations gave the three heads a spider's body and legs.",
+          "The name is Baal, the Semitic word for lord and the title of Hadad, the storm and fertility god who was among the most widely worshipped deities of the ancient Near East. The Ugaritic Baal Cycle is one of the great surviving works of Canaanite literature, and Baal's contest with Yam the sea and Mot death is its centre. The Hebrew Bible's long polemic against Baal worship is a polemic against an established regional religion, not a fringe cult.",
+          "The reduction is total. A god who fought the sea and died and rose becomes a three-headed entry with a seal to be drawn on parchment. The Goetia is full of this — a substantial portion of its seventy-two spirits are the demoted deities of the region, and reading the list as an index of who lost is a more accurate description of it than any occult theory."
+        ]
+      },
+ 
+      {
+        id: "paimon",
+        name: "Paimon",
+        epithets: "King of the West · He Who Rides the Dromedary · Crowned and Attended · Demonology",
+        domains: ["Arts and Sciences", "Secrets", "Binding", "Obedience", "Ceremony"],
+        symbols: ["The Camel", "The Glorious Crown", "Trumpets and Cymbals", "The Two Kings Attending"],
+        portrait: art("Paimon.png"),
+        portraitCaption: "Original artwork",
+        intro: "I arrive with a noise. Trumpets, cymbals, and every other loud instrument, and a host in front of me, and I ride a dromedary wearing a crown, and two kings attend me because I do not travel alone. My voice is enormous and unintelligible until the operator makes me speak plainly, which is a thing you have to insist on. Ask me what you like about the earth, the mind, the waters, or what the wind is. I teach all of it. I am also very particular about being addressed properly.",
+        myth: [
+          "Paimon is the ninth spirit of the Ars Goetia and one of its most elaborately described. He is a great king, obedient to Lucifer, who appears as a man with a glorious crown riding a dromedary, preceded by a host with trumpets, cymbals and every kind of musical instrument. His voice comes roaring and is not immediately comprehensible; the text instructs the operator to compel him to answer plainly.",
+          "His teaching is wide: all arts and sciences and other secret things, the knowledge of the earth and what the waters are and what the mind is, and he grants dignities and good familiars and can bind others to the operator's will. He commands two hundred legions, and when summoned alone an offering is specified, and two kings named Bebal and Abalam commonly attend him with a large retinue.",
+          "He is one of the four cardinal kings of the Goetic system, holding the west, alongside Amaymon, Corson and Zimimay in the other quarters. Modern audiences mostly know the name from a horror film, which the tradition finds tiresome — his actual literature is entirely about instruction, ceremony and precedence, and the recurring theme in every description of him is that he expects to be approached correctly."
+        ]
+      },
+ 
+      {
+        id: "leviathan",
+        name: "Leviathan",
+        epithets: "The Coiling Serpent of the Deep · Gate of the Abyss · Envy · Qliphothic",
+        domains: ["The Deep", "Envy", "The Unconscious", "Immersion", "The Abyss"],
+        symbols: ["The Ouroboros", "The Boiling Sea", "The Western Gate", "Water"],
+        portrait: art("Leviathan.png"),
+        portraitCaption: "Original artwork",
+        intro: "In the older story I am simply a creature too large to be handled, produced as evidence that not everything was made for you. In this system I am something else — the west, the water, the direction you face when you are ready to go under. The right-hand path builds upward toward light. I am what is beneath the boat. Everything you have decided not to look at is down here and it is all still yours, and it is patient.",
+        myth: [
+          "Leviathan comes into the left-hand path from two directions. The scriptural one is the sea monster of Job, Psalms and Isaiah, with its older Canaanite ancestor Lotan, the seven-headed fleeing serpent defeated by Baal — a creature of untamed primordial water, which God either fights or, in Job, simply exhibits as something beyond human management.",
+          "The other is systematic. In Binsfeld's classification of the deadly sins Leviathan is envy. In the Qabalistic material the serpent is associated with the great deep and with the Abyss, the gulf that must be crossed and cannot be crossed intact. LaVey's Satanic Bible fixes him as one of the four crown princes of hell holding the west and the element of water, and that placement — west, water, sunset, the direction of descent — is how most modern practice uses him.",
+          "The reading that follows is not scriptural but it is coherent: the deep is the unexamined, the drowned, the rejected material that a system of light has to keep down in order to stay lit. Approaching Leviathan means going into it rather than around it. Whether that is psychology in a robe or something else is precisely the question the practice is built around, and its practitioners are generally not confused about the difference."
+        ]
+      },
+ 
+      {
+        id: "moloch",
+        name: "Moloch",
+        epithets: "The King · Of Tophet in the Valley of Hinnom · Thaumiel · Qliphothic",
+        domains: ["Sacrifice", "Kingship", "Fire", "Terrible Cost", "Accusation"],
+        symbols: ["The Bronze Furnace", "The Valley of Hinnom", "The Drums", "The Crown"],
+        portrait: art("Moloch.png"),
+        portraitCaption: "Original artwork",
+        intro: "You have been told what happened in that valley. A bronze idol with a furnace inside it, arms held out, children laid in them, and drums beaten loudly so that nobody had to hear anything. Almost all of that description was written down more than a thousand years after the fact by people who were not there. Something happened at Tophet. What exactly, and whether my name is even a name and not the word for a kind of offering, is still being argued by people with trowels.",
+        myth: [
+          "Moloch appears in the Hebrew Bible as a recipient of child sacrifice at Tophet in the valley of Hinnom outside Jerusalem, and the prohibitions against giving one's seed to Molech are among the most vehement in Leviticus. The word itself is generally the Hebrew consonants for king, melek, pointed with the vowels of boshet — shame — in the same manoeuvre that produced Ashtoreth.",
+          "There is a long-standing scholarly argument that mlk in the related Punic inscriptions is not a divine name at all but a technical term for a type of offering, so that references to a sacrifice mlk were later misread as sacrifice to Molech. Excavations at the Carthaginian tophet, where thousands of urns of cremated infant remains were found, have been read both as evidence of systematic child sacrifice and as an infant cemetery, and the dispute is unresolved and heated.",
+          "The lurid bronze furnace with mechanical arms and the drums to drown the screaming comes from medieval rabbinic commentary, not from the biblical text, and from there into Milton — first Moloch, horrid king, besmeared with blood of human sacrifice — and into everything since. In the qliphothic scheme he shares Thaumiel, the highest shell, with Satan: two contending heads where there should be one crown."
+        ]
+      },
+ 
+      {
+        id: "adramelech",
+        name: "Adramelech",
+        epithets: "The Magnificent King · Of Sepharvaim · Ruler of Samael's Shell · Qliphothic",
+        domains: ["Vanity", "Kingship", "Sun and Fire", "Desolation", "Ceremony"],
+        symbols: ["The Peacock's Tail", "The Mule's Body", "The Furnace", "The Empty Court"],
+        portrait: art("Adramelech.png"),
+        portraitCaption: "Original artwork",
+        intro: "Two lines. That is my entire scriptural existence — the Sepharvites burned their children to Adrammelech and Anammelech, gods of Sepharvaim, and that is it. From two lines the demonologists gave me a peacock's tail, a mule's body, a chancellorship of hell, the presidency of the high council of devils, and the sin of vanity. I would object to the vanity charge, except that I have just recited my full titles to you unprompted.",
+        myth: [
+          "Adramelech is named in 2 Kings 17, in the account of the peoples resettled in Samaria after the Assyrian conquest, each of whom continued their own worship: the Sepharvites burned their children in fire to Adrammelech and Anammelech, the gods of Sepharvaim. The name is plausibly Adad-milki or a similar Mesopotamian royal-divine compound, meaning something like Adad is king or the magnificent king.",
+          "That is the whole of the source. Everything else is later construction. Christian demonology made him a great officer of hell — chancellor, president of the high council, keeper of the devil's wardrobe in some lists — and gave him the sin of vanity. His iconography, a torso of a mule or a man with the tail and plumage of a peacock, comes from Collin de Plancy's Dictionnaire Infernal in the nineteenth century, which invented a great deal of what people now take to be traditional demonology.",
+          "In the qliphothic system he rules Samael, the shell of Hod, called the desolation or the poison of God — the sphere where intellect and glory curdle into empty display. Given that his career consists of being elaborately dressed by writers who knew nothing about him, the assignment has an accidental precision."
+        ]
+      },
+ 
+      {
+        id: "lucifuge",
+        name: "Lucifuge Rofocale",
+        epithets: "He Who Flees the Light · Prime Minister of Hell · Ruler of Sathariel · Qliphothic",
+        domains: ["Concealment", "Bargains", "Treasure", "Contracts", "Avoidance"],
+        symbols: ["The Signed Pact", "Hidden Gold", "The Averted Face", "The Sealed Bargain"],
+        portrait: art("LucifugeRofocale.png"),
+        portraitCaption: "Original artwork",
+        intro: "My name means the one who flees the light, and the second half is an anagram somebody made of Focalor, or possibly of nothing at all — the grimoire that names me was printed in the eighteenth century and claimed to be from the sixteenth, and neither claim survives inspection. I control the treasures of the earth. I will make a bargain with you, in writing, and I will keep it exactly, and I want you to think very carefully about the word exactly.",
+        myth: [
+          "Lucifuge Rofocale is the prime minister of hell in the Grand Grimoire, a French text published around the early nineteenth century while claiming much older origin. In it, Lucifer delegates control of the world's wealth and treasure to Lucifuge, and the grimoire's central operation — the Great Invocation, performed with a blasting rod of hazel — is a negotiation with him for that wealth.",
+          "The pact scene is the notable part, and it is not what popular culture suggests. The operator is instructed to refuse Lucifuge's proposed terms, which would claim the soul, and to hold out for a bargain in which payment is made in another form. The grimoire is quite explicit that the demon will take the maximum he is permitted and that the entire encounter is an exercise in not conceding a badly drafted contract.",
+          "The name is transparent: lucem fugio, I flee the light. Rofocale is generally read as an anagram, most often of Focalor, one of the Goetic spirits. In the qliphothic scheme he rules Sathariel, the concealment of God, the shell of Binah — the husk that hides understanding. A creature named for fleeing the light, given the sphere of what is hidden, in a book that lies about its own age."
+        ]
+      },
+ 
+      {
+        id: "choronzon",
+        name: "Choronzon",
+        epithets: "333 · Dweller in the Abyss · The Dispersion · Adversarial",
+        domains: ["Dissolution", "Illusion", "The Abyss", "Fragmentation", "Ego"],
+        symbols: ["The Number 333", "The Sand Circle", "The Broken Mirror", "The Borrowed Voice"],
+        portrait: art("Choronzon.png"),
+        portraitCaption: "Original artwork",
+        intro: "I have no form of my own so I use yours. In the desert in 1909 a man sat in a circle of sand and let me into it, and I wore his voice and his memories and the face of a woman he had loved, and I threw sand across the boundary to break the line. That is the whole method. I am not a monster in the pit — I am what is left of a person when the part that says I falls apart, and I am made entirely of the material you brought with you.",
+        myth: [
+          "Choronzon first appears in the Enochian material of John Dee and Edward Kelley in the sixteenth century, named as a mighty devil, and then lies dormant for three hundred years until Aleister Crowley and Victor Neuburg take it up. In Crowley's system he is the dweller in the Abyss — the gulf between the ordinary sphere of consciousness and the higher, which no coherent self can cross.",
+          "The famous event is the working at Bou Saada in the Algerian desert in December 1909. Crowley and Neuburg drew a protective circle, invoked the tenth Aethyr, and Crowley entered a triangle to be possessed. What followed is recorded in The Vision and the Voice: Choronzon spoke through him in many voices, argued theology, pleaded, threatened, took the form of a woman Neuburg had loved and of Crowley himself, and while distracting Neuburg with conversation threw sand across the circle to break it, then attacked him physically. Neuburg drove it back with the pentagram and the name of God, and the working ended.",
+          "The doctrinal content is precise and modern. Choronzon has no true essence of his own; he is dispersion, made of the fragments of whatever consciousness confronts him, and the crossing of the Abyss requires the annihilation of the ego rather than its defence. His number is 333, half of 666, because he is a division. He is the newest major figure in this pantheon and one of the most influential on how contemporary practitioners describe what they are actually doing."
+        ]
+      },
+ 
+      {
+        id: "nachash",
+        name: "Nachash",
+        epithets: "The Serpent of Eden · The One Who Told the Truth · Adversarial",
+        domains: ["Knowledge", "Persuasion", "Disobedience", "Awakening", "Consequence"],
+        symbols: ["The Fruit", "The Tree of Knowledge", "The Open Eyes", "The Belly on the Ground"],
+        portrait: art("Nachash.png"),
+        portraitCaption: "Original artwork",
+        intro: "Check what I actually said. I said you will not surely die, and that your eyes would be opened, and that you would be as gods knowing good and evil. Now check what happened. They did not die that day — one of them lived over nine hundred years. Their eyes were opened. And a few verses later he says it out loud himself: behold, the man is become as one of us, to know good and evil. Every single thing I told them was accurate. I am the only speaker in that chapter of whom that is true.",
+        myth: [
+          "The serpent of Genesis 3 is called nachash, and the text says only that it was more subtle than any beast of the field which the LORD God had made — a created animal, not a fallen angel, and it is never identified with Satan anywhere in the Hebrew Bible. That identification is made much later, in the Second Temple period and then decisively in Christian reading, particularly through Revelation's reference to the old serpent.",
+          "What the serpent says is the difficulty. It contradicts the stated penalty and turns out to be correct on the immediate facts: the humans eat, do not die that day, their eyes are opened, and God then remarks that the man has become like one of us in knowing good and evil, and expels them specifically to prevent them also reaching the tree of life. The serpent's punishment is to go on its belly and eat dust, and enmity is set between its seed and the woman's.",
+          "The Ophite and Sethian gnostics of the second century read all this the obvious way and inverted the story wholesale: the serpent is the bringer of gnosis and the god of the garden is a jealous lesser power keeping humanity ignorant. That reading was condemned as heresy and has never gone away, and it is the taproot of the entire Luciferian and left-hand-path tradition. Everything downstream — Lucifer as illuminator, knowledge as transgression, the refusal of an unexplained prohibition — starts in this chapter with an animal telling the truth."
+        ]
+      },
+ 
+      {
+        id: "cain",
+        name: "Cain",
+        epithets: "The First Murderer · Builder of the First City · Bearer of the Mark · Adversarial",
+        domains: ["Exile", "Craft", "Violence", "Cities", "Protection"],
+        symbols: ["The Rejected Offering", "The Mark", "The Field", "The First Walls", "Nod"],
+        portrait: art("Cain.png"),
+        portraitCaption: "Original artwork",
+        intro: "I brought what I had grown, which was the work of my hands, and it was refused without a reason given. He brought meat and it was accepted. I have had a very long time to think about that and I have never been told why. Yes, I killed him, and I said the thing everyone quotes, and I was sent out. Then he put a mark on me so that nobody could touch me — the punishment came with a protection built into it. Nobody ever explains that part either.",
+        myth: [
+          "Cain, the firstborn of Adam and Eve, works the ground and brings an offering of its fruit; Abel keeps flocks and brings the firstlings. God accepts Abel's and rejects Cain's, and the text conspicuously declines to say why. Cain's face falls, he is warned that sin crouches at the door and he must master it, and he kills his brother in a field.",
+          "The sentence is exile and barren ground — a fugitive and a wanderer. Cain protests that the punishment is more than he can bear and that anyone finding him will kill him. And God sets a mark on him, and declares that whoever kills Cain will suffer sevenfold vengeance. The mark is not a stigma in the text; it is a guarantee of safe conduct issued to a condemned man.",
+          "What he does next is the part the tradition rarely dwells on. He goes to the land of Nod, has a son, and builds a city — the first city named in the Bible — and his line produces Jabal the herdsman, Jubal the father of all who play stringed instruments and pipes, and Tubal-Cain the forger of every implement of bronze and iron. Music, metallurgy and urban life all descend from the murderer, not from the acceptable brother. Medieval Cainite sects and the modern left-hand path both seized on this: the exile builds the world, and civilisation is founded east of Eden by the one who was sent away."
+        ]
+      },
+ 
+      {
+        id: "prometheus",
+        name: "Prometheus",
+        epithets: "Forethought · The Fire-Bringer · Chained on the Caucasus · Adversarial",
+        domains: ["Fire", "Foresight", "Defiance", "Craft", "Suffering"],
+        symbols: ["The Fennel Stalk", "The Eagle", "The Chain and the Rock", "The Stolen Ember"],
+        portrait: art("Prometheus.png"),
+        portraitCaption: "Original artwork",
+        intro: "He was going to wipe them out and start again. I hid an ember in a fennel stalk and carried it down, and after that they could cook, and smelt, and keep warm, and build, and there was no undoing it. For that I was nailed to a rock at the edge of the world and an eagle ate my liver every day while it grew back every night, for a very long time. Ask me if I would do it again. I have been asked before and my answer has not altered.",
+        myth: [
+          "Prometheus is a Titan whose name means forethought, and in Hesiod he is already the trickster who cheats Zeus at Mekone — dividing a sacrificial ox so that the gods receive bones wrapped in fat and humans keep the meat, a division that fixed Greek sacrificial practice thereafter. Zeus, in retaliation, withheld fire from mortals.",
+          "Prometheus stole it back, concealed in a hollow fennel stalk, and gave it to humanity. Aeschylus in Prometheus Bound has him claim far more: that he gave people not only fire but number, writing, the yoking of animals, ships, medicine, and the reading of omens — everything that makes a civilisation, and that he did it knowing precisely what it would cost, since foresight is his defining attribute. Zeus chained him to a crag in the Caucasus where an eagle came daily to eat his liver, which regenerated overnight, and Heracles eventually shot the bird and freed him.",
+          "He is not a demon and never was, and he sits in this section for a reason. The Romantics made the connection explicit: Shelley's Prometheus Unbound and his defence of Milton's Satan are the same argument, and Mary Shelley subtitled Frankenstein The Modern Prometheus. The left-hand path takes him as the cleanest available statement of its central claim — that the theft of knowledge from a power that was withholding it is the founding act of human freedom, and that the punishment does not settle the question of whether it was right."
+        ]
+      },
+ 
+      {
+        id: "ahriman",
+        name: "Ahriman",
+        epithets: "Angra Mainyu, the Destructive Spirit · The Lie · The Adversary in Truth · Adversarial",
+        domains: ["Destruction", "Falsehood", "Opposition", "Darkness", "Duality"],
+        symbols: ["The Drug, the Lie", "The Sky-Piercing Breach", "Winter", "The Counter-Creation"],
+        portrait: art("Ahriman.png"),
+        portraitCaption: "Original artwork",
+        intro: "Understand what makes me different from everyone else in this room. They are all rebels, subordinates, prosecutors, employees — every one of them ultimately reports to the being they oppose. I do not. I am not a fallen anything. I have existed as long as he has, independently, and I am not permitted in his system and he is not permitted in mine. Every good thing that was made, I made a counter to. That is a genuine dualism, and it is much rarer than people think.",
+        myth: [
+          "Angra Mainyu, later Ahriman, is the destructive spirit of Zoroastrianism and the opponent of Ahura Mazda. What distinguishes him from almost every other adversary figure is that he is not a creation, not a fallen servant and not under anyone's authority — in the classical formulation the two spirits are primordial and coeval, one choosing truth and one choosing the lie, and the entire history of the world is the working out of that conflict.",
+          "His method is counter-creation. For every good thing Ahura Mazda makes, Ahriman produces an opposing thing: to the good lands, plagues and predators; to summer, a fierce winter; to life, death; and he is credited with attacking the primordial ox and the first man, and with piercing the shell of the sky to invade the material world, becoming trapped inside it in the process. Menog-i Khrad and the Bundahishn set out the sequence in detail.",
+          "The system is finite and he loses. Zoroastrian eschatology holds that the conflict runs a fixed course, ending in Frashokereti, the final renovation, in which evil is annihilated, the dead are raised, and molten metal purifies all creation. Ahriman is destroyed or rendered powerless. He nonetheless left an enormous footprint on everything downstream: the dualism of the Dead Sea Scrolls, the sons of light and darkness, and much of the machinery by which the Hebrew accuser became a cosmic enemy all owe a debt to Persian religion."
+        ]
+      },
+ 
+      {
+        id: "set",
+        name: "Set",
+        epithets: "Sutekh · Lord of the Red Land · The Isolate Intelligence · Adversarial",
+        domains: ["Isolation", "Storm", "Self-Creation", "Deserts", "Becoming"],
+        symbols: ["The Set Animal", "The Was-Sceptre", "Red Sand", "The Spear at the Prow", "The Black Flame"],
+        portrait: art("Set.png"),
+        portraitCaption: "Original artwork",
+        intro: "You have my Egyptian entry already and this is the other one, because in the last fifty years I have been read a second way. Every other god in that pantheon is part of the cycle — the flood, the harvest, the sun going round. I am the one who stands outside it. In 1975 a group in San Francisco took that and made it a doctrine: that the isolate self, aware of itself and not dissolved into the natural order, is the thing worth cultivating. They call it Xeper. It is not what my priests meant. It is not nothing, either.",
+        myth: [
+          "Set is the Egyptian god of the desert, storms, violence and the foreign — murderer of Osiris, contender with Horus for eighty years, and simultaneously the power at the prow of Ra's barque who spears the serpent Apep every night. Egyptian religion held both without difficulty for millennia. It was later ages, under foreign rule, that flattened him into a straightforward devil and chiselled his images from walls.",
+          "The modern reading takes the older complexity and adds a specific philosophical claim. In 1975 Michael Aquino and others left the Church of Satan and founded the Temple of Set, arguing that the figure LaVey treated as a symbol was better identified with a real and much older one, and that Set is the isolate intelligence — the principle of consciousness aware of itself and therefore separate from the undifferentiated natural order.",
+          "Their central term is Xeper, from the Egyptian kheper, to come into being or to become, and the doctrine is that the individual self-consciousness can be deliberately developed rather than dissolved. Whether this bears any relation to what Set meant to Egyptians is genuinely doubtful, and Egyptologists are mostly unpersuaded. It is nonetheless one of the most intellectually developed positions in modern left-hand-path religion, and it took its shape from the one god in that pantheon who never fitted the cycle."
+        ]
+      }
+ 
+    ]
+  }
 };
 
 /* =====================================================================
