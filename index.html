@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -121,10 +122,54 @@ header.gate p.sub{font-style:italic;color:var(--parchment-dim);max-width:520px;m
 .typing{color:var(--parchment-dim);font-style:italic;font-size:14px;}
 
 footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-style:italic;margin-top:70px;opacity:0.65;}
+
+/* ---- auth bar, modal, paywall, lock badge ---- */
+.authbar{position:relative;z-index:2;display:flex;justify-content:flex-end;gap:10px;padding:16px 28px 0;font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;}
+.authbar button{background:transparent;border:1px solid var(--line);color:var(--parchment-dim);padding:8px 16px;border-radius:2px;cursor:pointer;font-family:inherit;font-size:inherit;letter-spacing:inherit;text-transform:inherit;}
+.authbar button:hover{border-color:var(--gold);color:var(--gold-bright);}
+.authbar .who{color:var(--parchment-dim);display:flex;align-items:center;padding:0 4px;}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:50;align-items:center;justify-content:center;}
+.modal-overlay.active{display:flex;}
+.modal{background:var(--ink-2);border:1px solid var(--gold);border-radius:4px;padding:32px;max-width:360px;width:90%;position:relative;}
+.modal h3{margin:0 0 18px;font-size:18px;color:var(--gold-bright);}
+.modal input{width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:12px 14px;font-family:'EB Garamond',serif;font-size:15px;border-radius:3px;margin-bottom:12px;}
+.modal button.primary{width:100%;background:var(--gold);color:var(--ink);border:none;padding:12px;font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;cursor:pointer;margin-bottom:10px;}
+.modal button.primary:hover{background:var(--gold-bright);}
+.modal button.google{width:100%;background:transparent;border:1px solid var(--line);color:var(--parchment);padding:12px;font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;border-radius:3px;cursor:pointer;margin-bottom:10px;}
+.modal button.google:hover{border-color:var(--gold);}
+.modal .close-x{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--parchment-dim);font-size:18px;cursor:pointer;}
+.modal .modal-msg{font-size:13px;color:var(--parchment-dim);font-style:italic;min-height:18px;margin-top:4px;}
+
+.lock-badge{position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.55);border:1px solid var(--gold);color:var(--gold);
+  width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;z-index:1;}
+
+.paywall{border:1px solid var(--line);border-radius:4px;padding:26px;text-align:center;background:rgba(0,0,0,0.2);}
+.paywall p{color:var(--parchment-dim);font-style:italic;margin:0 0 20px;}
+.paywall .buy-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.paywall button{background:var(--gold);color:var(--ink);border:none;padding:12px 20px;font-family:'Cinzel',serif;
+  font-size:12px;letter-spacing:0.08em;text-transform:uppercase;border-radius:3px;cursor:pointer;}
+.paywall button:hover{background:var(--gold-bright);}
+.paywall button.secondary{background:transparent;border:1px solid var(--gold);color:var(--gold-bright);}
 </style>
 </head>
 <body>
 <div class="flicker"></div>
+
+<div class="authbar" id="authBar"></div>
+
+<div class="modal-overlay" id="authModal">
+  <div class="modal">
+    <button class="close-x" id="authModalClose">&times;</button>
+    <h3 id="authModalTitle">Enter the Temple</h3>
+    <button class="google" id="googleSignInBtn">Continue with Google</button>
+    <div class="rule" style="margin:16px auto;width:60%;"></div>
+    <input type="email" id="authEmail" placeholder="you@example.com">
+    <button class="primary" id="magicLinkBtn">Email me a sign-in link</button>
+    <div class="modal-msg" id="authModalMsg"></div>
+  </div>
+</div>
+
 <div class="wrap">
 
   <header class="gate" id="gateHeader">
@@ -146,14 +191,164 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 /* =====================================================================
-   1. RELAY — paste your Apps Script Web app URL here (ends in /exec).
-      No API key ever appears in this file.
+   1. BACKEND CONFIG — fill these in once your Supabase project exists.
+      No AI key or Stripe key ever appears in this file; only these two
+      public, safe-to-expose values (the "anon" key is meant for browsers
+      and is useless without your Row Level Security rules, which are set
+      server-side in the SQL migration).
    ===================================================================== */
-const RELAY_URL = "https://script.google.com/macros/s/AKfycbzOPf9v5gNXm7XsBK-LMqvr2A1vdNKLFj4x-ALeIcv94-lNJtJwfSXqO_46MokvExwuSA/exec";
+const SUPABASE_URL = "https://kuvaeprkmwzlqrqtjbhc.supabase.co";        // e.g. https://abcdefgh.supabase.co
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dmFlcHJrbXd6bHFycXRqYmhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MDMzOTgsImV4cCI6MjEwMjQ3OTM5OH0.-W7tTHZZob_dY2ydAx26cFx_izPBKJ3_M0sadNd7cOI
+";
+const FUNCTIONS_URL = SUPABASE_URL.replace(".supabase.co", ".functions.supabase.co");
+
+/* One deity per pantheon is free to chat with, no account needed — a
+   teaser. Everything else requires sign-in + an unlock (subscription or
+   one-time purchase). Edit this list to change what's free; it MUST also
+   be kept in sync with the `free` flags in supabase/functions/chat/deities.json
+   on the backend, since the server is what actually enforces this. */
+const FREE_DEITY_IDS = ["zeus", "odin", "ra", "obatala", "dagda", "pangu", "tiamat", "lucifer"];
 
 const SESSION_ID = 'pg-' + Math.random().toString(36).slice(2, 12);
+
+/* ---- auth + entitlement state ---- */
+let supabaseClient = null;
+let currentUser = null;
+let entitlements = new Set();   // values like "all", "pantheon:norse", "deity:loki"
+
+function isFree(d){ return FREE_DEITY_IDS.includes(d.id); }
+function isUnlocked(d){
+  return isFree(d) ||
+    entitlements.has('all') ||
+    entitlements.has('pantheon:' + currentPantheon) ||
+    entitlements.has('deity:' + d.id);
+}
+
+async function initAuth(){
+  if(SUPABASE_URL.indexOf('PASTE_YOUR') === 0){
+    document.getElementById('authBar').innerHTML =
+      '<span class="who">Backend not configured yet</span>';
+    return;
+  }
+  supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  currentUser = session ? session.user : null;
+  await refreshEntitlements();
+  renderAuthBar();
+
+  supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+    currentUser = session ? session.user : null;
+    await refreshEntitlements();
+    renderAuthBar();
+    if(currentDeity) openDeity(currentDeity.id); // re-render paywall/chat state
+  });
+
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('checkout') === 'success'){
+    showAsideOnce('Payment received — the gate is opening.');
+  } else if(params.get('checkout') === 'cancelled'){
+    showAsideOnce('Checkout cancelled — nothing was charged.');
+  }
+
+  document.getElementById('authModalClose').onclick = () => closeAuthModal();
+  document.getElementById('googleSignInBtn').onclick = () => signInWithGoogle();
+  document.getElementById('magicLinkBtn').onclick = () => sendMagicLink();
+}
+
+function showAsideOnce(text){
+  const el = document.createElement('div');
+  el.className = 'pantheon-blurb';
+  el.style.color = 'var(--gold-bright)';
+  el.textContent = text;
+  document.body.insertBefore(el, document.querySelector('.wrap'));
+}
+
+async function refreshEntitlements(){
+  entitlements = new Set();
+  if(!currentUser || !supabaseClient) return;
+  const { data, error } = await supabaseClient
+    .from('entitlements')
+    .select('scope_type, scope_id')
+    .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString());
+  if(error){ console.error('entitlements fetch failed', error); return; }
+  (data || []).forEach(e => {
+    entitlements.add(e.scope_type === 'all' ? 'all' : e.scope_type + ':' + e.scope_id);
+  });
+}
+
+function renderAuthBar(){
+  const bar = document.getElementById('authBar');
+  if(currentUser){
+    bar.innerHTML =
+      '<span class="who">' + esc(currentUser.email || 'Signed in') + '</span>' +
+      '<button onclick="signOut()">Sign out</button>';
+  } else {
+    bar.innerHTML = '<button onclick="openAuthModal()">Sign in</button>';
+  }
+}
+
+function openAuthModal(){
+  document.getElementById('authModalMsg').textContent = '';
+  document.getElementById('authModal').classList.add('active');
+}
+function closeAuthModal(){
+  document.getElementById('authModal').classList.remove('active');
+}
+
+async function signInWithGoogle(){
+  if(!supabaseClient) return;
+  await supabaseClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname }
+  });
+}
+
+async function sendMagicLink(){
+  const email = document.getElementById('authEmail').value.trim();
+  const msg = document.getElementById('authModalMsg');
+  if(!email){ msg.textContent = 'Enter an email first.'; return; }
+  msg.textContent = 'Sending...';
+  const { error } = await supabaseClient.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.origin + window.location.pathname }
+  });
+  msg.textContent = error ? error.message : 'Check your email for a sign-in link.';
+}
+
+async function signOut(){
+  if(!supabaseClient) return;
+  await supabaseClient.auth.signOut();
+}
+
+async function authHeaders(){
+  if(!supabaseClient) return {};
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  return session ? { Authorization: 'Bearer ' + session.access_token } : {};
+}
+
+async function startCheckout(type, scopeId){
+  if(!currentUser){ openAuthModal(); return; }
+  try{
+    const headers = Object.assign({'Content-Type': 'application/json'}, await authHeaders());
+    const resp = await fetch(FUNCTIONS_URL + '/create-checkout', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ type, scopeId })
+    });
+    const data = await resp.json();
+    if(data.ok && data.url){
+      window.location.href = data.url;
+    } else {
+      alert(data.error || 'Could not start checkout.');
+    }
+  }catch(e){
+    alert('Could not reach checkout: ' + e.message);
+  }
+}
 
 /* Portrait helper. Portraits are your own artwork, stored as PNG files
    named after the deity, capitalised: Zeus.png, Hecate.png, Nemesis.png.
@@ -3008,6 +3203,7 @@ function renderGate(){
   const list = PANTHEONS[currentPantheon].deities;
   document.getElementById('gateGrid').innerHTML = list.map(d => `
     <div class="card" onclick="openDeity('${d.id}')">
+      ${isUnlocked(d) ? '' : '<div class="lock-badge" title="Locked">&#128274;</div>'}
       <div class="medallion">${portraitHTML(d)}</div>
       <h3>${esc(d.name)}</h3>
       <div class="epithet">${esc(d.epithets.split(' · ')[0])}</div>
@@ -3058,15 +3254,28 @@ function openDeity(id){
 
       <div class="communion">
         <div class="section-title">Speak with ${esc(d.name)}</div>
+        ${isUnlocked(d) ? `
         <div class="chat-window" id="chatWindow"></div>
         <div class="chat-input-row">
           <input type="text" id="chatInput" maxlength="600" placeholder="Ask ${esc(d.name)} something..." onkeydown="if(event.key==='Enter')sendMessage()">
           <button id="sendBtn" onclick="sendMessage()">Speak</button>
         </div>
+        ` : `
+        <div class="paywall">
+          <p>${currentUser ? esc(d.name) + ' has not granted you an audience yet.' : 'Sign in to unlock ' + esc(d.name) + '.'}</p>
+          <div class="buy-row">
+            ${!currentUser ? `<button onclick="openAuthModal()">Sign in</button>` : `
+              <button onclick="startCheckout('deity', '${d.id}')">Unlock ${esc(d.name)}</button>
+              <button class="secondary" onclick="startCheckout('pantheon', '${currentPantheon}')">Unlock this pantheon</button>
+              <button class="secondary" onclick="startCheckout('all')">Full access — monthly</button>
+            `}
+          </div>
+        </div>
+        `}
       </div>
     </div>
   `;
-  renderChat();
+  if(isUnlocked(d)) renderChat();
   window.scrollTo(0,0);
 }
 
@@ -3093,8 +3302,8 @@ async function sendMessage(){
   if(!text || !currentDeity) return;
   const key = historyKey();
 
-  if(RELAY_URL.indexOf('PASTE_YOUR') === 0){
-    chatHistory[key].push({role:'assistant', aside:true, content:'The relay URL has not been set in this file yet.'});
+  if(SUPABASE_URL.indexOf('PASTE_YOUR') === 0){
+    chatHistory[key].push({role:'assistant', aside:true, content:'The backend has not been configured in this file yet.'});
     renderChat();
     return;
   }
@@ -3113,11 +3322,10 @@ async function sendMessage(){
       .filter(m => !m.aside)
       .map(m => ({role: m.role, content: m.content}));
 
-    /* Content-Type MUST stay text/plain — anything else triggers a CORS
-       preflight, which Apps Script cannot answer. */
-    const response = await fetch(RELAY_URL, {
+    const headers = Object.assign({"Content-Type": "application/json"}, await authHeaders());
+    const response = await fetch(FUNCTIONS_URL + "/chat", {
       method: "POST",
-      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      headers,
       body: JSON.stringify({
         pantheon: currentPantheon,
         deity: currentDeity.id,
@@ -3150,6 +3358,7 @@ document.getElementById('backBtn').onclick = function(){
 };
 
 selectPantheon('greek');
+initAuth();
 </script>
 </body>
 </html>
