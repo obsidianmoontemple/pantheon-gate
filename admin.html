@@ -208,6 +208,19 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
       <div class="form-row">
         <div class="field">
+          <label>Send to</label>
+          <select id="broadcastTargetType" style="max-width:150px;">
+            <option value="everyone">Everyone</option>
+            <option value="one">One player</option>
+          </select>
+        </div>
+        <div class="field" id="broadcastTargetEmailField" style="display:none;">
+          <label>Their email</label>
+          <input type="email" id="broadcastTargetEmail" placeholder="player@example.com" style="max-width:220px;">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
           <label>Attach a gift?</label>
           <select id="broadcastGiftType" style="max-width:180px;">
             <option value="none">No gift, just a message</option>
@@ -231,8 +244,68 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="scroll-table" style="max-height:280px;margin-top:14px;">
         <table>
-          <thead><tr><th>Message</th><th>Gift</th><th></th></tr></thead>
-          <tbody id="broadcastRows"><tr><td colspan="3">Loading…</td></tr></tbody>
+          <thead><tr><th>To</th><th>Message</th><th>Gift</th><th></th></tr></thead>
+          <tbody id="broadcastRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Add a new god (EZ deity adder)</h2>
+      <p class="hint">Adds a god without touching code or redeploying anything. It appears on the site immediately, and shows up below in the Gods pricing table so you can price it or make it free just like any other.</p>
+      <div class="form-row">
+        <div class="field">
+          <label>Pantheon</label>
+          <select id="newGodPantheon" style="max-width:180px;"></select>
+        </div>
+        <div class="field">
+          <label>Id (lowercase, no spaces)</label>
+          <input type="text" id="newGodId" placeholder="e.g. anubis2" style="max-width:160px;">
+        </div>
+        <div class="field">
+          <label>Name</label>
+          <input type="text" id="newGodName" placeholder="e.g. Anubis" style="max-width:200px;">
+        </div>
+        <div class="field">
+          <label>Epithets</label>
+          <input type="text" id="newGodEpithets" placeholder="e.g. Lord of the Dead · Weigher of Hearts" style="max-width:280px;">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Domains (comma separated)</label>
+          <input type="text" id="newGodDomains" placeholder="e.g. death, judgment, embalming" style="max-width:280px;">
+        </div>
+        <div class="field">
+          <label>Symbols (comma separated)</label>
+          <input type="text" id="newGodSymbols" placeholder="e.g. jackal, scales, ankh" style="max-width:280px;">
+        </div>
+        <div class="field">
+          <label>Portrait image URL (optional)</label>
+          <input type="text" id="newGodPortraitUrl" placeholder="https://…" style="max-width:280px;">
+        </div>
+        <div class="field">
+          <label>Portrait caption (optional)</label>
+          <input type="text" id="newGodPortraitCaption" style="max-width:200px;">
+        </div>
+      </div>
+      <div class="field" style="max-width:none;">
+        <label>Introduction (first thing they say when opened)</label>
+        <textarea id="newGodIntro" rows="2" style="width:100%;max-width:none;background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;border-radius:3px;"></textarea>
+      </div>
+      <div class="field" style="max-width:none;">
+        <label>Myth / background (one paragraph per line — this is what they draw on in chat)</label>
+        <textarea id="newGodMyth" rows="5" style="width:100%;max-width:none;background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;border-radius:3px;"></textarea>
+      </div>
+      <div class="save-bar">
+        <button id="addGodBtn">Add god</button>
+        <div class="status" id="newGodStatus"></div>
+      </div>
+
+      <div class="scroll-table" style="max-height:220px;margin-top:14px;">
+        <table>
+          <thead><tr><th>God</th><th>Pantheon</th><th>Added</th><th></th></tr></thead>
+          <tbody id="customGodRows"><tr><td colspan="4">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -350,7 +423,10 @@ async function handleSession(session){
   adminArea.style.display = 'block';
   loadPricing();
   loadPantheonSettings();
+  populateNewGodPantheonOptions();
+  await loadCustomDeitiesIntoCatalog();
   loadDeitySettings();
+  loadCustomGodsList();
   loadEntitlements();
   loadBroadcasts();
   loadRevenue();
@@ -421,6 +497,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('postBroadcastBtn').addEventListener('click', postBroadcast);
   document.getElementById('broadcastGiftType').addEventListener('change', updateBroadcastGiftFields);
   updateBroadcastGiftFields();
+  document.getElementById('broadcastTargetType').addEventListener('change', updateBroadcastTargetField);
+  updateBroadcastTargetField();
+  document.getElementById('addGodBtn').addEventListener('click', addCustomGod);
 });
 
 /* ---------------- pantheons ---------------- */
@@ -515,6 +594,130 @@ async function saveDeitySettings(){
   if(!error) loadDeitySettings();
 }
 
+/* ---------------- EZ deity adder ---------------- */
+
+function populateNewGodPantheonOptions(){
+  const sel = document.getElementById('newGodPantheon');
+  sel.innerHTML = Object.keys(CATALOG).map(pid =>
+    `<option value="${esc(pid)}">${esc(CATALOG[pid].label)}</option>`
+  ).join('');
+}
+
+// Fetches admin-added gods and folds them into the same CATALOG/FLAT_DEITIES
+// structures the static 169 gods live in, so the rest of this page (the
+// pricing table, search, save-all) treats them identically. Called once per
+// sign-in, before loadDeitySettings().
+async function loadCustomDeitiesIntoCatalog(){
+  const { data, error } = await supabaseClient
+    .from('custom_deities')
+    .select('id, pantheon_id, name')
+    .eq('active', true);
+  if(error){ console.error('custom_deities load failed', error); return; }
+  (data || []).forEach(row => {
+    const pantheon = CATALOG[row.pantheon_id];
+    if(!pantheon){ console.warn('custom deity has unknown pantheon_id, skipping', row.id, row.pantheon_id); return; }
+    if(FLAT_DEITIES.some(d => d.id === row.id)) return; // already merged (e.g. re-run of handleSession)
+    pantheon.deities.push([row.id, row.name]);
+    FLAT_DEITIES.push({ id: row.id, name: row.name, pantheonId: row.pantheon_id, pantheonLabel: pantheon.label });
+  });
+}
+
+async function loadCustomGodsList(){
+  const rows = document.getElementById('customGodRows');
+  const { data, error } = await supabaseClient
+    .from('custom_deities')
+    .select('id, pantheon_id, name, created_at')
+    .eq('active', true)
+    .order('created_at', { ascending: false });
+
+  if(error){
+    rows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  if(!data.length){
+    rows.innerHTML = '<tr><td colspan="4">No admin-added gods yet.</td></tr>';
+    return;
+  }
+  rows.innerHTML = data.map(g => {
+    const pantheonLabel = CATALOG[g.pantheon_id]?.label || g.pantheon_id;
+    return `<tr>
+      <td>${esc(g.name)}</td>
+      <td class="dim">${esc(pantheonLabel)}</td>
+      <td class="dim">${esc(new Date(g.created_at).toLocaleDateString())}</td>
+      <td><button class="small danger" onclick="removeCustomGod('${esc(g.id)}','${esc(g.pantheon_id)}')">Remove</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function addCustomGod(){
+  const status = document.getElementById('newGodStatus');
+  const pantheonId = document.getElementById('newGodPantheon').value;
+  const id = document.getElementById('newGodId').value.trim().toLowerCase();
+  const name = document.getElementById('newGodName').value.trim();
+  const epithets = document.getElementById('newGodEpithets').value.trim();
+  const domains = document.getElementById('newGodDomains').value.split(',').map(s => s.trim()).filter(Boolean);
+  const symbols = document.getElementById('newGodSymbols').value.split(',').map(s => s.trim()).filter(Boolean);
+  const portraitUrl = document.getElementById('newGodPortraitUrl').value.trim();
+  const portraitCaption = document.getElementById('newGodPortraitCaption').value.trim();
+  const intro = document.getElementById('newGodIntro').value.trim();
+  const myth = document.getElementById('newGodMyth').value.split('\n').map(s => s.trim()).filter(Boolean);
+
+  if(!/^[a-z0-9]+$/.test(id)){
+    status.className = 'status err';
+    status.textContent = 'Id must be lowercase letters/numbers only, no spaces (e.g. anubis2).';
+    return;
+  }
+  if(FLAT_DEITIES.some(d => d.id === id)){
+    status.className = 'status err';
+    status.textContent = 'That id is already taken by another god — pick a different one.';
+    return;
+  }
+  if(!name || !intro){
+    status.className = 'status err';
+    status.textContent = 'Name and introduction are required.';
+    return;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('custom_deities').insert({
+    id, pantheon_id: pantheonId, name, epithets, domains, symbols,
+    intro, myth, portrait_url: portraitUrl || null, portrait_caption: portraitCaption
+  });
+
+  if(error){
+    status.className = 'status err';
+    status.textContent = 'Failed: ' + error.message;
+    return;
+  }
+
+  status.className = 'status ok';
+  status.textContent = name + ' is live. Set pricing for it below just like any other god.';
+
+  CATALOG[pantheonId].deities.push([id, name]);
+  FLAT_DEITIES.push({ id, name, pantheonId, pantheonLabel: CATALOG[pantheonId].label });
+
+  ['newGodId','newGodName','newGodEpithets','newGodDomains','newGodSymbols','newGodPortraitUrl','newGodPortraitCaption','newGodIntro','newGodMyth']
+    .forEach(fid => { document.getElementById(fid).value = ''; });
+
+  loadDeitySettings();
+  loadCustomGodsList();
+}
+
+async function removeCustomGod(id, pantheonId){
+  if(!confirm('Remove this god? Players who already have it entitled keep access, but it disappears from the site and pricing table.')) return;
+  const { error } = await supabaseClient.from('custom_deities').update({ active: false }).eq('id', id);
+  if(error){ alert('Failed: ' + error.message); return; }
+
+  const pantheon = CATALOG[pantheonId];
+  if(pantheon) pantheon.deities = pantheon.deities.filter(([did]) => did !== id);
+  const idx = FLAT_DEITIES.findIndex(d => d.id === id);
+  if(idx !== -1) FLAT_DEITIES.splice(idx, 1);
+
+  loadDeitySettings();
+  loadCustomGodsList();
+}
+
 /* ---------------- grant / revoke ---------------- */
 
 async function grantAccess(){
@@ -588,14 +791,26 @@ function updateBroadcastGiftFields(){
   document.getElementById('broadcastGiftScopeField').style.display = (type === 'deity' || type === 'pantheon') ? '' : 'none';
 }
 
+function updateBroadcastTargetField(){
+  const type = document.getElementById('broadcastTargetType').value;
+  document.getElementById('broadcastTargetEmailField').style.display = (type === 'one') ? '' : 'none';
+}
+
 async function postBroadcast(){
   const status = document.getElementById('broadcastStatus');
   const message = document.getElementById('broadcastMessage').value.trim();
   const giftType = document.getElementById('broadcastGiftType').value;
+  const targetType = document.getElementById('broadcastTargetType').value;
+  const targetEmail = document.getElementById('broadcastTargetEmail').value.trim();
 
   if(!message){
     status.className = 'status err';
     status.textContent = 'Write a message first.';
+    return;
+  }
+  if(targetType === 'one' && !targetEmail){
+    status.className = 'status err';
+    status.textContent = 'Enter the player\'s email, or switch back to Everyone.';
     return;
   }
 
@@ -625,16 +840,21 @@ async function postBroadcast(){
     p_message: message,
     p_gift_bonus_messages: giftBonus,
     p_gift_scope_type: giftScopeType,
-    p_gift_scope_id: giftScopeId
+    p_gift_scope_id: giftScopeId,
+    p_target_email: targetType === 'one' ? targetEmail : null
   });
   status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? ('Failed: ' + error.message) : 'Posted — players will see it next time they sign in or refresh.';
+  status.textContent = error ? ('Failed: ' + error.message) :
+    (targetType === 'one' ? ('Sent to ' + targetEmail + '.') : 'Posted — players will see it next time they sign in or refresh.');
   if(!error){
     document.getElementById('broadcastMessage').value = '';
     document.getElementById('broadcastGiftBonus').value = '';
     document.getElementById('broadcastGiftScopeId').value = '';
     document.getElementById('broadcastGiftType').value = 'none';
+    document.getElementById('broadcastTargetEmail').value = '';
+    document.getElementById('broadcastTargetType').value = 'everyone';
     updateBroadcastGiftFields();
+    updateBroadcastTargetField();
     loadBroadcasts();
   }
 }
@@ -643,24 +863,26 @@ async function loadBroadcasts(){
   const rows = document.getElementById('broadcastRows');
   const { data, error } = await supabaseClient
     .from('broadcasts')
-    .select('id, message, gift_bonus_messages, gift_scope_type, gift_scope_id, created_at')
+    .select('id, message, gift_bonus_messages, gift_scope_type, gift_scope_id, created_at, target_user_id, profiles!broadcasts_target_user_id_fkey(email)')
     .eq('active', true)
     .order('created_at', { ascending: false })
     .limit(50);
 
   if(error){
-    rows.innerHTML = '<tr><td colspan="3">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   if(!data.length){
-    rows.innerHTML = '<tr><td colspan="3">No active announcements.</td></tr>';
+    rows.innerHTML = '<tr><td colspan="4">No active announcements.</td></tr>';
     return;
   }
   rows.innerHTML = data.map(b => {
     const gift = b.gift_bonus_messages ? ('+' + b.gift_bonus_messages + ' messages') :
       b.gift_scope_type === 'all' ? 'Full access' :
       b.gift_scope_type ? (b.gift_scope_type + ': ' + (b.gift_scope_id || '')) : '—';
+    const to = b.target_user_id ? (b.profiles?.email || '(unknown player)') : 'Everyone';
     return `<tr>
+      <td class="dim">${esc(to)}</td>
       <td>${esc(b.message)}</td>
       <td class="dim">${esc(gift)}</td>
       <td><button class="small danger" onclick="retractBroadcast('${b.id}')">Retract</button></td>
