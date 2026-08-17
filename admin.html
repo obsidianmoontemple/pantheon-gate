@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -115,6 +116,18 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <label>Full access, monthly ($)</label>
         <input type="number" step="0.01" min="0" id="priceSubscription">
       </div>
+      <div class="field">
+        <label>Included messages / signed-in user / month (0 = unlimited)</label>
+        <input type="number" step="1" min="0" id="includedMessages">
+      </div>
+      <div class="field">
+        <label>Message pack size (extra messages per purchase)</label>
+        <input type="number" step="1" min="1" id="packSize">
+      </div>
+      <div class="field">
+        <label>Message pack price ($)</label>
+        <input type="number" step="0.01" min="0" id="packPrice">
+      </div>
       <button id="savePricingBtn">Save global prices</button>
       <div class="status" id="pricingStatus"></div>
     </div>
@@ -182,6 +195,44 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <table>
           <thead><tr><th>Email</th><th>Scope</th><th>Source</th><th>Granted</th><th></th></tr></thead>
           <tbody id="entitlementRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Broadcasts — the comm line</h2>
+      <p class="hint">Post a server-wide announcement, optionally with a gift attached. Players see it in their in-site mailbox and claim any gift with one click.</p>
+      <div class="field" style="max-width:none;">
+        <label>Message</label>
+        <textarea id="broadcastMessage" rows="3" style="width:100%;max-width:none;background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;border-radius:3px;"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Attach a gift?</label>
+          <select id="broadcastGiftType" style="max-width:180px;">
+            <option value="none">No gift, just a message</option>
+            <option value="bonus_messages">Bonus messages</option>
+            <option value="deity">Free unlock: one god</option>
+            <option value="pantheon">Free unlock: one pantheon</option>
+            <option value="all">Free unlock: full access</option>
+          </select>
+        </div>
+        <div class="field" id="broadcastGiftBonusField" style="display:none;">
+          <label>How many bonus messages</label>
+          <input type="number" min="1" step="1" id="broadcastGiftBonus" style="max-width:140px;">
+        </div>
+        <div class="field" id="broadcastGiftScopeField" style="display:none;">
+          <label>God or pantheon id</label>
+          <input type="text" id="broadcastGiftScopeId" placeholder="e.g. hera or norse" style="max-width:180px;">
+        </div>
+        <button id="postBroadcastBtn">Post announcement</button>
+      </div>
+      <div class="status" id="broadcastStatus"></div>
+
+      <div class="scroll-table" style="max-height:280px;margin-top:14px;">
+        <table>
+          <thead><tr><th>Message</th><th>Gift</th><th></th></tr></thead>
+          <tbody id="broadcastRows"><tr><td colspan="3">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -301,6 +352,7 @@ async function handleSession(session){
   loadPantheonSettings();
   loadDeitySettings();
   loadEntitlements();
+  loadBroadcasts();
   loadRevenue();
   loadCustomers();
 }
@@ -310,7 +362,7 @@ async function handleSession(session){
 async function loadPricing(){
   const { data, error } = await supabaseClient
     .from('pricing_settings')
-    .select('deity_price_cents, pantheon_price_cents, subscription_price_cents')
+    .select('deity_price_cents, pantheon_price_cents, subscription_price_cents, included_messages_per_month, message_pack_size, message_pack_price_cents')
     .eq('id', 1)
     .maybeSingle();
   if(error || !data){
@@ -320,6 +372,9 @@ async function loadPricing(){
   document.getElementById('priceDeity').value = fmt2(data.deity_price_cents);
   document.getElementById('pricePantheon').value = fmt2(data.pantheon_price_cents);
   document.getElementById('priceSubscription').value = fmt2(data.subscription_price_cents);
+  document.getElementById('includedMessages').value = data.included_messages_per_month;
+  document.getElementById('packSize').value = data.message_pack_size;
+  document.getElementById('packPrice').value = fmt2(data.message_pack_price_cents);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -329,10 +384,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const deity = toCents(document.getElementById('priceDeity').value);
     const pantheon = toCents(document.getElementById('pricePantheon').value);
     const subscription = toCents(document.getElementById('priceSubscription').value);
+    const includedMessages = parseInt(document.getElementById('includedMessages').value || '0', 10);
+    const packSize = parseInt(document.getElementById('packSize').value || '0', 10);
+    const packPrice = toCents(document.getElementById('packPrice').value);
 
-    if([deity, pantheon, subscription].some(v => isNaN(v) || v < 0)){
+    if([deity, pantheon, subscription, packPrice].some(v => isNaN(v) || v < 0) ||
+       isNaN(includedMessages) || includedMessages < 0 || isNaN(packSize) || packSize < 1){
       status.className = 'status err';
-      status.textContent = 'Enter valid, non-negative prices.';
+      status.textContent = 'Enter valid, non-negative prices (pack size must be at least 1).';
       return;
     }
 
@@ -344,6 +403,9 @@ document.addEventListener('DOMContentLoaded', () => {
         deity_price_cents: deity,
         pantheon_price_cents: pantheon,
         subscription_price_cents: subscription,
+        included_messages_per_month: includedMessages,
+        message_pack_size: packSize,
+        message_pack_price_cents: packPrice,
         updated_at: new Date().toISOString()
       })
       .eq('id', 1);
@@ -356,6 +418,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveDeitiesBtn').addEventListener('click', saveDeitySettings);
   document.getElementById('grantBtn').addEventListener('click', grantAccess);
   document.getElementById('godSearch').addEventListener('input', filterGodRows);
+  document.getElementById('postBroadcastBtn').addEventListener('click', postBroadcast);
+  document.getElementById('broadcastGiftType').addEventListener('change', updateBroadcastGiftFields);
+  updateBroadcastGiftFields();
 });
 
 /* ---------------- pantheons ---------------- */
@@ -513,6 +578,101 @@ async function loadEntitlements(){
       <td><button class="small danger" onclick="revokeEntitlement('${e.id}')">Revoke</button></td>
     </tr>`;
   }).join('');
+}
+
+/* ---------------- broadcasts (comm line) ---------------- */
+
+function updateBroadcastGiftFields(){
+  const type = document.getElementById('broadcastGiftType').value;
+  document.getElementById('broadcastGiftBonusField').style.display = (type === 'bonus_messages') ? '' : 'none';
+  document.getElementById('broadcastGiftScopeField').style.display = (type === 'deity' || type === 'pantheon') ? '' : 'none';
+}
+
+async function postBroadcast(){
+  const status = document.getElementById('broadcastStatus');
+  const message = document.getElementById('broadcastMessage').value.trim();
+  const giftType = document.getElementById('broadcastGiftType').value;
+
+  if(!message){
+    status.className = 'status err';
+    status.textContent = 'Write a message first.';
+    return;
+  }
+
+  let giftBonus = null, giftScopeType = null, giftScopeId = null;
+  if(giftType === 'bonus_messages'){
+    giftBonus = parseInt(document.getElementById('broadcastGiftBonus').value || '0', 10);
+    if(!giftBonus || giftBonus <= 0){
+      status.className = 'status err';
+      status.textContent = 'Enter a positive number of bonus messages.';
+      return;
+    }
+  } else if(giftType === 'deity' || giftType === 'pantheon'){
+    giftScopeType = giftType;
+    giftScopeId = document.getElementById('broadcastGiftScopeId').value.trim();
+    if(!giftScopeId){
+      status.className = 'status err';
+      status.textContent = 'Enter a god or pantheon id.';
+      return;
+    }
+  } else if(giftType === 'all'){
+    giftScopeType = 'all';
+  }
+
+  status.className = 'status';
+  status.textContent = 'Posting…';
+  const { error } = await supabaseClient.rpc('admin_post_broadcast', {
+    p_message: message,
+    p_gift_bonus_messages: giftBonus,
+    p_gift_scope_type: giftScopeType,
+    p_gift_scope_id: giftScopeId
+  });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Posted — players will see it next time they sign in or refresh.';
+  if(!error){
+    document.getElementById('broadcastMessage').value = '';
+    document.getElementById('broadcastGiftBonus').value = '';
+    document.getElementById('broadcastGiftScopeId').value = '';
+    document.getElementById('broadcastGiftType').value = 'none';
+    updateBroadcastGiftFields();
+    loadBroadcasts();
+  }
+}
+
+async function loadBroadcasts(){
+  const rows = document.getElementById('broadcastRows');
+  const { data, error } = await supabaseClient
+    .from('broadcasts')
+    .select('id, message, gift_bonus_messages, gift_scope_type, gift_scope_id, created_at')
+    .eq('active', true)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if(error){
+    rows.innerHTML = '<tr><td colspan="3">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  if(!data.length){
+    rows.innerHTML = '<tr><td colspan="3">No active announcements.</td></tr>';
+    return;
+  }
+  rows.innerHTML = data.map(b => {
+    const gift = b.gift_bonus_messages ? ('+' + b.gift_bonus_messages + ' messages') :
+      b.gift_scope_type === 'all' ? 'Full access' :
+      b.gift_scope_type ? (b.gift_scope_type + ': ' + (b.gift_scope_id || '')) : '—';
+    return `<tr>
+      <td>${esc(b.message)}</td>
+      <td class="dim">${esc(gift)}</td>
+      <td><button class="small danger" onclick="retractBroadcast('${b.id}')">Retract</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function retractBroadcast(id){
+  if(!confirm('Retract this announcement? Anyone who already claimed a gift from it keeps it.')) return;
+  const { error } = await supabaseClient.rpc('admin_deactivate_broadcast', { p_broadcast_id: id });
+  if(error){ alert('Failed: ' + error.message); return; }
+  loadBroadcasts();
 }
 
 /* ---------------- revenue ---------------- */
