@@ -237,11 +237,13 @@ async function initAuth(){
   currentUser = session ? session.user : null;
   await refreshEntitlements();
   renderAuthBar();
+  renderGate();
 
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
     currentUser = session ? session.user : null;
     await refreshEntitlements();
     renderAuthBar();
+    renderGate();
     if(currentDeity) openDeity(currentDeity.id); // re-render paywall/chat state
   });
 
