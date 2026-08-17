@@ -273,6 +273,7 @@ async function initAuth(){
   }
   supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   await refreshCatalogSettings();
+  await mergeCustomDeities();
 
   const { data: { session } } = await supabaseClient.auth.getSession();
   currentUser = session ? session.user : null;
@@ -355,6 +356,35 @@ async function refreshCatalogSettings(){
     .select('pantheon_id, price_cents, for_sale');
   pantheonSettings = {};
   (pantheonRows || []).forEach(r => { pantheonSettings[r.pantheon_id] = r; });
+}
+
+// Pulls in gods added through the admin panel's "EZ deity adder" and folds
+// them into PANTHEONS alongside the coded-in ones, so the rest of the site
+// (tabs, gate grid, chat, paywall) never has to know the difference. Only
+// merges into a pantheon key that already exists on the page.
+async function mergeCustomDeities(){
+  if(!supabaseClient) return;
+  const { data, error } = await supabaseClient
+    .from('custom_deities')
+    .select('id, pantheon_id, name, epithets, domains, symbols, intro, myth, portrait_url, portrait_caption')
+    .eq('active', true);
+  if(error){ console.error('custom_deities fetch failed', error); return; }
+  (data || []).forEach(row => {
+    const pantheon = PANTHEONS[row.pantheon_id];
+    if(!pantheon){ console.warn('custom deity has unknown pantheon_id, skipping', row.id, row.pantheon_id); return; }
+    if(pantheon.deities.some(d => d.id === row.id)) return; // don't double-add on re-merge
+    pantheon.deities.push({
+      id: row.id,
+      name: row.name,
+      epithets: row.epithets || '',
+      domains: row.domains || [],
+      symbols: row.symbols || [],
+      intro: row.intro || '',
+      myth: row.myth || [],
+      portrait: row.portrait_url || '',
+      portraitCaption: row.portrait_caption || ''
+    });
+  });
 }
 
 async function refreshMessageStatus(){
@@ -3337,6 +3367,11 @@ const esc = s => String(s).replace(/[&<>"']/g, c =>
 /* If a Commons filename doesn't resolve, swap in a gold monogram. */
 function portraitHTML(d){
   const initial = esc(d.name.charAt(0));
+  if(!d.portrait){
+    // No portrait at all (e.g. a custom deity added without one) — skip the
+    // broken-image flash and go straight to the monogram placeholder.
+    return '<div class="sigil">' + initial + '</div>';
+  }
   return '<img src="' + d.portrait + '" alt="' + esc(d.name) + '" ' +
          'onerror="this.parentNode.innerHTML=\'<div class=&quot;sigil&quot;>' + initial + '</div>\'">';
 }
