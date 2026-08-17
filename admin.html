@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -133,12 +131,105 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     </div>
 
     <div class="card">
+      <h2>Subscription tiers</h2>
+      <p class="hint">Beyond the flat "Full Access" plan above, add named tiers at their own price. Each tier grants full access, one pantheon, or one god — whatever fits that price point. Existing subscribers on a tier keep it even if you remove it later.</p>
+      <div class="form-row">
+        <div class="field">
+          <label>Id (lowercase, no spaces)</label>
+          <input type="text" id="newTierId" placeholder="e.g. bronze" style="max-width:130px;">
+        </div>
+        <div class="field">
+          <label>Name</label>
+          <input type="text" id="newTierName" placeholder="e.g. Bronze" style="max-width:170px;">
+        </div>
+        <div class="field">
+          <label>Price / month ($)</label>
+          <input type="number" step="0.01" min="0.01" id="newTierPrice" style="max-width:110px;">
+        </div>
+        <div class="field">
+          <label>Grants</label>
+          <select id="newTierGrantType" style="max-width:150px;">
+            <option value="all">Full site access</option>
+            <option value="pantheon">One pantheon</option>
+            <option value="deity">One god</option>
+          </select>
+        </div>
+        <div class="field" id="newTierGrantIdField" style="display:none;">
+          <label>God or pantheon id</label>
+          <input type="text" id="newTierGrantId" placeholder="e.g. hera or norse" style="max-width:160px;">
+        </div>
+        <button id="addTierBtn">Add tier</button>
+      </div>
+      <div class="field" style="max-width:none;">
+        <label>Description (shown to players)</label>
+        <input type="text" id="newTierDescription" style="max-width:none;" placeholder="e.g. Full access to every pantheon, unlimited messages">
+      </div>
+      <div class="status" id="newTierStatus"></div>
+      <div class="scroll-table" style="max-height:240px;margin-top:14px;">
+        <table>
+          <thead><tr><th>Tier</th><th>Price</th><th>Grants</th><th></th></tr></thead>
+          <tbody id="tierRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Store items</h2>
+      <p class="hint">Add your own packs to the in-game Shop — a name, a price, and what it hands out (bonus messages and/or a free unlock, either or both). Separate from the "buy more messages" button players already have.</p>
+      <div class="form-row">
+        <div class="field">
+          <label>Id (lowercase, no spaces)</label>
+          <input type="text" id="newItemId" placeholder="e.g. starterpack" style="max-width:150px;">
+        </div>
+        <div class="field">
+          <label>Name</label>
+          <input type="text" id="newItemName" placeholder="e.g. Starter Pack" style="max-width:180px;">
+        </div>
+        <div class="field">
+          <label>Price ($)</label>
+          <input type="number" step="0.01" min="0.01" id="newItemPrice" style="max-width:110px;">
+        </div>
+        <div class="field">
+          <label>Bonus messages (optional)</label>
+          <input type="number" step="1" min="0" id="newItemBonus" style="max-width:140px;">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Also unlock? (optional)</label>
+          <select id="newItemGrantType" style="max-width:170px;">
+            <option value="">Nothing — messages only</option>
+            <option value="all">Full site access</option>
+            <option value="pantheon">One pantheon</option>
+            <option value="deity">One god</option>
+          </select>
+        </div>
+        <div class="field" id="newItemGrantIdField" style="display:none;">
+          <label>God or pantheon id</label>
+          <input type="text" id="newItemGrantId" placeholder="e.g. hera or norse" style="max-width:160px;">
+        </div>
+        <button id="addItemBtn">Add item</button>
+      </div>
+      <div class="field" style="max-width:none;">
+        <label>Description (shown to players)</label>
+        <input type="text" id="newItemDescription" style="max-width:none;">
+      </div>
+      <div class="status" id="newItemStatus"></div>
+      <div class="scroll-table" style="max-height:240px;margin-top:14px;">
+        <table>
+          <thead><tr><th>Item</th><th>Price</th><th>Grants</th><th></th></tr></thead>
+          <tbody id="itemRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>Pantheons</h2>
-      <p class="hint">Override the bundle price for a specific pantheon, or take it off the market temporarily.</p>
+      <p class="hint">Override the bundle price for a specific pantheon, take it off the market temporarily, or age-restrict the whole thing at once.</p>
       <div class="scroll-table" style="max-height:340px;">
         <table>
-          <thead><tr><th>Pantheon</th><th>Override price ($)</th><th>For sale</th></tr></thead>
-          <tbody id="pantheonRows"><tr><td colspan="3">Loading…</td></tr></tbody>
+          <thead><tr><th>Pantheon</th><th>Override price ($)</th><th>For sale</th><th>18+</th><th>Warning text</th></tr></thead>
+          <tbody id="pantheonRows"><tr><td colspan="5">Loading…</td></tr></tbody>
         </table>
       </div>
       <div class="save-bar">
@@ -148,13 +239,40 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     </div>
 
     <div class="card">
+      <h2>Add a new pantheon</h2>
+      <p class="hint">Adds a new tab to the site immediately. Use the EZ deity adder below to start filling it with gods.</p>
+      <div class="form-row">
+        <div class="field">
+          <label>Id (lowercase, no spaces)</label>
+          <input type="text" id="newPantheonId" placeholder="e.g. slavic" style="max-width:160px;">
+        </div>
+        <div class="field">
+          <label>Label (shown on the tab)</label>
+          <input type="text" id="newPantheonLabel" placeholder="e.g. Slavic" style="max-width:200px;">
+        </div>
+        <button id="addPantheonBtn">Add pantheon</button>
+      </div>
+      <div class="field" style="max-width:none;">
+        <label>Blurb (shown under the tabs when selected)</label>
+        <textarea id="newPantheonBlurb" rows="2" style="width:100%;max-width:none;background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;border-radius:3px;"></textarea>
+      </div>
+      <div class="status" id="newPantheonStatus"></div>
+      <div class="scroll-table" style="max-height:200px;margin-top:14px;">
+        <table>
+          <thead><tr><th>Pantheon</th><th>Added</th><th></th></tr></thead>
+          <tbody id="customPantheonRows"><tr><td colspan="3">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>Gods (169 total)</h2>
-      <p class="hint">Free = talkable without unlocking. Override price blank = uses the global default. For sale off = can't be individually purchased (existing owners keep access).</p>
+      <p class="hint">Free = talkable without unlocking. Override price blank = uses the global default. For sale off = can't be individually purchased (existing owners keep access). 18+ shows your warning text once per visitor before they can open this god.</p>
       <input class="search-box" type="text" id="godSearch" placeholder="Search by name…">
       <div class="scroll-table">
         <table>
-          <thead><tr><th>God</th><th>Pantheon</th><th>Free</th><th>Override price ($)</th><th>For sale</th></tr></thead>
-          <tbody id="deityRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+          <thead><tr><th>God</th><th>Pantheon</th><th>Free</th><th>Override price ($)</th><th>For sale</th><th>18+</th><th>Warning text</th></tr></thead>
+          <tbody id="deityRows"><tr><td colspan="7">Loading…</td></tr></tbody>
         </table>
       </div>
       <div class="save-bar">
@@ -346,6 +464,7 @@ Object.keys(CATALOG).forEach(pid => {
 const esc = s => String(s).replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt2 = n => (n == null ? '' : (n / 100).toFixed(2));
+const fmtUsd = n => '$' + fmt2(n);
 
 let supabaseClient = null;
 let deitySettings = {};
@@ -422,7 +541,11 @@ async function handleSession(session){
   loginModal.classList.remove('active');
   adminArea.style.display = 'block';
   loadPricing();
+  loadSubscriptionTiers();
+  loadStoreItems();
+  await loadCustomPantheonsIntoCatalog();
   loadPantheonSettings();
+  loadCustomPantheonsList();
   populateNewGodPantheonOptions();
   await loadCustomDeitiesIntoCatalog();
   loadDeitySettings();
@@ -500,6 +623,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('broadcastTargetType').addEventListener('change', updateBroadcastTargetField);
   updateBroadcastTargetField();
   document.getElementById('addGodBtn').addEventListener('click', addCustomGod);
+  document.getElementById('addPantheonBtn').addEventListener('click', addCustomPantheon);
+  document.getElementById('addTierBtn').addEventListener('click', addTier);
+  document.getElementById('newTierGrantType').addEventListener('change', updateNewTierGrantField);
+  updateNewTierGrantField();
+  document.getElementById('addItemBtn').addEventListener('click', addStoreItem);
+  document.getElementById('newItemGrantType').addEventListener('change', updateNewItemGrantField);
+  updateNewItemGrantField();
 });
 
 /* ---------------- pantheons ---------------- */
@@ -507,18 +637,20 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadPantheonSettings(){
   const { data, error } = await supabaseClient
     .from('pantheon_settings')
-    .select('pantheon_id, price_cents, for_sale');
+    .select('pantheon_id, price_cents, for_sale, age_restricted, age_warning');
   pantheonSettings = {};
   (data || []).forEach(r => { pantheonSettings[r.pantheon_id] = r; });
   if(error) console.error('pantheon_settings load failed', error);
 
   const rows = document.getElementById('pantheonRows');
   rows.innerHTML = Object.keys(CATALOG).map(pid => {
-    const s = pantheonSettings[pid] || { price_cents: null, for_sale: true };
+    const s = pantheonSettings[pid] || { price_cents: null, for_sale: true, age_restricted: false, age_warning: '' };
     return `<tr>
       <td>${esc(CATALOG[pid].label)}</td>
       <td><input type="number" step="0.01" min="0" id="pprice_${pid}" placeholder="default" value="${s.price_cents != null ? fmt2(s.price_cents) : ''}"></td>
       <td><input type="checkbox" id="pforsale_${pid}" ${s.for_sale ? 'checked' : ''}></td>
+      <td><input type="checkbox" id="page18_${pid}" ${s.age_restricted ? 'checked' : ''}></td>
+      <td><input type="text" id="pwarn_${pid}" placeholder="shown before entry" value="${esc(s.age_warning || '')}" style="max-width:220px;"></td>
     </tr>`;
   }).join('');
 }
@@ -531,6 +663,8 @@ async function savePantheonSettings(){
       pantheon_id: pid,
       price_cents: priceVal === '' ? null : Math.round(parseFloat(priceVal) * 100),
       for_sale: document.getElementById('pforsale_' + pid).checked,
+      age_restricted: document.getElementById('page18_' + pid).checked,
+      age_warning: document.getElementById('pwarn_' + pid).value.trim(),
       updated_at: new Date().toISOString()
     };
   });
@@ -542,25 +676,123 @@ async function savePantheonSettings(){
   if(!error) loadPantheonSettings();
 }
 
+/* ---------------- add a new pantheon ---------------- */
+
+// Fetches admin-added pantheons and folds them into CATALOG with an empty
+// deity list, so loadCustomDeitiesIntoCatalog() (below) has somewhere to
+// put gods added under them, and the Pantheons pricing table above picks
+// them up automatically.
+async function loadCustomPantheonsIntoCatalog(){
+  const { data, error } = await supabaseClient
+    .from('custom_pantheons')
+    .select('id, label')
+    .eq('active', true);
+  if(error){ console.error('custom_pantheons load failed', error); return; }
+  (data || []).forEach(row => {
+    if(CATALOG[row.id]) return;
+    CATALOG[row.id] = { label: row.label, deities: [] };
+  });
+}
+
+async function loadCustomPantheonsList(){
+  const rows = document.getElementById('customPantheonRows');
+  const { data, error } = await supabaseClient
+    .from('custom_pantheons')
+    .select('id, label, created_at')
+    .eq('active', true)
+    .order('created_at', { ascending: false });
+  if(error){
+    rows.innerHTML = '<tr><td colspan="3">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  if(!data.length){
+    rows.innerHTML = '<tr><td colspan="3">No admin-added pantheons yet.</td></tr>';
+    return;
+  }
+  rows.innerHTML = data.map(p => `<tr>
+    <td>${esc(p.label)}</td>
+    <td class="dim">${esc(new Date(p.created_at).toLocaleDateString())}</td>
+    <td><button class="small danger" onclick="removeCustomPantheon('${esc(p.id)}')">Remove</button></td>
+  </tr>`).join('');
+}
+
+async function addCustomPantheon(){
+  const status = document.getElementById('newPantheonStatus');
+  const id = document.getElementById('newPantheonId').value.trim().toLowerCase();
+  const label = document.getElementById('newPantheonLabel').value.trim();
+  const blurb = document.getElementById('newPantheonBlurb').value.trim();
+
+  if(!/^[a-z0-9]+$/.test(id)){
+    status.className = 'status err';
+    status.textContent = 'Id must be lowercase letters/numbers only, no spaces (e.g. slavic).';
+    return;
+  }
+  if(CATALOG[id]){
+    status.className = 'status err';
+    status.textContent = 'That id is already used by another pantheon — pick a different one.';
+    return;
+  }
+  if(!label){
+    status.className = 'status err';
+    status.textContent = 'Label is required.';
+    return;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('custom_pantheons').insert({ id, label, blurb });
+  if(error){
+    status.className = 'status err';
+    status.textContent = 'Failed: ' + error.message;
+    return;
+  }
+
+  status.className = 'status ok';
+  status.textContent = label + ' is live. Add gods to it below, and set its bundle price above.';
+  CATALOG[id] = { label, deities: [] };
+
+  document.getElementById('newPantheonId').value = '';
+  document.getElementById('newPantheonLabel').value = '';
+  document.getElementById('newPantheonBlurb').value = '';
+
+  populateNewGodPantheonOptions();
+  loadPantheonSettings();
+  loadCustomPantheonsList();
+}
+
+async function removeCustomPantheon(id){
+  const hasGods = FLAT_DEITIES.some(d => d.pantheonId === id);
+  const warn = hasGods ? ' Any custom gods already added to it will disappear from the site along with it.' : '';
+  if(!confirm('Remove this pantheon?' + warn)) return;
+  const { error } = await supabaseClient.from('custom_pantheons').update({ active: false }).eq('id', id);
+  if(error){ alert('Failed: ' + error.message); return; }
+  delete CATALOG[id];
+  populateNewGodPantheonOptions();
+  loadPantheonSettings();
+  loadCustomPantheonsList();
+}
+
 /* ---------------- gods ---------------- */
 
 async function loadDeitySettings(){
   const { data, error } = await supabaseClient
     .from('deity_settings')
-    .select('deity_id, price_cents, is_free, for_sale');
+    .select('deity_id, price_cents, is_free, for_sale, age_restricted, age_warning');
   deitySettings = {};
   (data || []).forEach(r => { deitySettings[r.deity_id] = r; });
   if(error) console.error('deity_settings load failed', error);
 
   const rows = document.getElementById('deityRows');
   rows.innerHTML = FLAT_DEITIES.map(d => {
-    const s = deitySettings[d.id] || { price_cents: null, is_free: false, for_sale: true };
+    const s = deitySettings[d.id] || { price_cents: null, is_free: false, for_sale: true, age_restricted: false, age_warning: '' };
     return `<tr data-name="${esc(d.name.toLowerCase())}">
       <td>${esc(d.name)}</td>
       <td class="dim">${esc(d.pantheonLabel)}</td>
       <td><input type="checkbox" id="free_${d.id}" ${s.is_free ? 'checked' : ''}></td>
       <td><input type="number" step="0.01" min="0" id="price_${d.id}" placeholder="default" value="${s.price_cents != null ? fmt2(s.price_cents) : ''}"></td>
       <td><input type="checkbox" id="forsale_${d.id}" ${s.for_sale ? 'checked' : ''}></td>
+      <td><input type="checkbox" id="age18_${d.id}" ${s.age_restricted ? 'checked' : ''}></td>
+      <td><input type="text" id="warn_${d.id}" placeholder="shown before entry" value="${esc(s.age_warning || '')}" style="max-width:200px;"></td>
     </tr>`;
   }).join('');
 }
@@ -583,11 +815,13 @@ async function saveDeitySettings(){
       price_cents: priceVal === '' ? null : Math.round(parseFloat(priceVal) * 100),
       is_free: document.getElementById('free_' + d.id).checked,
       for_sale: document.getElementById('forsale_' + d.id).checked,
+      age_restricted: document.getElementById('age18_' + d.id).checked,
+      age_warning: document.getElementById('warn_' + d.id).value.trim(),
       updated_at: new Date().toISOString()
     };
   });
   status.className = 'status';
-  status.textContent = 'Saving 169 rows…';
+  status.textContent = 'Saving rows…';
   const { error } = await supabaseClient.from('deity_settings').upsert(rows, { onConflict: 'deity_id' });
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Changes apply immediately, no redeploy needed.';
@@ -716,6 +950,177 @@ async function removeCustomGod(id, pantheonId){
 
   loadDeitySettings();
   loadCustomGodsList();
+}
+
+/* ---------------- subscription tiers ---------------- */
+
+function updateNewTierGrantField(){
+  const type = document.getElementById('newTierGrantType').value;
+  document.getElementById('newTierGrantIdField').style.display = (type === 'pantheon' || type === 'deity') ? '' : 'none';
+}
+
+function grantLabel(scopeType, scopeId){
+  return scopeType === 'all' ? 'Full access' : (scopeType + ': ' + (scopeId || ''));
+}
+
+async function loadSubscriptionTiers(){
+  const rows = document.getElementById('tierRows');
+  const { data, error } = await supabaseClient
+    .from('subscription_tiers')
+    .select('id, name, price_cents, grant_scope_type, grant_scope_id, active')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+  if(error){
+    rows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  if(!data.length){
+    rows.innerHTML = '<tr><td colspan="4">No tiers yet — the flat Full Access plan above is still available on its own.</td></tr>';
+    return;
+  }
+  rows.innerHTML = data.map(t => `<tr>
+    <td>${esc(t.name)}</td>
+    <td class="dim">${fmtUsd(t.price_cents)}/mo</td>
+    <td class="dim">${esc(grantLabel(t.grant_scope_type, t.grant_scope_id))}</td>
+    <td><button class="small danger" onclick="removeTier('${esc(t.id)}')">Remove</button></td>
+  </tr>`).join('');
+}
+
+async function addTier(){
+  const status = document.getElementById('newTierStatus');
+  const id = document.getElementById('newTierId').value.trim().toLowerCase();
+  const name = document.getElementById('newTierName').value.trim();
+  const priceVal = document.getElementById('newTierPrice').value;
+  const description = document.getElementById('newTierDescription').value.trim();
+  const grantType = document.getElementById('newTierGrantType').value;
+  const grantId = document.getElementById('newTierGrantId').value.trim();
+
+  if(!/^[a-z0-9]+$/.test(id)){
+    status.className = 'status err';
+    status.textContent = 'Id must be lowercase letters/numbers only, no spaces (e.g. bronze).';
+    return;
+  }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  const price = Math.round(parseFloat(priceVal || '0') * 100);
+  if(isNaN(price) || price <= 0){ status.className = 'status err'; status.textContent = 'Enter a price greater than $0.'; return; }
+  if((grantType === 'pantheon' || grantType === 'deity') && !grantId){
+    status.className = 'status err';
+    status.textContent = 'Enter a god or pantheon id.';
+    return;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('subscription_tiers').insert({
+    id, name, description, price_cents: price,
+    grant_scope_type: grantType,
+    grant_scope_id: (grantType === 'pantheon' || grantType === 'deity') ? grantId : null
+  });
+  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+
+  status.className = 'status ok';
+  status.textContent = name + ' tier is live.';
+  ['newTierId','newTierName','newTierPrice','newTierDescription','newTierGrantId'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newTierGrantType').value = 'all';
+  updateNewTierGrantField();
+  loadSubscriptionTiers();
+}
+
+async function removeTier(id){
+  if(!confirm('Remove this tier? Anyone already subscribed to it keeps their access until they cancel.')) return;
+  const { error } = await supabaseClient.from('subscription_tiers').update({ active: false }).eq('id', id);
+  if(error){ alert('Failed: ' + error.message); return; }
+  loadSubscriptionTiers();
+}
+
+/* ---------------- store items ---------------- */
+
+function updateNewItemGrantField(){
+  const type = document.getElementById('newItemGrantType').value;
+  document.getElementById('newItemGrantIdField').style.display = (type === 'pantheon' || type === 'deity') ? '' : 'none';
+}
+
+async function loadStoreItems(){
+  const rows = document.getElementById('itemRows');
+  const { data, error } = await supabaseClient
+    .from('store_items')
+    .select('id, name, price_cents, gift_bonus_messages, gift_scope_type, gift_scope_id, active')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+  if(error){
+    rows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  if(!data.length){
+    rows.innerHTML = '<tr><td colspan="4">No store items yet.</td></tr>';
+    return;
+  }
+  rows.innerHTML = data.map(i => {
+    const parts = [];
+    if(i.gift_bonus_messages) parts.push('+' + i.gift_bonus_messages + ' messages');
+    if(i.gift_scope_type) parts.push(grantLabel(i.gift_scope_type, i.gift_scope_id));
+    return `<tr>
+      <td>${esc(i.name)}</td>
+      <td class="dim">${fmtUsd(i.price_cents)}</td>
+      <td class="dim">${esc(parts.join(', ') || '—')}</td>
+      <td><button class="small danger" onclick="removeStoreItem('${esc(i.id)}')">Remove</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function addStoreItem(){
+  const status = document.getElementById('newItemStatus');
+  const id = document.getElementById('newItemId').value.trim().toLowerCase();
+  const name = document.getElementById('newItemName').value.trim();
+  const priceVal = document.getElementById('newItemPrice').value;
+  const bonusVal = document.getElementById('newItemBonus').value.trim();
+  const description = document.getElementById('newItemDescription').value.trim();
+  const grantType = document.getElementById('newItemGrantType').value;
+  const grantId = document.getElementById('newItemGrantId').value.trim();
+
+  if(!/^[a-z0-9]+$/.test(id)){
+    status.className = 'status err';
+    status.textContent = 'Id must be lowercase letters/numbers only, no spaces (e.g. starterpack).';
+    return;
+  }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  const price = Math.round(parseFloat(priceVal || '0') * 100);
+  if(isNaN(price) || price <= 0){ status.className = 'status err'; status.textContent = 'Enter a price greater than $0.'; return; }
+  const bonus = bonusVal === '' ? null : parseInt(bonusVal, 10);
+  if((grantType === 'pantheon' || grantType === 'deity') && !grantId){
+    status.className = 'status err';
+    status.textContent = 'Enter a god or pantheon id.';
+    return;
+  }
+  if(!bonus && !grantType){
+    status.className = 'status err';
+    status.textContent = 'Give it bonus messages, an unlock, or both — it needs to grant something.';
+    return;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('store_items').insert({
+    id, name, description, price_cents: price,
+    gift_bonus_messages: bonus,
+    gift_scope_type: grantType || null,
+    gift_scope_id: (grantType === 'pantheon' || grantType === 'deity') ? grantId : null
+  });
+  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+
+  status.className = 'status ok';
+  status.textContent = name + ' is live in the shop.';
+  ['newItemId','newItemName','newItemPrice','newItemBonus','newItemDescription','newItemGrantId'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newItemGrantType').value = '';
+  updateNewItemGrantField();
+  loadStoreItems();
+}
+
+async function removeStoreItem(id){
+  if(!confirm('Remove this item from the shop?')) return;
+  const { error } = await supabaseClient.from('store_items').update({ active: false }).eq('id', id);
+  if(error){ alert('Failed: ' + error.message); return; }
+  loadStoreItems();
 }
 
 /* ---------------- grant / revoke ---------------- */
