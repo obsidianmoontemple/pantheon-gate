@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pantheon Gate — Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#100e16;
+  --ink-2:#17131f;
+  --parchment:#e9decb;
+  --parchment-dim:#b9ac93;
+  --gold:#c8a24a;
+  --gold-bright:#e6c777;
+  --ember:#a1462a;
+  --line:#3a3346;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--ink);color:var(--parchment);font-family:'EB Garamond',serif;}
+h1,h2,.display{font-family:'Cinzel',serif;letter-spacing:0.04em;}
+.wrap{max-width:900px;margin:0 auto;padding:48px 24px 100px;}
+h1{font-size:28px;color:var(--parchment);margin:0 0 6px;}
+.sub{color:var(--parchment-dim);font-style:italic;margin:0 0 40px;}
+.card{background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--line);border-radius:4px;padding:26px;margin-bottom:28px;}
+.card h2{font-size:15px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold);margin:0 0 20px;}
+label{display:block;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--parchment-dim);margin-bottom:6px;}
+input{background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;border-radius:3px;width:100%;max-width:220px;}
+input:focus{outline:none;border-color:var(--gold);}
+.field{margin-bottom:16px;}
+button{background:var(--gold);color:var(--ink);border:none;padding:11px 22px;font-family:'Cinzel',serif;
+  font-size:12px;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;cursor:pointer;}
+button:hover{background:var(--gold-bright);}
+button.secondary{background:transparent;border:1px solid var(--line);color:var(--parchment-dim);}
+button.secondary:hover{border-color:var(--gold);color:var(--gold-bright);}
+.status{font-size:13px;color:var(--parchment-dim);font-style:italic;margin-top:12px;min-height:18px;}
+.status.ok{color:var(--gold-bright);}
+.status.err{color:var(--ember);}
+table{width:100%;border-collapse:collapse;font-size:14px;}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);}
+th{color:var(--gold);font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;}
+td{color:var(--parchment);}
+.pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;border:1px solid var(--line);}
+.pill.active{border-color:var(--gold);color:var(--gold-bright);}
+.pill.none{color:var(--parchment-dim);}
+.gate-msg{text-align:center;padding:80px 20px;color:var(--parchment-dim);font-style:italic;}
+.gate-msg button{margin-top:20px;}
+#loginModal{display:none;}
+#loginModal.active{display:block;}
+.modal-inline{max-width:340px;margin:0 auto;}
+.modal-inline input{max-width:none;margin-bottom:10px;}
+.modal-inline button{width:100%;margin-bottom:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>The Pantheon Gate — Admin</h1>
+  <p class="sub">Pricing and customers, no code required.</p>
+
+  <div id="gateMsg" class="gate-msg">Checking your session…</div>
+
+  <div id="loginModal" class="modal-inline">
+    <button class="secondary" id="googleBtn">Continue with Google</button>
+    <input type="email" id="emailInput" placeholder="you@example.com">
+    <button id="magicBtn">Email me a sign-in link</button>
+    <div class="status" id="loginStatus"></div>
+  </div>
+
+  <div id="adminArea" style="display:none;">
+
+    <div class="card">
+      <h2>Pricing</h2>
+      <div class="field">
+        <label>Unlock one god ($)</label>
+        <input type="number" step="0.01" min="0" id="priceDeity">
+      </div>
+      <div class="field">
+        <label>Unlock a whole pantheon ($)</label>
+        <input type="number" step="0.01" min="0" id="pricePantheon">
+      </div>
+      <div class="field">
+        <label>Full access, monthly ($)</label>
+        <input type="number" step="0.01" min="0" id="priceSubscription">
+      </div>
+      <button id="savePricingBtn">Save prices</button>
+      <div class="status" id="pricingStatus"></div>
+    </div>
+
+    <div class="card">
+      <h2>Customers</h2>
+      <table id="customerTable">
+        <thead>
+          <tr><th>Email</th><th>Signed up</th><th>Subscription</th><th>One-time purchases</th></tr>
+        </thead>
+        <tbody id="customerRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+/* Same two values as index.html — this must point at the same Supabase project. */
+const SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY";
+
+const esc = s => String(s).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let supabaseClient = null;
+
+async function init(){
+  const gateMsg = document.getElementById('gateMsg');
+  if(SUPABASE_URL.indexOf('PASTE_YOUR') === 0){
+    gateMsg.textContent = 'This page has not been configured yet — fill in SUPABASE_URL and SUPABASE_ANON_KEY near the bottom of admin.html.';
+    return;
+  }
+  supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  document.getElementById('googleBtn').onclick = async () => {
+    await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.href.split('?')[0] }
+    });
+  };
+  document.getElementById('magicBtn').onclick = async () => {
+    const email = document.getElementById('emailInput').value.trim();
+    const status = document.getElementById('loginStatus');
+    if(!email){ status.textContent = 'Enter an email first.'; return; }
+    status.textContent = 'Sending…';
+    const { error } = await supabaseClient.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.href.split('?')[0] }
+    });
+    status.textContent = error ? error.message : 'Check your email for a sign-in link.';
+  };
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  await handleSession(session);
+
+  supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+    await handleSession(session);
+  });
+}
+
+async function handleSession(session){
+  const gateMsg = document.getElementById('gateMsg');
+  const loginModal = document.getElementById('loginModal');
+  const adminArea = document.getElementById('adminArea');
+
+  if(!session){
+    gateMsg.textContent = 'Sign in with the same account you use as the site owner.';
+    loginModal.classList.add('active');
+    adminArea.style.display = 'none';
+    return;
+  }
+
+  const { data: profile, error } = await supabaseClient
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', session.user.id)
+    .maybeSingle();
+
+  if(error || !profile?.is_admin){
+    gateMsg.textContent = "You're signed in, but this account isn't marked as an admin. Run the SQL from 0002_admin_and_pricing.sql to grant yourself access.";
+    loginModal.classList.remove('active');
+    adminArea.style.display = 'none';
+    return;
+  }
+
+  gateMsg.textContent = '';
+  loginModal.classList.remove('active');
+  adminArea.style.display = 'block';
+  loadPricing();
+  loadCustomers();
+}
+
+async function loadPricing(){
+  const { data, error } = await supabaseClient
+    .from('pricing_settings')
+    .select('deity_price_cents, pantheon_price_cents, subscription_price_cents')
+    .eq('id', 1)
+    .maybeSingle();
+  if(error || !data){
+    document.getElementById('pricingStatus').textContent = 'Could not load pricing: ' + (error?.message || 'no row found');
+    return;
+  }
+  document.getElementById('priceDeity').value = (data.deity_price_cents / 100).toFixed(2);
+  document.getElementById('pricePantheon').value = (data.pantheon_price_cents / 100).toFixed(2);
+  document.getElementById('priceSubscription').value = (data.subscription_price_cents / 100).toFixed(2);
+}
+
+document.getElementById('savePricingBtn').addEventListener('click', async () => {
+  const status = document.getElementById('pricingStatus');
+  const toCents = v => Math.round(parseFloat(v || '0') * 100);
+  const deity = toCents(document.getElementById('priceDeity').value);
+  const pantheon = toCents(document.getElementById('pricePantheon').value);
+  const subscription = toCents(document.getElementById('priceSubscription').value);
+
+  if([deity, pantheon, subscription].some(v => isNaN(v) || v < 0)){
+    status.className = 'status err';
+    status.textContent = 'Enter valid, non-negative prices.';
+    return;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient
+    .from('pricing_settings')
+    .update({
+      deity_price_cents: deity,
+      pantheon_price_cents: pantheon,
+      subscription_price_cents: subscription,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', 1);
+
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. New prices apply to the next checkout immediately.';
+});
+
+async function loadCustomers(){
+  const rows = document.getElementById('customerRows');
+  const { data, error } = await supabaseClient
+    .from('profiles')
+    .select('email, display_name, subscription_status, created_at, purchases(kind, amount_cents)')
+    .order('created_at', { ascending: false });
+
+  if(error){
+    rows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  if(!data.length){
+    rows.innerHTML = '<tr><td colspan="4">No customers yet.</td></tr>';
+    return;
+  }
+
+  rows.innerHTML = data.map(c => {
+    const oneTime = (c.purchases || []).filter(p => p.kind === 'one_time_purchase');
+    const spentCents = oneTime.reduce((sum, p) => sum + (p.amount_cents || 0), 0);
+    const subActive = c.subscription_status === 'active';
+    return `<tr>
+      <td>${esc(c.email || c.display_name || '(no email on file)')}</td>
+      <td>${esc(new Date(c.created_at).toLocaleDateString())}</td>
+      <td><span class="pill ${subActive ? 'active' : 'none'}">${esc(c.subscription_status || 'none')}</span></td>
+      <td>${oneTime.length} ($${(spentCents/100).toFixed(2)})</td>
+    </tr>`;
+  }).join('');
+}
+
+init();
+</script>
+</body>
+</html>
