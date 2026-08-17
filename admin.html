@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,27 +21,32 @@
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;background:var(--ink);color:var(--parchment);font-family:'EB Garamond',serif;}
 h1,h2,.display{font-family:'Cinzel',serif;letter-spacing:0.04em;}
-.wrap{max-width:900px;margin:0 auto;padding:48px 24px 100px;}
+.wrap{max-width:1100px;margin:0 auto;padding:48px 24px 100px;}
 h1{font-size:28px;color:var(--parchment);margin:0 0 6px;}
 .sub{color:var(--parchment-dim);font-style:italic;margin:0 0 40px;}
 .card{background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--line);border-radius:4px;padding:26px;margin-bottom:28px;}
-.card h2{font-size:15px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold);margin:0 0 20px;}
+.card h2{font-size:15px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold);margin:0 0 6px;}
+.card .hint{color:var(--parchment-dim);font-style:italic;font-size:13px;margin:0 0 20px;}
 label{display:block;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--parchment-dim);margin-bottom:6px;}
-input{background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;border-radius:3px;width:100%;max-width:220px;}
-input:focus{outline:none;border-color:var(--gold);}
+input,select{background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;border-radius:3px;width:100%;max-width:220px;}
+input:focus,select:focus{outline:none;border-color:var(--gold);}
 .field{margin-bottom:16px;}
 button{background:var(--gold);color:var(--ink);border:none;padding:11px 22px;font-family:'Cinzel',serif;
   font-size:12px;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;cursor:pointer;}
 button:hover{background:var(--gold-bright);}
 button.secondary{background:transparent;border:1px solid var(--line);color:var(--parchment-dim);}
 button.secondary:hover{border-color:var(--gold);color:var(--gold-bright);}
+button.small{padding:6px 12px;font-size:10px;}
+button.danger{background:transparent;border:1px solid var(--ember);color:var(--ember);}
+button.danger:hover{background:var(--ember);color:var(--parchment);}
 .status{font-size:13px;color:var(--parchment-dim);font-style:italic;margin-top:12px;min-height:18px;}
 .status.ok{color:var(--gold-bright);}
 .status.err{color:var(--ember);}
 table{width:100%;border-collapse:collapse;font-size:14px;}
 th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);}
-th{color:var(--gold);font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;}
+th{color:var(--gold);font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;position:sticky;top:0;background:var(--ink-2);}
 td{color:var(--parchment);}
+td.dim{color:var(--parchment-dim);font-size:13px;}
 .pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;border:1px solid var(--line);}
 .pill.active{border-color:var(--gold);color:var(--gold-bright);}
 .pill.none{color:var(--parchment-dim);}
@@ -51,12 +57,27 @@ td{color:var(--parchment);}
 .modal-inline{max-width:340px;margin:0 auto;}
 .modal-inline input{max-width:none;margin-bottom:10px;}
 .modal-inline button{width:100%;margin-bottom:8px;}
+.scroll-table{max-height:520px;overflow-y:auto;border:1px solid var(--line);border-radius:3px;}
+.scroll-table table{font-size:13px;}
+.scroll-table input[type=number]{max-width:90px;padding:6px 8px;}
+.scroll-table input[type=checkbox]{width:16px;height:16px;}
+.search-box{max-width:320px;margin-bottom:14px;}
+.form-row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;}
+.form-row .field{margin-bottom:0;}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:22px;}
+.stat-tile{border:1px solid var(--line);border-radius:3px;padding:16px;text-align:center;}
+.stat-tile .num{font-family:'Cinzel',serif;font-size:26px;color:var(--gold-bright);}
+.stat-tile .label{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--parchment-dim);margin-top:4px;}
+.top-sellers{list-style:none;padding:0;margin:0;}
+.top-sellers li{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;}
+.top-sellers li:last-child{border-bottom:none;}
+.save-bar{display:flex;align-items:center;gap:16px;margin-top:16px;}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>The Pantheon Gate — Admin</h1>
-  <p class="sub">Pricing and customers, no code required.</p>
+  <p class="sub">Pricing, catalog, and customers, no code required.</p>
 
   <div id="gateMsg" class="gate-msg">Checking your session…</div>
 
@@ -70,7 +91,18 @@ td{color:var(--parchment);}
   <div id="adminArea" style="display:none;">
 
     <div class="card">
-      <h2>Pricing</h2>
+      <h2>Revenue overview</h2>
+      <p class="hint">Live numbers from the purchases table. Manual grants (comped access) don't count toward revenue.</p>
+      <div class="stat-grid" id="statGrid">
+        <div class="stat-tile"><div class="num">—</div><div class="label">Loading…</div></div>
+      </div>
+      <h2 style="margin-top:8px;">Top sellers</h2>
+      <ul class="top-sellers" id="topSellers"><li>Loading…</li></ul>
+    </div>
+
+    <div class="card">
+      <h2>Global default pricing</h2>
+      <p class="hint">Applies to any god or pantheon that doesn't have its own override price below.</p>
       <div class="field">
         <label>Unlock one god ($)</label>
         <input type="number" step="0.01" min="0" id="priceDeity">
@@ -83,8 +115,75 @@ td{color:var(--parchment);}
         <label>Full access, monthly ($)</label>
         <input type="number" step="0.01" min="0" id="priceSubscription">
       </div>
-      <button id="savePricingBtn">Save prices</button>
+      <button id="savePricingBtn">Save global prices</button>
       <div class="status" id="pricingStatus"></div>
+    </div>
+
+    <div class="card">
+      <h2>Pantheons</h2>
+      <p class="hint">Override the bundle price for a specific pantheon, or take it off the market temporarily.</p>
+      <div class="scroll-table" style="max-height:340px;">
+        <table>
+          <thead><tr><th>Pantheon</th><th>Override price ($)</th><th>For sale</th></tr></thead>
+          <tbody id="pantheonRows"><tr><td colspan="3">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="save-bar">
+        <button id="savePantheonsBtn">Save pantheon changes</button>
+        <div class="status" id="pantheonStatus"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Gods (169 total)</h2>
+      <p class="hint">Free = talkable without unlocking. Override price blank = uses the global default. For sale off = can't be individually purchased (existing owners keep access).</p>
+      <input class="search-box" type="text" id="godSearch" placeholder="Search by name…">
+      <div class="scroll-table">
+        <table>
+          <thead><tr><th>God</th><th>Pantheon</th><th>Free</th><th>Override price ($)</th><th>For sale</th></tr></thead>
+          <tbody id="deityRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="save-bar">
+        <button id="saveDeitiesBtn">Save god changes</button>
+        <div class="status" id="deityStatus"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Grant or revoke access</h2>
+      <p class="hint">Comp a friend, fix a support issue, or claw back access — without touching the database directly. The person must have signed in at least once already.</p>
+      <div class="form-row">
+        <div class="field">
+          <label>Their email</label>
+          <input type="email" id="grantEmail" style="max-width:240px;">
+        </div>
+        <div class="field">
+          <label>Grant what</label>
+          <select id="grantScopeType" style="max-width:160px;">
+            <option value="deity">One god</option>
+            <option value="pantheon">One pantheon</option>
+            <option value="all">Full access</option>
+          </select>
+        </div>
+        <div class="field" id="grantScopeIdField">
+          <label>God or pantheon id</label>
+          <input type="text" id="grantScopeId" placeholder="e.g. hera or norse" style="max-width:180px;">
+        </div>
+        <div class="field">
+          <label>Note (optional)</label>
+          <input type="text" id="grantNote" placeholder="why" style="max-width:200px;">
+        </div>
+        <button id="grantBtn">Grant access</button>
+      </div>
+      <div class="status" id="grantStatus"></div>
+
+      <div class="scroll-table" style="max-height:320px;margin-top:10px;">
+        <table>
+          <thead><tr><th>Email</th><th>Scope</th><th>Source</th><th>Granted</th><th></th></tr></thead>
+          <tbody id="entitlementRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+        </table>
+      </div>
     </div>
 
     <div class="card">
@@ -106,10 +205,27 @@ td{color:var(--parchment);}
 const SUPABASE_URL = "https://kuvaeprkmwzlqrqtjbhc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dmFlcHJrbXd6bHFycXRqYmhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MDMzOTgsImV4cCI6MjEwMjQ3OTM5OH0.-W7tTHZZob_dY2ydAx26cFx_izPBKJ3_M0sadNd7cOI";
 
+/* Lightweight catalog — just ids/names/pantheons, so this page can build the
+   pricing table without shipping the full myth text from index.html. Keep
+   this in sync if you add a new pantheon or god in index.html/deities.json;
+   it doesn't need updating for anything else (prices, free/for-sale all
+   live in the database now). */
+const CATALOG = {"greek": {"label": "Greek", "deities": [["zeus", "Zeus"], ["hera", "Hera"], ["poseidon", "Poseidon"], ["demeter", "Demeter"], ["athena", "Athena"], ["apollo", "Apollo"], ["artemis", "Artemis"], ["ares", "Ares"], ["hephaestus", "Hephaestus"], ["aphrodite", "Aphrodite"], ["hermes", "Hermes"], ["hestia", "Hestia"], ["dionysus", "Dionysus"], ["hades", "Hades"], ["persephone", "Persephone"], ["hecate", "Hecate"], ["nemesis", "Nemesis"], ["morpheus", "Morpheus"]]}, "norse": {"label": "Norse", "deities": [["odin", "Odin"], ["frigg", "Frigg"], ["thor", "Thor"], ["sif", "Sif"], ["loki", "Loki"], ["baldr", "Baldr"], ["tyr", "Tyr"], ["heimdall", "Heimdall"], ["bragi", "Bragi"], ["idunn", "Idunn"], ["vidar", "Vidar"], ["njord", "Njord"], ["freyr", "Freyr"], ["freyja", "Freyja"], ["skadi", "Skadi"], ["hel", "Hel"]]}, "egyptian": {"label": "Egyptian", "deities": [["ra", "Ra"], ["amun", "Amun"], ["ptah", "Ptah"], ["thoth", "Thoth"], ["maat", "Maat"], ["osiris", "Osiris"], ["isis", "Isis"], ["set", "Set"], ["nephthys", "Nephthys"], ["horus", "Horus"], ["anubis", "Anubis"], ["sekhmet", "Sekhmet"], ["hathor", "Hathor"], ["bastet", "Bastet"], ["sobek", "Sobek"], ["nut", "Nut"], ["geb", "Geb"], ["taweret", "Taweret"]]}, "yoruba": {"label": "Yoruba / Orisha", "deities": [["obatala", "Obatala"], ["oduduwa", "Oduduwa"], ["esu", "Esu"], ["ogun", "Ogun"], ["sango", "Sango"], ["oya", "Oya"], ["osun", "Osun"], ["yemoja", "Yemoja"], ["orunmila", "Orunmila"], ["ososi", "Ososi"], ["osanyin", "Osanyin"], ["obaluaye", "Obaluaye"], ["olokun", "Olokun"], ["aganju", "Aganju"], ["ibeji", "Ibeji"], ["osumare", "Osumare"]]}, "celtic": {"label": "Celtic", "deities": [["dagda", "Dagda"], ["morrigan", "Morrigan"], ["brigid", "Brigid"], ["lugh", "Lugh"], ["nuada", "Nuada"], ["airmid", "Airmid"], ["manannan", "Manannan"], ["aengus", "Aengus"], ["oghma", "Oghma"], ["eriu", "Eriu"], ["rhiannon", "Rhiannon"], ["arawn", "Arawn"], ["cerridwen", "Cerridwen"], ["arianrhod", "Arianrhod"], ["gwydion", "Gwydion"], ["math", "Math"], ["bran", "Bran"], ["orddu", "Orddu"], ["cernunnos", "Cernunnos"], ["epona", "Epona"], ["matres", "Matres"], ["taranis", "Taranis"], ["merlin", "Merlin"], ["queenmab", "Queen Mab"]]}, "chinese": {"label": "Chinese", "deities": [["pangu", "Pangu"], ["nuwa", "Nuwa"], ["fuxi", "Fuxi"], ["jadeemperor", "Jade Emperor"], ["xiwangmu", "Xiwangmu"], ["laojun", "Taishang Laojun"], ["shennong", "Shennong"], ["houyi", "Houyi"], ["change", "Chang'e"], ["guanyin", "Guanyin"], ["mazu", "Mazu"], ["guanyu", "Guan Yu"], ["zaojun", "Zao Jun"], ["yanluo", "Yanluo Wang"], ["zhongkui", "Zhong Kui"], ["nezha", "Nezha"], ["wukong", "Sun Wukong"], ["lvdongbin", "Lu Dongbin"], ["zhongliquan", "Zhongli Quan"], ["zhangguolao", "Zhang Guolao"], ["hanxiangzi", "Han Xiangzi"], ["caoguojiu", "Cao Guojiu"], ["litieguai", "Li Tieguai"], ["lancaihe", "Lan Caihe"], ["hexiangu", "He Xiangu"]]}, "dragons": {"label": "Great Dragons", "deities": [["tiamat", "Tiamat"], ["kingu", "Kingu"], ["mushussu", "Mushussu"], ["apep", "Apep"], ["typhon", "Typhon"], ["echidna", "Echidna"], ["python", "Python"], ["ladon", "Ladon"], ["draco", "Draco"], ["colchian", "Colchian Dragon"], ["hydra", "Hydra"], ["jormungandr", "Jormungandr"], ["fafnir", "Fafnir"], ["nidhogg", "Nidhogg"], ["ddraiggoch", "Y Ddraig Goch"], ["barrowwyrm", "Barrow Wyrm"], ["zmey", "Zmey Gorynych"], ["azidahaka", "Azi Dahaka"], ["vritra", "Vritra"], ["vasuki", "Vasuki"], ["shesha", "Shesha"], ["aoguang", "Ao Guang"], ["yinglong", "Yinglong"], ["ryujin", "Ryujin"], ["orochi", "Yamata no Orochi"], ["quetzalcoatl", "Quetzalcoatl"], ["leviathan", "Leviathan"]]}, "lhp": {"label": "Left-Hand Path", "deities": [["lucifer", "Lucifer"], ["satan", "Satan"], ["lilith", "Lilith"], ["samael", "Samael"], ["naamah", "Naamah"], ["belial", "Belial"], ["beelzebub", "Beelzebub"], ["asmodeus", "Asmodeus"], ["astaroth", "Astaroth"], ["azazel", "Azazel"], ["baphomet", "Baphomet"], ["mammon", "Mammon"], ["belphegor", "Belphegor"], ["bael", "Bael"], ["paimon", "Paimon"], ["leviathan", "Leviathan"], ["moloch", "Moloch"], ["adramelech", "Adramelech"], ["lucifuge", "Lucifuge Rofocale"], ["choronzon", "Choronzon"], ["nachash", "Nachash"], ["cain", "Cain"], ["prometheus", "Prometheus"], ["ahriman", "Ahriman"], ["set", "Set"]]}};
+
+const FLAT_DEITIES = [];
+Object.keys(CATALOG).forEach(pid => {
+  CATALOG[pid].deities.forEach(([id, name]) => {
+    FLAT_DEITIES.push({ id, name, pantheonId: pid, pantheonLabel: CATALOG[pid].label });
+  });
+});
+
 const esc = s => String(s).replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt2 = n => (n == null ? '' : (n / 100).toFixed(2));
 
 let supabaseClient = null;
+let deitySettings = {};
+let pantheonSettings = {};
 
 async function init(){
   const gateMsg = document.getElementById('gateMsg');
@@ -137,12 +253,20 @@ async function init(){
     status.textContent = error ? error.message : 'Check your email for a sign-in link.';
   };
 
+  document.getElementById('grantScopeType').addEventListener('change', updateGrantScopeVisibility);
+  updateGrantScopeVisibility();
+
   const { data: { session } } = await supabaseClient.auth.getSession();
   await handleSession(session);
 
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
     await handleSession(session);
   });
+}
+
+function updateGrantScopeVisibility(){
+  const type = document.getElementById('grantScopeType').value;
+  document.getElementById('grantScopeIdField').style.display = (type === 'all') ? 'none' : '';
 }
 
 async function handleSession(session){
@@ -164,7 +288,7 @@ async function handleSession(session){
     .maybeSingle();
 
   if(error || !profile?.is_admin){
-    gateMsg.textContent = "You're signed in, but this account isn't marked as an admin. Run the SQL from 0002_admin_and_pricing.sql to grant yourself access.";
+    gateMsg.textContent = "You're signed in, but this account isn't marked as an admin.";
     loginModal.classList.remove('active');
     adminArea.style.display = 'none';
     return;
@@ -174,8 +298,14 @@ async function handleSession(session){
   loginModal.classList.remove('active');
   adminArea.style.display = 'block';
   loadPricing();
+  loadPantheonSettings();
+  loadDeitySettings();
+  loadEntitlements();
+  loadRevenue();
   loadCustomers();
 }
+
+/* ---------------- global pricing ---------------- */
 
 async function loadPricing(){
   const { data, error } = await supabaseClient
@@ -187,39 +317,250 @@ async function loadPricing(){
     document.getElementById('pricingStatus').textContent = 'Could not load pricing: ' + (error?.message || 'no row found');
     return;
   }
-  document.getElementById('priceDeity').value = (data.deity_price_cents / 100).toFixed(2);
-  document.getElementById('pricePantheon').value = (data.pantheon_price_cents / 100).toFixed(2);
-  document.getElementById('priceSubscription').value = (data.subscription_price_cents / 100).toFixed(2);
+  document.getElementById('priceDeity').value = fmt2(data.deity_price_cents);
+  document.getElementById('pricePantheon').value = fmt2(data.pantheon_price_cents);
+  document.getElementById('priceSubscription').value = fmt2(data.subscription_price_cents);
 }
 
-document.getElementById('savePricingBtn').addEventListener('click', async () => {
-  const status = document.getElementById('pricingStatus');
-  const toCents = v => Math.round(parseFloat(v || '0') * 100);
-  const deity = toCents(document.getElementById('priceDeity').value);
-  const pantheon = toCents(document.getElementById('pricePantheon').value);
-  const subscription = toCents(document.getElementById('priceSubscription').value);
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('savePricingBtn').addEventListener('click', async () => {
+    const status = document.getElementById('pricingStatus');
+    const toCents = v => Math.round(parseFloat(v || '0') * 100);
+    const deity = toCents(document.getElementById('priceDeity').value);
+    const pantheon = toCents(document.getElementById('pricePantheon').value);
+    const subscription = toCents(document.getElementById('priceSubscription').value);
 
-  if([deity, pantheon, subscription].some(v => isNaN(v) || v < 0)){
-    status.className = 'status err';
-    status.textContent = 'Enter valid, non-negative prices.';
+    if([deity, pantheon, subscription].some(v => isNaN(v) || v < 0)){
+      status.className = 'status err';
+      status.textContent = 'Enter valid, non-negative prices.';
+      return;
+    }
+
+    status.className = 'status';
+    status.textContent = 'Saving…';
+    const { error } = await supabaseClient
+      .from('pricing_settings')
+      .update({
+        deity_price_cents: deity,
+        pantheon_price_cents: pantheon,
+        subscription_price_cents: subscription,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', 1);
+
+    status.className = error ? 'status err' : 'status ok';
+    status.textContent = error ? ('Failed: ' + error.message) : 'Saved. New prices apply to the next checkout immediately.';
+  });
+
+  document.getElementById('savePantheonsBtn').addEventListener('click', savePantheonSettings);
+  document.getElementById('saveDeitiesBtn').addEventListener('click', saveDeitySettings);
+  document.getElementById('grantBtn').addEventListener('click', grantAccess);
+  document.getElementById('godSearch').addEventListener('input', filterGodRows);
+});
+
+/* ---------------- pantheons ---------------- */
+
+async function loadPantheonSettings(){
+  const { data, error } = await supabaseClient
+    .from('pantheon_settings')
+    .select('pantheon_id, price_cents, for_sale');
+  pantheonSettings = {};
+  (data || []).forEach(r => { pantheonSettings[r.pantheon_id] = r; });
+  if(error) console.error('pantheon_settings load failed', error);
+
+  const rows = document.getElementById('pantheonRows');
+  rows.innerHTML = Object.keys(CATALOG).map(pid => {
+    const s = pantheonSettings[pid] || { price_cents: null, for_sale: true };
+    return `<tr>
+      <td>${esc(CATALOG[pid].label)}</td>
+      <td><input type="number" step="0.01" min="0" id="pprice_${pid}" placeholder="default" value="${s.price_cents != null ? fmt2(s.price_cents) : ''}"></td>
+      <td><input type="checkbox" id="pforsale_${pid}" ${s.for_sale ? 'checked' : ''}></td>
+    </tr>`;
+  }).join('');
+}
+
+async function savePantheonSettings(){
+  const status = document.getElementById('pantheonStatus');
+  const rows = Object.keys(CATALOG).map(pid => {
+    const priceVal = document.getElementById('pprice_' + pid).value.trim();
+    return {
+      pantheon_id: pid,
+      price_cents: priceVal === '' ? null : Math.round(parseFloat(priceVal) * 100),
+      for_sale: document.getElementById('pforsale_' + pid).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('pantheon_settings').upsert(rows, { onConflict: 'pantheon_id' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadPantheonSettings();
+}
+
+/* ---------------- gods ---------------- */
+
+async function loadDeitySettings(){
+  const { data, error } = await supabaseClient
+    .from('deity_settings')
+    .select('deity_id, price_cents, is_free, for_sale');
+  deitySettings = {};
+  (data || []).forEach(r => { deitySettings[r.deity_id] = r; });
+  if(error) console.error('deity_settings load failed', error);
+
+  const rows = document.getElementById('deityRows');
+  rows.innerHTML = FLAT_DEITIES.map(d => {
+    const s = deitySettings[d.id] || { price_cents: null, is_free: false, for_sale: true };
+    return `<tr data-name="${esc(d.name.toLowerCase())}">
+      <td>${esc(d.name)}</td>
+      <td class="dim">${esc(d.pantheonLabel)}</td>
+      <td><input type="checkbox" id="free_${d.id}" ${s.is_free ? 'checked' : ''}></td>
+      <td><input type="number" step="0.01" min="0" id="price_${d.id}" placeholder="default" value="${s.price_cents != null ? fmt2(s.price_cents) : ''}"></td>
+      <td><input type="checkbox" id="forsale_${d.id}" ${s.for_sale ? 'checked' : ''}></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterGodRows(){
+  const q = document.getElementById('godSearch').value.trim().toLowerCase();
+  document.querySelectorAll('#deityRows tr').forEach(tr => {
+    const name = tr.getAttribute('data-name') || '';
+    tr.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+}
+
+async function saveDeitySettings(){
+  const status = document.getElementById('deityStatus');
+  const rows = FLAT_DEITIES.map(d => {
+    const priceVal = document.getElementById('price_' + d.id).value.trim();
+    return {
+      deity_id: d.id,
+      pantheon_id: d.pantheonId,
+      price_cents: priceVal === '' ? null : Math.round(parseFloat(priceVal) * 100),
+      is_free: document.getElementById('free_' + d.id).checked,
+      for_sale: document.getElementById('forsale_' + d.id).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  status.className = 'status';
+  status.textContent = 'Saving 169 rows…';
+  const { error } = await supabaseClient.from('deity_settings').upsert(rows, { onConflict: 'deity_id' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Changes apply immediately, no redeploy needed.';
+  if(!error) loadDeitySettings();
+}
+
+/* ---------------- grant / revoke ---------------- */
+
+async function grantAccess(){
+  const status = document.getElementById('grantStatus');
+  const email = document.getElementById('grantEmail').value.trim();
+  const scopeType = document.getElementById('grantScopeType').value;
+  const scopeId = document.getElementById('grantScopeId').value.trim();
+  const note = document.getElementById('grantNote').value.trim();
+
+  if(!email){ status.className = 'status err'; status.textContent = 'Enter an email.'; return; }
+  if(scopeType !== 'all' && !scopeId){ status.className = 'status err'; status.textContent = 'Enter a god or pantheon id.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Granting…';
+  const { error } = await supabaseClient.rpc('admin_grant_entitlement', {
+    p_target_email: email,
+    p_scope_type: scopeType,
+    p_scope_id: scopeType === 'all' ? null : scopeId,
+    p_note: note || null
+  });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Granted.';
+  if(!error){
+    document.getElementById('grantEmail').value = '';
+    document.getElementById('grantScopeId').value = '';
+    document.getElementById('grantNote').value = '';
+    loadEntitlements();
+  }
+}
+
+async function revokeEntitlement(id){
+  if(!confirm('Revoke this entitlement?')) return;
+  const { error } = await supabaseClient.rpc('admin_revoke_entitlement', { p_entitlement_id: id });
+  if(error){ alert('Failed: ' + error.message); return; }
+  loadEntitlements();
+}
+
+async function loadEntitlements(){
+  const rows = document.getElementById('entitlementRows');
+  const { data, error } = await supabaseClient
+    .from('entitlements')
+    .select('id, scope_type, scope_id, source, granted_at, profiles(email)')
+    .order('granted_at', { ascending: false })
+    .limit(200);
+
+  if(error){
+    rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  if(!data.length){
+    rows.innerHTML = '<tr><td colspan="5">No entitlements yet.</td></tr>';
+    return;
+  }
+  rows.innerHTML = data.map(e => {
+    const scope = e.scope_type === 'all' ? 'Full access' : (e.scope_type + ': ' + (e.scope_id || ''));
+    return `<tr>
+      <td>${esc(e.profiles?.email || '(unknown)')}</td>
+      <td>${esc(scope)}</td>
+      <td class="dim">${esc(e.source)}</td>
+      <td class="dim">${esc(new Date(e.granted_at).toLocaleDateString())}</td>
+      <td><button class="small danger" onclick="revokeEntitlement('${e.id}')">Revoke</button></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ---------------- revenue ---------------- */
+
+async function loadRevenue(){
+  const { data: purchases, error } = await supabaseClient
+    .from('purchases')
+    .select('amount_cents, kind, scope_type, scope_id, created_at');
+  const { count: activeSubs } = await supabaseClient
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('subscription_status', 'active');
+
+  if(error){
+    document.getElementById('statGrid').innerHTML = '<div class="stat-tile"><div class="num">—</div><div class="label">Failed to load</div></div>';
     return;
   }
 
-  status.className = 'status';
-  status.textContent = 'Saving…';
-  const { error } = await supabaseClient
-    .from('pricing_settings')
-    .update({
-      deity_price_cents: deity,
-      pantheon_price_cents: pantheon,
-      subscription_price_cents: subscription,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', 1);
+  const rows = purchases || [];
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. New prices apply to the next checkout immediately.';
-});
+  const totalRevenue = rows.reduce((sum, r) => sum + (r.amount_cents || 0), 0);
+  const monthRevenue = rows
+    .filter(r => new Date(r.created_at) >= monthStart)
+    .reduce((sum, r) => sum + (r.amount_cents || 0), 0);
+  const saleCount = rows.filter(r => r.kind === 'one_time_purchase' || r.kind === 'subscription_created').length;
+
+  document.getElementById('statGrid').innerHTML = `
+    <div class="stat-tile"><div class="num">$${(totalRevenue/100).toFixed(2)}</div><div class="label">All-time revenue</div></div>
+    <div class="stat-tile"><div class="num">$${(monthRevenue/100).toFixed(2)}</div><div class="label">This month</div></div>
+    <div class="stat-tile"><div class="num">${saleCount}</div><div class="label">Total sales</div></div>
+    <div class="stat-tile"><div class="num">${activeSubs ?? 0}</div><div class="label">Active subscribers</div></div>
+  `;
+
+  const counts = {};
+  rows.filter(r => r.scope_type === 'deity' && r.scope_id).forEach(r => {
+    counts[r.scope_id] = (counts[r.scope_id] || 0) + 1;
+  });
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const nameOf = id => FLAT_DEITIES.find(d => d.id === id)?.name || id;
+
+  document.getElementById('topSellers').innerHTML = top.length
+    ? top.map(([id, count]) => `<li><span>${esc(nameOf(id))}</span><span>${count} sale${count === 1 ? '' : 's'}</span></li>`).join('')
+    : '<li>No individual god purchases yet.</li>';
+}
+
+/* ---------------- customers ---------------- */
 
 async function loadCustomers(){
   const rows = document.getElementById('customerRows');
