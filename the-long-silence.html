@@ -124,8 +124,16 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .hp-row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px;}
 .hp-name{font-family:'Cinzel',serif;font-size:13px;color:var(--parchment);}
 .hp-bar-track{background:rgba(0,0,0,0.4);border:1px solid var(--line);border-radius:20px;height:10px;overflow:hidden;margin-bottom:18px;}
-.hp-bar-fill{height:100%;background:linear-gradient(90deg,var(--ember),var(--gold-bright));transition:width .3s;}
+.hp-bar-fill{height:100%;background:linear-gradient(90deg,var(--ember),var(--gold-bright));transition:width .35s ease;}
 .hp-bar-fill.opponent{background:linear-gradient(90deg,var(--amethyst,#8a6bb8),var(--moon));}
+.hp-wrap{position:relative;}
+.hp-wrap.flash-hit{animation:hitFlash 0.45s ease;}
+.hp-wrap.control-hit .hp-bar-track{box-shadow:0 0 0 1px var(--moon);}
+@keyframes hitFlash{ 0%{filter:brightness(1);} 25%{filter:brightness(2) saturate(1.5);transform:translateX(-2px);} 50%{transform:translateX(2px);} 100%{filter:brightness(1);transform:translateX(0);} }
+.dmg-float{position:absolute;right:4px;top:-6px;font-family:'Cinzel',serif;font-size:15px;color:var(--ember);pointer-events:none;animation:dmgFloat 0.9s ease forwards;text-shadow:0 1px 3px rgba(0,0,0,0.6);}
+.dmg-float.crit{color:var(--gold-bright);font-size:18px;}
+.dmg-float.control{color:var(--moon);font-size:13px;}
+@keyframes dmgFloat{ 0%{opacity:1;transform:translateY(0);} 100%{opacity:0;transform:translateY(-28px);} }
 
 .move-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:18px 0;}
 .move-btn{background:transparent;border:1px solid var(--gold);color:var(--gold-bright);padding:10px 18px;font-family:'Cinzel',serif;font-size:11.5px;letter-spacing:0.08em;text-transform:uppercase;border-radius:3px;cursor:pointer;}
@@ -452,7 +460,7 @@ function renderGuardianHome(){
         : (marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.')}</p>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:14px;">
         <button onclick="openPetitionPicker()">Petition a god</button>
-        <button class="secondary" onclick="openProving()">Enter the Proving</button>
+        <button class="secondary" onclick="openProving()">Enter the Gauntlet</button>
       </div>
     </div>
 
@@ -731,7 +739,7 @@ function renderProvingPicker(){
 
   app.innerHTML = `
     <div class="card">
-      <h2 style="text-align:center;">The Proving</h2>
+      <h2 style="text-align:center;">The Gauntlet</h2>
       <p class="hint" style="text-align:center;">Fixed trial grounds, always open, no moon required. Clear one to open the next. Wins and losses both pay Essence.</p>
       ${rows}
       <button class="secondary" style="margin-top:10px;" onclick="cancelCombat()">Back to your guardian</button>
@@ -831,7 +839,8 @@ function renderBattleScreen(){
   const logHtml = v.log.slice().reverse().map(entry => {
     const lines = entry.events.map(e => {
       const who = e.actor === 'guardian' ? esc(guardian.name) : esc(v.opponentName);
-      return `<div class="entry${e.crit ? ' crit' : ''}">Round ${entry.round}: ${who} used ${esc(e.move)}${e.crit ? ' (critical!)' : ''} — ${e.damage} damage.</div>`;
+      const tag = e.crit ? ' (critical!)' : (e.control ? ' (swiftness shaved)' : '');
+      return `<div class="entry${e.crit ? ' crit' : ''}">Round ${entry.round}: ${who} used ${esc(e.move)}${tag} — ${e.damage} damage.</div>`;
     }).join('');
     return lines;
   }).join('');
@@ -839,16 +848,43 @@ function renderBattleScreen(){
   app.innerHTML = `
     <div class="card">
       <h2 style="text-align:center;">${esc(guardian.name)} vs. ${esc(v.opponentName)}</h2>
-      <div class="hp-row"><span class="hp-name">${esc(guardian.name)}</span><span class="hp-name">${v.guardianHp} / ${v.guardianMaxHp}</span></div>
-      <div class="hp-bar-track"><div class="hp-bar-fill" style="width:${gPct}%;"></div></div>
-      <div class="hp-row"><span class="hp-name">${esc(v.opponentName)}</span><span class="hp-name">${v.opponentHp} / ${v.opponentMaxHp}</span></div>
-      <div class="hp-bar-track"><div class="hp-bar-fill opponent" style="width:${oPct}%;"></div></div>
+      <div class="hp-wrap" id="gHpWrap">
+        <div class="hp-row"><span class="hp-name">${esc(guardian.name)}</span><span class="hp-name" id="gHpText">${v.guardianHp} / ${v.guardianMaxHp}</span></div>
+        <div class="hp-bar-track"><div class="hp-bar-fill" id="gHpFill" style="width:${gPct}%;"></div></div>
+      </div>
+      <div class="hp-wrap" id="oHpWrap">
+        <div class="hp-row"><span class="hp-name">${esc(v.opponentName)}</span><span class="hp-name" id="oHpText">${v.opponentHp} / ${v.opponentMaxHp}</span></div>
+        <div class="hp-bar-track"><div class="hp-bar-fill opponent" id="oHpFill" style="width:${oPct}%;"></div></div>
+      </div>
 
       <div class="move-row" id="moveRow">${moveButtons}</div>
       <div class="status" id="battleStatus"></div>
       <div class="battle-log">${logHtml || '<div class="entry">The trial has not yet begun its first round.</div>'}</div>
     </div>
   `;
+}
+
+function sleep(ms){ return new Promise(res => setTimeout(res, ms)); }
+
+/* Direct DOM manipulation for the impact beat — deliberately not a
+   render() call, so the HP bars can animate in sequence before the
+   authoritative state lands and the screen redraws (or moves to the
+   result screen). No new art, just motion — same placeholder-first
+   approach as everything else on this page. */
+function animateHit(side, damage, crit, control, hpAfter, maxHp){
+  const fill = document.getElementById(side === 'guardian' ? 'gHpFill' : 'oHpFill');
+  const text = document.getElementById(side === 'guardian' ? 'gHpText' : 'oHpText');
+  const wrap = document.getElementById(side === 'guardian' ? 'gHpWrap' : 'oHpWrap');
+  if(fill) fill.style.width = Math.max(0, Math.round((hpAfter / maxHp) * 100)) + '%';
+  if(text) text.textContent = hpAfter + ' / ' + maxHp;
+  if(wrap){
+    wrap.classList.remove('flash-hit'); void wrap.offsetWidth; wrap.classList.add('flash-hit');
+    const num = document.createElement('div');
+    num.className = 'dmg-float' + (crit ? ' crit' : '') + (control ? ' control' : '');
+    num.textContent = (crit ? 'CRIT ' : '') + '-' + damage;
+    wrap.appendChild(num);
+    setTimeout(() => num.remove(), 900);
+  }
 }
 
 async function actMove(moveIndex){
@@ -868,6 +904,18 @@ async function actMove(moveIndex){
       if(status){ status.className = 'status err'; status.textContent = data.error || 'The round did not resolve.'; }
       if(row) Array.from(row.querySelectorAll('button')).forEach(b => b.disabled = false);
       return;
+    }
+
+    let gHp = combatView.guardianHp, oHp = combatView.opponentHp;
+    for(const ev of data.events){
+      const targetIsOpponent = ev.actor === 'guardian';
+      if(targetIsOpponent) oHp = Math.max(0, oHp - ev.damage); else gHp = Math.max(0, gHp - ev.damage);
+      animateHit(
+        targetIsOpponent ? 'opponent' : 'guardian', ev.damage, ev.crit, ev.control,
+        targetIsOpponent ? oHp : gHp,
+        targetIsOpponent ? combatView.opponentMaxHp : combatView.guardianMaxHp
+      );
+      await sleep(650);
     }
 
     combatView.guardianHp = data.guardianHp;
