@@ -175,23 +175,24 @@ const FUNCTIONS_URL = SUPABASE_URL.replace(".supabase.co", ".functions.supabase.
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-/* Placeholder art only — swap for real illustration whenever it exists.
-   Every shape is a single-color silhouette so a palette choice is just a
-   fill color, nothing more to wire up later. */
+/* Real illustrated art, five stages each (egg/hatchling/fledged/ascendant/
+   sovereign), files named familiar_<species>_<stage>.png sitting flat next
+   to this HTML file — same convention as the deity portrait PNGs on the
+   main Gate page. Each species carries its own fixed color identity now,
+   so there's no separate palette choice anymore (the old palette swatches
+   were a stand-in for real color, which this art already has baked in).
+   guardians.palette stays in the database default-populated but unused. */
 const SPECIES = [
-  { id: 'wyrmling', label: 'Wyrmling', blurb: 'Sinuous, patient, low to the ground.' },
-  { id: 'houndkin', label: 'Houndkin', blurb: 'Loyal, quick, built for the chase.' },
-  { id: 'wisp',     label: 'Wisp',     blurb: 'Weightless, watchful, hard to pin down.' },
+  { id: 'bat',         label: 'Bat',         blurb: 'Void-born, quick in the dark, drawn to secrets.' },
+  { id: 'griffin',     label: 'Griffin',     blurb: 'Sky-born, proud, drawn to high places and old oaths.' },
+  { id: 'icedragon',   label: 'Ice Dragon',  blurb: 'Patient in the old sense — cold, deep, unhurried.' },
+  { id: 'phoenix',     label: 'Phoenix',     blurb: 'Ember-born, restless, remembers every ending.' },
+  { id: 'earthdragon', label: 'Earth Dragon',blurb: 'Root-bound, slow to anger, impossible to uproot.' },
 ];
-const PALETTES = [
-  { id: 'gold',     label: 'Gilded',   color: '#c8a24a' },
-  { id: 'amethyst', label: 'Amethyst', color: '#8a6bb8' },
-  { id: 'moon',     label: 'Moonlit',  color: '#8fa6bf' },
-  { id: 'ember',    label: 'Ember',    color: '#a1462a' },
-  { id: 'verdant',  label: 'Verdant',  color: '#5f9464' },
-  { id: 'bone',     label: 'Bone',     color: '#e8e2d6' },
-];
-function paletteColor(id){ return (PALETTES.find(p => p.id === id) || PALETTES[0]).color; }
+function imgFor(species, stage, size){
+  size = size || 130;
+  return `<img src="familiar_${species}_${stage}.png" alt="" style="max-width:${size}px;max-height:${size}px;width:auto;height:auto;object-fit:contain;display:block;margin:0 auto;">`;
+}
 
 /* Evolution glow at Ascendant+ — per the GDD's art-budget note, affinity
    is expressed as a palette/overlay shift on the same silhouette, not new
@@ -219,49 +220,11 @@ async function loadCustomDeitiesIntoCatalog(){
   });
 }
 
-function speciesSVG(species, color, size){
-  size = size || 70;
-  if(species === 'wyrmling'){
-    return `<svg viewBox="0 0 100 100" width="${size}" height="${size}">
-      <path d="M20,74 C18,44 42,52 46,34 C50,16 72,24 76,12" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"/>
-      <circle cx="77" cy="11" r="7.5" fill="${color}"/>
-      <circle cx="80" cy="8" r="1.5" fill="#100e16"/>
-      <path d="M60,20 L69,7 L64,25 Z" fill="${color}" opacity="0.85"/>
-    </svg>`;
-  }
-  if(species === 'houndkin'){
-    return `<svg viewBox="0 0 100 100" width="${size}" height="${size}">
-      <path d="M74,72 C88,67 87,49 78,47 C82,58 77,68 68,70 Z" fill="${color}"/>
-      <ellipse cx="50" cy="68" rx="26" ry="18" fill="${color}"/>
-      <circle cx="50" cy="38" r="16" fill="${color}"/>
-      <path d="M38,26 L33,9 L47,23 Z" fill="${color}"/>
-      <path d="M62,26 L67,9 L53,23 Z" fill="${color}"/>
-      <circle cx="55.5" cy="36" r="1.7" fill="#100e16"/>
-      <circle cx="44.5" cy="36" r="1.7" fill="#100e16"/>
-    </svg>`;
-  }
-  return `<svg viewBox="0 0 100 100" width="${size}" height="${size}">
-    <path d="M50,18 C67,34 67,60 50,82 C33,60 33,34 50,18 Z" fill="${color}" opacity="0.92"/>
-    <circle cx="24" cy="30" r="4" fill="${color}" opacity="0.55"/>
-    <circle cx="75" cy="24" r="3" fill="${color}" opacity="0.5"/>
-    <circle cx="70" cy="70" r="3.5" fill="${color}" opacity="0.55"/>
-  </svg>`;
-}
-function eggSVG(color, size){
-  size = size || 130;
-  return `<svg viewBox="0 0 100 120" width="${size}" height="${size * 1.2}">
-    <ellipse cx="50" cy="65" rx="37" ry="50" fill="${color}" opacity="0.94"/>
-    <ellipse cx="50" cy="65" rx="37" ry="50" fill="none" stroke="#100e16" stroke-width="1" opacity="0.22"/>
-    <path d="M30,38 C41,54 34,70 45,92" fill="none" stroke="#100e16" stroke-width="2" opacity="0.16"/>
-    <path d="M69,34 C59,50 68,66 57,90" fill="none" stroke="#100e16" stroke-width="2" opacity="0.16"/>
-  </svg>`;
-}
 
 let supabaseClient = null;
 let session = null;
 let guardian = null;
 let pickedSpecies = null;
-let pickedPalette = null;
 let nameDraft = '';
 let marks = [];          // [{deity_id, pantheon_id, mark_type}]
 let currentPhase = null; // {cycle_id, phase, phase_index} — flavor + gating text only, edge function re-checks server-side
@@ -343,33 +306,26 @@ function renderHatchFlow(){
   app.innerHTML = `
     <div class="card">
       <h2 style="text-align:center;">Choose your companion</h2>
-      <p class="hint" style="text-align:center;">This is the only choice here that never changes anything about how your guardian fights — species and color are yours to wear, not an advantage to chase. The name you give it next is the one part of this you can never take back.</p>
+      <p class="hint" style="text-align:center;">This is the only choice here that never changes anything about how your guardian fights — species is yours to wear, not an advantage to chase. The name you give it next is the one part of this you can never take back.</p>
 
       <div class="choice-row" id="speciesRow">
         ${SPECIES.map(s => `
           <div class="choice ${pickedSpecies === s.id ? 'selected' : ''}" onclick="pickSpecies('${s.id}')">
-            <div class="art">${speciesSVG(s.id, pickedPalette ? paletteColor(pickedPalette) : '#b9ac93', 60)}</div>
+            <div class="art">${imgFor(s.id, 'hatchling', 60)}</div>
             <div class="label">${esc(s.label)}</div>
             <div class="blurb">${esc(s.blurb)}</div>
           </div>
         `).join('')}
       </div>
 
-      <div class="swatch-row" id="paletteRow">
-        ${PALETTES.map(p => `
-          <div class="swatch ${pickedPalette === p.id ? 'selected' : ''}" style="background:${p.color};" title="${esc(p.label)}" onclick="pickPalette('${p.id}')"></div>
-        `).join('')}
-      </div>
-
       <input type="text" id="guardianName" maxlength="24" placeholder="Name your egg — this is permanent" value="${esc(nameDraft)}" oninput="onNameInput()">
-      <button id="hatchBtn" ${(pickedSpecies && pickedPalette && nameDraft.trim().length >= 2) ? '' : 'disabled'} onclick="hatchGuardian()">Claim this egg</button>
+      <button id="hatchBtn" ${(pickedSpecies && nameDraft.trim().length >= 2) ? '' : 'disabled'} onclick="hatchGuardian()">Claim this egg</button>
       <div class="status" id="hatchStatus"></div>
     </div>
   `;
 }
 
 function pickSpecies(id){ pickedSpecies = id; renderHatchFlow(); }
-function pickPalette(id){ pickedPalette = id; renderHatchFlow(); }
 
 function onNameInput(){
   const el = document.getElementById('guardianName');
@@ -381,15 +337,15 @@ function updateHatchButton(){
   const btn = document.getElementById('hatchBtn');
   if(!btn) return;
   const name = nameDraft.trim();
-  btn.disabled = !(pickedSpecies && pickedPalette && name.length >= 2 && name.length <= 24);
+  btn.disabled = !(pickedSpecies && name.length >= 2 && name.length <= 24);
 }
 
 async function hatchGuardian(){
   const status = document.getElementById('hatchStatus');
   const name = nameDraft.trim();
-  if(!pickedSpecies || !pickedPalette || name.length < 2){
+  if(!pickedSpecies || name.length < 2){
     status.className = 'status err';
-    status.textContent = 'Pick a species, a color, and give it a name first.';
+    status.textContent = 'Pick a species and give it a name first.';
     return;
   }
   status.className = 'status';
@@ -397,7 +353,7 @@ async function hatchGuardian(){
 
   const { data, error } = await supabaseClient
     .from('guardians')
-    .insert({ owner_user_id: session.user.id, species: pickedSpecies, palette: pickedPalette, name })
+    .insert({ owner_user_id: session.user.id, species: pickedSpecies, name })
     .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank')
     .single();
 
@@ -419,10 +375,9 @@ const STAGE_LABEL = { egg: 'Egg', hatchling: 'Hatchling', fledged: 'Fledged', as
 
 function renderGuardianHome(){
   const app = document.getElementById('app');
-  const color = paletteColor(guardian.palette);
   const evolved = (guardian.stage === 'ascendant' || guardian.stage === 'sovereign') && guardian.dominant_affinity;
   const glowColor = evolved ? (AFFINITY_COLORS[guardian.dominant_affinity] || 'transparent') : 'transparent';
-  const rawArt = guardian.stage === 'egg' ? eggSVG(color) : speciesSVG(guardian.species, color, 130);
+  const rawArt = imgFor(guardian.species, guardian.stage, 160);
   const art = evolved ? `<div class="affinity-glow" style="--glow-color:${glowColor};">${rawArt}</div>` : rawArt;
   const speciesLabel = (SPECIES.find(s => s.id === guardian.species) || {}).label || guardian.species;
   const tendedToday = guardian.last_tended_at === todayStr();
