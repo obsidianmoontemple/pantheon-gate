@@ -83,6 +83,61 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
 
 .marks-note{text-align:center;color:var(--parchment-dim);font-style:italic;font-size:14px;margin:20px 0 0;}
 
+.phase-note{text-align:center;color:var(--parchment-dim);font-size:12.5px;font-style:italic;margin-bottom:18px;}
+.phase-note strong{color:var(--gold-bright);font-style:normal;}
+
+.pantheon-group{margin-bottom:18px;}
+.pantheon-group h3{font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);opacity:0.85;margin:0 0 8px;text-align:left;}
+.deity-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:3px;margin-bottom:6px;cursor:pointer;transition:border-color .15s;}
+.deity-row:hover{border-color:var(--gold);}
+.deity-row .name{font-family:'Cinzel',serif;font-size:13.5px;color:var(--parchment);}
+.mark-badge{font-size:10px;letter-spacing:0.06em;text-transform:uppercase;font-family:'Cinzel',serif;padding:3px 9px;border-radius:20px;border:1px solid var(--line);color:var(--parchment-dim);}
+.mark-badge.full{color:var(--ink);background:var(--gold-bright);border-color:var(--gold-bright);}
+.mark-badge.partial{color:var(--gold-bright);border-color:var(--gold);}
+
+.challenge-text{font-style:italic;font-size:16px;line-height:1.6;color:var(--parchment);text-align:center;margin:0 0 22px;padding:0 6px;}
+textarea{background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:12px 14px;
+  font-family:'EB Garamond',serif;font-size:16px;border-radius:3px;width:100%;max-width:520px;margin:0 auto 16px;display:block;min-height:110px;resize:vertical;}
+textarea:focus{outline:none;border-color:var(--gold);}
+
+.verdict-card{text-align:center;}
+.verdict-badge{display:inline-block;font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;border-radius:20px;padding:5px 16px;margin-bottom:14px;}
+.verdict-badge.full{color:var(--ink);background:var(--gold-bright);}
+.verdict-badge.partial{color:var(--gold-bright);border:1px solid var(--gold);}
+.verdict-text{font-style:italic;font-size:16px;line-height:1.6;color:var(--parchment);margin:0 0 18px;}
+.gain-note{font-size:13px;color:var(--parchment-dim);margin-bottom:22px;}
+
+.essence-row{display:flex;align-items:center;justify-content:center;gap:8px;margin:2px 0 18px;}
+.essence-label{font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--parchment-dim);}
+.essence-value{font-family:'Cinzel',serif;font-size:15px;color:var(--moon);}
+
+.tier-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:3px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;}
+.tier-row:hover{border-color:var(--gold);}
+.tier-row.locked{opacity:0.4;cursor:not-allowed;}
+.tier-row .tname{font-family:'Cinzel',serif;font-size:13.5px;color:var(--parchment);}
+.tier-row .taff{font-size:11px;color:var(--parchment-dim);font-style:italic;}
+
+.mark-check{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:3px;margin-bottom:6px;cursor:pointer;}
+.mark-check.picked{border-color:var(--gold-bright);background:rgba(200,162,74,0.08);}
+.mark-check .mname{font-size:14px;color:var(--parchment);}
+
+.hp-row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px;}
+.hp-name{font-family:'Cinzel',serif;font-size:13px;color:var(--parchment);}
+.hp-bar-track{background:rgba(0,0,0,0.4);border:1px solid var(--line);border-radius:20px;height:10px;overflow:hidden;margin-bottom:18px;}
+.hp-bar-fill{height:100%;background:linear-gradient(90deg,var(--ember),var(--gold-bright));transition:width .3s;}
+.hp-bar-fill.opponent{background:linear-gradient(90deg,var(--amethyst,#8a6bb8),var(--moon));}
+
+.move-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:18px 0;}
+.move-btn{background:transparent;border:1px solid var(--gold);color:var(--gold-bright);padding:10px 18px;font-family:'Cinzel',serif;font-size:11.5px;letter-spacing:0.08em;text-transform:uppercase;border-radius:3px;cursor:pointer;}
+.move-btn:hover:not(:disabled){background:rgba(200,162,74,0.12);}
+.move-btn:disabled{opacity:0.35;cursor:not-allowed;}
+
+.battle-log{max-height:150px;overflow-y:auto;border-top:1px solid var(--line);margin-top:16px;padding-top:12px;font-size:13px;color:var(--parchment-dim);text-align:left;}
+.battle-log .entry{margin-bottom:5px;}
+.battle-log .crit{color:var(--gold-bright);}
+
+.affinity-glow{border-radius:50%;filter:drop-shadow(0 0 26px var(--glow-color, transparent));}
+
 footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-style:italic;margin-top:50px;opacity:0.65;}
 </style>
 </head>
@@ -108,6 +163,7 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
 /* Same project as index.html / admin.html. */
 const SUPABASE_URL = "https://kuvaeprkmwzlqrqtjbhc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dmFlcHJrbXd6bHFycXRqYmhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MDMzOTgsImV4cCI6MjEwMjQ3OTM5OH0.-W7tTHZZob_dY2ydAx26cFx_izPBKJ3_M0sadNd7cOI";
+const FUNCTIONS_URL = SUPABASE_URL.replace(".supabase.co", ".functions.supabase.co");  // ← leave alone, don't touch
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -128,6 +184,32 @@ const PALETTES = [
   { id: 'bone',     label: 'Bone',     color: '#e8e2d6' },
 ];
 function paletteColor(id){ return (PALETTES.find(p => p.id === id) || PALETTES[0]).color; }
+
+/* Evolution glow at Ascendant+ — per the GDD's art-budget note, affinity
+   is expressed as a palette/overlay shift on the same silhouette, not new
+   art. This is the cheapest possible version of that: a colored aura. */
+const AFFINITY_COLORS = {
+  fire: '#c05a34', sea: '#3f7fa6', storm: '#c9c9dd', earth: '#7a9457',
+  death: '#8a8a94', shadow: '#6a5a8a', war: '#a1462a', light: '#e6c777'
+};
+
+/* Lightweight catalog for the petition picker below — same id/name pairs
+   the chat relay's deities.json holds, just without the myth text this
+   page doesn't need. Admin-added pantheons/gods get folded in at init. */
+const CATALOG = {"greek": {"label": "Greek", "deities": [["zeus", "Zeus"], ["hera", "Hera"], ["poseidon", "Poseidon"], ["demeter", "Demeter"], ["athena", "Athena"], ["apollo", "Apollo"], ["artemis", "Artemis"], ["ares", "Ares"], ["hephaestus", "Hephaestus"], ["aphrodite", "Aphrodite"], ["hermes", "Hermes"], ["hestia", "Hestia"], ["dionysus", "Dionysus"], ["hades", "Hades"], ["persephone", "Persephone"], ["hecate", "Hecate"], ["nemesis", "Nemesis"], ["morpheus", "Morpheus"]]}, "norse": {"label": "Norse", "deities": [["odin", "Odin"], ["frigg", "Frigg"], ["thor", "Thor"], ["sif", "Sif"], ["loki", "Loki"], ["baldr", "Baldr"], ["tyr", "Tyr"], ["heimdall", "Heimdall"], ["bragi", "Bragi"], ["idunn", "Idunn"], ["vidar", "Vidar"], ["njord", "Njord"], ["freyr", "Freyr"], ["freyja", "Freyja"], ["skadi", "Skadi"], ["hel", "Hel"]]}, "egyptian": {"label": "Egyptian", "deities": [["ra", "Ra"], ["amun", "Amun"], ["ptah", "Ptah"], ["thoth", "Thoth"], ["maat", "Maat"], ["osiris", "Osiris"], ["isis", "Isis"], ["set", "Set"], ["nephthys", "Nephthys"], ["horus", "Horus"], ["anubis", "Anubis"], ["sekhmet", "Sekhmet"], ["hathor", "Hathor"], ["bastet", "Bastet"], ["sobek", "Sobek"], ["nut", "Nut"], ["geb", "Geb"], ["taweret", "Taweret"]]}, "yoruba": {"label": "Yoruba / Orisha", "deities": [["obatala", "Obatala"], ["oduduwa", "Oduduwa"], ["esu", "Esu"], ["ogun", "Ogun"], ["sango", "Sango"], ["oya", "Oya"], ["osun", "Osun"], ["yemoja", "Yemoja"], ["orunmila", "Orunmila"], ["ososi", "Ososi"], ["osanyin", "Osanyin"], ["obaluaye", "Obaluaye"], ["olokun", "Olokun"], ["aganju", "Aganju"], ["ibeji", "Ibeji"], ["osumare", "Osumare"]]}, "celtic": {"label": "Celtic", "deities": [["dagda", "Dagda"], ["morrigan", "Morrigan"], ["brigid", "Brigid"], ["lugh", "Lugh"], ["nuada", "Nuada"], ["airmid", "Airmid"], ["manannan", "Manannan"], ["aengus", "Aengus"], ["oghma", "Oghma"], ["eriu", "Eriu"], ["rhiannon", "Rhiannon"], ["arawn", "Arawn"], ["cerridwen", "Cerridwen"], ["arianrhod", "Arianrhod"], ["gwydion", "Gwydion"], ["math", "Math"], ["bran", "Bran"], ["orddu", "Orddu"], ["cernunnos", "Cernunnos"], ["epona", "Epona"], ["matres", "Matres"], ["taranis", "Taranis"], ["merlin", "Merlin"], ["queenmab", "Queen Mab"]]}, "chinese": {"label": "Chinese", "deities": [["pangu", "Pangu"], ["nuwa", "Nuwa"], ["fuxi", "Fuxi"], ["jadeemperor", "Jade Emperor"], ["xiwangmu", "Xiwangmu"], ["laojun", "Taishang Laojun"], ["shennong", "Shennong"], ["houyi", "Houyi"], ["change", "Chang'e"], ["guanyin", "Guanyin"], ["mazu", "Mazu"], ["guanyu", "Guan Yu"], ["zaojun", "Zao Jun"], ["yanluo", "Yanluo Wang"], ["zhongkui", "Zhong Kui"], ["nezha", "Nezha"], ["wukong", "Sun Wukong"], ["lvdongbin", "Lu Dongbin"], ["zhongliquan", "Zhongli Quan"], ["zhangguolao", "Zhang Guolao"], ["hanxiangzi", "Han Xiangzi"], ["caoguojiu", "Cao Guojiu"], ["litieguai", "Li Tieguai"], ["lancaihe", "Lan Caihe"], ["hexiangu", "He Xiangu"]]}, "dragons": {"label": "Great Dragons", "deities": [["tiamat", "Tiamat"], ["kingu", "Kingu"], ["mushussu", "Mushussu"], ["apep", "Apep"], ["typhon", "Typhon"], ["echidna", "Echidna"], ["python", "Python"], ["ladon", "Ladon"], ["draco", "Draco"], ["colchian", "Colchian Dragon"], ["hydra", "Hydra"], ["jormungandr", "Jormungandr"], ["fafnir", "Fafnir"], ["nidhogg", "Nidhogg"], ["ddraiggoch", "Y Ddraig Goch"], ["barrowwyrm", "Barrow Wyrm"], ["zmey", "Zmey Gorynych"], ["azidahaka", "Azi Dahaka"], ["vritra", "Vritra"], ["vasuki", "Vasuki"], ["shesha", "Shesha"], ["aoguang", "Ao Guang"], ["yinglong", "Yinglong"], ["ryujin", "Ryujin"], ["orochi", "Yamata no Orochi"], ["quetzalcoatl", "Quetzalcoatl"], ["leviathan", "Leviathan"]]}, "lhp": {"label": "Left-Hand Path", "deities": [["lucifer", "Lucifer"], ["satan", "Satan"], ["lilith", "Lilith"], ["samael", "Samael"], ["naamah", "Naamah"], ["belial", "Belial"], ["beelzebub", "Beelzebub"], ["asmodeus", "Asmodeus"], ["astaroth", "Astaroth"], ["azazel", "Azazel"], ["baphomet", "Baphomet"], ["mammon", "Mammon"], ["belphegor", "Belphegor"], ["bael", "Bael"], ["paimon", "Paimon"], ["leviathan", "Leviathan"], ["moloch", "Moloch"], ["adramelech", "Adramelech"], ["lucifuge", "Lucifuge Rofocale"], ["choronzon", "Choronzon"], ["nachash", "Nachash"], ["cain", "Cain"], ["prometheus", "Prometheus"], ["ahriman", "Ahriman"], ["set", "Set"]]}};
+
+async function loadCustomDeitiesIntoCatalog(){
+  const { data: pantheonRows } = await supabaseClient.from('custom_pantheons').select('id, label').eq('active', true);
+  (pantheonRows || []).forEach(row => { if(!CATALOG[row.id]) CATALOG[row.id] = { label: row.label, deities: [] }; });
+
+  const { data: deityRows } = await supabaseClient.from('custom_deities').select('id, pantheon_id, name').eq('active', true);
+  (deityRows || []).forEach(row => {
+    const pantheon = CATALOG[row.pantheon_id];
+    if(!pantheon) return;
+    if(pantheon.deities.some(d => d[0] === row.id)) return;
+    pantheon.deities.push([row.id, row.name]);
+  });
+}
 
 function speciesSVG(species, color, size){
   size = size || 70;
@@ -173,6 +255,12 @@ let guardian = null;
 let pickedSpecies = null;
 let pickedPalette = null;
 let nameDraft = '';
+let marks = [];          // [{deity_id, pantheon_id, mark_type}]
+let currentPhase = null; // {cycle_id, phase, phase_index} — flavor + gating text only, edge function re-checks server-side
+let petitionView = null; // null | {step:'pick'} | {step:'challenge', ...} | {step:'verdict', ...}
+let answerDraft = '';
+let combatView = null;    // null | {step:'pick'} | {step:'loadout', ...} | {step:'battle', ...} | {step:'result', ...}
+let loadoutPicks = [];    // [{pantheonId, deityId}, ...] up to 5, chosen from full marks
 
 async function init(){
   if(SUPABASE_URL.indexOf('PASTE_YOUR') === 0){
@@ -193,21 +281,50 @@ async function init(){
     session = data.session;
   }
 
+  await loadCustomDeitiesIntoCatalog().catch(e => console.error('custom deities fold-in failed', e));
   await loadGuardian();
+  if(guardian) await loadMarks();
+  loadMoonPhase().catch(e => console.error('moon phase load failed', e));
   render();
 }
 
 async function loadGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank')
     .eq('owner_user_id', session.user.id)
     .maybeSingle();
   if(error){ console.error('guardian load failed', error); return; }
   guardian = data;
 }
 
+async function loadMarks(){
+  const { data, error } = await supabaseClient
+    .from('guardian_marks')
+    .select('deity_id, pantheon_id, mark_type')
+    .eq('guardian_id', guardian.id);
+  if(error){ console.error('marks load failed', error); return; }
+  marks = data || [];
+}
+
+async function loadMoonPhase(){
+  const { data, error } = await supabaseClient.rpc('current_moon_phase');
+  if(error || !data || !data[0]) return;
+  currentPhase = data[0];
+}
+
+function markFor(pantheonId, deityId){
+  return marks.find(m => m.pantheon_id === pantheonId && m.deity_id === deityId) || null;
+}
+
+async function petitionHeaders(){
+  const { data: { session: live } } = await supabaseClient.auth.getSession();
+  return Object.assign({ 'Content-Type': 'application/json' }, live ? { Authorization: 'Bearer ' + live.access_token } : {});
+}
+
 function render(){
+  if(guardian && petitionView){ renderPetition(); return; }
+  if(guardian && combatView){ renderCombat(); return; }
   guardian ? renderGuardianHome() : renderHatchFlow();
 }
 
@@ -273,7 +390,7 @@ async function hatchGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
     .insert({ owner_user_id: session.user.id, species: pickedSpecies, palette: pickedPalette, name })
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank')
     .single();
 
   if(error){
@@ -295,16 +412,20 @@ const STAGE_LABEL = { egg: 'Egg', hatchling: 'Hatchling', fledged: 'Fledged', as
 function renderGuardianHome(){
   const app = document.getElementById('app');
   const color = paletteColor(guardian.palette);
-  const art = guardian.stage === 'egg' ? eggSVG(color) : speciesSVG(guardian.species, color, 130);
+  const evolved = (guardian.stage === 'ascendant' || guardian.stage === 'sovereign') && guardian.dominant_affinity;
+  const glowColor = evolved ? (AFFINITY_COLORS[guardian.dominant_affinity] || 'transparent') : 'transparent';
+  const rawArt = guardian.stage === 'egg' ? eggSVG(color) : speciesSVG(guardian.species, color, 130);
+  const art = evolved ? `<div class="affinity-glow" style="--glow-color:${glowColor};">${rawArt}</div>` : rawArt;
   const speciesLabel = (SPECIES.find(s => s.id === guardian.species) || {}).label || guardian.species;
   const tendedToday = guardian.last_tended_at === todayStr();
+  const fullMarkCount = marks.filter(m => m.mark_type === 'full').length;
 
   app.innerHTML = `
     <div class="card guardian-display">
       <div class="art">${art}</div>
       <div class="stage-badge">${esc(STAGE_LABEL[guardian.stage] || guardian.stage)}</div>
       <h2>${esc(guardian.name)}</h2>
-      <div class="species-line">${esc(speciesLabel)} · still unmarked</div>
+      <div class="species-line">${esc(speciesLabel)}${guardian.dominant_affinity ? ' · ' + esc(guardian.dominant_affinity) + '-touched' : ''}</div>
 
       <div class="bond-row">
         <span class="bond-label">Bond</span>
@@ -312,6 +433,11 @@ function renderGuardianHome(){
         <button ${tendedToday ? 'disabled' : ''} onclick="tendGuardian()">${tendedToday ? 'Tended today' : 'Tend your guardian'}</button>
       </div>
       <div class="status" id="tendStatus"></div>
+
+      <div class="essence-row">
+        <span class="essence-label">Essence</span>
+        <span class="essence-value">${guardian.essence || 0}</span>
+      </div>
 
       <div class="stat-grid">
         <div class="stat-tile"><div class="num">${guardian.vitality}</div><div class="label">Vitality</div></div>
@@ -322,8 +448,12 @@ function renderGuardianHome(){
       </div>
 
       <p class="marks-note">${guardian.stage === 'egg'
-        ? 'Still an egg. It hatches the moment a god marks it for the first time — and petitions, the way you earn a mark, are not open yet. Come back soon.'
-        : 'No marks yet.'}</p>
+        ? 'Still an egg. It hatches the moment a god marks it for the first time.'
+        : (marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.')}</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:14px;">
+        <button onclick="openPetitionPicker()">Petition a god</button>
+        <button class="secondary" onclick="openProving()">Enter the Proving</button>
+      </div>
     </div>
 
     <div class="card" id="claimCard">
@@ -375,6 +505,410 @@ async function claimWithEmail(){
   );
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? error.message : 'Check your email and confirm the link — this Seeker is yours for good after that.';
+}
+
+/* ---------------- petitions ---------------- */
+
+function openPetitionPicker(){
+  petitionView = { step: 'pick' };
+  render();
+}
+
+function backToGuardianHome(){
+  petitionView = null;
+  answerDraft = '';
+  render();
+}
+
+function renderPetition(){
+  if(petitionView.step === 'pick') return renderPetitionPicker();
+  if(petitionView.step === 'challenge') return renderPetitionChallenge();
+  if(petitionView.step === 'verdict') return renderPetitionVerdict();
+}
+
+function renderPetitionPicker(){
+  const app = document.getElementById('app');
+  const phaseLine = currentPhase
+    ? `<p class="phase-note">Tonight's phase: <strong>${esc(currentPhase.phase)}</strong> — one petition per phase, whichever god you choose.</p>`
+    : '';
+  const groups = Object.keys(CATALOG).map(pid => {
+    const rows = CATALOG[pid].deities.map(([id, name]) => {
+      const m = markFor(pid, id);
+      const badge = m ? `<span class="mark-badge ${m.mark_type}">${m.mark_type}</span>` : '';
+      return `<div class="deity-row" onclick="beginPetition('${esc(pid)}','${esc(id)}')">
+        <span class="name">${esc(name)}</span>${badge}
+      </div>`;
+    }).join('');
+    return `<div class="pantheon-group"><h3>${esc(CATALOG[pid].label)}</h3>${rows}</div>`;
+  }).join('');
+
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">Choose who to petition</h2>
+      <p class="hint" style="text-align:center;">Every honest answer earns something. A god you've already earned a partial mark from can still be petitioned again for the full mark.</p>
+      ${phaseLine}
+      <div id="pickerStatus" class="status"></div>
+      ${groups}
+      <button class="secondary" style="margin-top:10px;" onclick="backToGuardianHome()">Back to your guardian</button>
+    </div>
+  `;
+}
+
+async function beginPetition(pantheonId, deityId){
+  const status = document.getElementById('pickerStatus');
+  if(status){ status.className = 'status'; status.textContent = 'The Gate listens…'; }
+
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/petition', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'begin', guardianId: guardian.id, pantheonId, deityId })
+    });
+    const data = await resp.json();
+    if(!data.ok){
+      if(status){ status.className = 'status err'; status.textContent = data.error || 'Could not open a trial.'; }
+      return;
+    }
+    petitionView = {
+      step: 'challenge',
+      attemptId: data.attemptId,
+      deityName: data.deityName,
+      pantheonId, deityId,
+      challenge: data.challenge,
+      phase: data.phase
+    };
+    answerDraft = '';
+    render();
+  }catch(e){
+    if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
+  }
+}
+
+function renderPetitionChallenge(){
+  const app = document.getElementById('app');
+  const v = petitionView;
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">${esc(v.deityName)} sets a trial</h2>
+      <p class="challenge-text">"${esc(v.challenge)}"</p>
+      <textarea id="answerBox" placeholder="Answer as your guardian's keeper…" oninput="onAnswerInput()">${esc(answerDraft)}</textarea>
+      <button id="answerBtn" ${answerDraft.trim().length < 2 ? 'disabled' : ''} onclick="submitPetitionAnswer()">Offer your answer</button>
+      <div class="status" id="answerStatus"></div>
+    </div>
+  `;
+}
+
+function onAnswerInput(){
+  const el = document.getElementById('answerBox');
+  answerDraft = el ? el.value : '';
+  const btn = document.getElementById('answerBtn');
+  if(btn) btn.disabled = answerDraft.trim().length < 2;
+}
+
+async function submitPetitionAnswer(){
+  const status = document.getElementById('answerStatus');
+  const btn = document.getElementById('answerBtn');
+  const answer = answerDraft.trim();
+  if(answer.length < 2){
+    status.className = 'status err';
+    status.textContent = 'Say something first.';
+    return;
+  }
+  if(btn) btn.disabled = true;
+  status.className = 'status';
+  status.textContent = `${petitionView.deityName} weighs your answer…`;
+
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/petition', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'answer', attemptId: petitionView.attemptId, answer })
+    });
+    const data = await resp.json();
+    if(!data.ok){
+      status.className = 'status err';
+      status.textContent = data.error || 'The verdict did not come through.';
+      if(btn) btn.disabled = false;
+      return;
+    }
+
+    // Reflect the result locally without a full reload.
+    const stageBefore = guardian.stage;
+    guardian.bond = data.bond;
+    guardian.stage = data.newStage;
+    if(data.statGain > 0){
+      guardian.vitality += data.statGain;
+      guardian.might += data.statGain;
+      guardian.ward += data.statGain;
+      guardian.swiftness += data.statGain;
+      guardian.cunning += data.statGain;
+    }
+    const existing = markFor(petitionView.pantheonId, petitionView.deityId);
+    if(existing){ existing.mark_type = data.markType; }
+    else{ marks.push({ pantheon_id: petitionView.pantheonId, deity_id: petitionView.deityId, mark_type: data.markType }); }
+
+    petitionView = {
+      step: 'verdict',
+      deityName: petitionView.deityName,
+      verdict: data.verdict,
+      verdictText: data.verdictText,
+      statGain: data.statGain,
+      newStage: data.newStage,
+      grew: data.newStage !== stageBefore
+    };
+    render();
+  }catch(e){
+    status.className = 'status err';
+    status.textContent = 'Could not reach the relay: ' + e.message;
+    if(btn) btn.disabled = false;
+  }
+}
+
+function renderPetitionVerdict(){
+  const app = document.getElementById('app');
+  const v = petitionView;
+  const gain = v.statGain > 0
+    ? `All five stats rose by ${v.statGain}.`
+    : 'No further stat gain from this mark — it was already earned.';
+  const growthLine = v.grew ? `<p class="gain-note">Your guardian has grown to <strong style="color:var(--gold-bright);">${esc(STAGE_LABEL[v.newStage] || v.newStage)}</strong>.</p>` : '';
+  app.innerHTML = `
+    <div class="card verdict-card">
+      <div class="verdict-badge ${v.verdict}">${v.verdict === 'full' ? 'Full mark' : 'Partial mark'}</div>
+      <p class="verdict-text">"${esc(v.verdictText)}" <span style="opacity:0.7;">— ${esc(v.deityName)}</span></p>
+      <p class="gain-note">${esc(gain)} Bond deepens by 1.</p>
+      ${growthLine}
+      <button onclick="finishPetition()">Return to your guardian</button>
+    </div>
+  `;
+}
+
+async function finishPetition(){
+  petitionView = null;
+  answerDraft = '';
+  render();
+}
+
+/* ---------------- combat (the Proving) ---------------- */
+
+/* Mirrors the edge function's OPPONENTS array for display only — the
+   server is the only place stats or outcomes are decided. */
+const PROVING_TIERS = [
+  { key: 'ashclad', name: 'Ashclad Recruit', affinity: 'earth' },
+  { key: 'brine',   name: 'Brine Warden',    affinity: 'sea' },
+  { key: 'cinder',  name: 'Cinder Whelp',    affinity: 'fire' },
+  { key: 'grave',   name: 'Grave Sentinel',  affinity: 'death' },
+  { key: 'storm',   name: 'Storm Herald',    affinity: 'storm' },
+  { key: 'veiled',  name: 'Veiled Judge',    affinity: 'light' },
+];
+
+function openProving(){
+  combatView = { step: 'pick' };
+  render();
+}
+
+function cancelCombat(){
+  combatView = null;
+  loadoutPicks = [];
+  render();
+}
+
+function renderCombat(){
+  if(combatView.step === 'pick') return renderProvingPicker();
+  if(combatView.step === 'loadout') return renderLoadoutPicker();
+  if(combatView.step === 'battle') return renderBattleScreen();
+  if(combatView.step === 'result') return renderBattleResult();
+}
+
+function renderProvingPicker(){
+  const app = document.getElementById('app');
+  const rows = PROVING_TIERS.map((t, i) => {
+    const locked = i > guardian.proving_rank;
+    return `<div class="tier-row ${locked ? 'locked' : ''}" ${locked ? '' : `onclick="selectOpponent('${esc(t.key)}')"`}>
+      <span class="tname">${esc(t.name)}</span>
+      <span class="taff">${locked ? 'Locked' : esc(t.affinity) + '-touched'}</span>
+    </div>`;
+  }).join('');
+
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">The Proving</h2>
+      <p class="hint" style="text-align:center;">Fixed trial grounds, always open, no moon required. Clear one to open the next. Wins and losses both pay Essence.</p>
+      ${rows}
+      <button class="secondary" style="margin-top:10px;" onclick="cancelCombat()">Back to your guardian</button>
+    </div>
+  `;
+}
+
+function selectOpponent(key){
+  combatView = { step: 'loadout', opponentKey: key };
+  loadoutPicks = [];
+  render();
+}
+
+function isPicked(pantheonId, deityId){
+  return loadoutPicks.some(p => p.pantheonId === pantheonId && p.deityId === deityId);
+}
+
+function toggleLoadoutPick(pantheonId, deityId){
+  if(isPicked(pantheonId, deityId)){
+    loadoutPicks = loadoutPicks.filter(p => !(p.pantheonId === pantheonId && p.deityId === deityId));
+  } else if(loadoutPicks.length < 5){
+    loadoutPicks.push({ pantheonId, deityId });
+  }
+  renderLoadoutPicker();
+}
+
+function deityDisplayName(pantheonId, deityId){
+  const pantheon = CATALOG[pantheonId];
+  const found = pantheon && pantheon.deities.find(d => d[0] === deityId);
+  return found ? found[1] : deityId;
+}
+
+function renderLoadoutPicker(){
+  const app = document.getElementById('app');
+  const tier = PROVING_TIERS.find(t => t.key === combatView.opponentKey);
+  const fullMarks = marks.filter(m => m.mark_type === 'full');
+
+  const rows = fullMarks.length
+    ? fullMarks.map(m => {
+        const picked = isPicked(m.pantheon_id, m.deity_id);
+        return `<div class="mark-check ${picked ? 'picked' : ''}" onclick="toggleLoadoutPick('${esc(m.pantheon_id)}','${esc(m.deity_id)}')">
+          <span class="mname">${esc(deityDisplayName(m.pantheon_id, m.deity_id))}</span>
+        </div>`;
+      }).join('')
+    : '<p class="hint" style="text-align:center;">No full marks yet — you can still fight with Basic Strike alone, it will just be a harder climb.</p>';
+
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">Choose your loadout</h2>
+      <p class="hint" style="text-align:center;">Facing the ${esc(tier.name)}. Pick up to five full marks to bring — Basic Strike always comes free. ${loadoutPicks.length}/5 chosen.</p>
+      ${rows}
+      <button style="margin-top:14px;" onclick="startBattle()">Begin the trial</button>
+      <button class="secondary" style="margin-top:10px;" onclick="cancelCombat()">Back</button>
+      <div class="status" id="loadoutStatus"></div>
+    </div>
+  `;
+}
+
+async function startBattle(){
+  const status = document.getElementById('loadoutStatus');
+  if(status){ status.className = 'status'; status.textContent = 'Stepping onto the trial ground…'; }
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/combat', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'start', guardianId: guardian.id, opponentKey: combatView.opponentKey, loadout: loadoutPicks })
+    });
+    const data = await resp.json();
+    if(!data.ok){
+      if(status){ status.className = 'status err'; status.textContent = data.error || 'Could not begin.'; }
+      return;
+    }
+    combatView = {
+      step: 'battle',
+      battleId: data.battleId,
+      opponentName: data.opponentName,
+      opponentAffinity: data.opponentAffinity,
+      guardianHp: data.guardianHp, guardianMaxHp: data.guardianMaxHp,
+      opponentHp: data.opponentHp, opponentMaxHp: data.opponentMaxHp,
+      moves: data.moves,
+      log: []
+    };
+    render();
+  }catch(e){
+    if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
+  }
+}
+
+function renderBattleScreen(){
+  const app = document.getElementById('app');
+  const v = combatView;
+  const gPct = Math.max(0, Math.round((v.guardianHp / v.guardianMaxHp) * 100));
+  const oPct = Math.max(0, Math.round((v.opponentHp / v.opponentMaxHp) * 100));
+  const moveButtons = v.moves.map((label, i) =>
+    `<button class="move-btn" onclick="actMove(${i})">${esc(label)}</button>`
+  ).join('');
+  const logHtml = v.log.slice().reverse().map(entry => {
+    const lines = entry.events.map(e => {
+      const who = e.actor === 'guardian' ? esc(guardian.name) : esc(v.opponentName);
+      return `<div class="entry${e.crit ? ' crit' : ''}">Round ${entry.round}: ${who} used ${esc(e.move)}${e.crit ? ' (critical!)' : ''} — ${e.damage} damage.</div>`;
+    }).join('');
+    return lines;
+  }).join('');
+
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">${esc(guardian.name)} vs. ${esc(v.opponentName)}</h2>
+      <div class="hp-row"><span class="hp-name">${esc(guardian.name)}</span><span class="hp-name">${v.guardianHp} / ${v.guardianMaxHp}</span></div>
+      <div class="hp-bar-track"><div class="hp-bar-fill" style="width:${gPct}%;"></div></div>
+      <div class="hp-row"><span class="hp-name">${esc(v.opponentName)}</span><span class="hp-name">${v.opponentHp} / ${v.opponentMaxHp}</span></div>
+      <div class="hp-bar-track"><div class="hp-bar-fill opponent" style="width:${oPct}%;"></div></div>
+
+      <div class="move-row" id="moveRow">${moveButtons}</div>
+      <div class="status" id="battleStatus"></div>
+      <div class="battle-log">${logHtml || '<div class="entry">The trial has not yet begun its first round.</div>'}</div>
+    </div>
+  `;
+}
+
+async function actMove(moveIndex){
+  const status = document.getElementById('battleStatus');
+  const row = document.getElementById('moveRow');
+  if(row) Array.from(row.querySelectorAll('button')).forEach(b => b.disabled = true);
+  if(status){ status.className = 'status'; status.textContent = 'The blow lands…'; }
+
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/combat', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'act', battleId: combatView.battleId, moveIndex })
+    });
+    const data = await resp.json();
+    if(!data.ok){
+      if(status){ status.className = 'status err'; status.textContent = data.error || 'The round did not resolve.'; }
+      if(row) Array.from(row.querySelectorAll('button')).forEach(b => b.disabled = false);
+      return;
+    }
+
+    combatView.guardianHp = data.guardianHp;
+    combatView.opponentHp = data.opponentHp;
+    combatView.log.push({ round: data.round, events: data.events });
+
+    if(data.finished){
+      combatView = {
+        step: 'result',
+        result: data.result,
+        essenceGained: data.essenceGained,
+        rankUp: data.rankUp,
+        opponentName: combatView.opponentName
+      };
+    }
+    render();
+  }catch(e){
+    if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
+    if(row) Array.from(row.querySelectorAll('button')).forEach(b => b.disabled = false);
+  }
+}
+
+function renderBattleResult(){
+  const app = document.getElementById('app');
+  const v = combatView;
+  const win = v.result === 'win';
+  app.innerHTML = `
+    <div class="card verdict-card">
+      <div class="verdict-badge ${win ? 'full' : 'partial'}">${win ? 'Victory' : 'Defeat'}</div>
+      <p class="verdict-text">${win ? `${esc(guardian.name)} bested the ${esc(v.opponentName)}.` : `${esc(v.opponentName)} proved too much this time.`}</p>
+      <p class="gain-note">Essence gained: ${v.essenceGained}.${v.rankUp ? ' A new trial ground has opened.' : ''}</p>
+      <button onclick="finishCombat()">Return to your guardian</button>
+    </div>
+  `;
+}
+
+async function finishCombat(){
+  combatView = null;
+  loadoutPicks = [];
+  await loadGuardian();
+  render();
 }
 
 init();
