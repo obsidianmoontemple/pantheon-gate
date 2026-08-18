@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The Long Silence — Pantheon Gate</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#100e16;
+  --ink-2:#17131f;
+  --parchment:#e9decb;
+  --parchment-dim:#b9ac93;
+  --gold:#c8a24a;
+  --gold-bright:#e6c777;
+  --ember:#a1462a;
+  --line:#3a3346;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--ink);color:var(--parchment);font-family:'EB Garamond',serif;}
+body{
+  background-image:radial-gradient(ellipse at 20% -10%, rgba(200,162,74,0.10), transparent 55%),
+                   radial-gradient(ellipse at 90% 5%, rgba(138,107,184,0.08), transparent 55%);
+  background-attachment:fixed;
+}
+h1,h2,h3,.display{font-family:'Cinzel',serif;letter-spacing:0.04em;}
+.wrap{max-width:760px;margin:0 auto;padding:0 24px 100px;}
+.eyebrow{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:var(--gold);opacity:0.85;}
+header.mast{text-align:center;padding:64px 0 40px;}
+header.mast h1{font-size:clamp(32px,6vw,50px);margin:14px 0 6px;color:var(--parchment);text-shadow:0 0 30px rgba(200,162,74,0.15);}
+header.mast p.sub{font-style:italic;color:var(--parchment-dim);max-width:480px;margin:0 auto;font-size:16px;}
+.rule{width:120px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:22px auto;}
+.backlink{display:block;text-align:center;color:var(--parchment-dim);text-decoration:none;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;font-family:'Cinzel',serif;margin-top:10px;}
+.backlink:hover{color:var(--gold-bright);}
+
+.card{background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--line);border-radius:4px;padding:28px;margin-bottom:24px;}
+.card h2{font-size:18px;color:var(--gold-bright);margin:0 0 8px;}
+.card .hint{color:var(--parchment-dim);font-style:italic;font-size:14px;margin:0 0 20px;}
+
+.choice-row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-bottom:22px;}
+.choice{background:rgba(0,0,0,0.25);border:1px solid var(--line);border-radius:4px;padding:18px 16px;text-align:center;cursor:pointer;width:150px;transition:border-color .15s, transform .15s;}
+.choice:hover{border-color:var(--gold);transform:translateY(-2px);}
+.choice.selected{border-color:var(--gold-bright);background:rgba(200,162,74,0.08);box-shadow:0 0 0 1px var(--gold-bright);}
+.choice .art{margin:0 auto 10px;display:flex;align-items:center;justify-content:center;height:70px;}
+.choice .label{font-family:'Cinzel',serif;font-size:12.5px;letter-spacing:0.06em;color:var(--parchment);}
+.choice .blurb{font-size:12px;color:var(--parchment-dim);font-style:italic;margin-top:4px;}
+
+.swatch-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:22px;}
+.swatch{width:44px;height:44px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .15s;}
+.swatch:hover{transform:scale(1.08);}
+.swatch.selected{border-color:var(--gold-bright);box-shadow:0 0 0 3px rgba(230,199,119,0.25);}
+
+input[type=text],input[type=email]{
+  background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:12px 14px;
+  font-family:'EB Garamond',serif;font-size:16px;border-radius:3px;width:100%;max-width:320px;margin:0 auto 16px;display:block;
+}
+input:focus{outline:none;border-color:var(--gold);}
+button{background:var(--gold);color:var(--ink);border:none;padding:12px 26px;font-family:'Cinzel',serif;
+  font-size:12px;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;cursor:pointer;display:block;margin:0 auto;}
+button:hover:not(:disabled){background:var(--gold-bright);}
+button:disabled{opacity:0.4;cursor:not-allowed;}
+button.secondary{background:transparent;border:1px solid var(--gold);color:var(--gold-bright);}
+.status{font-size:13px;color:var(--parchment-dim);font-style:italic;text-align:center;margin-top:14px;min-height:18px;}
+.status.ok{color:var(--gold-bright);}
+.status.err{color:var(--ember);}
+
+.guardian-display{text-align:center;padding:10px 0 20px;}
+.guardian-display .art{margin:0 auto 14px;filter:drop-shadow(0 0 22px rgba(200,162,74,0.22));}
+.guardian-display h2{font-size:26px;color:var(--parchment);margin:0 0 4px;}
+.stage-badge{display:inline-block;font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--gold-bright);border:1px solid var(--gold);border-radius:20px;padding:4px 14px;margin-bottom:6px;}
+.species-line{color:var(--parchment-dim);font-style:italic;font-size:14px;margin-bottom:20px;}
+
+.bond-row{display:flex;align-items:center;justify-content:center;gap:16px;margin:18px 0 6px;flex-wrap:wrap;}
+.bond-label{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--parchment-dim);}
+.bond-value{font-family:'Cinzel',serif;font-size:20px;color:var(--gold-bright);}
+
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:12px;margin:20px 0 4px;}
+.stat-tile{border:1px solid var(--line);border-radius:3px;padding:12px 8px;text-align:center;}
+.stat-tile .num{font-family:'Cinzel',serif;font-size:19px;color:var(--gold-bright);}
+.stat-tile .label{font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--parchment-dim);margin-top:3px;}
+
+.marks-note{text-align:center;color:var(--parchment-dim);font-style:italic;font-size:14px;margin:20px 0 0;}
+
+footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-style:italic;margin-top:50px;opacity:0.65;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">Temple of the Obsidian Moon presents</p>
+    <h1>The Long Silence</h1>
+    <div class="rule"></div>
+    <p class="sub">The gods did not leave. They were silenced. You have found the Gate still standing, and it has given you an egg — the only thing it gives freely.</p>
+    <a class="backlink" href="index.html">&larr; Return to the Gate</a>
+  </header>
+
+  <div id="app">
+    <div class="card"><p class="hint" style="margin:0;text-align:center;">Finding your way through the Gate…</p></div>
+  </div>
+
+  <footer class="notice">The Long Silence · a Pantheon Gate chapter, still being written</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+/* Same project as index.html / admin.html. */
+const SUPABASE_URL = "https://kuvaeprkmwzlqrqtjbhc.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dmFlcHJrbXd6bHFycXRqYmhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MDMzOTgsImV4cCI6MjEwMjQ3OTM5OH0.-W7tTHZZob_dY2ydAx26cFx_izPBKJ3_M0sadNd7cOI";
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* Placeholder art only — swap for real illustration whenever it exists.
+   Every shape is a single-color silhouette so a palette choice is just a
+   fill color, nothing more to wire up later. */
+const SPECIES = [
+  { id: 'wyrmling', label: 'Wyrmling', blurb: 'Sinuous, patient, low to the ground.' },
+  { id: 'houndkin', label: 'Houndkin', blurb: 'Loyal, quick, built for the chase.' },
+  { id: 'wisp',     label: 'Wisp',     blurb: 'Weightless, watchful, hard to pin down.' },
+];
+const PALETTES = [
+  { id: 'gold',     label: 'Gilded',   color: '#c8a24a' },
+  { id: 'amethyst', label: 'Amethyst', color: '#8a6bb8' },
+  { id: 'moon',     label: 'Moonlit',  color: '#8fa6bf' },
+  { id: 'ember',    label: 'Ember',    color: '#a1462a' },
+  { id: 'verdant',  label: 'Verdant',  color: '#5f9464' },
+  { id: 'bone',     label: 'Bone',     color: '#e8e2d6' },
+];
+function paletteColor(id){ return (PALETTES.find(p => p.id === id) || PALETTES[0]).color; }
+
+function speciesSVG(species, color, size){
+  size = size || 70;
+  if(species === 'wyrmling'){
+    return `<svg viewBox="0 0 100 100" width="${size}" height="${size}">
+      <path d="M20,74 C18,44 42,52 46,34 C50,16 72,24 76,12" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"/>
+      <circle cx="77" cy="11" r="7.5" fill="${color}"/>
+      <circle cx="80" cy="8" r="1.5" fill="#100e16"/>
+      <path d="M60,20 L69,7 L64,25 Z" fill="${color}" opacity="0.85"/>
+    </svg>`;
+  }
+  if(species === 'houndkin'){
+    return `<svg viewBox="0 0 100 100" width="${size}" height="${size}">
+      <path d="M74,72 C88,67 87,49 78,47 C82,58 77,68 68,70 Z" fill="${color}"/>
+      <ellipse cx="50" cy="68" rx="26" ry="18" fill="${color}"/>
+      <circle cx="50" cy="38" r="16" fill="${color}"/>
+      <path d="M38,26 L33,9 L47,23 Z" fill="${color}"/>
+      <path d="M62,26 L67,9 L53,23 Z" fill="${color}"/>
+      <circle cx="55.5" cy="36" r="1.7" fill="#100e16"/>
+      <circle cx="44.5" cy="36" r="1.7" fill="#100e16"/>
+    </svg>`;
+  }
+  return `<svg viewBox="0 0 100 100" width="${size}" height="${size}">
+    <path d="M50,18 C67,34 67,60 50,82 C33,60 33,34 50,18 Z" fill="${color}" opacity="0.92"/>
+    <circle cx="24" cy="30" r="4" fill="${color}" opacity="0.55"/>
+    <circle cx="75" cy="24" r="3" fill="${color}" opacity="0.5"/>
+    <circle cx="70" cy="70" r="3.5" fill="${color}" opacity="0.55"/>
+  </svg>`;
+}
+function eggSVG(color, size){
+  size = size || 130;
+  return `<svg viewBox="0 0 100 120" width="${size}" height="${size * 1.2}">
+    <ellipse cx="50" cy="65" rx="37" ry="50" fill="${color}" opacity="0.94"/>
+    <ellipse cx="50" cy="65" rx="37" ry="50" fill="none" stroke="#100e16" stroke-width="1" opacity="0.22"/>
+    <path d="M30,38 C41,54 34,70 45,92" fill="none" stroke="#100e16" stroke-width="2" opacity="0.16"/>
+    <path d="M69,34 C59,50 68,66 57,90" fill="none" stroke="#100e16" stroke-width="2" opacity="0.16"/>
+  </svg>`;
+}
+
+let supabaseClient = null;
+let session = null;
+let guardian = null;
+let pickedSpecies = null;
+let pickedPalette = null;
+let nameDraft = '';
+
+async function init(){
+  if(SUPABASE_URL.indexOf('PASTE_YOUR') === 0){
+    document.getElementById('app').innerHTML = '<div class="card"><p class="hint" style="margin:0;">Backend not configured yet.</p></div>';
+    return;
+  }
+  supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const { data: { session: existing } } = await supabaseClient.auth.getSession();
+  session = existing;
+  if(!session){
+    const { data, error } = await supabaseClient.auth.signInAnonymously();
+    if(error){
+      document.getElementById('app').innerHTML =
+        '<div class="card"><p class="hint" style="margin:0;">Could not reach the Gate: ' + esc(error.message) + '. If you are the site owner, check that anonymous sign-ins are enabled in Supabase Auth settings.</p></div>';
+      return;
+    }
+    session = data.session;
+  }
+
+  await loadGuardian();
+  render();
+}
+
+async function loadGuardian(){
+  const { data, error } = await supabaseClient
+    .from('guardians')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity')
+    .eq('owner_user_id', session.user.id)
+    .maybeSingle();
+  if(error){ console.error('guardian load failed', error); return; }
+  guardian = data;
+}
+
+function render(){
+  guardian ? renderGuardianHome() : renderHatchFlow();
+}
+
+/* ---------------- hatching ---------------- */
+
+function renderHatchFlow(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">Choose your companion</h2>
+      <p class="hint" style="text-align:center;">This is the only choice here that never changes anything about how your guardian fights — species and color are yours to wear, not an advantage to chase. The name you give it next is the one part of this you can never take back.</p>
+
+      <div class="choice-row" id="speciesRow">
+        ${SPECIES.map(s => `
+          <div class="choice ${pickedSpecies === s.id ? 'selected' : ''}" onclick="pickSpecies('${s.id}')">
+            <div class="art">${speciesSVG(s.id, pickedPalette ? paletteColor(pickedPalette) : '#b9ac93', 60)}</div>
+            <div class="label">${esc(s.label)}</div>
+            <div class="blurb">${esc(s.blurb)}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="swatch-row" id="paletteRow">
+        ${PALETTES.map(p => `
+          <div class="swatch ${pickedPalette === p.id ? 'selected' : ''}" style="background:${p.color};" title="${esc(p.label)}" onclick="pickPalette('${p.id}')"></div>
+        `).join('')}
+      </div>
+
+      <input type="text" id="guardianName" maxlength="24" placeholder="Name your egg — this is permanent" value="${esc(nameDraft)}" oninput="onNameInput()">
+      <button id="hatchBtn" ${(pickedSpecies && pickedPalette && nameDraft.trim().length >= 2) ? '' : 'disabled'} onclick="hatchGuardian()">Claim this egg</button>
+      <div class="status" id="hatchStatus"></div>
+    </div>
+  `;
+}
+
+function pickSpecies(id){ pickedSpecies = id; renderHatchFlow(); }
+function pickPalette(id){ pickedPalette = id; renderHatchFlow(); }
+
+function onNameInput(){
+  const el = document.getElementById('guardianName');
+  nameDraft = el ? el.value : '';
+  updateHatchButton();
+}
+
+function updateHatchButton(){
+  const btn = document.getElementById('hatchBtn');
+  if(!btn) return;
+  const name = nameDraft.trim();
+  btn.disabled = !(pickedSpecies && pickedPalette && name.length >= 2 && name.length <= 24);
+}
+
+async function hatchGuardian(){
+  const status = document.getElementById('hatchStatus');
+  const name = nameDraft.trim();
+  if(!pickedSpecies || !pickedPalette || name.length < 2){
+    status.className = 'status err';
+    status.textContent = 'Pick a species, a color, and give it a name first.';
+    return;
+  }
+  status.className = 'status';
+  status.textContent = 'The shell is warm…';
+
+  const { data, error } = await supabaseClient
+    .from('guardians')
+    .insert({ owner_user_id: session.user.id, species: pickedSpecies, palette: pickedPalette, name })
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity')
+    .single();
+
+  if(error){
+    status.className = 'status err';
+    status.textContent = error.code === '23505'
+      ? 'You already have a guardian — refresh the page.'
+      : ('Failed: ' + error.message);
+    return;
+  }
+
+  guardian = data;
+  render();
+}
+
+/* ---------------- guardian home ---------------- */
+
+const STAGE_LABEL = { egg: 'Egg', hatchling: 'Hatchling', fledged: 'Fledged', ascendant: 'Ascendant', sovereign: 'Sovereign' };
+
+function renderGuardianHome(){
+  const app = document.getElementById('app');
+  const color = paletteColor(guardian.palette);
+  const art = guardian.stage === 'egg' ? eggSVG(color) : speciesSVG(guardian.species, color, 130);
+  const speciesLabel = (SPECIES.find(s => s.id === guardian.species) || {}).label || guardian.species;
+  const tendedToday = guardian.last_tended_at === todayStr();
+
+  app.innerHTML = `
+    <div class="card guardian-display">
+      <div class="art">${art}</div>
+      <div class="stage-badge">${esc(STAGE_LABEL[guardian.stage] || guardian.stage)}</div>
+      <h2>${esc(guardian.name)}</h2>
+      <div class="species-line">${esc(speciesLabel)} · still unmarked</div>
+
+      <div class="bond-row">
+        <span class="bond-label">Bond</span>
+        <span class="bond-value">${guardian.bond}</span>
+        <button ${tendedToday ? 'disabled' : ''} onclick="tendGuardian()">${tendedToday ? 'Tended today' : 'Tend your guardian'}</button>
+      </div>
+      <div class="status" id="tendStatus"></div>
+
+      <div class="stat-grid">
+        <div class="stat-tile"><div class="num">${guardian.vitality}</div><div class="label">Vitality</div></div>
+        <div class="stat-tile"><div class="num">${guardian.might}</div><div class="label">Might</div></div>
+        <div class="stat-tile"><div class="num">${guardian.ward}</div><div class="label">Ward</div></div>
+        <div class="stat-tile"><div class="num">${guardian.swiftness}</div><div class="label">Swiftness</div></div>
+        <div class="stat-tile"><div class="num">${guardian.cunning}</div><div class="label">Cunning</div></div>
+      </div>
+
+      <p class="marks-note">${guardian.stage === 'egg'
+        ? 'Still an egg. It hatches the moment a god marks it for the first time — and petitions, the way you earn a mark, are not open yet. Come back soon.'
+        : 'No marks yet.'}</p>
+    </div>
+
+    <div class="card" id="claimCard">
+      <h2>Claim this Seeker</h2>
+      <p class="hint">Right now this guardian only exists on this browser. Add an email and it's yours for good — same account everywhere, and required later if you want to join a Circle.</p>
+      <input type="email" id="claimEmail" placeholder="you@example.com">
+      <button class="secondary" onclick="claimWithEmail()">Send confirmation link</button>
+      <div class="status" id="claimStatus"></div>
+    </div>
+  `;
+}
+
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+async function tendGuardian(){
+  const status = document.getElementById('tendStatus');
+  status.className = 'status';
+  status.textContent = 'Tending…';
+  const { data, error } = await supabaseClient.rpc('tend_guardian', { p_guardian_id: guardian.id });
+  if(error){
+    status.className = 'status err';
+    status.textContent = 'Failed: ' + error.message;
+    return;
+  }
+  if(!data){
+    status.className = 'status';
+    status.textContent = 'Already tended today — come back tomorrow.';
+    return;
+  }
+  guardian.bond += 1;
+  guardian.last_tended_at = todayStr();
+  render();
+  const s2 = document.getElementById('tendStatus');
+  if(s2){ s2.className = 'status ok'; s2.textContent = 'Bond deepens.'; }
+}
+
+async function claimWithEmail(){
+  const status = document.getElementById('claimStatus');
+  const email = document.getElementById('claimEmail').value.trim();
+  if(!email){ status.className = 'status err'; status.textContent = 'Enter an email first.'; return; }
+  status.className = 'status';
+  status.textContent = 'Sending…';
+  const { error } = await supabaseClient.auth.updateUser(
+    { email },
+    { emailRedirectTo: window.location.origin + window.location.pathname }
+  );
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? error.message : 'Check your email and confirm the link — this Seeker is yours for good after that.';
+}
+
+init();
+</script>
+</body>
+</html>
