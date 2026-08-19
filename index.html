@@ -157,6 +157,18 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
   width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;z-index:1;}
 .age-badge{left:10px;right:auto;font-size:10px;font-family:'Cinzel',serif;letter-spacing:0.02em;}
 
+/* ---- locked-card teaser/blur (unlocked but for-sale) and full seal
+   (admin has marked a deity not-for-sale) — see lockState() in the script.
+   Teaser blurs the portrait/epithet/domain tags but leaves the name
+   crisp, so a visitor knows what they'd be unlocking. Sealed cards never
+   render that content into the DOM at all, name included, so there's
+   nothing to un-blur with devtools. ---- */
+.card-blur{filter:blur(6px);user-select:none;pointer-events:none;}
+.sealed-glyph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:38px;color:var(--parchment-dim);}
+.card .sealed-name{color:var(--parchment-dim);font-style:italic;}
+.detail-blur{filter:blur(7px);user-select:none;}
+.sealed-notice{border:1px solid var(--line);border-radius:4px;padding:26px;text-align:center;background:rgba(0,0,0,0.2);color:var(--parchment-dim);font-style:italic;margin-bottom:46px;}
+
 .paywall{border:1px solid var(--line);border-radius:4px;padding:26px;text-align:center;background:rgba(0,0,0,0.2);}
 .paywall p{color:var(--parchment-dim);font-style:italic;margin:0 0 20px;}
 .paywall .buy-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
@@ -290,6 +302,24 @@ function isUnlocked(d){
     entitlements.has('all') ||
     entitlements.has('pantheon:' + currentPantheon) ||
     entitlements.has('deity:' + d.id);
+}
+
+// Three states a card/detail view can render in:
+//   'unlocked' — full content, same as always.
+//   'teaser'   — locked, but for_sale (or no row = defaults for-sale): name
+//                stays visible so a visitor knows what they'd be unlocking;
+//                everything else (portrait, epithets, domains, myth) is
+//                blurred rather than removed — it's still "there," just
+//                unreadable, so this stays cheap (no extra fetch, no risk
+//                of a half-loaded card if the blur class fails to apply).
+//   'hidden'   — locked AND explicitly for_sale = false in deity_settings.
+//                Nothing identifying renders at all, not even the name —
+//                actually removed from the DOM, not just visually blurred,
+//                since "no one can see what's inside" is a stronger ask
+//                than the teaser case.
+function lockState(d){
+  if(isUnlocked(d)) return 'unlocked';
+  return deityForSale(d) === false ? 'hidden' : 'teaser';
 }
 
 async function initAuth(){
@@ -3563,16 +3593,38 @@ function selectPantheon(key){
 
 function renderGate(){
   const list = PANTHEONS[currentPantheon].deities;
-  document.getElementById('gateGrid').innerHTML = list.map(d => `
+  document.getElementById('gateGrid').innerHTML = list.map(d => {
+    const state = lockState(d);
+
+    // Sealed: admin marked this deity not-for-sale, and it isn't unlocked
+    // some other way (pantheon bundle, full access). Nothing identifying
+    // renders — not even the name — just a lock and a placeholder glyph.
+    if(state === 'hidden'){
+      return `
     <div class="card" onclick="openDeity('${d.id}')">
-      ${isUnlocked(d) ? '' : '<div class="lock-badge" title="Locked">&#128274;</div>'}
-      ${isAgeRestricted(d) ? '<div class="lock-badge age-badge" title="Age restricted">18+</div>' : ''}
-      <div class="medallion">${portraitHTML(d)}</div>
-      <h3>${esc(d.name)}</h3>
-      <div class="epithet">${esc(d.epithets.split(' · ')[0])}</div>
-      <div class="domain-tags">${d.domains.slice(0,3).join(' &middot; ')}</div>
+      <div class="lock-badge" title="Not available">&#128274;</div>
+      <div class="medallion"><div class="sealed-glyph">&#10021;</div></div>
+      <h3 class="sealed-name">Sealed</h3>
+      <div class="epithet">&nbsp;</div>
+      <div class="domain-tags">&nbsp;</div>
     </div>
-  `).join('');
+  `;
+    }
+
+    // Teaser: locked, but purchasable — name stays crisp, everything else
+    // (portrait, epithet, domains) is blurred rather than removed.
+    const blurred = state === 'teaser' ? ' card-blur' : '';
+    return `
+    <div class="card" onclick="openDeity('${d.id}')">
+      ${state === 'unlocked' ? '' : '<div class="lock-badge" title="Locked">&#128274;</div>'}
+      ${isAgeRestricted(d) ? '<div class="lock-badge age-badge" title="Age restricted">18+</div>' : ''}
+      <div class="medallion${blurred}">${portraitHTML(d)}</div>
+      <h3>${esc(d.name)}</h3>
+      <div class="epithet${blurred}">${esc(d.epithets.split(' · ')[0])}</div>
+      <div class="domain-tags${blurred}">${d.domains.slice(0,3).join(' &middot; ')}</div>
+    </div>
+  `;
+  }).join('');
 }
 
 function showGate(show){
@@ -3596,36 +3648,79 @@ function openDeity(id){
   renderDeityDetail(d);
 }
 
+// The buy-row is identical regardless of lock state (teaser or hidden) —
+// only difference is whether the "Unlock <name>" button appears, which
+// deityForSale(d) already governs. Pulled out so the sealed branch below
+// doesn't have to duplicate it and so a hidden god's name genuinely never
+// gets interpolated into that markup either.
+function buyRowHTML(d){
+  return !currentUser ? `<button onclick="openAuthModal()">Sign in</button>` : `
+    ${deityForSale(d)
+      ? `<button onclick="startCheckout('deity', '${d.id}')">Unlock ${esc(d.name)} — ${fmtUsd(deityPrice(d))}</button>`
+      : `<span class="unavailable">Individual unlock unavailable right now</span>`}
+    ${pantheonForSale(currentPantheon)
+      ? `<button class="secondary" onclick="startCheckout('pantheon', '${currentPantheon}')">Unlock this pantheon — ${fmtUsd(pantheonPrice(currentPantheon))}</button>`
+      : ''}
+    <button class="secondary" onclick="startCheckout('all')">Full access — ${fmtUsd(pricing.subscription)}/mo</button>
+  `;
+}
+
 function renderDeityDetail(d){
   showGate(false);
   document.getElementById('detailView').classList.add('active');
 
+  const state = lockState(d);
+
+  // Sealed: not-for-sale and not unlocked some other way. No bio content
+  // renders at all — not blurred, genuinely absent — and the paywall never
+  // interpolates the god's name either. The only way in is the pantheon
+  // bundle or full access, same buy-row every other locked god shows.
+  if(state === 'hidden'){
+    document.getElementById('detailContent').innerHTML = `
+    <div class="veil">
+      <div class="sealed-notice">
+        <p style="margin:0 0 6px;font-size:20px;">&#10021;</p>
+        <p style="margin:0;">This god has not been made available for individual viewing.</p>
+      </div>
+      <div class="communion" style="margin-top:0;border-top:none;padding-top:0;">
+        <div class="paywall">
+          <p>${currentUser ? 'You have not been granted an audience here.' : 'Sign in to see what this pantheon holds.'}</p>
+          <div class="buy-row">${buyRowHTML(d)}</div>
+        </div>
+      </div>
+    </div>
+    `;
+    window.scrollTo(0,0);
+    return;
+  }
+
   const firstWord = d.intro.split(' ')[0];
   const restOfIntro = d.intro.slice(firstWord.length);
+  const blurred = state === 'teaser' ? ' detail-blur' : '';
 
   document.getElementById('detailContent').innerHTML = `
     <div class="veil">
       <div class="deity-hero">
-        <div class="portrait-frame">
+        <div class="portrait-frame${blurred}">
           <div class="ring">${portraitHTML(d)}</div>
           <div class="caption">${esc(d.portraitCaption)}</div>
         </div>
         <div>
           <div class="eyebrow">${esc(PANTHEONS[currentPantheon].label)} pantheon</div>
           <h2 class="deity-name">${esc(d.name)}</h2>
-          <div class="deity-epithets">${esc(d.epithets)}</div>
-          <div class="tagrow">${d.domains.map(t => '<span class="tag">' + esc(t) + '</span>').join('')}</div>
-          <div class="tagrow">${d.symbols.map(t => '<span class="tag">' + esc(t) + '</span>').join('')}</div>
-          <p class="intro-quote"><span class="dropcap">${esc(firstWord[0])}</span>${esc(firstWord.slice(1))}${esc(restOfIntro)}</p>
+          <div class="deity-epithets${blurred}">${esc(d.epithets)}</div>
+          <div class="tagrow${blurred}">${d.domains.map(t => '<span class="tag">' + esc(t) + '</span>').join('')}</div>
+          <div class="tagrow${blurred}">${d.symbols.map(t => '<span class="tag">' + esc(t) + '</span>').join('')}</div>
+          <p class="intro-quote${blurred}"><span class="dropcap">${esc(firstWord[0])}</span>${esc(firstWord.slice(1))}${esc(restOfIntro)}</p>
         </div>
       </div>
 
       <div class="section-title">The Story</div>
-      <div class="myth">${d.myth.map(p => '<p>' + esc(p) + '</p>').join('')}</div>
+      <div class="myth${blurred}">${d.myth.map(p => '<p>' + esc(p) + '</p>').join('')}</div>
 
       <div class="communion">
-        <div class="section-title">Speak with ${esc(d.name)}</div>
-        ${isUnlocked(d) ? `
+        <div class="section-title">Speak with ${state === 'unlocked' ? esc(d.name) : 'this god'}</div>
+        ${state === 'unlocked' ? `
         <div class="chat-window" id="chatWindow"></div>
         <div class="chat-input-row">
           <input type="text" id="chatInput" maxlength="600" placeholder="Ask ${esc(d.name)} something..." onkeydown="if(event.key==='Enter')sendMessage()">
@@ -3634,23 +3729,13 @@ function renderDeityDetail(d){
         ` : `
         <div class="paywall">
           <p>${currentUser ? esc(d.name) + ' has not granted you an audience yet.' : 'Sign in to unlock ' + esc(d.name) + '.'}</p>
-          <div class="buy-row">
-            ${!currentUser ? `<button onclick="openAuthModal()">Sign in</button>` : `
-              ${deityForSale(d)
-                ? `<button onclick="startCheckout('deity', '${d.id}')">Unlock ${esc(d.name)} — ${fmtUsd(deityPrice(d))}</button>`
-                : `<span class="unavailable">Individual unlock unavailable right now</span>`}
-              ${pantheonForSale(currentPantheon)
-                ? `<button class="secondary" onclick="startCheckout('pantheon', '${currentPantheon}')">Unlock this pantheon — ${fmtUsd(pantheonPrice(currentPantheon))}</button>`
-                : ''}
-              <button class="secondary" onclick="startCheckout('all')">Full access — ${fmtUsd(pricing.subscription)}/mo</button>
-            `}
-          </div>
+          <div class="buy-row">${buyRowHTML(d)}</div>
         </div>
         `}
       </div>
     </div>
   `;
-  if(isUnlocked(d)) renderChat();
+  if(state === 'unlocked') renderChat();
   window.scrollTo(0,0);
 }
 
