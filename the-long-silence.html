@@ -561,11 +561,13 @@ function todayStr(){
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
+const CHECKIN_CURRENCY_LABELS = { essence: 'Essence', favor: 'Favor', god_shards: 'God Shards', god_tokens: 'God Tokens', petition_credits: 'Petition Credits' };
+
 async function tendGuardian(){
   // tend_guardian now returns a small object — { tended, streak, rewards,
   // essenceGained } — instead of a plain boolean, so a daily check-in can
-  // carry an actual prize (admin-configurable via daily_checkin_rewards)
-  // instead of just +1 Bond.
+  // carry an actual prize (admin-configurable via daily_checkin_rewards,
+  // any personal currency — not just Essence) instead of just +1 Bond.
   const status = document.getElementById('tendStatus');
   status.className = 'status';
   status.textContent = 'Tending…';
@@ -580,16 +582,14 @@ async function tendGuardian(){
     status.textContent = 'Already tended today — come back tomorrow.';
     return;
   }
-  guardian.bond += 1;
-  guardian.essence = (guardian.essence || 0) + (data.essenceGained || 0);
-  guardian.checkin_streak = data.streak;
-  guardian.last_tended_at = todayStr();
+  await loadGuardian(); // refetches every currency field fresh rather than guessing which ones the reward touched
   render();
   const s2 = document.getElementById('tendStatus');
   if(s2){
     s2.className = 'status ok';
+    const gainParts = (data.rewards || []).filter(r => r.amount > 0).map(r => `+${r.amount} ${CHECKIN_CURRENCY_LABELS[r.currency] || r.currency}`);
     const milestoneLabels = (data.rewards || []).filter(r => r.label && r.label !== 'Daily tending').map(r => r.label);
-    let msg = `Bond deepens. +${data.essenceGained || 0} Essence — ${data.streak} day streak.`;
+    let msg = `Bond deepens. ${gainParts.join(', ') || 'Tended.'} — ${data.streak} day streak.`;
     if(milestoneLabels.length) msg += ' ' + milestoneLabels.join(', ') + '!';
     s2.textContent = msg;
   }
