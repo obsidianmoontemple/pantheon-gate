@@ -861,6 +861,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
               <option value="deity">Free unlock: one god</option>
               <option value="pantheon">Free unlock: one pantheon</option>
               <option value="all">Free unlock: full access</option>
+              <option value="store_item">Give away a store item</option>
             </select>
           </div>
           <div class="field" id="broadcastGiftBonusField" style="display:none;">
@@ -870,6 +871,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field" id="broadcastGiftScopeField" style="display:none;">
             <label>God or pantheon id</label>
             <input type="text" id="broadcastGiftScopeId" placeholder="e.g. hera or norse" style="max-width:180px;">
+          </div>
+          <div class="field" id="broadcastGiftStoreItemField" style="display:none;">
+            <label>Which item</label>
+            <select id="broadcastGiftStoreItem" style="max-width:200px;"><option value="">Loading…</option></select>
           </div>
           <button id="postBroadcastBtn">Post announcement</button>
         </div>
@@ -938,6 +943,7 @@ let supabaseClient = null;
 let deitySettings = {};
 let pantheonSettings = {};
 let currencyDefs = {}; // key -> row, refreshed by loadCurrencyDefinitions()
+let storeItemsCache = []; // active store_items rows, refreshed by loadStoreItems() — also feeds the broadcast "give away a store item" picker
 
 /* ---------------- tabs ---------------- */
 
@@ -1622,6 +1628,8 @@ async function loadStoreItems(){
     rows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
+  storeItemsCache = data || [];
+  populateBroadcastGiftStoreItemSelect();
   if(!data.length){
     rows.innerHTML = '<tr><td colspan="4">No store items yet.</td></tr>';
     return;
@@ -1781,6 +1789,15 @@ function updateBroadcastGiftFields(){
   const type = document.getElementById('broadcastGiftType').value;
   document.getElementById('broadcastGiftBonusField').style.display = (type === 'bonus_messages') ? '' : 'none';
   document.getElementById('broadcastGiftScopeField').style.display = (type === 'deity' || type === 'pantheon') ? '' : 'none';
+  document.getElementById('broadcastGiftStoreItemField').style.display = (type === 'store_item') ? '' : 'none';
+}
+
+function populateBroadcastGiftStoreItemSelect(){
+  const sel = document.getElementById('broadcastGiftStoreItem');
+  if(!sel) return;
+  const current = sel.value;
+  sel.innerHTML = storeItemsCache.map(i => `<option value="${esc(i.id)}">${esc(i.name)} (${fmtUsd(i.price_cents)})</option>`).join('') || '<option value="">No store items yet — add one first</option>';
+  if(current && storeItemsCache.some(i => i.id === current)) sel.value = current;
 }
 
 function updateBroadcastTargetField(){
@@ -1806,7 +1823,7 @@ async function postBroadcast(){
     return;
   }
 
-  let giftBonus = null, giftScopeType = null, giftScopeId = null;
+  let giftBonus = null, giftScopeType = null, giftScopeId = null, giftStoreItemId = null;
   if(giftType === 'bonus_messages'){
     giftBonus = parseInt(document.getElementById('broadcastGiftBonus').value || '0', 10);
     if(!giftBonus || giftBonus <= 0){
@@ -1824,6 +1841,13 @@ async function postBroadcast(){
     }
   } else if(giftType === 'all'){
     giftScopeType = 'all';
+  } else if(giftType === 'store_item'){
+    giftStoreItemId = document.getElementById('broadcastGiftStoreItem').value;
+    if(!giftStoreItemId){
+      status.className = 'status err';
+      status.textContent = 'Pick a store item to give away, or add one first in Pricing & Store.';
+      return;
+    }
   }
 
   status.className = 'status';
@@ -1833,7 +1857,8 @@ async function postBroadcast(){
     p_gift_bonus_messages: giftBonus,
     p_gift_scope_type: giftScopeType,
     p_gift_scope_id: giftScopeId,
-    p_target_email: targetType === 'one' ? targetEmail : null
+    p_target_email: targetType === 'one' ? targetEmail : null,
+    p_gift_store_item_id: giftStoreItemId
   });
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) :
@@ -1855,7 +1880,7 @@ async function loadBroadcasts(){
   const rows = document.getElementById('broadcastRows');
   const { data, error } = await supabaseClient
     .from('broadcasts')
-    .select('id, message, gift_bonus_messages, gift_scope_type, gift_scope_id, created_at, target_user_id, profiles!broadcasts_target_user_id_fkey(email)')
+    .select('id, message, gift_bonus_messages, gift_scope_type, gift_scope_id, gift_store_item_id, created_at, target_user_id, profiles!broadcasts_target_user_id_fkey(email)')
     .eq('active', true)
     .order('created_at', { ascending: false })
     .limit(50);
@@ -1869,7 +1894,8 @@ async function loadBroadcasts(){
     return;
   }
   rows.innerHTML = data.map(b => {
-    const gift = b.gift_bonus_messages ? ('+' + b.gift_bonus_messages + ' messages') :
+    const gift = b.gift_store_item_id ? ('Store item: ' + (storeItemsCache.find(i => i.id === b.gift_store_item_id)?.name || b.gift_store_item_id)) :
+      b.gift_bonus_messages ? ('+' + b.gift_bonus_messages + ' messages') :
       b.gift_scope_type === 'all' ? 'Full access' :
       b.gift_scope_type ? (b.gift_scope_type + ': ' + (b.gift_scope_id || '')) : '—';
     const to = b.target_user_id ? (b.profiles?.email || '(unknown player)') : 'Everyone';
