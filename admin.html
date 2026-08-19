@@ -20,15 +20,17 @@
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;background:var(--ink);color:var(--parchment);font-family:'EB Garamond',serif;}
 h1,h2,.display{font-family:'Cinzel',serif;letter-spacing:0.04em;}
-.wrap{max-width:1100px;margin:0 auto;padding:48px 24px 100px;}
+.wrap{max-width:1200px;margin:0 auto;padding:48px 24px 100px;}
 h1{font-size:28px;color:var(--parchment);margin:0 0 6px;}
-.sub{color:var(--parchment-dim);font-style:italic;margin:0 0 40px;}
+.sub{color:var(--parchment-dim);font-style:italic;margin:0 0 28px;}
 .card{background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--line);border-radius:4px;padding:26px;margin-bottom:28px;}
 .card h2{font-size:15px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold);margin:0 0 6px;}
+.card h3{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold-bright);margin:22px 0 6px;}
 .card .hint{color:var(--parchment-dim);font-style:italic;font-size:13px;margin:0 0 20px;}
 label{display:block;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--parchment-dim);margin-bottom:6px;}
-input,select{background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;border-radius:3px;width:100%;max-width:220px;}
-input:focus,select:focus{outline:none;border-color:var(--gold);}
+input,select,textarea{background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;border-radius:3px;width:100%;max-width:220px;}
+textarea{max-width:none;width:100%;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);}
 .field{margin-bottom:16px;}
 button{background:var(--gold);color:var(--ink);border:none;padding:11px 22px;font-family:'Cinzel',serif;
   font-size:12px;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;cursor:pointer;}
@@ -56,10 +58,12 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 .modal-inline{max-width:340px;margin:0 auto;}
 .modal-inline input{max-width:none;margin-bottom:10px;}
 .modal-inline button{width:100%;margin-bottom:8px;}
-.scroll-table{max-height:520px;overflow-y:auto;border:1px solid var(--line);border-radius:3px;}
+.scroll-table{max-height:520px;overflow-y:auto;overflow-x:auto;border:1px solid var(--line);border-radius:3px;}
 .scroll-table table{font-size:13px;}
 .scroll-table input[type=number]{max-width:90px;padding:6px 8px;}
+.scroll-table input[type=text]{max-width:140px;padding:6px 8px;}
 .scroll-table input[type=checkbox]{width:16px;height:16px;}
+.scroll-table select{max-width:150px;padding:6px 8px;}
 .search-box{max-width:320px;margin-bottom:14px;}
 .form-row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;}
 .form-row .field{margin-bottom:0;}
@@ -71,12 +75,26 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 .top-sellers li{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;}
 .top-sellers li:last-child{border-bottom:none;}
 .save-bar{display:flex;align-items:center;gap:16px;margin-top:16px;}
+.tabnav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:28px;border-bottom:1px solid var(--line);padding-bottom:16px;}
+.tabnav button{background:transparent;border:1px solid var(--line);color:var(--parchment-dim);}
+.tabnav button:hover{border-color:var(--gold);color:var(--gold-bright);background:transparent;}
+.tabnav button.active{background:var(--gold);color:var(--ink);border-color:var(--gold);}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+.sort-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.sort-bar button.active{background:var(--gold-bright);}
+.circle-detail{border:1px solid var(--line);border-radius:3px;padding:18px;margin-top:14px;}
+.circle-detail .empty{color:var(--parchment-dim);font-style:italic;}
+.pick-list{list-style:none;padding:0;margin:0 0 14px;}
+.pick-list li{padding:6px 0;border-bottom:1px solid var(--line);}
+.pick-list button{background:transparent;border:1px solid var(--line);color:var(--parchment);padding:6px 12px;font-size:12px;width:100%;text-align:left;}
+.pick-list button:hover{border-color:var(--gold);color:var(--gold-bright);}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>The Pantheon Gate — Admin</h1>
-  <p class="sub">Pricing, catalog, and customers, no code required.</p>
+  <p class="sub">Full administrative control: pricing, catalog, Circles, currencies, deities, and every leaderboard at a glance.</p>
 
   <div id="gateMsg" class="gate-msg">Checking your session…</div>
 
@@ -89,353 +107,791 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
   <div id="adminArea" style="display:none;">
 
-    <div class="card">
-      <h2>Revenue overview</h2>
-      <p class="hint">Live numbers from the purchases table. Manual grants (comped access) don't count toward revenue.</p>
-      <div class="stat-grid" id="statGrid">
-        <div class="stat-tile"><div class="num">—</div><div class="label">Loading…</div></div>
-      </div>
-      <h2 style="margin-top:8px;">Top sellers</h2>
-      <ul class="top-sellers" id="topSellers"><li>Loading…</li></ul>
+    <div class="tabnav" id="tabNav">
+      <button class="tab-btn active" data-tab="overview" onclick="showTab('overview')">Overview</button>
+      <button class="tab-btn" data-tab="leaderboards" onclick="showTab('leaderboards')">Leaderboards</button>
+      <button class="tab-btn" data-tab="circles" onclick="showTab('circles')">Circles</button>
+      <button class="tab-btn" data-tab="currencies" onclick="showTab('currencies')">Currencies &amp; Gifts</button>
+      <button class="tab-btn" data-tab="checkins" onclick="showTab('checkins')">Check-ins &amp; Events</button>
+      <button class="tab-btn" data-tab="progression" onclick="showTab('progression')">Guardian Progression</button>
+      <button class="tab-btn" data-tab="dragons" onclick="showTab('dragons')">Big Baddies</button>
+      <button class="tab-btn" data-tab="guardianitems" onclick="showTab('guardianitems')">Guardian Items</button>
+      <button class="tab-btn" data-tab="arenastore" onclick="showTab('arenastore')">Arena Store</button>
+      <button class="tab-btn" data-tab="deities" onclick="showTab('deities')">Deity Personalities</button>
+      <button class="tab-btn" data-tab="pricing" onclick="showTab('pricing')">Pricing &amp; Store</button>
+      <button class="tab-btn" data-tab="pantheons" onclick="showTab('pantheons')">Pantheons &amp; Gods</button>
+      <button class="tab-btn" data-tab="access" onclick="showTab('access')">Access &amp; Broadcasts</button>
+      <button class="tab-btn" data-tab="customers" onclick="showTab('customers')">Customers</button>
     </div>
 
-    <div class="card">
-      <h2>Global default pricing</h2>
-      <p class="hint">Applies to any god or pantheon that doesn't have its own override price below.</p>
-      <div class="field">
-        <label>Unlock one god ($)</label>
-        <input type="number" step="0.01" min="0" id="priceDeity">
+    <!-- ============================== OVERVIEW ============================== -->
+    <div class="tab-content active" id="tab-overview">
+      <div class="card">
+        <h2>Revenue overview</h2>
+        <p class="hint">Live numbers from the purchases table. Manual grants (comped access) don't count toward revenue.</p>
+        <div class="stat-grid" id="statGrid">
+          <div class="stat-tile"><div class="num">—</div><div class="label">Loading…</div></div>
+        </div>
+        <h2 style="margin-top:8px;">Top sellers</h2>
+        <ul class="top-sellers" id="topSellers"><li>Loading…</li></ul>
       </div>
-      <div class="field">
-        <label>Unlock a whole pantheon ($)</label>
-        <input type="number" step="0.01" min="0" id="pricePantheon">
-      </div>
-      <div class="field">
-        <label>Full access, monthly ($)</label>
-        <input type="number" step="0.01" min="0" id="priceSubscription">
-      </div>
-      <div class="field">
-        <label>Included messages / signed-in user / month (0 = unlimited)</label>
-        <input type="number" step="1" min="0" id="includedMessages">
-      </div>
-      <div class="field">
-        <label>Message pack size (extra messages per purchase)</label>
-        <input type="number" step="1" min="1" id="packSize">
-      </div>
-      <div class="field">
-        <label>Message pack price ($)</label>
-        <input type="number" step="0.01" min="0" id="packPrice">
-      </div>
-      <button id="savePricingBtn">Save global prices</button>
-      <div class="status" id="pricingStatus"></div>
     </div>
 
-    <div class="card">
-      <h2>Subscription tiers</h2>
-      <p class="hint">Beyond the flat "Full Access" plan above, add named tiers at their own price. Each tier grants full access, one pantheon, or one god — whatever fits that price point. Existing subscribers on a tier keep it even if you remove it later.</p>
-      <div class="form-row">
-        <div class="field">
-          <label>Id (lowercase, no spaces)</label>
-          <input type="text" id="newTierId" placeholder="e.g. bronze" style="max-width:130px;">
+    <!-- ============================== LEADERBOARDS ============================== -->
+    <div class="tab-content" id="tab-leaderboards">
+      <div class="card">
+        <h2>Circle rank &amp; economy</h2>
+        <p class="hint">Every Circle, one table — Proving-of-Circles rank alongside the Chest, Devotion, and lifetime tithe numbers, so you don't have to flip between screens.</p>
+        <div class="sort-bar" id="circleLbSort">
+          <button class="small active" data-sort="rank_score" onclick="renderCircleLeaderboard('rank_score')">By rank</button>
+          <button class="small" data-sort="devotion_balance" onclick="renderCircleLeaderboard('devotion_balance')">By Devotion</button>
+          <button class="small" data-sort="chest_essence" onclick="renderCircleLeaderboard('chest_essence')">By Chest</button>
+          <button class="small" data-sort="essence_spent" onclick="renderCircleLeaderboard('essence_spent')">By lifetime tithe</button>
         </div>
-        <div class="field">
-          <label>Name</label>
-          <input type="text" id="newTierName" placeholder="e.g. Bronze" style="max-width:170px;">
+        <div class="scroll-table" style="max-height:360px;">
+          <table>
+            <thead><tr><th>#</th><th>Circle</th><th>Members</th><th>Rank score</th><th>Chest essence</th><th>Devotion</th><th>Lifetime tithe</th></tr></thead>
+            <tbody id="circleLbRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+          </table>
         </div>
-        <div class="field">
-          <label>Price / month ($)</label>
-          <input type="number" step="0.01" min="0.01" id="newTierPrice" style="max-width:110px;">
-        </div>
-        <div class="field">
-          <label>Grants</label>
-          <select id="newTierGrantType" style="max-width:150px;">
-            <option value="all">Full site access</option>
-            <option value="pantheon">One pantheon</option>
-            <option value="deity">One god</option>
-          </select>
-        </div>
-        <div class="field" id="newTierGrantIdField" style="display:none;">
-          <label>God or pantheon id</label>
-          <input type="text" id="newTierGrantId" placeholder="e.g. hera or norse" style="max-width:160px;">
-        </div>
-        <button id="addTierBtn">Add tier</button>
       </div>
-      <div class="field" style="max-width:none;">
-        <label>Description (shown to players)</label>
-        <input type="text" id="newTierDescription" style="max-width:none;" placeholder="e.g. Full access to every pantheon, unlimited messages">
+
+      <div class="card">
+        <h2>Personal PvP ladder</h2>
+        <p class="hint">Ordinal ladder position, 1 = best. Only guardians who've entered the Arena at least once appear here.</p>
+        <div class="scroll-table" style="max-height:360px;">
+          <table>
+            <thead><tr><th>#</th><th>Guardian</th><th>Owner</th><th>Stage</th></tr></thead>
+            <tbody id="pvpLbRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
       </div>
-      <div class="status" id="newTierStatus"></div>
-      <div class="scroll-table" style="max-height:240px;margin-top:14px;">
-        <table>
-          <thead><tr><th>Tier</th><th>Price</th><th>Grants</th><th></th></tr></thead>
-          <tbody id="tierRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+
+      <div class="card">
+        <h2>Top guardians</h2>
+        <p class="hint">By Proving rank (Gauntlet combat wins) by default — switch to total stats or Bond to see who's been invested in the most.</p>
+        <div class="sort-bar" id="guardianLbSort">
+          <button class="small active" data-sort="proving_rank" onclick="renderGuardianLeaderboard('proving_rank')">By Proving rank</button>
+          <button class="small" data-sort="stats" onclick="renderGuardianLeaderboard('stats')">By total stats</button>
+          <button class="small" data-sort="bond" onclick="renderGuardianLeaderboard('bond')">By Bond</button>
+          <button class="small" data-sort="essence" onclick="renderGuardianLeaderboard('essence')">By Essence</button>
+        </div>
+        <div class="scroll-table" style="max-height:360px;">
+          <table>
+            <thead><tr><th>#</th><th>Guardian</th><th>Owner</th><th>Stage</th><th>Proving</th><th>Total stats</th><th>Bond</th><th>Essence</th></tr></thead>
+            <tbody id="guardianLbRows"><tr><td colspan="8">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Top spenders</h2>
+        <p class="hint">Sum of every purchase-event's amount across a player's history (subscriptions and one-time), highest first. Not netted against refunds or cancellations — a proxy for lifetime spend, not a ledger.</p>
+        <div class="scroll-table" style="max-height:360px;">
+          <table>
+            <thead><tr><th>#</th><th>Customer</th><th>Total (proxy)</th><th>Purchase events</th></tr></thead>
+            <tbody id="spenderLbRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================== CIRCLES ============================== -->
+    <div class="tab-content" id="tab-circles">
+      <div class="card">
+        <h2>Circles governance</h2>
+        <p class="hint">Full override on any Circle — roster, chat, balances, identity. Bypasses the normal leader-only rules on purpose.</p>
+        <div class="form-row">
+          <div class="field">
+            <label>Search by name</label>
+            <input type="text" id="circleSearchInput" placeholder="e.g. Ember" style="max-width:240px;">
+          </div>
+          <button id="circleSearchBtn">Search</button>
+        </div>
+        <ul class="pick-list" id="circleSearchResults"></ul>
+        <div class="status" id="circleSearchStatus"></div>
+
+        <div class="circle-detail" id="circleDetail">
+          <p class="empty">Search for a Circle above to load its roster and controls.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================== CURRENCIES & GIFTS ============================== -->
+    <div class="tab-content" id="tab-currencies">
+      <div class="card">
+        <h2>Currency registry</h2>
+        <p class="hint">What currencies exist, what they're for, and where they apply. Adding a row here only creates the registry entry — actually granting it also needs a matching handler wired into the admin edge function's code (today: Essence and Devotion). A new currency will show up everywhere below, but grants will return an error until that code-side wiring is added.</p>
+        <div class="scroll-table" style="max-height:280px;">
+          <table>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Scope</th><th>Icon</th><th>Sort</th><th>Active</th></tr></thead>
+            <tbody id="currencyRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveCurrenciesBtn">Save changes</button>
+          <div class="status" id="currencyStatus"></div>
+        </div>
+        <h3>Add a new currency</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, a-z0-9_)</label><input type="text" id="newCurrencyKey" placeholder="e.g. glory" style="max-width:140px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newCurrencyName" placeholder="e.g. Glory" style="max-width:160px;"></div>
+          <div class="field"><label>Scope</label>
+            <select id="newCurrencyScope" style="max-width:140px;"><option value="personal">Personal</option><option value="circle">Circle</option></select>
+          </div>
+          <div class="field"><label>Icon</label><input type="text" id="newCurrencyIcon" placeholder="e.g. 🏆" style="max-width:80px;"></div>
+          <button id="addCurrencyBtn">Add currency</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description</label>
+          <input type="text" id="newCurrencyDescription" style="max-width:none;">
+        </div>
+        <div class="status" id="newCurrencyStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Grant to a player</h2>
+        <p class="hint">Comp a player directly. They must have signed in (and, for a personal currency, have a guardian) already.</p>
+        <div class="form-row">
+          <div class="field"><label>Their email</label><input type="email" id="grantPlayerEmail" style="max-width:220px;"></div>
+          <div class="field"><label>Currency</label><select id="grantPlayerCurrency" style="max-width:160px;"></select></div>
+          <div class="field"><label>Mode</label>
+            <select id="grantPlayerMode" style="max-width:120px;"><option value="delta">Add</option><option value="set">Set to</option></select>
+          </div>
+          <div class="field"><label>Amount</label><input type="number" id="grantPlayerAmount" style="max-width:120px;"></div>
+          <div class="field"><label>Reason (optional)</label><input type="text" id="grantPlayerReason" style="max-width:200px;"></div>
+          <button id="grantPlayerBtn">Grant</button>
+        </div>
+        <div class="status" id="grantPlayerStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Grant to a Circle</h2>
+        <p class="hint">Adjusts one Circle's shared balance directly — same effect as the Circles tab's balance control, kept here too since currency work often starts from this side.</p>
+        <div class="form-row">
+          <div class="field"><label>Circle name (exact)</label><input type="text" id="grantCircleName" style="max-width:200px;"></div>
+          <div class="field"><label>Currency</label><select id="grantCircleCurrency" style="max-width:160px;"></select></div>
+          <div class="field"><label>Mode</label>
+            <select id="grantCircleMode" style="max-width:120px;"><option value="delta">Add</option><option value="set">Set to</option></select>
+          </div>
+          <div class="field"><label>Amount</label><input type="number" id="grantCircleAmount" style="max-width:120px;"></div>
+          <div class="field"><label>Reason (optional)</label><input type="text" id="grantCircleReason" style="max-width:200px;"></div>
+          <button id="grantCircleBtn">Grant</button>
+        </div>
+        <div class="status" id="grantCircleStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Bulk / broadcast gift</h2>
+        <p class="hint">Personal currencies only — fans out to every member of one Circle, or to every player site-wide. Instant and unrecorded beyond the admin action log; for a repeatable named campaign, use Check-ins &amp; Events instead.</p>
+        <div class="form-row">
+          <div class="field"><label>Currency</label><select id="bulkGrantCurrency" style="max-width:160px;"></select></div>
+          <div class="field"><label>Scope</label>
+            <select id="bulkGrantScope" style="max-width:140px;"><option value="sitewide">Everyone</option><option value="circle">One Circle</option></select>
+          </div>
+          <div class="field" id="bulkGrantCircleField" style="display:none;">
+            <label>Circle name (exact)</label><input type="text" id="bulkGrantCircleName" style="max-width:200px;">
+          </div>
+          <div class="field"><label>Amount each</label><input type="number" id="bulkGrantAmount" style="max-width:120px;"></div>
+          <div class="field"><label>Reason (optional)</label><input type="text" id="bulkGrantReason" style="max-width:200px;"></div>
+          <button id="bulkGrantBtn">Send gift</button>
+        </div>
+        <div class="status" id="bulkGrantStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== CHECK-INS & EVENTS ============================== -->
+    <div class="tab-content" id="tab-checkins">
+      <div class="card">
+        <h2>Daily check-in rewards</h2>
+        <p class="hint">streak_day 0 is the baseline reward, granted on every successful tend. Any other streak_day is a one-time milestone bonus fired the exact day a streak reaches it (doesn't repeat).</p>
+        <div class="scroll-table" style="max-height:280px;">
+          <table>
+            <thead><tr><th>Streak day</th><th>Currency</th><th>Amount</th><th>Label</th><th>Active</th></tr></thead>
+            <tbody id="checkinRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveCheckinsBtn">Save changes</button>
+          <div class="status" id="checkinStatus"></div>
+        </div>
+        <h3>Add a milestone</h3>
+        <div class="form-row">
+          <div class="field"><label>Streak day (0 = baseline)</label><input type="number" min="0" id="newCheckinDay" style="max-width:140px;"></div>
+          <div class="field"><label>Currency</label><select id="newCheckinCurrency" style="max-width:150px;"></select></div>
+          <div class="field"><label>Amount</label><input type="number" min="1" id="newCheckinAmount" style="max-width:110px;"></div>
+          <div class="field"><label>Label</label><input type="text" id="newCheckinLabel" placeholder="e.g. Two Week Streak" style="max-width:200px;"></div>
+          <button id="addCheckinBtn">Add</button>
+        </div>
+        <div class="status" id="newCheckinStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Promo events</h2>
+        <p class="hint">A named, time-boxed campaign — set it up ahead of time as a draft, flip it active, then run it (possibly more than once, e.g. once a day of an event week). Distribution reuses the same currency handlers as the grant forms.</p>
+        <div class="scroll-table" style="max-height:340px;">
+          <table>
+            <thead><tr><th>Event</th><th>Currency / amount</th><th>Scope</th><th>Status</th><th>Runs</th><th></th></tr></thead>
+            <tbody id="promoRows"><tr><td colspan="6">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="status" id="promoStatus"></div>
+        <h3>Create a new event</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, a-z0-9_-)</label><input type="text" id="newPromoKey" placeholder="e.g. summer_giveaway" style="max-width:200px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newPromoName" style="max-width:180px;"></div>
+          <div class="field"><label>Currency</label><select id="newPromoCurrency" style="max-width:150px;"></select></div>
+          <div class="field"><label>Amount each</label><input type="number" min="1" id="newPromoAmount" style="max-width:120px;"></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Scope</label>
+            <select id="newPromoScope" style="max-width:140px;"><option value="sitewide">Everyone</option><option value="circle">One Circle</option></select>
+          </div>
+          <div class="field" id="newPromoCircleField" style="display:none;">
+            <label>Circle name (exact)</label><input type="text" id="newPromoCircleName" style="max-width:200px;">
+          </div>
+          <div class="field"><label>Starts (optional)</label><input type="datetime-local" id="newPromoStarts" style="max-width:200px;"></div>
+          <div class="field"><label>Ends (optional)</label><input type="datetime-local" id="newPromoEnds" style="max-width:200px;"></div>
+          <button id="addPromoBtn">Create event</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (optional)</label>
+          <input type="text" id="newPromoDescription" style="max-width:none;">
+        </div>
+        <div class="status" id="newPromoStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== GUARDIAN PROGRESSION ============================== -->
+    <div class="tab-content" id="tab-progression">
+      <div class="card">
+        <h2>Guardian stage evolution</h2>
+        <p class="hint">Mark-count thresholds for each stage. Each must be at or above the one before it — a guardian can't reach Sovereign before Ascendant.</p>
+        <div class="form-row">
+          <div class="field"><label>Hatchling at</label><input type="number" min="0" id="progHatchling" style="max-width:110px;"></div>
+          <div class="field"><label>Fledged at</label><input type="number" min="0" id="progFledged" style="max-width:110px;"></div>
+          <div class="field"><label>Ascendant at</label><input type="number" min="0" id="progAscendant" style="max-width:110px;"></div>
+          <div class="field"><label>Sovereign at</label><input type="number" min="0" id="progSovereign" style="max-width:110px;"></div>
+        </div>
+        <h3>Marks &amp; affinity</h3>
+        <div class="form-row">
+          <div class="field"><label>Stat gain, full mark</label><input type="number" min="0" id="progFullGain" style="max-width:140px;"></div>
+          <div class="field"><label>Stat gain, partial mark</label><input type="number" min="0" id="progPartialGain" style="max-width:150px;"></div>
+          <div class="field"><label>Dominant affinity locks in at</label><input type="number" min="0" id="progAffinityMarks" style="max-width:170px;"></div>
+        </div>
+        <div class="save-bar">
+          <button id="saveProgressionBtn">Save changes</button>
+          <div class="status" id="progressionStatus"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================== BIG BADDIES (DRAGONS) ============================== -->
+    <div class="tab-content" id="tab-dragons">
+      <div class="card">
+        <h2>Dragon catalog</h2>
+        <p class="hint">Every dragon a Circle can face in the Lair — combat stats, the fight window, and what a win (or a loss) pays out.</p>
+        <div class="scroll-table" style="max-height:420px;">
+          <table>
+            <thead><tr>
+              <th>Key</th><th>Name</th><th>Tier</th><th>Affinity</th><th>HP</th><th>Ward</th><th>Power</th>
+              <th>Window (hrs)</th><th>Expiry penalty</th><th>Reward Devotion</th><th>Reward Essence pool</th>
+              <th>Reward rank Δ</th><th>Deco key</th><th>Deco chance</th><th>Active</th>
+            </tr></thead>
+            <tbody id="dragonRows"><tr><td colspan="15">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveDragonsBtn">Save changes</button>
+          <div class="status" id="dragonStatus"></div>
+        </div>
+        <h3>Add a new dragon</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newDragonKey" style="max-width:140px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newDragonName" style="max-width:160px;"></div>
+          <div class="field"><label>Tier (unique)</label><input type="number" min="1" id="newDragonTier" style="max-width:100px;"></div>
+          <div class="field"><label>Affinity</label><select id="newDragonAffinity" style="max-width:140px;"></select></div>
+          <div class="field"><label>HP pool</label><input type="number" min="1" id="newDragonHp" style="max-width:110px;"></div>
+          <button id="addDragonBtn">Add dragon</button>
+        </div>
+        <div class="status" id="newDragonStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== GUARDIAN ITEMS ============================== -->
+    <div class="tab-content" id="tab-guardianitems">
+      <div class="card">
+        <h2>Guardian item catalog</h2>
+        <p class="hint">What God Shards can be crafted into. A stat boost applies immediately at craft time. A cosmetic is owned forever — ownership is the effect. A consumable sits in inventory until a player uses it; the effect key is recorded honestly but needs matching game logic elsewhere before it does anything.</p>
+        <div class="scroll-table" style="max-height:420px;">
+          <table>
+            <thead><tr>
+              <th>Key</th><th>Name</th><th>Description</th><th>Type</th><th>Stat key</th><th>Stat amount</th><th>Consumable effect</th><th>Shard cost</th><th>Active</th>
+            </tr></thead>
+            <tbody id="guardianItemRows"><tr><td colspan="9">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveGuardianItemsBtn">Save changes</button>
+          <div class="status" id="guardianItemStatus"></div>
+        </div>
+        <h3>Add a new item</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newGuardianItemKey" style="max-width:150px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newGuardianItemName" style="max-width:160px;"></div>
+          <div class="field"><label>Type</label>
+            <select id="newGuardianItemType" style="max-width:140px;">
+              <option value="stat_boost">Stat boost</option>
+              <option value="cosmetic">Cosmetic</option>
+              <option value="consumable">Consumable</option>
+            </select>
+          </div>
+          <div class="field"><label>Shard cost</label><input type="number" min="1" id="newGuardianItemCost" style="max-width:110px;"></div>
+          <button id="addGuardianItemBtn">Add item</button>
+        </div>
+        <div class="form-row">
+          <div class="field" id="newGuardianItemStatKeyField"><label>Stat key</label>
+            <select id="newGuardianItemStatKey" style="max-width:140px;">
+              <option value="vitality">vitality</option>
+              <option value="might">might</option>
+              <option value="ward">ward</option>
+              <option value="swiftness">swiftness</option>
+              <option value="cunning">cunning</option>
+            </select>
+          </div>
+          <div class="field" id="newGuardianItemStatAmountField"><label>Stat amount</label><input type="number" min="1" id="newGuardianItemStatAmount" style="max-width:110px;"></div>
+          <div class="field" id="newGuardianItemEffectField" style="display:none;"><label>Consumable effect key</label><input type="text" id="newGuardianItemEffect" placeholder="e.g. essence_surge" style="max-width:180px;"></div>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (shown to players)</label>
+          <input type="text" id="newGuardianItemDescription" style="max-width:none;">
+        </div>
+        <div class="status" id="newGuardianItemStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== ARENA STORE ============================== -->
+    <div class="tab-content" id="tab-arenastore">
+      <div class="card">
+        <h2>Arena Store catalog</h2>
+        <p class="hint">What Favor buys. Cosmetics are owned instantly. Utility items apply immediately on purchase — no separate "use" step. Only the effect key challenge_shield is actually wired to real game logic (it sets a PvP shield); any other effect key is honestly recorded as owned but non-functional until code catches up.</p>
+        <div class="scroll-table" style="max-height:420px;">
+          <table>
+            <thead><tr>
+              <th>Key</th><th>Name</th><th>Description</th><th>Category</th><th>Effect key</th><th>Effect hours</th><th>Cost (Favor)</th><th>Active</th>
+            </tr></thead>
+            <tbody id="arenaItemRows"><tr><td colspan="8">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveArenaItemsBtn">Save changes</button>
+          <div class="status" id="arenaItemStatus"></div>
+        </div>
+        <h3>Add a new item</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newArenaItemKey" style="max-width:150px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newArenaItemName" style="max-width:160px;"></div>
+          <div class="field"><label>Category</label>
+            <select id="newArenaItemCategory" style="max-width:140px;">
+              <option value="utility">Utility</option>
+              <option value="cosmetic">Cosmetic</option>
+            </select>
+          </div>
+          <div class="field"><label>Cost (Favor)</label><input type="number" min="1" id="newArenaItemCost" style="max-width:110px;"></div>
+          <button id="addArenaItemBtn">Add item</button>
+        </div>
+        <div class="form-row" id="newArenaItemEffectRow">
+          <div class="field"><label>Effect key</label><input type="text" id="newArenaItemEffect" placeholder="e.g. challenge_shield" style="max-width:180px;"></div>
+          <div class="field"><label>Effect hours</label><input type="number" min="1" id="newArenaItemEffectHours" style="max-width:110px;"></div>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (shown to players)</label>
+          <input type="text" id="newArenaItemDescription" style="max-width:none;">
+        </div>
+        <div class="status" id="newArenaItemStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== DEITY PERSONALITIES ============================== -->
+    <div class="tab-content" id="tab-deities">
+      <div class="card">
+        <h2>Deity personality overrides</h2>
+        <p class="hint">Free-text voice/personality direction spliced into a deity's system prompt in the chat relay, taking priority over their default tone where the two conflict. Blank = no override, default behavior. Active off keeps the text saved but not applied.</p>
+        <input class="search-box" type="text" id="personalitySearch" placeholder="Search by name…">
+        <div class="scroll-table">
+          <table>
+            <thead><tr><th>God</th><th>Pantheon</th><th>Personality override</th><th>Active</th></tr></thead>
+            <tbody id="personalityRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="savePersonalitiesBtn">Save changes</button>
+          <div class="status" id="personalityStatus"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================== PRICING & STORE ============================== -->
+    <div class="tab-content" id="tab-pricing">
+      <div class="card">
+        <h2>Global default pricing</h2>
+        <p class="hint">Applies to any god or pantheon that doesn't have its own override price below.</p>
+        <div class="field">
+          <label>Unlock one god ($)</label>
+          <input type="number" step="0.01" min="0" id="priceDeity">
+        </div>
+        <div class="field">
+          <label>Unlock a whole pantheon ($)</label>
+          <input type="number" step="0.01" min="0" id="pricePantheon">
+        </div>
+        <div class="field">
+          <label>Full access, monthly ($)</label>
+          <input type="number" step="0.01" min="0" id="priceSubscription">
+        </div>
+        <div class="field">
+          <label>Included messages / signed-in user / month (0 = unlimited)</label>
+          <input type="number" step="1" min="0" id="includedMessages">
+        </div>
+        <div class="field">
+          <label>Message pack size (extra messages per purchase)</label>
+          <input type="number" step="1" min="1" id="packSize">
+        </div>
+        <div class="field">
+          <label>Message pack price ($)</label>
+          <input type="number" step="0.01" min="0" id="packPrice">
+        </div>
+        <button id="savePricingBtn">Save global prices</button>
+        <div class="status" id="pricingStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Subscription tiers</h2>
+        <p class="hint">Beyond the flat "Full Access" plan above, add named tiers at their own price. Each tier grants full access, one pantheon, or one god — whatever fits that price point. Existing subscribers on a tier keep it even if you remove it later.</p>
+        <div class="form-row">
+          <div class="field">
+            <label>Id (lowercase, no spaces)</label>
+            <input type="text" id="newTierId" placeholder="e.g. bronze" style="max-width:130px;">
+          </div>
+          <div class="field">
+            <label>Name</label>
+            <input type="text" id="newTierName" placeholder="e.g. Bronze" style="max-width:170px;">
+          </div>
+          <div class="field">
+            <label>Price / month ($)</label>
+            <input type="number" step="0.01" min="0.01" id="newTierPrice" style="max-width:110px;">
+          </div>
+          <div class="field">
+            <label>Grants</label>
+            <select id="newTierGrantType" style="max-width:150px;">
+              <option value="all">Full site access</option>
+              <option value="pantheon">One pantheon</option>
+              <option value="deity">One god</option>
+            </select>
+          </div>
+          <div class="field" id="newTierGrantIdField" style="display:none;">
+            <label>God or pantheon id</label>
+            <input type="text" id="newTierGrantId" placeholder="e.g. hera or norse" style="max-width:160px;">
+          </div>
+          <button id="addTierBtn">Add tier</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (shown to players)</label>
+          <input type="text" id="newTierDescription" style="max-width:none;" placeholder="e.g. Full access to every pantheon, unlimited messages">
+        </div>
+        <div class="status" id="newTierStatus"></div>
+        <div class="scroll-table" style="max-height:240px;margin-top:14px;">
+          <table>
+            <thead><tr><th>Tier</th><th>Price</th><th>Grants</th><th></th></tr></thead>
+            <tbody id="tierRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Store items</h2>
+        <p class="hint">Add your own packs to the in-game Shop — a name, a price, and what it hands out (bonus messages and/or a free unlock, either or both). Separate from the "buy more messages" button players already have.</p>
+        <div class="form-row">
+          <div class="field">
+            <label>Id (lowercase, no spaces)</label>
+            <input type="text" id="newItemId" placeholder="e.g. starterpack" style="max-width:150px;">
+          </div>
+          <div class="field">
+            <label>Name</label>
+            <input type="text" id="newItemName" placeholder="e.g. Starter Pack" style="max-width:180px;">
+          </div>
+          <div class="field">
+            <label>Price ($)</label>
+            <input type="number" step="0.01" min="0.01" id="newItemPrice" style="max-width:110px;">
+          </div>
+          <div class="field">
+            <label>Bonus messages (optional)</label>
+            <input type="number" step="1" min="0" id="newItemBonus" style="max-width:140px;">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Also unlock? (optional)</label>
+            <select id="newItemGrantType" style="max-width:170px;">
+              <option value="">Nothing — messages only</option>
+              <option value="all">Full site access</option>
+              <option value="pantheon">One pantheon</option>
+              <option value="deity">One god</option>
+            </select>
+          </div>
+          <div class="field" id="newItemGrantIdField" style="display:none;">
+            <label>God or pantheon id</label>
+            <input type="text" id="newItemGrantId" placeholder="e.g. hera or norse" style="max-width:160px;">
+          </div>
+          <button id="addItemBtn">Add item</button>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Also grant a currency? (optional)</label>
+            <select id="newItemGiftCurrency" style="max-width:170px;">
+              <option value="">Nothing — no currency grant</option>
+            </select>
+          </div>
+          <div class="field" id="newItemGiftAmountField" style="display:none;">
+            <label>Amount</label>
+            <input type="number" step="1" min="1" id="newItemGiftAmount" style="max-width:110px;">
+          </div>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (shown to players)</label>
+          <input type="text" id="newItemDescription" style="max-width:none;">
+        </div>
+        <div class="status" id="newItemStatus"></div>
+        <div class="scroll-table" style="max-height:240px;margin-top:14px;">
+          <table>
+            <thead><tr><th>Item</th><th>Price</th><th>Grants</th><th></th></tr></thead>
+            <tbody id="itemRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================== PANTHEONS & GODS ============================== -->
+    <div class="tab-content" id="tab-pantheons">
+      <div class="card">
+        <h2>Pantheons</h2>
+        <p class="hint">Override the bundle price for a specific pantheon, take it off the market temporarily, or age-restrict the whole thing at once.</p>
+        <div class="scroll-table" style="max-height:340px;">
+          <table>
+            <thead><tr><th>Pantheon</th><th>Override price ($)</th><th>For sale</th><th>18+</th><th>Warning text</th></tr></thead>
+            <tbody id="pantheonRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="savePantheonsBtn">Save pantheon changes</button>
+          <div class="status" id="pantheonStatus"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Add a new pantheon</h2>
+        <p class="hint">Adds a new tab to the site immediately. Use the EZ deity adder below to start filling it with gods.</p>
+        <div class="form-row">
+          <div class="field">
+            <label>Id (lowercase, no spaces)</label>
+            <input type="text" id="newPantheonId" placeholder="e.g. slavic" style="max-width:160px;">
+          </div>
+          <div class="field">
+            <label>Label (shown on the tab)</label>
+            <input type="text" id="newPantheonLabel" placeholder="e.g. Slavic" style="max-width:200px;">
+          </div>
+          <button id="addPantheonBtn">Add pantheon</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Blurb (shown under the tabs when selected)</label>
+          <textarea id="newPantheonBlurb" rows="2"></textarea>
+        </div>
+        <div class="status" id="newPantheonStatus"></div>
+        <div class="scroll-table" style="max-height:200px;margin-top:14px;">
+          <table>
+            <thead><tr><th>Pantheon</th><th>Added</th><th></th></tr></thead>
+            <tbody id="customPantheonRows"><tr><td colspan="3">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Gods (169 total)</h2>
+        <p class="hint">Free = talkable without unlocking. Override price blank = uses the global default. For sale off = can't be individually purchased (existing owners keep access). 18+ shows your warning text once per visitor before they can open this god.</p>
+        <input class="search-box" type="text" id="godSearch" placeholder="Search by name…">
+        <div class="scroll-table">
+          <table>
+            <thead><tr><th>God</th><th>Pantheon</th><th>Free</th><th>Override price ($)</th><th>For sale</th><th>18+</th><th>Warning text</th></tr></thead>
+            <tbody id="deityRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveDeitiesBtn">Save god changes</button>
+          <div class="status" id="deityStatus"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Add a new god (EZ deity adder)</h2>
+        <p class="hint">Adds a god without touching code or redeploying anything. It appears on the site immediately, and shows up below in the Gods pricing table so you can price it or make it free just like any other.</p>
+        <div class="form-row">
+          <div class="field">
+            <label>Pantheon</label>
+            <select id="newGodPantheon" style="max-width:180px;"></select>
+          </div>
+          <div class="field">
+            <label>Id (lowercase, no spaces)</label>
+            <input type="text" id="newGodId" placeholder="e.g. anubis2" style="max-width:160px;">
+          </div>
+          <div class="field">
+            <label>Name</label>
+            <input type="text" id="newGodName" placeholder="e.g. Anubis" style="max-width:200px;">
+          </div>
+          <div class="field">
+            <label>Epithets</label>
+            <input type="text" id="newGodEpithets" placeholder="e.g. Lord of the Dead · Weigher of Hearts" style="max-width:280px;">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Domains (comma separated)</label>
+            <input type="text" id="newGodDomains" placeholder="e.g. death, judgment, embalming" style="max-width:280px;">
+          </div>
+          <div class="field">
+            <label>Symbols (comma separated)</label>
+            <input type="text" id="newGodSymbols" placeholder="e.g. jackal, scales, ankh" style="max-width:280px;">
+          </div>
+          <div class="field">
+            <label>Portrait image URL (optional)</label>
+            <input type="text" id="newGodPortraitUrl" placeholder="https://…" style="max-width:280px;">
+          </div>
+          <div class="field">
+            <label>Portrait caption (optional)</label>
+            <input type="text" id="newGodPortraitCaption" style="max-width:200px;">
+          </div>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Introduction (first thing they say when opened)</label>
+          <textarea id="newGodIntro" rows="2"></textarea>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Myth / background (one paragraph per line — this is what they draw on in chat)</label>
+          <textarea id="newGodMyth" rows="5"></textarea>
+        </div>
+        <div class="save-bar">
+          <button id="addGodBtn">Add god</button>
+          <div class="status" id="newGodStatus"></div>
+        </div>
+
+        <div class="scroll-table" style="max-height:220px;margin-top:14px;">
+          <table>
+            <thead><tr><th>God</th><th>Pantheon</th><th>Added</th><th></th></tr></thead>
+            <tbody id="customGodRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================== ACCESS & BROADCASTS ============================== -->
+    <div class="tab-content" id="tab-access">
+      <div class="card">
+        <h2>Grant or revoke access</h2>
+        <p class="hint">Comp a friend, fix a support issue, or claw back access — without touching the database directly. The person must have signed in at least once already.</p>
+        <div class="form-row">
+          <div class="field">
+            <label>Their email</label>
+            <input type="email" id="grantEmail" style="max-width:240px;">
+          </div>
+          <div class="field">
+            <label>Grant what</label>
+            <select id="grantScopeType" style="max-width:160px;">
+              <option value="deity">One god</option>
+              <option value="pantheon">One pantheon</option>
+              <option value="all">Full access</option>
+            </select>
+          </div>
+          <div class="field" id="grantScopeIdField">
+            <label>God or pantheon id</label>
+            <input type="text" id="grantScopeId" placeholder="e.g. hera or norse" style="max-width:180px;">
+          </div>
+          <div class="field">
+            <label>Note (optional)</label>
+            <input type="text" id="grantNote" placeholder="why" style="max-width:200px;">
+          </div>
+          <button id="grantBtn">Grant access</button>
+        </div>
+        <div class="status" id="grantStatus"></div>
+
+        <div class="scroll-table" style="max-height:320px;margin-top:10px;">
+          <table>
+            <thead><tr><th>Email</th><th>Scope</th><th>Source</th><th>Granted</th><th></th></tr></thead>
+            <tbody id="entitlementRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Broadcasts — the comm line</h2>
+        <p class="hint">Post a server-wide announcement, optionally with a gift attached. Players see it in their in-site mailbox and claim any gift with one click.</p>
+        <div class="field" style="max-width:none;">
+          <label>Message</label>
+          <textarea id="broadcastMessage" rows="3"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Send to</label>
+            <select id="broadcastTargetType" style="max-width:150px;">
+              <option value="everyone">Everyone</option>
+              <option value="one">One player</option>
+            </select>
+          </div>
+          <div class="field" id="broadcastTargetEmailField" style="display:none;">
+            <label>Their email</label>
+            <input type="email" id="broadcastTargetEmail" placeholder="player@example.com" style="max-width:220px;">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Attach a gift?</label>
+            <select id="broadcastGiftType" style="max-width:180px;">
+              <option value="none">No gift, just a message</option>
+              <option value="bonus_messages">Bonus messages</option>
+              <option value="deity">Free unlock: one god</option>
+              <option value="pantheon">Free unlock: one pantheon</option>
+              <option value="all">Free unlock: full access</option>
+            </select>
+          </div>
+          <div class="field" id="broadcastGiftBonusField" style="display:none;">
+            <label>How many bonus messages</label>
+            <input type="number" min="1" step="1" id="broadcastGiftBonus" style="max-width:140px;">
+          </div>
+          <div class="field" id="broadcastGiftScopeField" style="display:none;">
+            <label>God or pantheon id</label>
+            <input type="text" id="broadcastGiftScopeId" placeholder="e.g. hera or norse" style="max-width:180px;">
+          </div>
+          <button id="postBroadcastBtn">Post announcement</button>
+        </div>
+        <div class="status" id="broadcastStatus"></div>
+
+        <div class="scroll-table" style="max-height:280px;margin-top:14px;">
+          <table>
+            <thead><tr><th>To</th><th>Message</th><th>Gift</th><th></th></tr></thead>
+            <tbody id="broadcastRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================== CUSTOMERS ============================== -->
+    <div class="tab-content" id="tab-customers">
+      <div class="card">
+        <h2>Customers</h2>
+        <table id="customerTable">
+          <thead>
+            <tr><th>Email</th><th>Signed up</th><th>Subscription</th><th>One-time purchases</th></tr>
+          </thead>
+          <tbody id="customerRows"><tr><td colspan="4">Loading…</td></tr></tbody>
         </table>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>Store items</h2>
-      <p class="hint">Add your own packs to the in-game Shop — a name, a price, and what it hands out (bonus messages and/or a free unlock, either or both). Separate from the "buy more messages" button players already have.</p>
-      <div class="form-row">
-        <div class="field">
-          <label>Id (lowercase, no spaces)</label>
-          <input type="text" id="newItemId" placeholder="e.g. starterpack" style="max-width:150px;">
-        </div>
-        <div class="field">
-          <label>Name</label>
-          <input type="text" id="newItemName" placeholder="e.g. Starter Pack" style="max-width:180px;">
-        </div>
-        <div class="field">
-          <label>Price ($)</label>
-          <input type="number" step="0.01" min="0.01" id="newItemPrice" style="max-width:110px;">
-        </div>
-        <div class="field">
-          <label>Bonus messages (optional)</label>
-          <input type="number" step="1" min="0" id="newItemBonus" style="max-width:140px;">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="field">
-          <label>Also unlock? (optional)</label>
-          <select id="newItemGrantType" style="max-width:170px;">
-            <option value="">Nothing — messages only</option>
-            <option value="all">Full site access</option>
-            <option value="pantheon">One pantheon</option>
-            <option value="deity">One god</option>
-          </select>
-        </div>
-        <div class="field" id="newItemGrantIdField" style="display:none;">
-          <label>God or pantheon id</label>
-          <input type="text" id="newItemGrantId" placeholder="e.g. hera or norse" style="max-width:160px;">
-        </div>
-        <button id="addItemBtn">Add item</button>
-      </div>
-      <div class="field" style="max-width:none;">
-        <label>Description (shown to players)</label>
-        <input type="text" id="newItemDescription" style="max-width:none;">
-      </div>
-      <div class="status" id="newItemStatus"></div>
-      <div class="scroll-table" style="max-height:240px;margin-top:14px;">
-        <table>
-          <thead><tr><th>Item</th><th>Price</th><th>Grants</th><th></th></tr></thead>
-          <tbody id="itemRows"><tr><td colspan="4">Loading…</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Pantheons</h2>
-      <p class="hint">Override the bundle price for a specific pantheon, take it off the market temporarily, or age-restrict the whole thing at once.</p>
-      <div class="scroll-table" style="max-height:340px;">
-        <table>
-          <thead><tr><th>Pantheon</th><th>Override price ($)</th><th>For sale</th><th>18+</th><th>Warning text</th></tr></thead>
-          <tbody id="pantheonRows"><tr><td colspan="5">Loading…</td></tr></tbody>
-        </table>
-      </div>
-      <div class="save-bar">
-        <button id="savePantheonsBtn">Save pantheon changes</button>
-        <div class="status" id="pantheonStatus"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Add a new pantheon</h2>
-      <p class="hint">Adds a new tab to the site immediately. Use the EZ deity adder below to start filling it with gods.</p>
-      <div class="form-row">
-        <div class="field">
-          <label>Id (lowercase, no spaces)</label>
-          <input type="text" id="newPantheonId" placeholder="e.g. slavic" style="max-width:160px;">
-        </div>
-        <div class="field">
-          <label>Label (shown on the tab)</label>
-          <input type="text" id="newPantheonLabel" placeholder="e.g. Slavic" style="max-width:200px;">
-        </div>
-        <button id="addPantheonBtn">Add pantheon</button>
-      </div>
-      <div class="field" style="max-width:none;">
-        <label>Blurb (shown under the tabs when selected)</label>
-        <textarea id="newPantheonBlurb" rows="2" style="width:100%;max-width:none;background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;border-radius:3px;"></textarea>
-      </div>
-      <div class="status" id="newPantheonStatus"></div>
-      <div class="scroll-table" style="max-height:200px;margin-top:14px;">
-        <table>
-          <thead><tr><th>Pantheon</th><th>Added</th><th></th></tr></thead>
-          <tbody id="customPantheonRows"><tr><td colspan="3">Loading…</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Gods (169 total)</h2>
-      <p class="hint">Free = talkable without unlocking. Override price blank = uses the global default. For sale off = can't be individually purchased (existing owners keep access). 18+ shows your warning text once per visitor before they can open this god.</p>
-      <input class="search-box" type="text" id="godSearch" placeholder="Search by name…">
-      <div class="scroll-table">
-        <table>
-          <thead><tr><th>God</th><th>Pantheon</th><th>Free</th><th>Override price ($)</th><th>For sale</th><th>18+</th><th>Warning text</th></tr></thead>
-          <tbody id="deityRows"><tr><td colspan="7">Loading…</td></tr></tbody>
-        </table>
-      </div>
-      <div class="save-bar">
-        <button id="saveDeitiesBtn">Save god changes</button>
-        <div class="status" id="deityStatus"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Grant or revoke access</h2>
-      <p class="hint">Comp a friend, fix a support issue, or claw back access — without touching the database directly. The person must have signed in at least once already.</p>
-      <div class="form-row">
-        <div class="field">
-          <label>Their email</label>
-          <input type="email" id="grantEmail" style="max-width:240px;">
-        </div>
-        <div class="field">
-          <label>Grant what</label>
-          <select id="grantScopeType" style="max-width:160px;">
-            <option value="deity">One god</option>
-            <option value="pantheon">One pantheon</option>
-            <option value="all">Full access</option>
-          </select>
-        </div>
-        <div class="field" id="grantScopeIdField">
-          <label>God or pantheon id</label>
-          <input type="text" id="grantScopeId" placeholder="e.g. hera or norse" style="max-width:180px;">
-        </div>
-        <div class="field">
-          <label>Note (optional)</label>
-          <input type="text" id="grantNote" placeholder="why" style="max-width:200px;">
-        </div>
-        <button id="grantBtn">Grant access</button>
-      </div>
-      <div class="status" id="grantStatus"></div>
-
-      <div class="scroll-table" style="max-height:320px;margin-top:10px;">
-        <table>
-          <thead><tr><th>Email</th><th>Scope</th><th>Source</th><th>Granted</th><th></th></tr></thead>
-          <tbody id="entitlementRows"><tr><td colspan="5">Loading…</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Broadcasts — the comm line</h2>
-      <p class="hint">Post a server-wide announcement, optionally with a gift attached. Players see it in their in-site mailbox and claim any gift with one click.</p>
-      <div class="field" style="max-width:none;">
-        <label>Message</label>
-        <textarea id="broadcastMessage" rows="3" style="width:100%;max-width:none;background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;border-radius:3px;"></textarea>
-      </div>
-      <div class="form-row">
-        <div class="field">
-          <label>Send to</label>
-          <select id="broadcastTargetType" style="max-width:150px;">
-            <option value="everyone">Everyone</option>
-            <option value="one">One player</option>
-          </select>
-        </div>
-        <div class="field" id="broadcastTargetEmailField" style="display:none;">
-          <label>Their email</label>
-          <input type="email" id="broadcastTargetEmail" placeholder="player@example.com" style="max-width:220px;">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="field">
-          <label>Attach a gift?</label>
-          <select id="broadcastGiftType" style="max-width:180px;">
-            <option value="none">No gift, just a message</option>
-            <option value="bonus_messages">Bonus messages</option>
-            <option value="deity">Free unlock: one god</option>
-            <option value="pantheon">Free unlock: one pantheon</option>
-            <option value="all">Free unlock: full access</option>
-          </select>
-        </div>
-        <div class="field" id="broadcastGiftBonusField" style="display:none;">
-          <label>How many bonus messages</label>
-          <input type="number" min="1" step="1" id="broadcastGiftBonus" style="max-width:140px;">
-        </div>
-        <div class="field" id="broadcastGiftScopeField" style="display:none;">
-          <label>God or pantheon id</label>
-          <input type="text" id="broadcastGiftScopeId" placeholder="e.g. hera or norse" style="max-width:180px;">
-        </div>
-        <button id="postBroadcastBtn">Post announcement</button>
-      </div>
-      <div class="status" id="broadcastStatus"></div>
-
-      <div class="scroll-table" style="max-height:280px;margin-top:14px;">
-        <table>
-          <thead><tr><th>To</th><th>Message</th><th>Gift</th><th></th></tr></thead>
-          <tbody id="broadcastRows"><tr><td colspan="4">Loading…</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Add a new god (EZ deity adder)</h2>
-      <p class="hint">Adds a god without touching code or redeploying anything. It appears on the site immediately, and shows up below in the Gods pricing table so you can price it or make it free just like any other.</p>
-      <div class="form-row">
-        <div class="field">
-          <label>Pantheon</label>
-          <select id="newGodPantheon" style="max-width:180px;"></select>
-        </div>
-        <div class="field">
-          <label>Id (lowercase, no spaces)</label>
-          <input type="text" id="newGodId" placeholder="e.g. anubis2" style="max-width:160px;">
-        </div>
-        <div class="field">
-          <label>Name</label>
-          <input type="text" id="newGodName" placeholder="e.g. Anubis" style="max-width:200px;">
-        </div>
-        <div class="field">
-          <label>Epithets</label>
-          <input type="text" id="newGodEpithets" placeholder="e.g. Lord of the Dead · Weigher of Hearts" style="max-width:280px;">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="field">
-          <label>Domains (comma separated)</label>
-          <input type="text" id="newGodDomains" placeholder="e.g. death, judgment, embalming" style="max-width:280px;">
-        </div>
-        <div class="field">
-          <label>Symbols (comma separated)</label>
-          <input type="text" id="newGodSymbols" placeholder="e.g. jackal, scales, ankh" style="max-width:280px;">
-        </div>
-        <div class="field">
-          <label>Portrait image URL (optional)</label>
-          <input type="text" id="newGodPortraitUrl" placeholder="https://…" style="max-width:280px;">
-        </div>
-        <div class="field">
-          <label>Portrait caption (optional)</label>
-          <input type="text" id="newGodPortraitCaption" style="max-width:200px;">
-        </div>
-      </div>
-      <div class="field" style="max-width:none;">
-        <label>Introduction (first thing they say when opened)</label>
-        <textarea id="newGodIntro" rows="2" style="width:100%;max-width:none;background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;border-radius:3px;"></textarea>
-      </div>
-      <div class="field" style="max-width:none;">
-        <label>Myth / background (one paragraph per line — this is what they draw on in chat)</label>
-        <textarea id="newGodMyth" rows="5" style="width:100%;max-width:none;background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;border-radius:3px;"></textarea>
-      </div>
-      <div class="save-bar">
-        <button id="addGodBtn">Add god</button>
-        <div class="status" id="newGodStatus"></div>
-      </div>
-
-      <div class="scroll-table" style="max-height:220px;margin-top:14px;">
-        <table>
-          <thead><tr><th>God</th><th>Pantheon</th><th>Added</th><th></th></tr></thead>
-          <tbody id="customGodRows"><tr><td colspan="4">Loading…</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Customers</h2>
-      <table id="customerTable">
-        <thead>
-          <tr><th>Email</th><th>Signed up</th><th>Subscription</th><th>One-time purchases</th></tr>
-        </thead>
-        <tbody id="customerRows"><tr><td colspan="4">Loading…</td></tr></tbody>
-      </table>
     </div>
 
   </div>
@@ -446,6 +902,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 /* Same two values as index.html — this must point at the same Supabase project. */
 const SUPABASE_URL = "https://kuvaeprkmwzlqrqtjbhc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dmFlcHJrbXd6bHFycXRqYmhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MDMzOTgsImV4cCI6MjEwMjQ3OTM5OH0.-W7tTHZZob_dY2ydAx26cFx_izPBKJ3_M0sadNd7cOI";
+
+/* Edge functions live on a sibling subdomain — same project, different host. */
+const FUNCTIONS_URL = SUPABASE_URL.replace(".supabase.co", ".functions.supabase.co");
 
 /* Lightweight catalog — just ids/names/pantheons, so this page can build the
    pricing table without shipping the full myth text from index.html. Keep
@@ -461,14 +920,64 @@ Object.keys(CATALOG).forEach(pid => {
   });
 });
 
+const AFFINITIES = ['fire', 'sea', 'storm', 'earth', 'death', 'shadow', 'war', 'light'];
+const GUARDIAN_STAT_KEYS = ['vitality', 'might', 'ward', 'swiftness', 'cunning'];
+const CIRCLE_ROLES = ['high_priest', 'high_priestess', 'magus', 'initiate'];
+const ROLE_LABEL = { high_priest: 'High Priest', high_priestess: 'High Priestess', magus: 'Magus', initiate: 'Initiate' };
+
 const esc = s => String(s).replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt2 = n => (n == null ? '' : (n / 100).toFixed(2));
 const fmtUsd = n => '$' + fmt2(n);
+const ownerLabel = p => (p?.display_name || p?.email || '(unknown)');
 
 let supabaseClient = null;
 let deitySettings = {};
 let pantheonSettings = {};
+let currencyDefs = {}; // key -> row, refreshed by loadCurrencyDefinitions()
+
+/* ---------------- tabs ---------------- */
+
+function showTab(id){
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  const content = document.getElementById('tab-' + id);
+  const btn = document.querySelector('.tab-btn[data-tab="' + id + '"]');
+  if(content) content.classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+/* ---------------- admin edge function helper ---------------- */
+
+async function adminHeaders(){
+  const { data: { session: live } } = await supabaseClient.auth.getSession();
+  return Object.assign({ 'Content-Type': 'application/json' }, live ? { Authorization: 'Bearer ' + live.access_token } : {});
+}
+
+async function callAdmin(action, payload){
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/admin', {
+      method: 'POST',
+      headers: await adminHeaders(),
+      body: JSON.stringify(Object.assign({ action }, payload || {}))
+    });
+    return await resp.json();
+  }catch(e){
+    return { ok: false, error: 'Network error: ' + e.message };
+  }
+}
+
+async function findCircleIdByName(name){
+  const { data, error } = await supabaseClient.from('circles').select('id, name').ilike('name', name.trim()).maybeSingle();
+  if(error || !data) return null;
+  return data.id;
+}
+
+async function findUserIdByEmail(email){
+  const { data, error } = await supabaseClient.from('profiles').select('id').eq('email', email.trim()).maybeSingle();
+  if(error || !data) return null;
+  return data.id;
+}
 
 async function init(){
   const gateMsg = document.getElementById('gateMsg');
@@ -542,6 +1051,7 @@ async function handleSession(session){
   adminArea.style.display = 'block';
   loadPricing();
   loadSubscriptionTiers();
+  await loadCurrencyDefinitions();
   loadStoreItems();
   await loadCustomPantheonsIntoCatalog();
   loadPantheonSettings();
@@ -554,6 +1064,15 @@ async function handleSession(session){
   loadBroadcasts();
   loadRevenue();
   loadCustomers();
+
+  loadDeityPersonalities();
+  loadCheckinRewards();
+  loadPromoEvents();
+  loadGuardianProgression();
+  loadDragonCatalog();
+  loadGuardianItemCatalog();
+  loadArenaShopCatalog();
+  loadLeaderboards();
 }
 
 /* ---------------- global pricing ---------------- */
@@ -630,6 +1149,42 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addItemBtn').addEventListener('click', addStoreItem);
   document.getElementById('newItemGrantType').addEventListener('change', updateNewItemGrantField);
   updateNewItemGrantField();
+  document.getElementById('newItemGiftCurrency').addEventListener('change', updateNewItemGiftCurrencyField);
+  updateNewItemGiftCurrencyField();
+
+  /* ---- new admin-overhaul tabs ---- */
+  document.getElementById('circleSearchBtn').addEventListener('click', searchCircles);
+  document.getElementById('circleSearchInput').addEventListener('keydown', e => { if(e.key === 'Enter') searchCircles(); });
+
+  document.getElementById('saveCurrenciesBtn').addEventListener('click', saveCurrencyDefinitions);
+  document.getElementById('addCurrencyBtn').addEventListener('click', addCurrencyDefinition);
+  document.getElementById('grantPlayerBtn').addEventListener('click', grantToPlayer);
+  document.getElementById('grantCircleBtn').addEventListener('click', grantToCircle);
+  document.getElementById('bulkGrantBtn').addEventListener('click', sendBulkGrant);
+  document.getElementById('bulkGrantScope').addEventListener('change', updateBulkGrantScopeVisibility);
+  updateBulkGrantScopeVisibility();
+
+  document.getElementById('saveCheckinsBtn').addEventListener('click', saveCheckinRewards);
+  document.getElementById('addCheckinBtn').addEventListener('click', addCheckinReward);
+  document.getElementById('addPromoBtn').addEventListener('click', createPromoEvent);
+  document.getElementById('newPromoScope').addEventListener('change', updateNewPromoScopeVisibility);
+  updateNewPromoScopeVisibility();
+
+  document.getElementById('saveProgressionBtn').addEventListener('click', saveGuardianProgression);
+
+  document.getElementById('saveDragonsBtn').addEventListener('click', saveDragonCatalog);
+  document.getElementById('addDragonBtn').addEventListener('click', addDragon);
+
+  document.getElementById('saveGuardianItemsBtn').addEventListener('click', saveGuardianItemCatalog);
+  document.getElementById('addGuardianItemBtn').addEventListener('click', addGuardianItem);
+  document.getElementById('newGuardianItemType').addEventListener('change', updateNewGuardianItemTypeFields);
+  updateNewGuardianItemTypeFields();
+
+  document.getElementById('saveArenaItemsBtn').addEventListener('click', saveArenaShopCatalog);
+  document.getElementById('addArenaItemBtn').addEventListener('click', addArenaShopItem);
+
+  document.getElementById('savePersonalitiesBtn').addEventListener('click', savePersonalityOverrides);
+  document.getElementById('personalitySearch').addEventListener('input', filterPersonalityRows);
 });
 
 /* ---------------- pantheons ---------------- */
@@ -1040,11 +1595,16 @@ function updateNewItemGrantField(){
   document.getElementById('newItemGrantIdField').style.display = (type === 'pantheon' || type === 'deity') ? '' : 'none';
 }
 
+function updateNewItemGiftCurrencyField(){
+  const key = document.getElementById('newItemGiftCurrency').value;
+  document.getElementById('newItemGiftAmountField').style.display = key ? '' : 'none';
+}
+
 async function loadStoreItems(){
   const rows = document.getElementById('itemRows');
   const { data, error } = await supabaseClient
     .from('store_items')
-    .select('id, name, price_cents, gift_bonus_messages, gift_scope_type, gift_scope_id, active')
+    .select('id, name, price_cents, gift_bonus_messages, gift_scope_type, gift_scope_id, gift_currency_key, gift_currency_amount, active')
     .eq('active', true)
     .order('sort_order', { ascending: true });
   if(error){
@@ -1059,6 +1619,7 @@ async function loadStoreItems(){
     const parts = [];
     if(i.gift_bonus_messages) parts.push('+' + i.gift_bonus_messages + ' messages');
     if(i.gift_scope_type) parts.push(grantLabel(i.gift_scope_type, i.gift_scope_id));
+    if(i.gift_currency_key) parts.push('+' + i.gift_currency_amount + ' ' + (currencyDefs[i.gift_currency_key]?.name || i.gift_currency_key));
     return `<tr>
       <td>${esc(i.name)}</td>
       <td class="dim">${fmtUsd(i.price_cents)}</td>
@@ -1077,6 +1638,8 @@ async function addStoreItem(){
   const description = document.getElementById('newItemDescription').value.trim();
   const grantType = document.getElementById('newItemGrantType').value;
   const grantId = document.getElementById('newItemGrantId').value.trim();
+  const giftCurrency = document.getElementById('newItemGiftCurrency').value;
+  const giftAmountVal = document.getElementById('newItemGiftAmount').value.trim();
 
   if(!/^[a-z0-9]+$/.test(id)){
     status.className = 'status err';
@@ -1092,9 +1655,18 @@ async function addStoreItem(){
     status.textContent = 'Enter a god or pantheon id.';
     return;
   }
-  if(!bonus && !grantType){
+  let giftAmount = null;
+  if(giftCurrency){
+    giftAmount = parseInt(giftAmountVal, 10);
+    if(isNaN(giftAmount) || giftAmount < 1){
+      status.className = 'status err';
+      status.textContent = 'Enter an amount greater than 0 for the currency grant.';
+      return;
+    }
+  }
+  if(!bonus && !grantType && !giftCurrency){
     status.className = 'status err';
-    status.textContent = 'Give it bonus messages, an unlock, or both — it needs to grant something.';
+    status.textContent = 'Give it bonus messages, an unlock, a currency grant, or some combination — it needs to grant something.';
     return;
   }
 
@@ -1104,15 +1676,19 @@ async function addStoreItem(){
     id, name, description, price_cents: price,
     gift_bonus_messages: bonus,
     gift_scope_type: grantType || null,
-    gift_scope_id: (grantType === 'pantheon' || grantType === 'deity') ? grantId : null
+    gift_scope_id: (grantType === 'pantheon' || grantType === 'deity') ? grantId : null,
+    gift_currency_key: giftCurrency || null,
+    gift_currency_amount: giftAmount
   });
   if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
 
   status.className = 'status ok';
   status.textContent = name + ' is live in the shop.';
-  ['newItemId','newItemName','newItemPrice','newItemBonus','newItemDescription','newItemGrantId'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newItemId','newItemName','newItemPrice','newItemBonus','newItemDescription','newItemGrantId','newItemGiftAmount'].forEach(fid => { document.getElementById(fid).value = ''; });
   document.getElementById('newItemGrantType').value = '';
+  document.getElementById('newItemGiftCurrency').value = '';
   updateNewItemGrantField();
+  updateNewItemGiftCurrencyField();
   loadStoreItems();
 }
 
@@ -1376,6 +1952,1064 @@ async function loadCustomers(){
       <td>${oneTime.length} ($${(spentCents/100).toFixed(2)})</td>
     </tr>`;
   }).join('');
+}
+
+/* =====================================================================
+   LEADERBOARDS
+   ===================================================================== */
+
+let lbCircles = [];
+let lbGuardians = [];
+
+async function loadLeaderboards(){
+  const [circlesRes, pvpRes, guardiansRes, spendersRes] = await Promise.all([
+    supabaseClient.from('circles')
+      .select('id, name, rank_score, chest_essence, devotion_balance, essence_spent, circle_members(user_id)'),
+    supabaseClient.from('guardians')
+      .select('id, name, stage, ladder_position, owner_user_id, profiles(email, display_name)')
+      .not('ladder_position', 'is', null)
+      .order('ladder_position', { ascending: true })
+      .limit(100),
+    supabaseClient.from('guardians')
+      .select('id, name, owner_user_id, stage, vitality, might, ward, swiftness, cunning, bond, essence, proving_rank, profiles(email, display_name)')
+      .order('proving_rank', { ascending: false })
+      .limit(200),
+    supabaseClient.from('profiles')
+      .select('id, email, display_name, purchases(amount_cents)')
+  ]);
+
+  lbCircles = (circlesRes.data || []).map(c => ({ ...c, member_count: (c.circle_members || []).length }));
+  renderCircleLeaderboard('rank_score');
+
+  const pvpRows = document.getElementById('pvpLbRows');
+  if(pvpRes.error){
+    pvpRows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(pvpRes.error.message) + '</td></tr>';
+  } else if(!(pvpRes.data || []).length){
+    pvpRows.innerHTML = '<tr><td colspan="4">No guardians have entered the Arena yet.</td></tr>';
+  } else {
+    pvpRows.innerHTML = pvpRes.data.map(g => `<tr>
+      <td>${g.ladder_position}</td>
+      <td>${esc(g.name)}</td>
+      <td class="dim">${esc(ownerLabel(g.profiles))}</td>
+      <td class="dim">${esc(g.stage)}</td>
+    </tr>`).join('');
+  }
+
+  lbGuardians = (guardiansRes.data || []).map(g => ({
+    ...g,
+    total_stats: g.vitality + g.might + g.ward + g.swiftness + g.cunning
+  }));
+  if(guardiansRes.error){
+    document.getElementById('guardianLbRows').innerHTML = '<tr><td colspan="8">Failed to load: ' + esc(guardiansRes.error.message) + '</td></tr>';
+  } else {
+    renderGuardianLeaderboard('proving_rank');
+  }
+
+  const spenderRows = document.getElementById('spenderLbRows');
+  if(spendersRes.error){
+    spenderRows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(spendersRes.error.message) + '</td></tr>';
+  } else {
+    const withTotals = (spendersRes.data || [])
+      .map(p => ({
+        label: p.email || p.display_name || '(unknown)',
+        total: (p.purchases || []).reduce((sum, x) => sum + (x.amount_cents || 0), 0),
+        count: (p.purchases || []).length
+      }))
+      .filter(p => p.count > 0)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 25);
+    spenderRows.innerHTML = withTotals.length
+      ? withTotals.map((p, i) => `<tr>
+          <td>${i + 1}</td>
+          <td>${esc(p.label)}</td>
+          <td>${fmtUsd(p.total)}</td>
+          <td class="dim">${p.count}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="4">No purchases yet.</td></tr>';
+  }
+}
+
+function renderCircleLeaderboard(sortKey){
+  document.querySelectorAll('#circleLbSort button').forEach(b => b.classList.toggle('active', b.dataset.sort === sortKey));
+  const rows = document.getElementById('circleLbRows');
+  if(!lbCircles.length){ rows.innerHTML = '<tr><td colspan="7">No Circles founded yet.</td></tr>'; return; }
+  const sorted = [...lbCircles].sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0));
+  rows.innerHTML = sorted.map((c, i) => `<tr>
+    <td>${i + 1}</td>
+    <td>${esc(c.name)}</td>
+    <td class="dim">${c.member_count}</td>
+    <td>${c.rank_score}</td>
+    <td>${c.chest_essence}</td>
+    <td>${c.devotion_balance}</td>
+    <td class="dim">${c.essence_spent}</td>
+  </tr>`).join('');
+}
+
+function renderGuardianLeaderboard(sortKey){
+  document.querySelectorAll('#guardianLbSort button').forEach(b => b.classList.toggle('active', b.dataset.sort === sortKey));
+  const rows = document.getElementById('guardianLbRows');
+  if(!lbGuardians.length){ rows.innerHTML = '<tr><td colspan="8">No guardians yet.</td></tr>'; return; }
+  const sorted = [...lbGuardians].sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0));
+  rows.innerHTML = sorted.slice(0, 50).map((g, i) => `<tr>
+    <td>${i + 1}</td>
+    <td>${esc(g.name)}</td>
+    <td class="dim">${esc(ownerLabel(g.profiles))}</td>
+    <td class="dim">${esc(g.stage)}</td>
+    <td>${g.proving_rank}</td>
+    <td>${g.total_stats}</td>
+    <td>${g.bond}</td>
+    <td>${g.essence}</td>
+  </tr>`).join('');
+}
+
+/* =====================================================================
+   CIRCLES GOVERNANCE
+   ===================================================================== */
+
+let selectedCircleId = null;
+
+async function searchCircles(){
+  const q = document.getElementById('circleSearchInput').value.trim();
+  const status = document.getElementById('circleSearchStatus');
+  const list = document.getElementById('circleSearchResults');
+  if(!q){ status.className = 'status err'; status.textContent = 'Enter at least part of a Circle name.'; return; }
+  status.className = 'status';
+  status.textContent = 'Searching…';
+  const { data, error } = await supabaseClient.from('circles').select('id, name, rank_score').ilike('name', '%' + q + '%').limit(10);
+  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+  if(!data.length){
+    status.className = 'status';
+    status.textContent = 'No Circles matched.';
+    list.innerHTML = '';
+    return;
+  }
+  status.textContent = '';
+  list.innerHTML = data.map(c => `<li><button onclick="loadCircleDetail('${esc(c.id)}')">${esc(c.name)} <span class="dim" style="float:right;">rank ${c.rank_score}</span></button></li>`).join('');
+}
+
+async function loadCircleDetail(circleId){
+  selectedCircleId = circleId;
+  const detail = document.getElementById('circleDetail');
+  detail.innerHTML = '<p class="empty">Loading…</p>';
+
+  const [{ data: circle, error: circleErr }, { data: members, error: memberErr }] = await Promise.all([
+    supabaseClient.from('circles').select('*').eq('id', circleId).maybeSingle(),
+    supabaseClient.from('circle_members').select('user_id, role, guardian_id, profiles(email, display_name), guardians(name, stage)').eq('circle_id', circleId)
+  ]);
+
+  if(circleErr || !circle){
+    detail.innerHTML = '<p class="empty">Could not load that Circle: ' + esc(circleErr?.message || 'not found') + '</p>';
+    return;
+  }
+
+  const rosterRows = (members || []).sort((a, b) => CIRCLE_ROLES.indexOf(a.role) - CIRCLE_ROLES.indexOf(b.role)).map(m => `
+    <tr>
+      <td>${esc(ownerLabel(m.profiles))}</td>
+      <td class="dim">${esc(m.guardians?.name || '—')} (${esc(m.guardians?.stage || '?')})</td>
+      <td>
+        <select id="roleSel_${esc(m.user_id)}">
+          ${CIRCLE_ROLES.map(r => `<option value="${r}" ${r === m.role ? 'selected' : ''}>${ROLE_LABEL[r]}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <button class="small" onclick="setCircleMemberRole('${esc(m.user_id)}')">Set role</button>
+        <button class="small danger" onclick="kickCircleMember('${esc(m.user_id)}')">Kick</button>
+      </td>
+    </tr>`).join('');
+
+  detail.innerHTML = `
+    <h3 style="margin-top:0;">${esc(circle.name)}</h3>
+
+    <h3>Edit identity</h3>
+    <div class="form-row">
+      <div class="field"><label>Name</label><input type="text" id="circEditName" value="${esc(circle.name)}" style="max-width:220px;"></div>
+      <div class="field"><label>Member cap</label><input type="number" min="20" max="30" id="circEditCap" value="${circle.member_cap}" style="max-width:100px;"></div>
+      <div class="field"><label>Banner shape</label>
+        <select id="circEditShape" style="max-width:140px;">
+          ${['shield','pennant','roundel'].map(s => `<option value="${s}" ${s === circle.banner_shape ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Banner affinity</label>
+        <select id="circEditAffinity" style="max-width:140px;">
+          ${AFFINITIES.map(a => `<option value="${a}" ${a === circle.banner_affinity ? 'selected' : ''}>${a}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="field" style="max-width:none;"><label>Blurb</label><textarea id="circEditBlurb" rows="2">${esc(circle.blurb || '')}</textarea></div>
+    <div class="save-bar">
+      <button onclick="saveCircleEdit()">Save changes</button>
+      <button class="danger" onclick="disbandCircleAction()">Disband Circle</button>
+      <div class="status" id="circleEditStatus"></div>
+    </div>
+
+    <h3>Balances</h3>
+    <p class="hint" style="margin:0 0 10px;">Rank score ${circle.rank_score} · Chest essence ${circle.chest_essence} · Devotion ${circle.devotion_balance}</p>
+    <div class="form-row">
+      <div class="field"><label>Field</label>
+        <select id="circBalField" style="max-width:170px;">
+          <option value="rank_score">Rank score</option>
+          <option value="chest_essence">Chest essence</option>
+          <option value="devotion_balance">Devotion</option>
+        </select>
+      </div>
+      <div class="field"><label>Mode</label>
+        <select id="circBalMode" style="max-width:120px;"><option value="delta">Add</option><option value="set">Set to</option></select>
+      </div>
+      <div class="field"><label>Amount</label><input type="number" id="circBalAmount" style="max-width:120px;"></div>
+      <button onclick="adjustCircleBalance()">Apply</button>
+    </div>
+    <div class="status" id="circleBalStatus"></div>
+
+    <h3>Post an announcement</h3>
+    <div class="field" style="max-width:none;"><textarea id="circAnnounceText" rows="2" placeholder="Posted as you, into this Circle's chat."></textarea></div>
+    <div class="save-bar">
+      <button onclick="postCircleAnnouncementAction()">Post</button>
+      <div class="status" id="circleAnnounceStatus"></div>
+    </div>
+
+    <h3>Roster (${(members || []).length})</h3>
+    <div class="scroll-table" style="max-height:300px;">
+      <table>
+        <thead><tr><th>Player</th><th>Guardian</th><th>Role</th><th></th></tr></thead>
+        <tbody>${rosterRows || '<tr><td colspan="4">No members.</td></tr>'}</tbody>
+      </table>
+    </div>
+    <div class="status" id="circleRosterStatus"></div>
+  `;
+}
+
+async function saveCircleEdit(){
+  const status = document.getElementById('circleEditStatus');
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const result = await callAdmin('edit-circle', {
+    circleId: selectedCircleId,
+    name: document.getElementById('circEditName').value.trim(),
+    blurb: document.getElementById('circEditBlurb').value.trim(),
+    memberCap: parseInt(document.getElementById('circEditCap').value, 10),
+    bannerShape: document.getElementById('circEditShape').value,
+    bannerAffinity: document.getElementById('circEditAffinity').value
+  });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? 'Saved.' : ('Failed: ' + result.error);
+  if(result.ok){ loadCircleDetail(selectedCircleId); loadLeaderboards(); }
+}
+
+async function disbandCircleAction(){
+  if(!confirm('Disband this Circle permanently? Every member, the chest, the shop, chat history, and altar all go with it.')) return;
+  const result = await callAdmin('disband-circle', { circleId: selectedCircleId });
+  if(!result.ok){ alert('Failed: ' + result.error); return; }
+  document.getElementById('circleDetail').innerHTML = '<p class="empty">Circle disbanded.</p>';
+  document.getElementById('circleSearchResults').innerHTML = '';
+  selectedCircleId = null;
+  loadLeaderboards();
+}
+
+async function adjustCircleBalance(){
+  const status = document.getElementById('circleBalStatus');
+  const field = document.getElementById('circBalField').value;
+  const mode = document.getElementById('circBalMode').value;
+  const amount = Number(document.getElementById('circBalAmount').value);
+  if(!Number.isFinite(amount)){ status.className = 'status err'; status.textContent = 'Enter a valid number.'; return; }
+  status.className = 'status';
+  status.textContent = 'Applying…';
+  const result = await callAdmin('adjust-circle-balance', { circleId: selectedCircleId, field, mode, amount });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? `${field}: ${result.from} → ${result.to}` : ('Failed: ' + result.error);
+  if(result.ok){ loadCircleDetail(selectedCircleId); loadLeaderboards(); }
+}
+
+async function postCircleAnnouncementAction(){
+  const status = document.getElementById('circleAnnounceStatus');
+  const content = document.getElementById('circAnnounceText').value.trim();
+  if(!content){ status.className = 'status err'; status.textContent = 'Write something first.'; return; }
+  status.className = 'status';
+  status.textContent = 'Posting…';
+  const result = await callAdmin('post-circle-announcement', { circleId: selectedCircleId, content });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? 'Posted.' : ('Failed: ' + result.error);
+  if(result.ok) document.getElementById('circAnnounceText').value = '';
+}
+
+async function setCircleMemberRole(userId){
+  const status = document.getElementById('circleRosterStatus');
+  const newRole = document.getElementById('roleSel_' + userId).value;
+  status.className = 'status';
+  status.textContent = 'Updating…';
+  const result = await callAdmin('force-set-role', { targetUserId: userId, newRole });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? 'Role updated.' : ('Failed: ' + result.error);
+  if(result.ok) loadCircleDetail(selectedCircleId);
+}
+
+async function kickCircleMember(userId){
+  if(!confirm('Kick this member from the Circle?')) return;
+  const status = document.getElementById('circleRosterStatus');
+  status.className = 'status';
+  status.textContent = 'Kicking…';
+  const result = await callAdmin('force-kick', { targetUserId: userId });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? (result.disbanded ? 'Kicked — Circle emptied and was disbanded.' : 'Kicked.') : ('Failed: ' + result.error);
+  if(result.ok){
+    if(result.disbanded){
+      document.getElementById('circleDetail').innerHTML = '<p class="empty">Circle disbanded (last member kicked).</p>';
+      selectedCircleId = null;
+    } else {
+      loadCircleDetail(selectedCircleId);
+    }
+    loadLeaderboards();
+  }
+}
+
+/* =====================================================================
+   CURRENCIES & GIFTS
+   ===================================================================== */
+
+async function loadCurrencyDefinitions(){
+  const { data, error } = await supabaseClient.from('currency_definitions').select('*').order('sort_order', { ascending: true });
+  currencyDefs = {};
+  (data || []).forEach(r => { currencyDefs[r.key] = r; });
+
+  const rows = document.getElementById('currencyRows');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="7">Failed to load: ' + esc(error.message) + '</td></tr>';
+  } else {
+    rows.innerHTML = (data || []).map(c => `<tr data-key="${esc(c.key)}">
+      <td class="dim">${esc(c.key)}</td>
+      <td><input type="text" id="curName_${esc(c.key)}" value="${esc(c.name)}"></td>
+      <td><input type="text" id="curDesc_${esc(c.key)}" value="${esc(c.description)}" style="max-width:260px;"></td>
+      <td>
+        <select id="curScope_${esc(c.key)}">
+          <option value="personal" ${c.scope === 'personal' ? 'selected' : ''}>Personal</option>
+          <option value="circle" ${c.scope === 'circle' ? 'selected' : ''}>Circle</option>
+        </select>
+      </td>
+      <td><input type="text" id="curIcon_${esc(c.key)}" value="${esc(c.icon)}" style="max-width:60px;"></td>
+      <td><input type="number" id="curSort_${esc(c.key)}" value="${c.sort_order}" style="max-width:70px;"></td>
+      <td><input type="checkbox" id="curActive_${esc(c.key)}" ${c.active ? 'checked' : ''}></td>
+    </tr>`).join('');
+  }
+
+  const populateSelect = (id, scope) => {
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    const opts = Object.values(currencyDefs).filter(c => c.active && (!scope || c.scope === scope));
+    sel.innerHTML = opts.map(c => `<option value="${esc(c.key)}">${esc(c.name)} (${c.scope})</option>`).join('') || '<option value="">No currencies</option>';
+  };
+  populateSelect('grantPlayerCurrency', 'personal');
+  populateSelect('grantCircleCurrency', 'circle');
+  populateSelect('bulkGrantCurrency', 'personal');
+  populateSelect('newCheckinCurrency', 'personal');
+  populateSelect('newPromoCurrency', null);
+
+  const giftSel = document.getElementById('newItemGiftCurrency');
+  if(giftSel){
+    const opts = Object.values(currencyDefs).filter(c => c.active && c.scope === 'personal');
+    giftSel.innerHTML = '<option value="">Nothing — no currency grant</option>' +
+      opts.map(c => `<option value="${esc(c.key)}">${esc(c.name)}</option>`).join('');
+  }
+}
+
+async function saveCurrencyDefinitions(){
+  const status = document.getElementById('currencyStatus');
+  const rows = Object.keys(currencyDefs).map(key => ({
+    key,
+    name: document.getElementById('curName_' + key).value.trim(),
+    description: document.getElementById('curDesc_' + key).value.trim(),
+    scope: document.getElementById('curScope_' + key).value,
+    icon: document.getElementById('curIcon_' + key).value.trim(),
+    sort_order: parseInt(document.getElementById('curSort_' + key).value || '0', 10),
+    active: document.getElementById('curActive_' + key).checked,
+    updated_at: new Date().toISOString()
+  }));
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('currency_definitions').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadCurrencyDefinitions();
+}
+
+async function addCurrencyDefinition(){
+  const status = document.getElementById('newCurrencyStatus');
+  const key = document.getElementById('newCurrencyKey').value.trim().toLowerCase();
+  const name = document.getElementById('newCurrencyName').value.trim();
+  const scope = document.getElementById('newCurrencyScope').value;
+  const icon = document.getElementById('newCurrencyIcon').value.trim();
+  const description = document.getElementById('newCurrencyDescription').value.trim();
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('currency_definitions').insert({ key, name, description, scope, icon });
+  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+
+  status.className = 'status ok';
+  status.textContent = name + ' registered. It needs a matching handler in the admin edge function\'s code before grants of it will work — see the hint above.';
+  ['newCurrencyKey','newCurrencyName','newCurrencyIcon','newCurrencyDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  loadCurrencyDefinitions();
+}
+
+async function grantToPlayer(){
+  const status = document.getElementById('grantPlayerStatus');
+  const email = document.getElementById('grantPlayerEmail').value.trim();
+  const currencyKey = document.getElementById('grantPlayerCurrency').value;
+  const mode = document.getElementById('grantPlayerMode').value;
+  const amount = Number(document.getElementById('grantPlayerAmount').value);
+  const reason = document.getElementById('grantPlayerReason').value.trim();
+
+  if(!email){ status.className = 'status err'; status.textContent = 'Enter an email.'; return; }
+  if(!Number.isFinite(amount)){ status.className = 'status err'; status.textContent = 'Enter a valid amount.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Looking up player…';
+  const targetId = await findUserIdByEmail(email);
+  if(!targetId){ status.className = 'status err'; status.textContent = 'No player found with that email.'; return; }
+
+  status.textContent = 'Granting…';
+  const result = await callAdmin('grant-currency', { currencyKey, targetType: 'player', targetId, mode, amount, reason });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? `Done. ${result.from} → ${result.to}` : ('Failed: ' + result.error);
+  if(result.ok){
+    document.getElementById('grantPlayerEmail').value = '';
+    document.getElementById('grantPlayerAmount').value = '';
+    document.getElementById('grantPlayerReason').value = '';
+  }
+}
+
+async function grantToCircle(){
+  const status = document.getElementById('grantCircleStatus');
+  const name = document.getElementById('grantCircleName').value.trim();
+  const currencyKey = document.getElementById('grantCircleCurrency').value;
+  const mode = document.getElementById('grantCircleMode').value;
+  const amount = Number(document.getElementById('grantCircleAmount').value);
+  const reason = document.getElementById('grantCircleReason').value.trim();
+
+  if(!name){ status.className = 'status err'; status.textContent = 'Enter a Circle name.'; return; }
+  if(!Number.isFinite(amount)){ status.className = 'status err'; status.textContent = 'Enter a valid amount.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Looking up Circle…';
+  const targetId = await findCircleIdByName(name);
+  if(!targetId){ status.className = 'status err'; status.textContent = 'No Circle found with that exact name.'; return; }
+
+  status.textContent = 'Granting…';
+  const result = await callAdmin('grant-currency', { currencyKey, targetType: 'circle', targetId, mode, amount, reason });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? `Done. ${result.from} → ${result.to}` : ('Failed: ' + result.error);
+  if(result.ok){
+    document.getElementById('grantCircleName').value = '';
+    document.getElementById('grantCircleAmount').value = '';
+    document.getElementById('grantCircleReason').value = '';
+    loadLeaderboards();
+  }
+}
+
+function updateBulkGrantScopeVisibility(){
+  const scope = document.getElementById('bulkGrantScope').value;
+  document.getElementById('bulkGrantCircleField').style.display = (scope === 'circle') ? '' : 'none';
+}
+
+async function sendBulkGrant(){
+  const status = document.getElementById('bulkGrantStatus');
+  const currencyKey = document.getElementById('bulkGrantCurrency').value;
+  const scope = document.getElementById('bulkGrantScope').value;
+  const amount = Number(document.getElementById('bulkGrantAmount').value);
+  const reason = document.getElementById('bulkGrantReason').value.trim();
+
+  if(!Number.isFinite(amount)){ status.className = 'status err'; status.textContent = 'Enter a valid amount.'; return; }
+
+  let circleId = null;
+  if(scope === 'circle'){
+    const name = document.getElementById('bulkGrantCircleName').value.trim();
+    if(!name){ status.className = 'status err'; status.textContent = 'Enter a Circle name.'; return; }
+    status.className = 'status';
+    status.textContent = 'Looking up Circle…';
+    circleId = await findCircleIdByName(name);
+    if(!circleId){ status.className = 'status err'; status.textContent = 'No Circle found with that exact name.'; return; }
+  }
+
+  status.className = 'status';
+  status.textContent = 'Sending…';
+  const result = await callAdmin('bulk-grant-currency', { currencyKey, scope, circleId, amount, reason });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? `Sent to ${result.granted} player(s).` : ('Failed: ' + result.error);
+  if(result.ok){
+    document.getElementById('bulkGrantAmount').value = '';
+    document.getElementById('bulkGrantReason').value = '';
+  }
+}
+
+/* =====================================================================
+   CHECK-INS & EVENTS
+   ===================================================================== */
+
+async function loadCheckinRewards(){
+  const { data, error } = await supabaseClient.from('daily_checkin_rewards').select('*').order('streak_day', { ascending: true });
+  const rows = document.getElementById('checkinRows');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = (data || []).map(r => `<tr data-id="${esc(r.id)}">
+    <td class="dim">${r.streak_day === 0 ? '0 (baseline)' : r.streak_day}</td>
+    <td>
+      <select id="chkCur_${esc(r.id)}">
+        ${Object.values(currencyDefs).filter(c => c.scope === 'personal').map(c => `<option value="${esc(c.key)}" ${c.key === r.currency_key ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="number" min="1" id="chkAmt_${esc(r.id)}" value="${r.amount}"></td>
+    <td><input type="text" id="chkLabel_${esc(r.id)}" value="${esc(r.label)}"></td>
+    <td><input type="checkbox" id="chkActive_${esc(r.id)}" ${r.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="5">No rewards configured.</td></tr>';
+}
+
+async function saveCheckinRewards(){
+  const status = document.getElementById('checkinStatus');
+  const trs = document.querySelectorAll('#checkinRows tr[data-id]');
+  const rows = Array.from(trs).map(tr => {
+    const id = tr.getAttribute('data-id');
+    return {
+      id,
+      currency_key: document.getElementById('chkCur_' + id).value,
+      amount: parseInt(document.getElementById('chkAmt_' + id).value || '0', 10),
+      label: document.getElementById('chkLabel_' + id).value.trim(),
+      active: document.getElementById('chkActive_' + id).checked
+    };
+  });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('daily_checkin_rewards').upsert(rows, { onConflict: 'id' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadCheckinRewards();
+}
+
+async function addCheckinReward(){
+  const status = document.getElementById('newCheckinStatus');
+  const streakDay = parseInt(document.getElementById('newCheckinDay').value, 10);
+  const currencyKey = document.getElementById('newCheckinCurrency').value;
+  const amount = parseInt(document.getElementById('newCheckinAmount').value, 10);
+  const label = document.getElementById('newCheckinLabel').value.trim();
+
+  if(isNaN(streakDay) || streakDay < 0){ status.className = 'status err'; status.textContent = 'Enter a valid streak day (0 or more).'; return; }
+  if(!currencyKey){ status.className = 'status err'; status.textContent = 'No personal currency available — add one in Currencies & Gifts first.'; return; }
+  if(isNaN(amount) || amount <= 0){ status.className = 'status err'; status.textContent = 'Enter an amount greater than 0.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('daily_checkin_rewards').insert({ streak_day: streakDay, currency_key: currencyKey, amount, label });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That streak day + currency combination already exists.' : ('Failed: ' + error.message); return; }
+
+  status.className = 'status ok';
+  status.textContent = 'Added.';
+  ['newCheckinDay','newCheckinAmount','newCheckinLabel'].forEach(fid => { document.getElementById(fid).value = ''; });
+  loadCheckinRewards();
+}
+
+let promoEvents = [];
+let promoRuns = {};
+
+async function loadPromoEvents(){
+  const [{ data: events, error: evErr }, { data: runs, error: runErr }] = await Promise.all([
+    supabaseClient.from('promo_events').select('*').order('created_at', { ascending: false }),
+    supabaseClient.from('promo_event_runs').select('event_id, recipient_count, total_granted, run_at').order('run_at', { ascending: false })
+  ]);
+
+  const rows = document.getElementById('promoRows');
+  if(evErr){
+    rows.innerHTML = '<tr><td colspan="6">Failed to load: ' + esc(evErr.message) + '</td></tr>';
+    return;
+  }
+  promoEvents = events || [];
+  promoRuns = {};
+  (runs || []).forEach(r => {
+    if(!promoRuns[r.event_id]) promoRuns[r.event_id] = [];
+    promoRuns[r.event_id].push(r);
+  });
+
+  if(!promoEvents.length){
+    rows.innerHTML = '<tr><td colspan="6">No promo events yet.</td></tr>';
+    return;
+  }
+
+  rows.innerHTML = promoEvents.map(ev => {
+    const cur = currencyDefs[ev.currency_key];
+    const runsForEvent = promoRuns[ev.id] || [];
+    const lastRun = runsForEvent[0];
+    const runsSummary = runsForEvent.length
+      ? `${runsForEvent.length} run(s), last ${new Date(lastRun.run_at).toLocaleDateString()} (${lastRun.recipient_count} recipients, ${lastRun.total_granted} total)`
+      : 'Never run';
+    return `<tr>
+      <td>${esc(ev.name)}<div class="dim">${esc(ev.key)}</div></td>
+      <td class="dim">${esc(cur?.name || ev.currency_key)} × ${ev.amount}</td>
+      <td class="dim">${ev.scope === 'circle' ? 'One Circle' : 'Everyone'}</td>
+      <td>
+        <select id="promoStatus_${esc(ev.id)}">
+          ${['draft','active','ended','archived'].map(s => `<option value="${s}" ${s === ev.status ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+        <button class="small" onclick="updatePromoStatus('${esc(ev.id)}')">Save</button>
+      </td>
+      <td class="dim">${esc(runsSummary)}</td>
+      <td><button class="small" onclick="runPromoEventAction('${esc(ev.id)}')">Run now</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function updatePromoStatus(eventId){
+  const status = document.getElementById('promoStatus');
+  const newStatus = document.getElementById('promoStatus_' + eventId).value;
+  status.className = 'status';
+  status.textContent = 'Updating…';
+  const result = await callAdmin('update-promo-event', { eventId, status: newStatus });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? 'Updated.' : ('Failed: ' + result.error);
+  if(result.ok) loadPromoEvents();
+}
+
+async function runPromoEventAction(eventId){
+  if(!confirm('Run this event now and distribute its reward?')) return;
+  const status = document.getElementById('promoStatus');
+  status.className = 'status';
+  status.textContent = 'Running…';
+  const result = await callAdmin('run-promo-event', { eventId });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? `Distributed to ${result.recipientCount} recipient(s), ${result.totalGranted} total.` : ('Failed: ' + result.error);
+  if(result.ok) loadPromoEvents();
+}
+
+function updateNewPromoScopeVisibility(){
+  const scope = document.getElementById('newPromoScope').value;
+  document.getElementById('newPromoCircleField').style.display = (scope === 'circle') ? '' : 'none';
+}
+
+async function createPromoEvent(){
+  const status = document.getElementById('newPromoStatus');
+  const key = document.getElementById('newPromoKey').value.trim().toLowerCase();
+  const name = document.getElementById('newPromoName').value.trim();
+  const currencyKey = document.getElementById('newPromoCurrency').value;
+  const amount = Number(document.getElementById('newPromoAmount').value);
+  const scope = document.getElementById('newPromoScope').value;
+  const description = document.getElementById('newPromoDescription').value.trim();
+  const startsRaw = document.getElementById('newPromoStarts').value;
+  const endsRaw = document.getElementById('newPromoEnds').value;
+
+  if(!/^[a-z0-9_-]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/dashes/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  if(!Number.isFinite(amount) || amount <= 0){ status.className = 'status err'; status.textContent = 'Enter an amount greater than 0.'; return; }
+
+  let circleId = null;
+  if(scope === 'circle'){
+    const circleName = document.getElementById('newPromoCircleName').value.trim();
+    if(!circleName){ status.className = 'status err'; status.textContent = 'Enter a Circle name.'; return; }
+    status.className = 'status';
+    status.textContent = 'Looking up Circle…';
+    circleId = await findCircleIdByName(circleName);
+    if(!circleId){ status.className = 'status err'; status.textContent = 'No Circle found with that exact name.'; return; }
+  }
+
+  status.className = 'status';
+  status.textContent = 'Creating…';
+  const result = await callAdmin('create-promo-event', {
+    key, name, description, currencyKey, amount, scope, circleId,
+    startsAt: startsRaw ? new Date(startsRaw).toISOString() : null,
+    endsAt: endsRaw ? new Date(endsRaw).toISOString() : null
+  });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? 'Created as a draft — flip it to active in the table above when ready.' : ('Failed: ' + result.error);
+  if(result.ok){
+    ['newPromoKey','newPromoName','newPromoAmount','newPromoDescription','newPromoCircleName','newPromoStarts','newPromoEnds'].forEach(fid => { document.getElementById(fid).value = ''; });
+    loadPromoEvents();
+  }
+}
+
+/* =====================================================================
+   GUARDIAN PROGRESSION
+   ===================================================================== */
+
+async function loadGuardianProgression(){
+  const { data, error } = await supabaseClient.from('guardian_progression_settings').select('*').eq('id', 1).maybeSingle();
+  if(error || !data){
+    document.getElementById('progressionStatus').textContent = 'Could not load: ' + (error?.message || 'no row found');
+    return;
+  }
+  document.getElementById('progHatchling').value = data.hatchling_marks;
+  document.getElementById('progFledged').value = data.fledged_marks;
+  document.getElementById('progAscendant').value = data.ascendant_marks;
+  document.getElementById('progSovereign').value = data.sovereign_marks;
+  document.getElementById('progFullGain').value = data.full_mark_stat_gain;
+  document.getElementById('progPartialGain').value = data.partial_mark_stat_gain;
+  document.getElementById('progAffinityMarks').value = data.dominant_affinity_marks;
+}
+
+async function saveGuardianProgression(){
+  const status = document.getElementById('progressionStatus');
+  const v = id => parseInt(document.getElementById(id).value, 10);
+  const hatchling = v('progHatchling'), fledged = v('progFledged'), ascendant = v('progAscendant'), sovereign = v('progSovereign');
+  const fullGain = v('progFullGain'), partialGain = v('progPartialGain'), affinityMarks = v('progAffinityMarks');
+
+  if([hatchling, fledged, ascendant, sovereign, fullGain, partialGain, affinityMarks].some(n => isNaN(n) || n < 0)){
+    status.className = 'status err';
+    status.textContent = 'Every field must be a non-negative number.';
+    return;
+  }
+  if(!(hatchling <= fledged && fledged <= ascendant && ascendant <= sovereign)){
+    status.className = 'status err';
+    status.textContent = 'Thresholds must stay in order: Hatchling ≤ Fledged ≤ Ascendant ≤ Sovereign.';
+    return;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('guardian_progression_settings').update({
+    hatchling_marks: hatchling, fledged_marks: fledged, ascendant_marks: ascendant, sovereign_marks: sovereign,
+    full_mark_stat_gain: fullGain, partial_mark_stat_gain: partialGain, dominant_affinity_marks: affinityMarks,
+    updated_at: new Date().toISOString()
+  }).eq('id', 1);
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies to the next petition resolved, no redeploy needed.';
+}
+
+/* =====================================================================
+   BIG BADDIES — DRAGON CATALOG
+   ===================================================================== */
+
+async function loadDragonCatalog(){
+  const { data, error } = await supabaseClient.from('dragon_catalog').select('*').order('tier', { ascending: true });
+  const rows = document.getElementById('dragonRows');
+  const affSel = document.getElementById('newDragonAffinity');
+  if(affSel && !affSel.options.length) affSel.innerHTML = AFFINITIES.map(a => `<option value="${a}">${a}</option>`).join('');
+
+  if(error){
+    rows.innerHTML = '<tr><td colspan="15">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = (data || []).map(d => `<tr data-key="${esc(d.key)}">
+    <td class="dim">${esc(d.key)}</td>
+    <td><input type="text" id="drgName_${esc(d.key)}" value="${esc(d.name)}"></td>
+    <td><input type="number" id="drgTier_${esc(d.key)}" value="${d.tier}"></td>
+    <td>
+      <select id="drgAff_${esc(d.key)}">
+        ${AFFINITIES.map(a => `<option value="${a}" ${a === d.affinity ? 'selected' : ''}>${a}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="number" id="drgHp_${esc(d.key)}" value="${d.hp_pool}"></td>
+    <td><input type="number" id="drgWard_${esc(d.key)}" value="${d.ward}"></td>
+    <td><input type="number" id="drgPower_${esc(d.key)}" value="${d.power}"></td>
+    <td><input type="number" id="drgWindow_${esc(d.key)}" value="${d.window_hours}"></td>
+    <td><input type="number" id="drgPenalty_${esc(d.key)}" value="${d.expiry_rank_penalty}"></td>
+    <td><input type="number" id="drgRewardDev_${esc(d.key)}" value="${d.reward_devotion}"></td>
+    <td><input type="number" id="drgRewardEss_${esc(d.key)}" value="${d.reward_essence_pool}"></td>
+    <td><input type="number" id="drgRewardRank_${esc(d.key)}" value="${d.reward_circle_rank_delta}"></td>
+    <td><input type="text" id="drgDecoKey_${esc(d.key)}" value="${esc(d.reward_decoration_key || '')}"></td>
+    <td><input type="number" step="0.01" min="0" max="1" id="drgDecoChance_${esc(d.key)}" value="${d.reward_decoration_chance}"></td>
+    <td><input type="checkbox" id="drgActive_${esc(d.key)}" ${d.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="15">No dragons yet.</td></tr>';
+}
+
+async function saveDragonCatalog(){
+  const status = document.getElementById('dragonStatus');
+  const trs = document.querySelectorAll('#dragonRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    return {
+      key,
+      name: document.getElementById('drgName_' + key).value.trim(),
+      tier: parseInt(document.getElementById('drgTier_' + key).value, 10),
+      affinity: document.getElementById('drgAff_' + key).value,
+      hp_pool: parseInt(document.getElementById('drgHp_' + key).value, 10),
+      ward: parseInt(document.getElementById('drgWard_' + key).value, 10),
+      power: parseInt(document.getElementById('drgPower_' + key).value, 10),
+      window_hours: parseInt(document.getElementById('drgWindow_' + key).value, 10),
+      expiry_rank_penalty: parseInt(document.getElementById('drgPenalty_' + key).value, 10),
+      reward_devotion: parseInt(document.getElementById('drgRewardDev_' + key).value, 10),
+      reward_essence_pool: parseInt(document.getElementById('drgRewardEss_' + key).value, 10),
+      reward_circle_rank_delta: parseInt(document.getElementById('drgRewardRank_' + key).value, 10),
+      reward_decoration_key: document.getElementById('drgDecoKey_' + key).value.trim() || null,
+      reward_decoration_chance: parseFloat(document.getElementById('drgDecoChance_' + key).value || '0'),
+      active: document.getElementById('drgActive_' + key).checked
+    };
+  });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('dragon_catalog').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadDragonCatalog();
+}
+
+async function addDragon(){
+  const status = document.getElementById('newDragonStatus');
+  const key = document.getElementById('newDragonKey').value.trim().toLowerCase();
+  const name = document.getElementById('newDragonName').value.trim();
+  const tier = parseInt(document.getElementById('newDragonTier').value, 10);
+  const affinity = document.getElementById('newDragonAffinity').value;
+  const hpPool = parseInt(document.getElementById('newDragonHp').value, 10);
+
+  if(!/^[a-z0-9]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  if(isNaN(tier) || tier < 1){ status.className = 'status err'; status.textContent = 'Enter a tier of 1 or higher (must be unique).'; return; }
+  if(isNaN(hpPool) || hpPool < 1){ status.className = 'status err'; status.textContent = 'Enter an HP pool greater than 0.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('dragon_catalog').insert({ key, name, tier, affinity, hp_pool: hpPool });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key or tier is already in use.' : ('Failed: ' + error.message); return; }
+
+  status.className = 'status ok';
+  status.textContent = name + ' added — tune its power, ward, window and rewards in the table above.';
+  ['newDragonKey','newDragonName','newDragonTier','newDragonHp'].forEach(fid => { document.getElementById(fid).value = ''; });
+  loadDragonCatalog();
+}
+
+/* =====================================================================
+   GUARDIAN ITEM CATALOG (Shard crafting)
+   ===================================================================== */
+
+function updateNewGuardianItemTypeFields(){
+  const type = document.getElementById('newGuardianItemType').value;
+  document.getElementById('newGuardianItemStatKeyField').style.display = type === 'stat_boost' ? '' : 'none';
+  document.getElementById('newGuardianItemStatAmountField').style.display = type === 'stat_boost' ? '' : 'none';
+  document.getElementById('newGuardianItemEffectField').style.display = type === 'consumable' ? '' : 'none';
+}
+
+async function loadGuardianItemCatalog(){
+  const { data, error } = await supabaseClient.from('guardian_item_catalog').select('*').order('key', { ascending: true });
+  const rows = document.getElementById('guardianItemRows');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="9">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = (data || []).map(i => `<tr data-key="${esc(i.key)}">
+    <td class="dim">${esc(i.key)}</td>
+    <td><input type="text" id="giName_${esc(i.key)}" value="${esc(i.name)}"></td>
+    <td><input type="text" id="giDesc_${esc(i.key)}" value="${esc(i.description || '')}" style="max-width:220px;"></td>
+    <td>
+      <select id="giType_${esc(i.key)}">
+        <option value="stat_boost" ${i.item_type === 'stat_boost' ? 'selected' : ''}>stat_boost</option>
+        <option value="cosmetic" ${i.item_type === 'cosmetic' ? 'selected' : ''}>cosmetic</option>
+        <option value="consumable" ${i.item_type === 'consumable' ? 'selected' : ''}>consumable</option>
+      </select>
+    </td>
+    <td>
+      <select id="giStatKey_${esc(i.key)}">
+        <option value="">—</option>
+        ${GUARDIAN_STAT_KEYS.map(s => `<option value="${s}" ${s === i.stat_key ? 'selected' : ''}>${s}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="number" min="1" id="giStatAmount_${esc(i.key)}" value="${i.stat_amount ?? ''}" style="max-width:90px;"></td>
+    <td><input type="text" id="giEffect_${esc(i.key)}" value="${esc(i.consumable_effect || '')}" style="max-width:150px;"></td>
+    <td><input type="number" min="1" id="giCost_${esc(i.key)}" value="${i.shard_cost}" style="max-width:90px;"></td>
+    <td><input type="checkbox" id="giActive_${esc(i.key)}" ${i.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="9">No items yet.</td></tr>';
+}
+
+async function saveGuardianItemCatalog(){
+  const status = document.getElementById('guardianItemStatus');
+  const trs = document.querySelectorAll('#guardianItemRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    const statAmountVal = document.getElementById('giStatAmount_' + key).value;
+    return {
+      key,
+      name: document.getElementById('giName_' + key).value.trim(),
+      description: document.getElementById('giDesc_' + key).value.trim(),
+      item_type: document.getElementById('giType_' + key).value,
+      stat_key: document.getElementById('giStatKey_' + key).value || null,
+      stat_amount: statAmountVal === '' ? null : parseInt(statAmountVal, 10),
+      consumable_effect: document.getElementById('giEffect_' + key).value.trim() || null,
+      shard_cost: parseInt(document.getElementById('giCost_' + key).value, 10),
+      active: document.getElementById('giActive_' + key).checked
+    };
+  });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('guardian_item_catalog').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadGuardianItemCatalog();
+}
+
+async function addGuardianItem(){
+  const status = document.getElementById('newGuardianItemStatus');
+  const key = document.getElementById('newGuardianItemKey').value.trim().toLowerCase();
+  const name = document.getElementById('newGuardianItemName').value.trim();
+  const description = document.getElementById('newGuardianItemDescription').value.trim();
+  const itemType = document.getElementById('newGuardianItemType').value;
+  const cost = parseInt(document.getElementById('newGuardianItemCost').value, 10);
+  const statKey = document.getElementById('newGuardianItemStatKey').value;
+  const statAmountVal = document.getElementById('newGuardianItemStatAmount').value;
+  const effect = document.getElementById('newGuardianItemEffect').value.trim();
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  if(isNaN(cost) || cost < 1){ status.className = 'status err'; status.textContent = 'Enter a Shard cost greater than 0.'; return; }
+  if(itemType === 'stat_boost' && (!statKey || !statAmountVal || parseInt(statAmountVal, 10) < 1)){
+    status.className = 'status err'; status.textContent = 'Stat boosts need a stat key and an amount greater than 0.'; return;
+  }
+  if(itemType === 'consumable' && !effect){
+    status.className = 'status err'; status.textContent = 'Consumables need an effect key.'; return;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('guardian_item_catalog').insert({
+    key, name, description, item_type: itemType, shard_cost: cost,
+    stat_key: itemType === 'stat_boost' ? statKey : null,
+    stat_amount: itemType === 'stat_boost' ? parseInt(statAmountVal, 10) : null,
+    consumable_effect: itemType === 'consumable' ? effect : null
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+
+  status.className = 'status ok';
+  status.textContent = name + ' added to the crafting catalog.' + (itemType === 'consumable' ? ' Remember: this only records the effect key — real game logic for it is separate wiring.' : '');
+  ['newGuardianItemKey','newGuardianItemName','newGuardianItemCost','newGuardianItemStatAmount','newGuardianItemEffect','newGuardianItemDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  updateNewGuardianItemTypeFields();
+  loadGuardianItemCatalog();
+}
+
+/* =====================================================================
+   ARENA STORE CATALOG (Favor spending)
+   ===================================================================== */
+
+async function loadArenaShopCatalog(){
+  const { data, error } = await supabaseClient.from('arena_shop_items').select('*').order('key', { ascending: true });
+  const rows = document.getElementById('arenaItemRows');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="8">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = (data || []).map(i => `<tr data-key="${esc(i.key)}">
+    <td class="dim">${esc(i.key)}</td>
+    <td><input type="text" id="aiName_${esc(i.key)}" value="${esc(i.name)}"></td>
+    <td><input type="text" id="aiDesc_${esc(i.key)}" value="${esc(i.description || '')}" style="max-width:220px;"></td>
+    <td>
+      <select id="aiCategory_${esc(i.key)}">
+        <option value="utility" ${i.category === 'utility' ? 'selected' : ''}>utility</option>
+        <option value="cosmetic" ${i.category === 'cosmetic' ? 'selected' : ''}>cosmetic</option>
+      </select>
+    </td>
+    <td><input type="text" id="aiEffect_${esc(i.key)}" value="${esc(i.effect_key || '')}" style="max-width:150px;"></td>
+    <td><input type="number" min="1" id="aiEffectHours_${esc(i.key)}" value="${i.effect_hours ?? ''}" style="max-width:90px;"></td>
+    <td><input type="number" min="1" id="aiCost_${esc(i.key)}" value="${i.cost_favor}" style="max-width:90px;"></td>
+    <td><input type="checkbox" id="aiActive_${esc(i.key)}" ${i.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="8">No items yet.</td></tr>';
+}
+
+async function saveArenaShopCatalog(){
+  const status = document.getElementById('arenaItemStatus');
+  const trs = document.querySelectorAll('#arenaItemRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    const hoursVal = document.getElementById('aiEffectHours_' + key).value;
+    return {
+      key,
+      name: document.getElementById('aiName_' + key).value.trim(),
+      description: document.getElementById('aiDesc_' + key).value.trim(),
+      category: document.getElementById('aiCategory_' + key).value,
+      effect_key: document.getElementById('aiEffect_' + key).value.trim() || null,
+      effect_hours: hoursVal === '' ? null : parseInt(hoursVal, 10),
+      cost_favor: parseInt(document.getElementById('aiCost_' + key).value, 10),
+      active: document.getElementById('aiActive_' + key).checked
+    };
+  });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('arena_shop_items').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadArenaShopCatalog();
+}
+
+async function addArenaShopItem(){
+  const status = document.getElementById('newArenaItemStatus');
+  const key = document.getElementById('newArenaItemKey').value.trim().toLowerCase();
+  const name = document.getElementById('newArenaItemName').value.trim();
+  const description = document.getElementById('newArenaItemDescription').value.trim();
+  const category = document.getElementById('newArenaItemCategory').value;
+  const cost = parseInt(document.getElementById('newArenaItemCost').value, 10);
+  const effect = document.getElementById('newArenaItemEffect').value.trim();
+  const hoursVal = document.getElementById('newArenaItemEffectHours').value.trim();
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  if(isNaN(cost) || cost < 1){ status.className = 'status err'; status.textContent = 'Enter a Favor cost greater than 0.'; return; }
+  if(category === 'utility' && !effect){
+    status.className = 'status err'; status.textContent = 'Utility items need an effect key.'; return;
+  }
+  const effectHours = hoursVal === '' ? null : parseInt(hoursVal, 10);
+  if(effectHours !== null && (isNaN(effectHours) || effectHours < 1)){
+    status.className = 'status err'; status.textContent = 'Effect hours must be greater than 0 (or left blank).'; return;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('arena_shop_items').insert({
+    key, name, description, category, cost_favor: cost,
+    effect_key: category === 'utility' ? effect : (effect || null),
+    effect_hours: effectHours
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+
+  status.className = 'status ok';
+  status.textContent = name + ' added to the Arena Store.' + (effect && effect !== 'challenge_shield' ? ' Remember: only challenge_shield is wired to real game logic — this effect key will be honestly recorded but non-functional until code catches up.' : '');
+  ['newArenaItemKey','newArenaItemName','newArenaItemCost','newArenaItemEffect','newArenaItemEffectHours','newArenaItemDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  loadArenaShopCatalog();
+}
+
+/* =====================================================================
+   DEITY PERSONALITY OVERRIDES
+   ===================================================================== */
+
+let personalityOverrides = {};
+
+async function loadDeityPersonalities(){
+  const { data, error } = await supabaseClient.from('deity_personality_overrides').select('*');
+  personalityOverrides = {};
+  (data || []).forEach(r => { personalityOverrides[r.deity_id] = r; });
+  if(error) console.error('deity_personality_overrides load failed', error);
+
+  const rows = document.getElementById('personalityRows');
+  rows.innerHTML = FLAT_DEITIES.map(d => {
+    const o = personalityOverrides[d.id] || { personality_override: '', active: true };
+    return `<tr data-name="${esc(d.name.toLowerCase())}">
+      <td>${esc(d.name)}</td>
+      <td class="dim">${esc(d.pantheonLabel)}</td>
+      <td><input type="text" id="pers_${d.id}" value="${esc(o.personality_override || '')}" placeholder="e.g. clipped, impatient, speaks in short declaratives" style="max-width:420px;"></td>
+      <td><input type="checkbox" id="persActive_${d.id}" ${o.active !== false ? 'checked' : ''}></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterPersonalityRows(){
+  const q = document.getElementById('personalitySearch').value.trim().toLowerCase();
+  document.querySelectorAll('#personalityRows tr').forEach(tr => {
+    const name = tr.getAttribute('data-name') || '';
+    tr.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+}
+
+async function savePersonalityOverrides(){
+  const status = document.getElementById('personalityStatus');
+  const rows = FLAT_DEITIES
+    .map(d => ({
+      deity_id: d.id,
+      pantheon_id: d.pantheonId,
+      personality_override: document.getElementById('pers_' + d.id).value.trim(),
+      active: document.getElementById('persActive_' + d.id).checked,
+      updated_at: new Date().toISOString()
+    }))
+    .filter(r => r.personality_override !== '' || personalityOverrides[r.deity_id]);
+
+  status.className = 'status';
+  status.textContent = rows.length ? 'Saving…' : 'Nothing to save yet.';
+  if(!rows.length) return;
+  const { error } = await supabaseClient.from('deity_personality_overrides').upsert(rows, { onConflict: 'deity_id' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies to the next message sent to that deity, no redeploy needed.';
+  if(!error) loadDeityPersonalities();
 }
 
 init();
