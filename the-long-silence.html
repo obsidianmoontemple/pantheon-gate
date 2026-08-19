@@ -321,12 +321,20 @@ let dragonStatus = null;      // dragon-status response, while circleView.step =
 let invasionStatus = null;    // invasion-status response, while circleView.step === 'invasions'
 let invasionCircleNames = {}; // { circleId: name }, enriched client-side so reports read naturally
 
-let pvpView = null;           // null | {step:'locked'} | {step:'home'} | {step:'browse'} | {step:'leaderboard'} — top-level, NOT circle-scoped
+let pvpView = null;           // null | {step:'locked'} | {step:'home'} | {step:'browse'} | {step:'leaderboard'} | {step:'shop'} — top-level, NOT circle-scoped
 let pvpStatus = null;
 let pvpBrowseResults = [];
 let pvpBrowseQuery = '';
 let pvpLeaderboard = [];
 let pvpLastMatch = null;      // most recent resolved match, shown once as a result screen
+let arenaShopCatalog = [];    // arena_shop_items, public catalog — loaded once and cached, like circleShopItems
+let arenaInventory = [];      // this guardian's guardian_arena_items, reloaded each time the shop opens
+
+let craftView = null;         // null | {step:'home'} — top-level, NOT circle-scoped (Shard crafting, new economy layer)
+let craftCatalog = [];        // guardian_item_catalog, public catalog — loaded once and cached
+let craftInventory = [];      // this guardian's guardian_items, reloaded each time Craft opens
+
+let redeemView = null;        // null | {step:'pick'} — spend God Tokens to fully unlock a deity
 
 async function loadCircleShopItems(){
   if(circleShopItems.length) return;
@@ -364,7 +372,7 @@ async function init(){
 async function loadGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, checkin_streak, favor, god_shards, god_tokens, bonus_petition_credits, pvp_shield_until')
     .eq('owner_user_id', session.user.id)
     .maybeSingle();
   if(error){ console.error('guardian load failed', error); return; }
@@ -400,6 +408,8 @@ function render(){
   if(!circleView || circleView.step !== 'altar') stopAltarTicking();
   if(guardian && petitionView){ renderPetition(); return; }
   if(guardian && combatView){ renderCombat(); return; }
+  if(guardian && craftView){ renderCraft(); return; }
+  if(guardian && redeemView){ renderRedeem(); return; }
   if(guardian && pvpView){ renderPvpArena(); return; }
   if(guardian && circleView){ renderCircle(); return; }
   guardian ? renderGuardianHome() : renderHatchFlow();
@@ -460,7 +470,7 @@ async function hatchGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
     .insert({ owner_user_id: session.user.id, species: pickedSpecies, name })
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, checkin_streak, favor, god_shards, god_tokens, bonus_petition_credits, pvp_shield_until')
     .single();
 
   if(error){
@@ -501,11 +511,18 @@ function renderGuardianHome(){
         <span class="bond-value">${guardian.bond}</span>
         <button ${tendedToday ? 'disabled' : ''} onclick="tendGuardian()">${tendedToday ? 'Tended today' : 'Tend your guardian'}</button>
       </div>
+      ${guardian.checkin_streak > 0 ? `<p class="hint" style="text-align:center;margin:-8px 0 4px;">${guardian.checkin_streak} day check-in streak</p>` : ''}
       <div class="status" id="tendStatus"></div>
 
       <div class="essence-row">
         <span class="essence-label">Essence</span>
         <span class="essence-value">${guardian.essence || 0}</span>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-tile"><div class="num">${guardian.favor || 0}</div><div class="label">Favor</div></div>
+        <div class="stat-tile"><div class="num">${guardian.god_shards || 0}</div><div class="label">God Shards</div></div>
+        <div class="stat-tile"><div class="num">${guardian.god_tokens || 0}</div><div class="label">God Tokens</div></div>
       </div>
 
       <div class="stat-grid">
@@ -524,6 +541,8 @@ function renderGuardianHome(){
         <button class="secondary" onclick="openProving()">Enter the Gauntlet</button>
         <button class="secondary" onclick="openCircle()">Your Circle</button>
         <button class="secondary" onclick="openPvpArena()">The Arena</button>
+        <button class="secondary" onclick="openCraft()">Craft</button>
+        <button class="secondary" onclick="openRedeem()">Redeem a Token</button>
       </div>
     </div>
 
@@ -543,6 +562,10 @@ function todayStr(){
 }
 
 async function tendGuardian(){
+  // tend_guardian now returns a small object — { tended, streak, rewards,
+  // essenceGained } — instead of a plain boolean, so a daily check-in can
+  // carry an actual prize (admin-configurable via daily_checkin_rewards)
+  // instead of just +1 Bond.
   const status = document.getElementById('tendStatus');
   status.className = 'status';
   status.textContent = 'Tending…';
@@ -552,16 +575,24 @@ async function tendGuardian(){
     status.textContent = 'Failed: ' + error.message;
     return;
   }
-  if(!data){
+  if(!data || !data.tended){
     status.className = 'status';
     status.textContent = 'Already tended today — come back tomorrow.';
     return;
   }
   guardian.bond += 1;
+  guardian.essence = (guardian.essence || 0) + (data.essenceGained || 0);
+  guardian.checkin_streak = data.streak;
   guardian.last_tended_at = todayStr();
   render();
   const s2 = document.getElementById('tendStatus');
-  if(s2){ s2.className = 'status ok'; s2.textContent = 'Bond deepens.'; }
+  if(s2){
+    s2.className = 'status ok';
+    const milestoneLabels = (data.rewards || []).filter(r => r.label && r.label !== 'Daily tending').map(r => r.label);
+    let msg = `Bond deepens. +${data.essenceGained || 0} Essence — ${data.streak} day streak.`;
+    if(milestoneLabels.length) msg += ' ' + milestoneLabels.join(', ') + '!';
+    s2.textContent = msg;
+  }
 }
 
 async function claimWithEmail(){
@@ -2162,6 +2193,210 @@ function renderCircleInvasions(){
   `;
 }
 
+/* ---------------- Shard crafting (new economy layer) ---------------- */
+
+async function loadCraftCatalog(){
+  if(craftCatalog.length) return;
+  const { data, error } = await supabaseClient.from('guardian_item_catalog').select('*').eq('active', true).order('shard_cost', { ascending: true });
+  if(error){ console.error('guardian item catalog load failed', error); return; }
+  craftCatalog = data || [];
+}
+
+async function loadCraftInventory(){
+  const { data, error } = await supabaseClient
+    .from('guardian_items')
+    .select('id, item_key, acquired_at, consumed_at')
+    .eq('guardian_id', guardian.id)
+    .order('acquired_at', { ascending: false });
+  if(error){ console.error('guardian items load failed', error); return; }
+  craftInventory = data || [];
+}
+
+async function openCraft(){
+  craftView = { step: 'home' };
+  render();
+  await Promise.all([loadCraftCatalog(), loadCraftInventory()]);
+  if(craftView) render();
+}
+
+function backFromCraft(){
+  craftView = null;
+  render();
+}
+
+function setCraftStatus(text, ok){
+  const el = document.getElementById('craftStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
+async function doCraftItem(itemKey){
+  setCraftStatus('Working the Shards…');
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/craft', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'craft-item', guardianId: guardian.id, itemKey })
+    });
+    const data = await resp.json();
+    if(!data.ok){ setCraftStatus(data.error || 'Could not craft that.', false); return; }
+    guardian.god_shards = data.remainingShards;
+    await loadGuardian();
+    await loadCraftInventory();
+    render();
+    setCraftStatus(data.itemType === 'stat_boost' ? 'Crafted — the boost applied immediately.' : 'Crafted — check Your Items below.', true);
+  }catch(e){
+    setCraftStatus('Could not reach the relay: ' + e.message, false);
+  }
+}
+
+async function doCraftPetition(){
+  setCraftStatus('Working the Shards…');
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/craft', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'craft-petition', guardianId: guardian.id })
+    });
+    const data = await resp.json();
+    if(!data.ok){ setCraftStatus(data.error || 'Could not craft a petition credit.', false); return; }
+    guardian.god_shards = data.remainingShards;
+    guardian.bonus_petition_credits = data.bonusPetitionCredits;
+    render();
+    setCraftStatus('Bonus petition credit banked.', true);
+  }catch(e){
+    setCraftStatus('Could not reach the relay: ' + e.message, false);
+  }
+}
+
+async function doUseItem(itemId){
+  setCraftStatus('Using…');
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/craft', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'use-item', guardianId: guardian.id, itemId })
+    });
+    const data = await resp.json();
+    if(!data.ok){ setCraftStatus(data.error || 'Could not use that item.', false); return; }
+    await loadCraftInventory();
+    render();
+    setCraftStatus(`${data.itemName} used.`, true);
+  }catch(e){
+    setCraftStatus('Could not reach the relay: ' + e.message, false);
+  }
+}
+
+function renderCraft(){
+  const app = document.getElementById('app');
+
+  const catalogRows = craftCatalog.map(item => {
+    const affordable = (guardian.god_shards || 0) >= item.shard_cost;
+    const typeNote = item.item_type === 'stat_boost' ? `+${item.stat_amount} ${item.stat_key}`
+      : item.item_type === 'consumable' ? 'Consumable' : 'Cosmetic';
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(item.name)}</div><div class="cblurb">${esc(item.description || '')} — ${esc(typeNote)} — ${item.shard_cost} Shards</div></div>
+      <div class="ractions"><button class="secondary" ${affordable ? '' : 'disabled'} onclick="doCraftItem('${esc(item.key)}')">Craft</button></div>
+    </div>`;
+  }).join('') || '<p class="hint">Nothing craftable yet — check back later.</p>';
+
+  const inventoryRows = craftInventory.map(it => {
+    const catalogItem = craftCatalog.find(c => c.key === it.item_key);
+    const name = catalogItem ? catalogItem.name : it.item_key;
+    const type = catalogItem ? catalogItem.item_type : '';
+    const statusLabel = it.consumed_at ? (type === 'consumable' ? 'Used' : 'Applied') : 'Held';
+    const canUse = type === 'consumable' && !it.consumed_at;
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(name)}</div><div class="cblurb">${statusLabel}</div></div>
+      ${canUse ? `<div class="ractions"><button class="secondary" onclick="doUseItem('${esc(it.id)}')">Use</button></div>` : ''}
+    </div>`;
+  }).join('') || '<p class="hint">Nothing crafted yet.</p>';
+
+  app.innerHTML = `
+    <div class="card" style="text-align:center;">
+      <h2>Shard Crafting</h2>
+      <p class="hint">Turn God Shards into a permanent stat boost, a cosmetic, or a consumable — or bank a bonus petition credit that bypasses the one-per-moon-phase gate.</p>
+      <div class="essence-row"><span class="essence-label">God Shards</span><span class="essence-value">${guardian.god_shards || 0}</span></div>
+      <div class="status" id="craftStatus"></div>
+    </div>
+    <div class="card">
+      <h2>Catalog</h2>
+      ${catalogRows}
+    </div>
+    <div class="card">
+      <h2>Bonus Petition Credit</h2>
+      <p class="hint">Costs a set number of Shards, decided by the gods — if you can't afford it, the attempt will tell you the price.</p>
+      <p class="hint">You currently hold <strong>${guardian.bonus_petition_credits || 0}</strong> bonus credit${guardian.bonus_petition_credits === 1 ? '' : 's'}.</p>
+      <button class="secondary" ${(guardian.god_shards || 0) > 0 ? '' : 'disabled'} onclick="doCraftPetition()">Craft a petition credit</button>
+    </div>
+    <div class="card">
+      <h2>Your Items</h2>
+      ${inventoryRows}
+      <button class="secondary" style="margin-top:14px;" onclick="backFromCraft()">Back to your guardian</button>
+    </div>
+  `;
+}
+
+/* ---------------- God Token redemption (new economy layer) ---------------- */
+
+function openRedeem(){
+  redeemView = { step: 'pick' };
+  render();
+}
+
+function backFromRedeem(){
+  redeemView = null;
+  render();
+}
+
+async function doRedeemToken(pantheonId, deityId, deityName){
+  const status = document.getElementById('redeemStatus');
+  if(status){ status.className = 'status'; status.textContent = 'Spending a Token…'; }
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/redeem', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'redeem-god-token', pantheonId, deityId })
+    });
+    const data = await resp.json();
+    if(!data.ok){
+      if(status){ status.className = 'status err'; status.textContent = data.error || 'Could not redeem.'; }
+      return;
+    }
+    guardian.god_tokens = data.remainingTokens;
+    render();
+    const s2 = document.getElementById('redeemStatus');
+    if(s2){
+      s2.className = 'status ok';
+      s2.textContent = `${deityName} fully unlocked. ${data.remainingTokens} Token${data.remainingTokens === 1 ? '' : 's'} remaining.`;
+    }
+  }catch(e){
+    if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
+  }
+}
+
+function renderRedeem(){
+  const app = document.getElementById('app');
+  const groups = Object.keys(CATALOG).map(pid => {
+    const rows = CATALOG[pid].deities.map(([id, name]) => `<div class="deity-row" onclick="doRedeemToken('${esc(pid)}','${esc(id)}','${esc(name)}')">
+      <span class="name">${esc(name)}</span>
+    </div>`).join('');
+    return `<div class="pantheon-group"><h3>${esc(CATALOG[pid].label)}</h3>${rows}</div>`;
+  }).join('');
+
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">Redeem a God Token</h2>
+      <p class="hint" style="text-align:center;">Spend God Tokens to fully unlock any one god's chat, for good. If you already have access some other way, nothing is spent.</p>
+      <div class="essence-row"><span class="essence-label">God Tokens</span><span class="essence-value">${guardian.god_tokens || 0}</span></div>
+      <div id="redeemStatus" class="status"></div>
+      ${groups}
+      <button class="secondary" style="margin-top:10px;" onclick="backFromRedeem()">Back to your guardian</button>
+    </div>
+  `;
+}
+
 /* ---------------- raw PvP (Phase 5c) ---------------- */
 
 async function pvpFetch(action, extra){
@@ -2193,7 +2428,45 @@ async function openPvpArena(){
 async function refreshPvpStatus(){
   const data = await pvpFetch('status');
   pvpStatus = data.ok ? data : null;
+  if(data.ok){
+    guardian.favor = data.favor;
+    guardian.pvp_shield_until = data.shieldUntil;
+  }
   if(pvpView && pvpView.step === 'home') render();
+}
+
+async function loadArenaShopCatalog(){
+  if(arenaShopCatalog.length) return;
+  const { data, error } = await supabaseClient.from('arena_shop_items').select('*').eq('active', true).order('cost_favor', { ascending: true });
+  if(error){ console.error('arena shop load failed', error); return; }
+  arenaShopCatalog = data || [];
+}
+
+async function loadArenaInventory(){
+  const { data, error } = await supabaseClient
+    .from('guardian_arena_items')
+    .select('id, item_key, acquired_at, consumed_at')
+    .eq('guardian_id', guardian.id)
+    .order('acquired_at', { ascending: false });
+  if(error){ console.error('arena inventory load failed', error); return; }
+  arenaInventory = data || [];
+}
+
+function openPvpShop(){
+  pvpView = { step: 'shop' };
+  render();
+  Promise.all([loadArenaShopCatalog(), loadArenaInventory()]).then(() => { if(pvpView && pvpView.step === 'shop') render(); });
+}
+
+async function doArenaBuy(itemKey){
+  setPvpActionStatus('Purchasing…');
+  const data = await pvpFetch('shop-buy', { itemKey });
+  if(!data.ok){ setPvpActionStatus(data.error || 'Could not buy that.', false); return; }
+  guardian.favor = data.remainingFavor;
+  if(data.shieldUntil) guardian.pvp_shield_until = data.shieldUntil;
+  await loadArenaInventory();
+  render();
+  setPvpActionStatus(data.wired ? 'Purchased and applied.' : 'Purchased — recorded, though this effect has no game logic wired to it yet.', true);
 }
 
 function backFromPvp(){
@@ -2289,6 +2562,47 @@ function renderPvpArena(){
   if(pvpView.step === 'home') return renderPvpHome();
   if(pvpView.step === 'browse') return renderPvpBrowse();
   if(pvpView.step === 'leaderboard') return renderPvpLeaderboard();
+  if(pvpView.step === 'shop') return renderPvpShop();
+}
+
+function renderPvpShop(){
+  const app = document.getElementById('app');
+  const rows = arenaShopCatalog.map(item => {
+    const affordable = (guardian.favor || 0) >= item.cost_favor;
+    const note = item.category === 'utility' ? `Utility${item.effect_hours ? ' · ' + item.effect_hours + 'h' : ''}` : 'Cosmetic';
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(item.name)}</div><div class="cblurb">${esc(item.description || '')} — ${esc(note)} — ${item.cost_favor} Favor</div></div>
+      <div class="ractions"><button class="secondary" ${affordable ? '' : 'disabled'} onclick="doArenaBuy('${esc(item.key)}')">Buy</button></div>
+    </div>`;
+  }).join('') || '<p class="hint">The Arena Store is empty right now.</p>';
+
+  const invRows = arenaInventory.map(it => {
+    const catalogItem = arenaShopCatalog.find(c => c.key === it.item_key);
+    const name = catalogItem ? catalogItem.name : it.item_key;
+    return `<div class="roster-row"><div class="rname">${esc(name)}</div></div>`;
+  }).join('') || '<p class="hint">Nothing purchased yet.</p>';
+
+  const shieldNote = guardian.pvp_shield_until && new Date(guardian.pvp_shield_until) > new Date()
+    ? `<p class="hint">Warded from challenges until ${new Date(guardian.pvp_shield_until).toLocaleString()}.</p>` : '';
+
+  app.innerHTML = `
+    <div class="card" style="text-align:center;">
+      <h2>Arena Store</h2>
+      <p class="hint">Spend Favor earned from duels on PvP utility and guardian cosmetics.</p>
+      <div class="essence-row"><span class="essence-label">Favor</span><span class="essence-value">${guardian.favor || 0}</span></div>
+      ${shieldNote}
+      <div class="status" id="pvpActionStatus"></div>
+    </div>
+    <div class="card">
+      <h2>Catalog</h2>
+      ${rows}
+    </div>
+    <div class="card">
+      <h2>Owned</h2>
+      ${invRows}
+      <button class="secondary" style="margin-top:14px;" onclick="backFromPvpSub()">Back</button>
+    </div>
+  `;
 }
 
 function renderPvpLocked(){
@@ -2359,9 +2673,11 @@ function renderPvpHome(){
     <div class="card" style="text-align:center;">
       <h2>The Arena</h2>
       <p class="hint">Your ladder position: <strong style="color:var(--gold-bright);">${pvpStatus.ladderPosition ? '#' + pvpStatus.ladderPosition : 'unranked — play a duel to join the ladder'}</strong></p>
+      <p class="hint">Favor: <strong style="color:var(--gold-bright);">${guardian.favor || 0}</strong></p>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
         <button onclick="openPvpBrowse()">Find an opponent</button>
         <button class="secondary" onclick="openPvpLeaderboard()">Leaderboard</button>
+        <button class="secondary" onclick="openPvpShop()">Arena Store</button>
       </div>
       <div class="status" id="pvpActionStatus"></div>
     </div>
