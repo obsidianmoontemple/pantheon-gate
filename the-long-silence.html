@@ -692,12 +692,34 @@ function renderPetitionChallenge(){
   app.innerHTML = `
     <div class="card">
       <h2 style="text-align:center;">${esc(v.deityName)} sets a trial</h2>
+      <p class="hint" style="text-align:center;">Write whatever answer feels honest to your guardian's keeper — there's no wrong format. Any genuine attempt earns at least a partial mark; a real show of understanding, courage, or wit earns the full one.</p>
       <p class="challenge-text">"${esc(v.challenge)}"</p>
       <textarea id="answerBox" placeholder="Answer as your guardian's keeper…" oninput="onAnswerInput()">${esc(answerDraft)}</textarea>
       <button id="answerBtn" ${answerDraft.trim().length < 2 ? 'disabled' : ''} onclick="submitPetitionAnswer()">Offer your answer</button>
       <div class="status" id="answerStatus"></div>
+      <button class="secondary" style="margin-top:10px;" onclick="abandonPetition()">Withdraw — choose a different god instead</button>
     </div>
   `;
+}
+
+async function abandonPetition(){
+  const v = petitionView;
+  if(!v || !v.attemptId) return;
+  try{
+    await fetch(FUNCTIONS_URL + '/petition', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'abandon', attemptId: v.attemptId })
+    });
+  }catch(e){
+    console.error('abandon petition failed', e);
+  }
+  // Withdrawing doesn't cost the moon-phase attempt either way — leave
+  // silently even if the network call above failed; worst case the old
+  // trial just gets resumed next time, same as before this existed.
+  petitionView = null;
+  answerDraft = '';
+  render();
 }
 
 function onAnswerInput(){
@@ -792,20 +814,24 @@ async function finishPetition(){
 
 /* ---------------- combat (the Proving) ---------------- */
 
-/* Mirrors the edge function's OPPONENTS array for display only — the
-   server is the only place stats or outcomes are decided. */
-const PROVING_TIERS = [
-  { key: 'ashclad', name: 'Ashclad Recruit', affinity: 'earth' },
-  { key: 'brine',   name: 'Brine Warden',    affinity: 'sea' },
-  { key: 'cinder',  name: 'Cinder Whelp',    affinity: 'fire' },
-  { key: 'grave',   name: 'Grave Sentinel',  affinity: 'death' },
-  { key: 'storm',   name: 'Storm Herald',    affinity: 'storm' },
-  { key: 'veiled',  name: 'Veiled Judge',    affinity: 'light' },
-];
+/* Admin-editable roster (gauntlet_opponents) — display only, same as
+   circleShopItems: loaded once and cached. The server (combat/index.ts)
+   reads this same table fresh on every request and is the only place
+   stats or outcomes are actually decided; this copy just needs the
+   key/name/affinity/tier to draw the picker correctly. */
+let PROVING_TIERS = [];
+
+async function loadGauntletOpponents(){
+  if(PROVING_TIERS.length) return;
+  const { data, error } = await supabaseClient.from('gauntlet_opponents').select('key, name, affinity, tier').eq('active', true).order('tier', { ascending: true });
+  if(error){ console.error('gauntlet opponents load failed', error); return; }
+  PROVING_TIERS = data || [];
+}
 
 function openProving(){
   combatView = { step: 'pick' };
   render();
+  loadGauntletOpponents().then(() => { if(combatView && combatView.step === 'pick') render(); });
 }
 
 function cancelCombat(){
@@ -823,13 +849,13 @@ function renderCombat(){
 
 function renderProvingPicker(){
   const app = document.getElementById('app');
-  const rows = PROVING_TIERS.map((t, i) => {
-    const locked = i > guardian.proving_rank;
+  const rows = PROVING_TIERS.length ? PROVING_TIERS.map(t => {
+    const locked = t.tier > guardian.proving_rank;
     return `<div class="tier-row ${locked ? 'locked' : ''}" ${locked ? '' : `onclick="selectOpponent('${esc(t.key)}')"`}>
       <span class="tname">${esc(t.name)}</span>
       <span class="taff">${locked ? 'Locked' : esc(t.affinity) + '-touched'}</span>
     </div>`;
-  }).join('');
+  }).join('') : '<p class="hint">Loading the trial grounds…</p>';
 
   app.innerHTML = `
     <div class="card">
