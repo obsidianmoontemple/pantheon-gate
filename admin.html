@@ -118,6 +118,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="checkins" onclick="showTab('checkins')">Check-ins &amp; Events</button>
       <button class="tab-btn" data-tab="progression" onclick="showTab('progression')">Guardian Progression</button>
       <button class="tab-btn" data-tab="dragons" onclick="showTab('dragons')">Big Baddies</button>
+      <button class="tab-btn" data-tab="gauntlet" onclick="showTab('gauntlet')">Gauntlet</button>
+      <button class="tab-btn" data-tab="moves" onclick="showTab('moves')">Moves</button>
       <button class="tab-btn" data-tab="guardianitems" onclick="showTab('guardianitems')">Guardian Items</button>
       <button class="tab-btn" data-tab="arenastore" onclick="showTab('arenastore')">Arena Store</button>
       <button class="tab-btn" data-tab="deities" onclick="showTab('deities')">Deity Personalities</button>
@@ -418,6 +420,70 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <button id="addDragonBtn">Add dragon</button>
         </div>
         <div class="status" id="newDragonStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== GAUNTLET ============================== -->
+    <div class="tab-content" id="tab-gauntlet">
+      <div class="card">
+        <h2>Gauntlet opponents</h2>
+        <p class="hint">The fixed solo trial ladder ("Enter the Gauntlet"), unlocked one tier at a time as a guardian clears the current frontier. A freshly hatched guardian starts at 10 in every stat with no combat moves beyond Basic Strike — if the Gauntlet is beating up new guardians, the fix is almost always to bring tier 0's stats down closer to that, not further above it. Tier must stay a unique, contiguous 0, 1, 2, 3… sequence for the unlock logic to make sense — leave gaps and later tiers may become unreachable or skip unlocking.</p>
+        <div class="scroll-table" style="max-height:420px;">
+          <table>
+            <thead><tr>
+              <th>Key</th><th>Name</th><th>Tier</th><th>Affinity</th><th>Vitality</th><th>Might</th><th>Ward</th><th>Swiftness</th><th>Cunning</th><th>Active</th>
+            </tr></thead>
+            <tbody id="gauntletRows"><tr><td colspan="10">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveGauntletBtn">Save changes</button>
+          <div class="status" id="gauntletStatus"></div>
+        </div>
+        <h3>Add a new opponent</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newGauntletKey" style="max-width:140px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newGauntletName" style="max-width:160px;"></div>
+          <div class="field"><label>Tier (unique)</label><input type="number" min="0" id="newGauntletTier" style="max-width:100px;"></div>
+          <div class="field"><label>Affinity</label><select id="newGauntletAffinity" style="max-width:140px;"></select></div>
+          <div class="field"><label>Vitality</label><input type="number" min="1" id="newGauntletVitality" style="max-width:100px;"></div>
+          <button id="addGauntletBtn">Add opponent</button>
+        </div>
+        <div class="status" id="newGauntletStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== MOVES ============================== -->
+    <div class="tab-content" id="tab-moves">
+      <div class="card">
+        <h2>Affinity moves (baseline)</h2>
+        <p class="hint">The Power + Control move every deity uses in the Gauntlet and any future combat unless it has its own signature move set below. Also what Gauntlet opponents use. Power moves have no swiftness shave; Control moves hit softer but shave the defender's Swiftness for the rest of the fight.</p>
+        <div class="scroll-table" style="max-height:420px;">
+          <table>
+            <thead><tr><th>Affinity</th><th>Kind</th><th>Name</th><th>Power</th><th>Swiftness shave</th></tr></thead>
+            <tbody id="affinityMoveRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveAffinityMovesBtn">Save changes</button>
+          <div class="status" id="affinityMoveStatus"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Deity signature moves (optional overrides)</h2>
+        <p class="hint">Give a specific deity its own Power and/or Control move instead of sharing the affinity baseline above. Leave a name blank to fall back to the baseline for that slot — nothing needs filling in for every deity, only the ones you want to stand out.</p>
+        <input class="search-box" type="text" id="deityMoveSearch" placeholder="Search by name…">
+        <div class="scroll-table">
+          <table>
+            <thead><tr><th>God</th><th>Pantheon</th><th>Power name</th><th>Power</th><th>Control name</th><th>Control</th><th>Control shave</th></tr></thead>
+            <tbody id="deityMoveRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveDeityMovesBtn">Save changes</button>
+          <div class="status" id="deityMoveStatus"></div>
+        </div>
       </div>
     </div>
 
@@ -1087,6 +1153,9 @@ async function handleSession(session){
   loadPromoEvents();
   loadGuardianProgression();
   loadDragonCatalog();
+  loadGauntletOpponents();
+  loadAffinityMoves();
+  loadDeityMoves();
   loadGuardianItemCatalog();
   loadArenaShopCatalog();
   loadLeaderboards();
@@ -1191,6 +1260,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('saveDragonsBtn').addEventListener('click', saveDragonCatalog);
   document.getElementById('addDragonBtn').addEventListener('click', addDragon);
+
+  document.getElementById('saveGauntletBtn').addEventListener('click', saveGauntletOpponents);
+  document.getElementById('addGauntletBtn').addEventListener('click', addGauntletOpponent);
+
+  document.getElementById('saveAffinityMovesBtn').addEventListener('click', saveAffinityMoves);
+  document.getElementById('saveDeityMovesBtn').addEventListener('click', saveDeityMoves);
+  document.getElementById('deityMoveSearch').addEventListener('input', filterDeityMoveRows);
 
   document.getElementById('saveGuardianItemsBtn').addEventListener('click', saveGuardianItemCatalog);
   document.getElementById('addGuardianItemBtn').addEventListener('click', addGuardianItem);
@@ -2799,6 +2875,209 @@ async function addDragon(){
   status.textContent = name + ' added — tune its power, ward, window and rewards in the table above.';
   ['newDragonKey','newDragonName','newDragonTier','newDragonHp'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadDragonCatalog();
+}
+
+/* =====================================================================
+   GAUNTLET OPPONENTS
+   ===================================================================== */
+
+async function loadGauntletOpponents(){
+  const { data, error } = await supabaseClient.from('gauntlet_opponents').select('*').order('tier', { ascending: true });
+  const rows = document.getElementById('gauntletRows');
+  const affSel = document.getElementById('newGauntletAffinity');
+  if(affSel && !affSel.options.length) affSel.innerHTML = AFFINITIES.map(a => `<option value="${a}">${a}</option>`).join('');
+
+  if(error){
+    rows.innerHTML = '<tr><td colspan="10">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = (data || []).map(o => `<tr data-key="${esc(o.key)}">
+    <td class="dim">${esc(o.key)}</td>
+    <td><input type="text" id="gauName_${esc(o.key)}" value="${esc(o.name)}"></td>
+    <td><input type="number" min="0" id="gauTier_${esc(o.key)}" value="${o.tier}" style="max-width:70px;"></td>
+    <td>
+      <select id="gauAff_${esc(o.key)}">
+        ${AFFINITIES.map(a => `<option value="${a}" ${a === o.affinity ? 'selected' : ''}>${a}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="number" min="1" id="gauVitality_${esc(o.key)}" value="${o.vitality}" style="max-width:80px;"></td>
+    <td><input type="number" min="1" id="gauMight_${esc(o.key)}" value="${o.might}" style="max-width:80px;"></td>
+    <td><input type="number" min="0" id="gauWard_${esc(o.key)}" value="${o.ward}" style="max-width:80px;"></td>
+    <td><input type="number" min="1" id="gauSwiftness_${esc(o.key)}" value="${o.swiftness}" style="max-width:80px;"></td>
+    <td><input type="number" min="0" id="gauCunning_${esc(o.key)}" value="${o.cunning}" style="max-width:80px;"></td>
+    <td><input type="checkbox" id="gauActive_${esc(o.key)}" ${o.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="10">No opponents yet.</td></tr>';
+}
+
+async function saveGauntletOpponents(){
+  const status = document.getElementById('gauntletStatus');
+  const trs = document.querySelectorAll('#gauntletRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    return {
+      key,
+      name: document.getElementById('gauName_' + key).value.trim(),
+      tier: parseInt(document.getElementById('gauTier_' + key).value, 10),
+      affinity: document.getElementById('gauAff_' + key).value,
+      vitality: parseInt(document.getElementById('gauVitality_' + key).value, 10),
+      might: parseInt(document.getElementById('gauMight_' + key).value, 10),
+      ward: parseInt(document.getElementById('gauWard_' + key).value, 10),
+      swiftness: parseInt(document.getElementById('gauSwiftness_' + key).value, 10),
+      cunning: parseInt(document.getElementById('gauCunning_' + key).value, 10),
+      active: document.getElementById('gauActive_' + key).checked
+    };
+  });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('gauntlet_opponents').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadGauntletOpponents();
+}
+
+async function addGauntletOpponent(){
+  const status = document.getElementById('newGauntletStatus');
+  const key = document.getElementById('newGauntletKey').value.trim().toLowerCase();
+  const name = document.getElementById('newGauntletName').value.trim();
+  const tier = parseInt(document.getElementById('newGauntletTier').value, 10);
+  const affinity = document.getElementById('newGauntletAffinity').value;
+  const vitality = parseInt(document.getElementById('newGauntletVitality').value, 10);
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  if(isNaN(tier) || tier < 0){ status.className = 'status err'; status.textContent = 'Enter a tier of 0 or higher (must be unique).'; return; }
+  if(isNaN(vitality) || vitality < 1){ status.className = 'status err'; status.textContent = 'Enter a vitality greater than 0.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('gauntlet_opponents').insert({
+    key, name, tier, affinity, vitality,
+    might: 10, ward: 10, swiftness: 10, cunning: 10
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key or tier is already in use.' : ('Failed: ' + error.message); return; }
+
+  status.className = 'status ok';
+  status.textContent = name + ' added — tune might/ward/swiftness/cunning in the table above (seeded at 10 each).';
+  ['newGauntletKey','newGauntletName','newGauntletTier','newGauntletVitality'].forEach(fid => { document.getElementById(fid).value = ''; });
+  loadGauntletOpponents();
+}
+
+/* =====================================================================
+   MOVES — affinity baseline + per-deity signature overrides
+   ===================================================================== */
+
+async function loadAffinityMoves(){
+  const { data, error } = await supabaseClient.from('affinity_moves').select('*').order('key', { ascending: true });
+  const rows = document.getElementById('affinityMoveRows');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = (data || []).map(m => `<tr data-key="${esc(m.key)}">
+    <td class="dim">${esc(m.affinity || '—')}</td>
+    <td class="dim">${esc(m.kind)}</td>
+    <td><input type="text" id="amName_${esc(m.key)}" value="${esc(m.name)}" style="max-width:200px;"></td>
+    <td><input type="number" step="0.01" min="0.01" id="amPower_${esc(m.key)}" value="${m.power}" style="max-width:90px;"></td>
+    <td>${m.kind === 'control' ? `<input type="number" min="1" id="amShave_${esc(m.key)}" value="${m.swiftness_shave ?? ''}" style="max-width:90px;">` : '<span class="dim">—</span>'}</td>
+  </tr>`).join('') || '<tr><td colspan="5">No moves found.</td></tr>';
+}
+
+async function saveAffinityMoves(){
+  const status = document.getElementById('affinityMoveStatus');
+  const trs = document.querySelectorAll('#affinityMoveRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    const shaveEl = document.getElementById('amShave_' + key);
+    return {
+      key,
+      name: document.getElementById('amName_' + key).value.trim(),
+      power: parseFloat(document.getElementById('amPower_' + key).value),
+      swiftness_shave: shaveEl ? (shaveEl.value === '' ? null : parseInt(shaveEl.value, 10)) : null,
+      updated_at: new Date().toISOString()
+    };
+  });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('affinity_moves').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies to the next fight, no redeploy needed.';
+  if(!error) loadAffinityMoves();
+}
+
+let deityMoveOverrides = {}; // deity_id -> { power: row|null, control: row|null }
+
+async function loadDeityMoves(){
+  const { data, error } = await supabaseClient.from('deity_moves').select('*');
+  deityMoveOverrides = {};
+  (data || []).forEach(r => {
+    if(!deityMoveOverrides[r.deity_id]) deityMoveOverrides[r.deity_id] = {};
+    deityMoveOverrides[r.deity_id][r.kind] = r;
+  });
+  if(error) console.error('deity_moves load failed', error);
+
+  const rows = document.getElementById('deityMoveRows');
+  rows.innerHTML = FLAT_DEITIES.map(d => {
+    const o = deityMoveOverrides[d.id] || {};
+    const power = o.power || { name: '', power: '' };
+    const control = o.control || { name: '', power: '', swiftness_shave: '' };
+    return `<tr data-name="${esc(d.name.toLowerCase())}">
+      <td>${esc(d.name)}</td>
+      <td class="dim">${esc(d.pantheonLabel)}</td>
+      <td><input type="text" id="dmPowerName_${d.id}" value="${esc(power.name || '')}" placeholder="baseline" style="max-width:150px;"></td>
+      <td><input type="number" step="0.01" min="0.01" id="dmPowerVal_${d.id}" value="${power.power ?? ''}" style="max-width:80px;"></td>
+      <td><input type="text" id="dmControlName_${d.id}" value="${esc(control.name || '')}" placeholder="baseline" style="max-width:150px;"></td>
+      <td><input type="number" step="0.01" min="0.01" id="dmControlVal_${d.id}" value="${control.power ?? ''}" style="max-width:80px;"></td>
+      <td><input type="number" min="1" id="dmControlShave_${d.id}" value="${control.swiftness_shave ?? ''}" style="max-width:80px;"></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterDeityMoveRows(){
+  const q = document.getElementById('deityMoveSearch').value.trim().toLowerCase();
+  document.querySelectorAll('#deityMoveRows tr').forEach(tr => {
+    const name = tr.getAttribute('data-name') || '';
+    tr.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+}
+
+async function saveDeityMoves(){
+  const status = document.getElementById('deityMoveStatus');
+  const rows = [];
+  for(const d of FLAT_DEITIES){
+    const powerName = document.getElementById('dmPowerName_' + d.id).value.trim();
+    const powerVal = document.getElementById('dmPowerVal_' + d.id).value;
+    const controlName = document.getElementById('dmControlName_' + d.id).value.trim();
+    const controlVal = document.getElementById('dmControlVal_' + d.id).value;
+    const controlShave = document.getElementById('dmControlShave_' + d.id).value;
+    const had = deityMoveOverrides[d.id] || {};
+
+    // Only write a row if there's something to say (a name set) or a row
+    // already exists there (so clearing a name actually clears it via
+    // upsert rather than leaving stale text behind).
+    if(powerName || had.power){
+      rows.push({
+        deity_id: d.id, pantheon_id: d.pantheonId, kind: 'power',
+        name: powerName, power: powerVal === '' ? null : parseFloat(powerVal),
+        swiftness_shave: null, active: true, updated_at: new Date().toISOString()
+      });
+    }
+    if(controlName || had.control){
+      rows.push({
+        deity_id: d.id, pantheon_id: d.pantheonId, kind: 'control',
+        name: controlName, power: controlVal === '' ? null : parseFloat(controlVal),
+        swiftness_shave: controlShave === '' ? null : parseInt(controlShave, 10),
+        active: true, updated_at: new Date().toISOString()
+      });
+    }
+  }
+
+  status.className = 'status';
+  status.textContent = rows.length ? 'Saving…' : 'Nothing to save yet.';
+  if(!rows.length) return;
+  const { error } = await supabaseClient.from('deity_moves').upsert(rows, { onConflict: 'deity_id,kind' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. A blank name/power falls back to the affinity baseline. Applies to the next fight, no redeploy needed.';
+  if(!error) loadDeityMoves();
 }
 
 /* =====================================================================
