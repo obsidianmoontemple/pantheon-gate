@@ -146,6 +146,60 @@ textarea:focus{outline:none;border-color:var(--gold);}
 
 .affinity-glow{border-radius:50%;filter:drop-shadow(0 0 26px var(--glow-color, transparent));}
 
+/* ---------------- circles ---------------- */
+.circle-banner{margin:0 auto;display:block;}
+.circle-list-row{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--line);border-radius:3px;margin-bottom:8px;}
+.circle-list-row .cinfo{flex:1;text-align:left;}
+.circle-list-row .cname{font-family:'Cinzel',serif;font-size:14px;color:var(--parchment);}
+.circle-list-row .cblurb{font-size:12.5px;color:var(--parchment-dim);font-style:italic;margin-top:2px;}
+.circle-list-row .ccount{font-size:11px;color:var(--parchment-dim);margin-top:3px;letter-spacing:0.06em;text-transform:uppercase;}
+.circle-list-row .ractions{display:flex;flex-direction:column;gap:6px;}
+.circle-list-row .ractions button{padding:8px 12px;font-size:10.5px;white-space:nowrap;}
+.role-badge{display:inline-block;font-family:'Cinzel',serif;font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;border-radius:20px;padding:3px 10px;}
+.role-badge.high_priest, .role-badge.high_priestess{color:var(--ink);background:var(--gold-bright);}
+.role-badge.magus{color:var(--gold-bright);border:1px solid var(--gold);}
+.role-badge.initiate{color:var(--parchment-dim);border:1px solid var(--line);}
+.roster-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:3px;margin-bottom:6px;}
+.roster-row .rname{font-size:14px;color:var(--parchment);}
+.roster-row .ractions{display:flex;gap:6px;flex-wrap:wrap;}
+.roster-row .ractions button{padding:6px 10px;font-size:10px;}
+.request-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:3px;margin-bottom:6px;}
+.request-row .ractions button{padding:6px 10px;font-size:10px;}
+.shape-pick-row{display:flex;gap:14px;justify-content:center;margin-bottom:22px;flex-wrap:wrap;}
+.shape-pick{cursor:pointer;text-align:center;padding:10px;border:1px solid var(--line);border-radius:4px;width:80px;transition:border-color .15s;}
+.shape-pick:hover{border-color:var(--gold);}
+.shape-pick.selected{border-color:var(--gold-bright);box-shadow:0 0 0 1px var(--gold-bright);}
+.affinity-pick-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:22px;}
+.affinity-pick{cursor:pointer;text-align:center;padding:8px 4px;border:1px solid var(--line);border-radius:4px;width:74px;transition:border-color .15s;}
+.affinity-pick:hover{border-color:var(--gold);}
+.affinity-pick.selected{border-color:var(--gold-bright);box-shadow:0 0 0 1px var(--gold-bright);}
+.affinity-pick .dot{width:20px;height:20px;border-radius:50%;margin:0 auto 6px;}
+.affinity-pick .aname{font-size:10.5px;color:var(--parchment-dim);text-transform:capitalize;}
+.cap-pick-row{display:flex;gap:10px;justify-content:center;margin-bottom:22px;}
+.cap-pick{cursor:pointer;padding:10px 18px;border:1px solid var(--line);border-radius:3px;font-family:'Cinzel',serif;font-size:13px;color:var(--parchment);transition:border-color .15s;}
+.cap-pick:hover{border-color:var(--gold);}
+.cap-pick.selected{border-color:var(--gold-bright);background:rgba(200,162,74,0.08);color:var(--gold-bright);}
+.section-label{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--parchment-dim);text-align:center;margin:0 0 12px;}
+.msg-list{max-height:340px;overflow-y:auto;border:1px solid var(--line);border-radius:4px;padding:12px;margin-bottom:4px;}
+.msg-row{margin-bottom:12px;text-align:left;}
+.msg-row.mine{text-align:right;}
+.msg-meta{font-size:10.5px;color:var(--parchment-dim);letter-spacing:0.04em;margin-bottom:2px;}
+.msg-body{display:inline-block;background:rgba(200,162,74,0.08);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px;color:var(--parchment);max-width:85%;text-align:left;}
+.msg-row.mine .msg-body{background:rgba(200,162,74,0.16);border-color:var(--gold);}
+
+/* ---------------- altar ---------------- */
+.altar-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:16px 0;}
+.altar-plot{aspect-ratio:1;border:1px dashed var(--line);border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px;text-align:center;font-size:10px;line-height:1.3;color:var(--parchment-dim);}
+.altar-plot.empty.clickable{cursor:pointer;transition:border-color .15s;}
+.altar-plot.empty.clickable:hover{border-color:var(--gold);}
+.altar-plot.seed{border-style:solid;border-color:var(--line);background:rgba(122,148,87,0.14);}
+.altar-plot.seed.ready{border-color:var(--gold-bright);cursor:pointer;color:var(--gold-bright);}
+.altar-plot.decoration{border-style:solid;border-color:var(--gold);background:rgba(200,162,74,0.1);color:var(--parchment);}
+.altar-picker{border:1px solid var(--line);border-radius:4px;padding:14px;margin-bottom:16px;}
+.altar-catalog-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:3px;margin-bottom:6px;}
+.altar-catalog-row .aname{font-size:13.5px;color:var(--parchment);}
+.altar-catalog-row .adesc{font-size:11.5px;color:var(--parchment-dim);font-style:italic;}
+
 footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-style:italic;margin-top:50px;opacity:0.65;}
 </style>
 </head>
@@ -233,6 +287,54 @@ let answerDraft = '';
 let combatView = null;    // null | {step:'pick'} | {step:'loadout', ...} | {step:'battle', ...} | {step:'result', ...}
 let loadoutPicks = [];    // [{pantheonId, deityId}, ...] up to 5, chosen from full marks
 
+let circleView = null;    // null | {step:'locked'} | {step:'loading'} | {step:'browse'} | {step:'create'} | {step:'home'} | {step:'editBanner'}
+let myCircle = null;      // {circle, myRole, roster, pendingRequests} | null
+let browseCircles = [];
+let circleStatus = '';    // scratch status text for the browse/home views
+let inviteResults = [];
+let bannerIdCounter = 0;
+const FOUNDING_COST_ESSENCE = 500; // must match the `circle` edge function's constant
+const INVASION_COST_DEVOTION = 300; // must match the `circle` edge function's constant
+const CIRCLE_ACCENTS = ['#c8a24a','#e6c777','#a1462a','#6a5a8a','#3f7fa6','#7a9457','#8a8a94','#c9c9dd'];
+let circleDraft = {
+  name: '', blurb: '', memberCap: 25, leaderTitle: 'high_priest',
+  bannerShape: 'shield', bannerAffinity: 'light', bannerSecondary: CIRCLE_ACCENTS[1]
+};
+let circleShopItems = [];   // circle_shop_items, public catalog — loaded once and cached
+let chestAmountDraft = '';
+let messagesTab = 'feed'; // 'feed' | 'dm'
+let dmPeerId = null;
+let feedMessages = [];
+let dmMessages = [];
+let messageDraft = '';
+let messagesPollTimer = null;
+let altarData = null;         // full altar-view response for whichever circle is open
+let altarCircleId = null;
+let altarPickerPlot = null;   // plot_index currently showing the plant/decorate picker, or null
+let altarPickerTab = 'plant'; // 'plant' | 'decorate'
+let offerAmountDraft = '';
+let altarTickTimer = null;    // periodic re-render so countdowns stay live
+let titheAmountDraft = '';
+
+let dragonStatus = null;      // dragon-status response, while circleView.step === 'dragon'
+
+let invasionStatus = null;    // invasion-status response, while circleView.step === 'invasions'
+let invasionCircleNames = {}; // { circleId: name }, enriched client-side so reports read naturally
+
+let pvpView = null;           // null | {step:'locked'} | {step:'home'} | {step:'browse'} | {step:'leaderboard'} — top-level, NOT circle-scoped
+let pvpStatus = null;
+let pvpBrowseResults = [];
+let pvpBrowseQuery = '';
+let pvpLeaderboard = [];
+let pvpLastMatch = null;      // most recent resolved match, shown once as a result screen
+
+async function loadCircleShopItems(){
+  if(circleShopItems.length) return;
+  const { data, error } = await supabaseClient.from('circle_shop_items').select('*').eq('active', true).order('cost_devotion');
+  if(error){ console.error('circle shop load failed', error); return; }
+  circleShopItems = data || [];
+}
+
 async function init(){
   if(SUPABASE_URL.indexOf('PASTE_YOUR') === 0){
     document.getElementById('app').innerHTML = '<div class="card"><p class="hint" style="margin:0;">Backend not configured yet.</p></div>';
@@ -294,8 +396,12 @@ async function petitionHeaders(){
 }
 
 function render(){
+  if(!circleView || circleView.step !== 'messages') stopMessagesPolling();
+  if(!circleView || circleView.step !== 'altar') stopAltarTicking();
   if(guardian && petitionView){ renderPetition(); return; }
   if(guardian && combatView){ renderCombat(); return; }
+  if(guardian && pvpView){ renderPvpArena(); return; }
+  if(guardian && circleView){ renderCircle(); return; }
   guardian ? renderGuardianHome() : renderHatchFlow();
 }
 
@@ -416,6 +522,8 @@ function renderGuardianHome(){
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:14px;">
         <button onclick="openPetitionPicker()">Petition a god</button>
         <button class="secondary" onclick="openProving()">Enter the Gauntlet</button>
+        <button class="secondary" onclick="openCircle()">Your Circle</button>
+        <button class="secondary" onclick="openPvpArena()">The Arena</button>
       </div>
     </div>
 
@@ -912,6 +1020,1395 @@ async function finishCombat(){
   loadoutPicks = [];
   await loadGuardian();
   render();
+}
+
+/* ---------------- circles (Phase 4a skeleton) ---------------- */
+
+async function circleFetch(action, extra){
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/circle', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify(Object.assign({ action }, extra || {}))
+    });
+    return await resp.json();
+  }catch(e){
+    return { ok: false, error: 'Could not reach the relay: ' + e.message };
+  }
+}
+
+function roleLabel(role){
+  return { high_priest: 'High Priest', high_priestess: 'High Priestess', magus: 'Magus', initiate: 'Initiate' }[role] || role;
+}
+
+function bannerSVG(shape, primary, secondary, size){
+  size = size || 120;
+  const gid = 'bgrad' + (bannerIdCounter++);
+  const grad = `<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="${primary}"/><stop offset="100%" stop-color="${secondary}"/>
+  </linearGradient></defs>`;
+  let shapeEl;
+  if(shape === 'roundel'){
+    shapeEl = `<circle cx="50" cy="55" r="48" fill="url(#${gid})" stroke="#c8a24a" stroke-width="2"/>`;
+  } else if(shape === 'pennant'){
+    shapeEl = `<rect x="8" y="4" width="14" height="106" fill="#5a4e38"/>
+      <polygon points="22,14 96,55 22,96" fill="url(#${gid})" stroke="#c8a24a" stroke-width="2"/>`;
+  } else {
+    shapeEl = `<path d="M50 3 L92 18 L92 54 C92 88 71 108 50 116 C29 108 8 88 8 54 L8 18 Z" fill="url(#${gid})" stroke="#c8a24a" stroke-width="2"/>`;
+  }
+  return `<svg class="circle-banner" width="${size}" height="${Math.round(size*1.1)}" viewBox="0 0 100 120">${grad}${shapeEl}</svg>`;
+}
+
+async function openCircle(){
+  if(session.user.is_anonymous){
+    circleView = { step: 'locked' };
+    render();
+    return;
+  }
+  circleView = { step: 'loading' };
+  render();
+  await loadMyCircle();
+}
+
+async function loadMyCircle(){
+  circleStatus = '';
+  const data = await circleFetch('my-circle');
+  if(!data.ok){
+    circleStatus = data.error || 'Could not load your Circle.';
+    circleView = { step: 'browse' };
+    await loadBrowseCircles();
+    return;
+  }
+  myCircle = data;
+  if(data.circle){
+    await loadCircleShopItems();
+    circleView = { step: 'home' };
+    render();
+  }else{
+    circleView = { step: 'browse' };
+    await loadBrowseCircles();
+  }
+}
+
+async function loadBrowseCircles(){
+  const data = await circleFetch('browse');
+  browseCircles = data.ok ? (data.circles || []) : [];
+  if(!data.ok) circleStatus = data.error || 'Could not load Circles.';
+  render();
+}
+
+function backToGuardianHomeFromCircle(){
+  circleView = null;
+  circleStatus = '';
+  render();
+}
+
+function backToCircleFromForm(){
+  circleView = (myCircle && myCircle.circle) ? { step: 'home' } : { step: 'browse' };
+  render();
+}
+
+function renderCircle(){
+  if(circleView.step === 'locked') return renderCircleLocked();
+  if(circleView.step === 'loading') return renderCircleLoading();
+  if(circleView.step === 'browse') return renderCircleBrowse();
+  if(circleView.step === 'create' || circleView.step === 'editBanner') return renderCircleForm();
+  if(circleView.step === 'home') return renderCircleHome();
+  if(circleView.step === 'messages') return renderCircleMessages();
+  if(circleView.step === 'altar') return renderCircleAltar();
+  if(circleView.step === 'dragon') return renderCircleDragon();
+  if(circleView.step === 'invasions') return renderCircleInvasions();
+}
+
+function renderCircleLocked(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">Your Circle</h2>
+      <p class="hint" style="text-align:center;">Circles need a permanent account — claim this Seeker with an email first (see the card below), then come back.</p>
+      <button class="secondary" onclick="backToGuardianHomeFromCircle()">Back to your guardian</button>
+    </div>
+  `;
+}
+
+function renderCircleLoading(){
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="card"><p class="status">Reading the roll of Circles…</p></div>`;
+}
+
+function renderCircleBrowse(){
+  const app = document.getElementById('app');
+  const myRole = myCircle && myCircle.myRole;
+  const isOfficer = myRole === 'high_priest' || myRole === 'high_priestess' || myRole === 'magus';
+  const myCircleId = myCircle && myCircle.circle && myCircle.circle.id;
+
+  const rows = browseCircles.length
+    ? browseCircles.map(c => `
+      <div class="circle-list-row">
+        ${bannerSVG(c.banner_shape, c.banner_primary, c.banner_secondary, 54)}
+        <div class="cinfo">
+          <div class="cname">${esc(c.name)}</div>
+          <div class="cblurb">${esc(c.blurb || 'No blurb yet.')}</div>
+          <div class="ccount">${c.memberCount}/${c.member_cap} members · rank ${c.rank_score}</div>
+        </div>
+        <div class="ractions">
+          <button class="secondary" onclick="openCircleAltar('${esc(c.id)}')">Visit altar</button>
+          <button class="secondary" onclick="requestJoinCircle('${esc(c.id)}')">Request to join</button>
+          ${(isOfficer && c.id !== myCircleId) ? `<button class="secondary" onclick="doDeclareInvasion('${esc(c.id)}')">Invade — ${INVASION_COST_DEVOTION} Devotion</button>` : ''}
+        </div>
+      </div>
+    `).join('')
+    : '<p class="hint" style="text-align:center;">No Circles yet — found the first one.</p>';
+
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">Circles</h2>
+      <p class="hint" style="text-align:center;">Browse and request to join one, or found your own — founding costs ${FOUNDING_COST_ESSENCE} Essence. An officer can also invite you directly by your guardian's name. Circles are sorted by rank — this list doubles as the Circle leaderboard.</p>
+      ${circleStatus ? `<div class="status ${circleStatus.toLowerCase().includes('sent') ? 'ok' : 'err'}">${esc(circleStatus)}</div>` : ''}
+      <button style="margin-bottom:18px;" onclick="openCreateCircle()">Found a Circle</button>
+      ${rows}
+      <button class="secondary" style="margin-top:14px;" onclick="backToGuardianHomeFromCircle()">Back to your guardian</button>
+    </div>
+  `;
+}
+
+async function requestJoinCircle(circleId){
+  circleStatus = 'Sending request…';
+  render();
+  const data = await circleFetch('request-join', { circleId });
+  circleStatus = data.ok ? 'Request sent — waiting on an officer to approve it.' : (data.error || 'Could not send request.');
+  render();
+}
+
+function openCreateCircle(){
+  circleDraft = { name: '', blurb: '', memberCap: 25, leaderTitle: 'high_priest', bannerShape: 'shield', bannerAffinity: 'light', bannerSecondary: CIRCLE_ACCENTS[1] };
+  circleView = { step: 'create' };
+  render();
+}
+
+function openEditBanner(){
+  const c = myCircle.circle;
+  circleDraft = Object.assign({}, circleDraft, {
+    bannerShape: c.banner_shape, bannerAffinity: c.banner_affinity, bannerSecondary: c.banner_secondary, blurb: c.blurb || ''
+  });
+  circleView = { step: 'editBanner' };
+  render();
+}
+
+function pickLeaderTitle(v){ circleDraft.leaderTitle = v; render(); }
+function pickBannerShape(v){ circleDraft.bannerShape = v; render(); }
+function pickBannerAffinity(v){ circleDraft.bannerAffinity = v; render(); }
+function pickBannerSecondary(v){ circleDraft.bannerSecondary = v; render(); }
+function pickMemberCap(v){ circleDraft.memberCap = v; render(); }
+function onCircleNameInput(){ const el = document.getElementById('circleNameInput'); if(el) circleDraft.name = el.value; }
+function onCircleBlurbInput(){ const el = document.getElementById('circleBlurbInput'); if(el) circleDraft.blurb = el.value; }
+
+function renderCircleForm(){
+  const editing = circleView.step === 'editBanner';
+  const app = document.getElementById('app');
+  const preview = bannerSVG(circleDraft.bannerShape, AFFINITY_COLORS[circleDraft.bannerAffinity], circleDraft.bannerSecondary, 120);
+
+  const shapeRow = ['shield','pennant','roundel'].map(s => `
+    <div class="shape-pick ${circleDraft.bannerShape === s ? 'selected' : ''}" onclick="pickBannerShape('${s}')">
+      ${bannerSVG(s, AFFINITY_COLORS[circleDraft.bannerAffinity], circleDraft.bannerSecondary, 46)}
+      <div class="label" style="font-size:11px;margin-top:4px;text-transform:capitalize;">${s}</div>
+    </div>
+  `).join('');
+
+  const affinityRow = Object.keys(AFFINITY_COLORS).map(a => `
+    <div class="affinity-pick ${circleDraft.bannerAffinity === a ? 'selected' : ''}" onclick="pickBannerAffinity('${a}')">
+      <div class="dot" style="background:${AFFINITY_COLORS[a]};"></div>
+      <div class="aname">${a}</div>
+    </div>
+  `).join('');
+
+  const secondaryRow = CIRCLE_ACCENTS.map(c => `
+    <div class="swatch ${circleDraft.bannerSecondary === c ? 'selected' : ''}" style="background:${c};" onclick="pickBannerSecondary('${c}')"></div>
+  `).join('');
+
+  const capRow = [20,25,30].map(n => `<div class="cap-pick ${circleDraft.memberCap === n ? 'selected' : ''}" onclick="pickMemberCap(${n})">${n}</div>`).join('');
+
+  const leaderRow = [['high_priest','High Priest'],['high_priestess','High Priestess']].map(([v,l]) => `
+    <div class="choice ${circleDraft.leaderTitle === v ? 'selected' : ''}" onclick="pickLeaderTitle('${v}')" style="width:150px;">
+      <div class="label" style="margin-top:6px;">${l}</div>
+    </div>
+  `).join('');
+
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">${editing ? 'Redesign the banner' : 'Found a Circle'}</h2>
+      ${preview}
+      ${editing ? '' : `
+        <p class="section-label" style="margin-top:18px;">Name</p>
+        <input type="text" id="circleNameInput" maxlength="40" placeholder="Name your Circle" value="${esc(circleDraft.name)}" oninput="onCircleNameInput()">
+      `}
+      <p class="section-label">Blurb${editing ? '' : ' (shown to players browsing Circles)'}</p>
+      <textarea id="circleBlurbInput" maxlength="200" placeholder="What is this Circle about?" oninput="onCircleBlurbInput()">${esc(circleDraft.blurb)}</textarea>
+      ${editing ? '' : `
+        <p class="section-label">Your title</p>
+        <div class="choice-row">${leaderRow}</div>
+        <p class="section-label">Member cap</p>
+        <div class="cap-pick-row">${capRow}</div>
+      `}
+      <p class="section-label">Banner shape</p>
+      <div class="shape-pick-row">${shapeRow}</div>
+      <p class="section-label">Sigil affinity</p>
+      <div class="affinity-pick-row">${affinityRow}</div>
+      <p class="section-label">Accent color</p>
+      <div class="swatch-row">${secondaryRow}</div>
+      <div class="status" id="circleFormStatus"></div>
+      <button onclick="${editing ? 'submitUpdateBanner()' : 'submitFoundCircle()'}">${editing ? 'Save banner' : ('Found this Circle — ' + FOUNDING_COST_ESSENCE + ' Essence')}</button>
+      <button class="secondary" style="margin-top:10px;" onclick="backToCircleFromForm()">Cancel</button>
+    </div>
+  `;
+}
+
+async function submitFoundCircle(){
+  const status = document.getElementById('circleFormStatus');
+  const name = (circleDraft.name || '').trim();
+  if(name.length < 3){ status.className = 'status err'; status.textContent = 'Name needs at least 3 characters.'; return; }
+  status.className = 'status';
+  status.textContent = 'Founding…';
+  const data = await circleFetch('found', {
+    name, blurb: (circleDraft.blurb || '').trim(), memberCap: circleDraft.memberCap,
+    leaderTitle: circleDraft.leaderTitle, bannerShape: circleDraft.bannerShape,
+    bannerAffinity: circleDraft.bannerAffinity,
+    bannerPrimary: AFFINITY_COLORS[circleDraft.bannerAffinity], bannerSecondary: circleDraft.bannerSecondary
+  });
+  if(!data.ok){ status.className = 'status err'; status.textContent = data.error || 'Could not found the Circle.'; return; }
+  await loadGuardian();
+  await loadMyCircle();
+}
+
+async function submitUpdateBanner(){
+  const status = document.getElementById('circleFormStatus');
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const data = await circleFetch('update-banner', {
+    bannerShape: circleDraft.bannerShape, bannerAffinity: circleDraft.bannerAffinity,
+    bannerPrimary: AFFINITY_COLORS[circleDraft.bannerAffinity], bannerSecondary: circleDraft.bannerSecondary,
+    blurb: (circleDraft.blurb || '').trim()
+  });
+  if(!data.ok){ status.className = 'status err'; status.textContent = data.error || 'Could not save.'; return; }
+  await loadMyCircle();
+}
+
+function setCircleHomeStatus(text, ok){
+  const el = document.getElementById('circleHomeStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
+function renderCircleHome(){
+  const app = document.getElementById('app');
+  const c = myCircle.circle;
+  const myRole = myCircle.myRole;
+  const isLeader = myRole === 'high_priest' || myRole === 'high_priestess';
+  const isOfficer = isLeader || myRole === 'magus';
+  const roster = myCircle.roster || [];
+  const filledSlots = new Set(roster.map(m => m.role));
+
+  const rosterRows = roster.map(m => {
+    const g = m.guardians || {};
+    const isSelf = m.user_id === (session && session.user && session.user.id);
+    let actions = '';
+    if(isLeader && !isSelf){
+      if(m.role === 'initiate'){
+        actions = `<button class="secondary" onclick="doPromote('${m.user_id}','magus')">Promote to Magus</button>
+          <button class="secondary" onclick="doKick('${m.user_id}')">Kick</button>`;
+      }else if(m.role === 'magus'){
+        const slotBtns = ['high_priest','high_priestess'].filter(r => !filledSlots.has(r))
+          .map(r => `<button class="secondary" onclick="doPromote('${m.user_id}','${r}')">Make ${roleLabel(r)}</button>`).join('');
+        actions = `${slotBtns}<button class="secondary" onclick="doDemote('${m.user_id}')">Demote</button>
+          <button class="secondary" onclick="doKick('${m.user_id}')">Kick</button>`;
+      }else{
+        actions = `<button class="secondary" onclick="doDemote('${m.user_id}')">Demote</button>`;
+      }
+    }
+    return `<div class="roster-row">
+      <div>
+        <div class="rname">${esc(g.name || 'Unnamed')} <span class="role-badge ${m.role}">${roleLabel(m.role)}</span>${isSelf ? ' <em style="color:var(--parchment-dim);font-size:11px;">(you)</em>' : ''}</div>
+      </div>
+      <div class="ractions">${actions}</div>
+    </div>`;
+  }).join('');
+
+  let requestsBlock = '';
+  if(isOfficer){
+    const reqs = myCircle.pendingRequests || [];
+    const reqRows = reqs.length ? reqs.map(r => `
+      <div class="request-row">
+        <span>${esc(r.guardianName)} — ${r.direction === 'request' ? 'wants to join' : 'invited, awaiting reply'}</span>
+        <div class="ractions">
+          ${r.direction === 'request'
+            ? `<button class="secondary" onclick="doRespondRequest('${r.id}','approve')">Approve</button>
+               <button class="secondary" onclick="doRespondRequest('${r.id}','decline')">Decline</button>`
+            : `<button class="secondary" onclick="doCancelRequest('${r.id}')">Cancel invite</button>`}
+        </div>
+      </div>
+    `).join('') : '<p class="hint">Nothing pending.</p>';
+
+    requestsBlock = `
+      <h2 style="margin-top:26px;">Pending requests &amp; invites</h2>
+      ${reqRows}
+      <h2 style="margin-top:26px;">Invite a player</h2>
+      <input type="text" id="inviteSearchInput" placeholder="Search by guardian name…" oninput="onInviteSearchInput()">
+      <div id="inviteResultsBox">${renderInviteResults()}</div>
+    `;
+  }
+
+  const patron = myCircle.patron;
+  const patronLine = patron
+    ? `<p class="hint">Patron: <strong style="color:var(--gold-bright);">${esc(deityDisplayName(patron.pantheonId, patron.deityId))}</strong> — ${patron.count} member${patron.count === 1 ? '' : 's'} carry a full mark. (Flavor only for now — no bonus attached yet.)</p>`
+    : '';
+
+  const shopRows = circleShopItems.map(item => `
+    <div class="roster-row">
+      <div>
+        <div class="rname">${esc(item.name)}</div>
+        <div class="cblurb">${esc(item.description)} — ${item.cost_devotion} Devotion</div>
+      </div>
+      <div class="ractions"><button class="secondary" ${c.devotion_balance < item.cost_devotion ? 'disabled' : ''} onclick="doShopBuy('${esc(item.key)}')">Buy</button></div>
+    </div>
+  `).join('');
+
+  app.innerHTML = `
+    <div class="card" style="text-align:center;">
+      ${bannerSVG(c.banner_shape, c.banner_primary, c.banner_secondary, 140)}
+      <h2>${esc(c.name)}</h2>
+      <p class="hint">${esc(c.blurb || 'No blurb yet.')}</p>
+      <p class="ccount" style="text-align:center;">${roster.length}/${c.member_cap} members · Circle rank ${c.rank_score}</p>
+      <div class="role-badge ${myRole}" style="margin-top:6px;">Your rank: ${roleLabel(myRole)}</div>
+      ${patronLine}
+    </div>
+
+    <div class="card">
+      <h2>The Chest &amp; Devotion</h2>
+      <p class="hint">The Chest holds pooled Essence any member can deposit and officers can withdraw. Tithing burns your own Essence for good, but mints Devotion for the Circle Shop below.</p>
+      <p class="ccount" style="text-align:center;">Chest: ${c.chest_essence} Essence · Devotion: ${c.devotion_balance}</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;align-items:center;margin-top:10px;">
+        <input type="text" inputmode="numeric" id="chestAmountInput" placeholder="Amount" value="${esc(chestAmountDraft)}" oninput="onChestAmountInput()" style="width:110px;margin:0;">
+        <button class="secondary" onclick="doDepositChest()">Deposit</button>
+        ${isOfficer ? '<button class="secondary" onclick="doWithdrawChest()">Withdraw</button>' : ''}
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;align-items:center;margin-top:10px;">
+        <input type="text" inputmode="numeric" id="titheAmountInput" placeholder="Amount" value="${esc(titheAmountDraft)}" oninput="onTitheAmountInput()" style="width:110px;margin:0;">
+        <button class="secondary" onclick="doTithe()">Tithe for Devotion</button>
+      </div>
+      <div class="status" id="chestStatus"></div>
+    </div>
+
+    <div class="card">
+      <h2>The Circle Shop</h2>
+      <p class="hint">Spends the Circle's shared Devotion — anyone can buy, the blessing lands on your own guardian.</p>
+      ${shopRows || '<p class="hint">Nothing in stock yet.</p>'}
+    </div>
+
+    <div class="card">
+      <h2>Roster</h2>
+      ${rosterRows}
+      ${requestsBlock}
+      <div class="status" id="circleHomeStatus"></div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:16px;">
+        <button class="secondary" onclick="openCircleAltar(myCircle.circle.id)">Your Altar</button>
+        <button class="secondary" onclick="openCircleMessages()">Messages</button>
+        <button class="secondary" onclick="openCircleDragon()">Dragon's Lair</button>
+        <button class="secondary" onclick="openCircleInvasions()">Invasions</button>
+        ${isLeader ? '<button class="secondary" onclick="openEditBanner()">Redesign banner</button>' : ''}
+        <button class="secondary" onclick="doLeaveCircle()">Leave Circle</button>
+        ${isLeader ? '<button class="secondary" onclick="doDisbandCircle()">Disband Circle</button>' : ''}
+        <button class="secondary" onclick="backToGuardianHomeFromCircle()">Back to your guardian</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderInviteResults(){
+  if(!inviteResults.length) return '';
+  return inviteResults.map(r => `
+    <div class="roster-row">
+      <div class="rname">${esc(r.name)}</div>
+      <div class="ractions"><button class="secondary" onclick="doInvite('${esc(r.id)}')">Invite</button></div>
+    </div>
+  `).join('');
+}
+
+let inviteSearchTimer = null;
+function onInviteSearchInput(){
+  const el = document.getElementById('inviteSearchInput');
+  const query = el ? el.value : '';
+  if(inviteSearchTimer) clearTimeout(inviteSearchTimer);
+  inviteSearchTimer = setTimeout(async () => {
+    const data = await circleFetch('find-player', { query });
+    inviteResults = data.ok ? (data.results || []) : [];
+    const box = document.getElementById('inviteResultsBox');
+    if(box) box.innerHTML = renderInviteResults();
+  }, 350);
+}
+
+async function doInvite(targetGuardianId){
+  const data = await circleFetch('invite', { circleId: myCircle.circle.id, targetGuardianId });
+  setCircleHomeStatus(data.ok ? 'Invite sent.' : (data.error || 'Could not invite.'), data.ok);
+  if(data.ok) await loadMyCircle();
+}
+
+async function doRespondRequest(requestId, decision){
+  const data = await circleFetch('respond-request', { requestId, decision });
+  setCircleHomeStatus(data.ok ? 'Done.' : (data.error || 'Could not respond.'), data.ok);
+  await loadMyCircle();
+}
+
+async function doCancelRequest(requestId){
+  const data = await circleFetch('cancel-request', { requestId });
+  setCircleHomeStatus(data.ok ? 'Cancelled.' : (data.error || 'Could not cancel.'), data.ok);
+  await loadMyCircle();
+}
+
+async function doPromote(targetUserId, newRole){
+  const data = await circleFetch('promote', { targetUserId, newRole });
+  setCircleHomeStatus(data.ok ? 'Promoted.' : (data.error || 'Could not promote.'), data.ok);
+  if(data.ok) await loadMyCircle();
+}
+
+async function doDemote(targetUserId){
+  const data = await circleFetch('demote', { targetUserId });
+  setCircleHomeStatus(data.ok ? 'Demoted.' : (data.error || 'Could not demote.'), data.ok);
+  if(data.ok) await loadMyCircle();
+}
+
+async function doKick(targetUserId){
+  const data = await circleFetch('kick', { targetUserId });
+  setCircleHomeStatus(data.ok ? 'Removed from the Circle.' : (data.error || 'Could not kick.'), data.ok);
+  if(data.ok) await loadMyCircle();
+}
+
+async function doLeaveCircle(){
+  const data = await circleFetch('leave');
+  if(!data.ok){ setCircleHomeStatus(data.error || 'Could not leave.', false); return; }
+  myCircle = null;
+  circleView = { step: 'browse' };
+  circleStatus = 'You left the Circle.';
+  await loadBrowseCircles();
+}
+
+async function doDisbandCircle(){
+  const data = await circleFetch('disband');
+  if(!data.ok){ setCircleHomeStatus(data.error || 'Could not disband.', false); return; }
+  myCircle = null;
+  circleView = { step: 'browse' };
+  circleStatus = 'The Circle has been disbanded.';
+  await loadBrowseCircles();
+}
+
+/* ---------------- circle chest / devotion / shop ---------------- */
+
+function onChestAmountInput(){ const el = document.getElementById('chestAmountInput'); if(el) chestAmountDraft = el.value; }
+function onTitheAmountInput(){ const el = document.getElementById('titheAmountInput'); if(el) titheAmountDraft = el.value; }
+
+function setChestStatus(text, ok){
+  const el = document.getElementById('chestStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
+function parseAmount(raw){
+  const n = Math.floor(Number(raw));
+  return (Number.isInteger(n) && n > 0) ? n : null;
+}
+
+async function doDepositChest(){
+  const amount = parseAmount(chestAmountDraft);
+  if(!amount){ setChestStatus('Enter a positive whole number first.', false); return; }
+  const data = await circleFetch('deposit-chest', { amount });
+  setChestStatus(data.ok ? `Deposited ${amount} Essence into the Chest.` : (data.error || 'Could not deposit.'), data.ok);
+  if(data.ok){ chestAmountDraft = ''; await loadGuardian(); await loadMyCircle(); }
+}
+
+async function doWithdrawChest(){
+  const amount = parseAmount(chestAmountDraft);
+  if(!amount){ setChestStatus('Enter a positive whole number first.', false); return; }
+  const data = await circleFetch('withdraw-chest', { amount });
+  setChestStatus(data.ok ? `Withdrew ${amount} Essence from the Chest.` : (data.error || 'Could not withdraw.'), data.ok);
+  if(data.ok){ chestAmountDraft = ''; await loadGuardian(); await loadMyCircle(); }
+}
+
+async function doTithe(){
+  const amount = parseAmount(titheAmountDraft);
+  if(!amount){ setChestStatus('Enter a positive whole number first.', false); return; }
+  const data = await circleFetch('tithe', { amount });
+  setChestStatus(data.ok ? `Tithed ${amount} Essence — the Circle gained ${amount} Devotion.` : (data.error || 'Could not tithe.'), data.ok);
+  if(data.ok){ titheAmountDraft = ''; await loadGuardian(); await loadMyCircle(); }
+}
+
+async function doShopBuy(itemKey){
+  const data = await circleFetch('shop-buy', { itemKey });
+  setChestStatus(data.ok ? 'Blessing received.' : (data.error || 'Could not complete the purchase.'), data.ok);
+  if(data.ok){ await loadGuardian(); await loadMyCircle(); }
+}
+
+/* ---------------- circle messaging (Phase 4c) ----------------
+   No edge function involved here — reads and writes both go straight
+   through supabaseClient, gated entirely by the circle_messages RLS
+   policies (see migration 0016). Circle Chat = recipient_user_id null;
+   Direct Messages = a thread with one specific fellow member. */
+
+function rosterNameMap(){
+  const map = {};
+  ((myCircle && myCircle.roster) || []).forEach(m => { map[m.user_id] = (m.guardians && m.guardians.name) || 'Unknown'; });
+  return map;
+}
+
+async function openCircleMessages(){
+  if(!myCircle || !myCircle.circle) return;
+  circleView = { step: 'messages' };
+  messagesTab = 'feed';
+  dmPeerId = null;
+  messageDraft = '';
+  render();
+  await refreshFeedMessages();
+  startMessagesPolling();
+}
+
+function backToCircleHomeFromMessages(){
+  stopMessagesPolling();
+  circleView = { step: 'home' };
+  render();
+}
+
+function startMessagesPolling(){
+  stopMessagesPolling();
+  messagesPollTimer = setInterval(() => {
+    if(!circleView || circleView.step !== 'messages'){ stopMessagesPolling(); return; }
+    if(messagesTab === 'feed') refreshFeedMessages();
+    else if(dmPeerId) refreshDmMessages(dmPeerId);
+  }, 5000);
+}
+function stopMessagesPolling(){
+  if(messagesPollTimer){ clearInterval(messagesPollTimer); messagesPollTimer = null; }
+}
+
+async function refreshFeedMessages(){
+  if(!myCircle || !myCircle.circle) return;
+  const { data, error } = await supabaseClient
+    .from('circle_messages')
+    .select('id, sender_id, content, created_at')
+    .eq('circle_id', myCircle.circle.id)
+    .is('recipient_user_id', null)
+    .order('created_at', { ascending: true })
+    .limit(200);
+  if(error){ console.error('circle feed load failed', error); return; }
+  feedMessages = data || [];
+  if(circleView && circleView.step === 'messages' && messagesTab === 'feed') renderCircleMessages();
+}
+
+async function refreshDmMessages(peerId){
+  if(!myCircle || !myCircle.circle || !peerId || !session) return;
+  const me = session.user.id;
+  const { data, error } = await supabaseClient
+    .from('circle_messages')
+    .select('id, sender_id, recipient_user_id, content, created_at, read_at')
+    .eq('circle_id', myCircle.circle.id)
+    .or(`and(sender_id.eq.${me},recipient_user_id.eq.${peerId}),and(sender_id.eq.${peerId},recipient_user_id.eq.${me})`)
+    .order('created_at', { ascending: true })
+    .limit(200);
+  if(error){ console.error('dm load failed', error); return; }
+  dmMessages = data || [];
+
+  const unreadIds = dmMessages.filter(m => m.recipient_user_id === me && !m.read_at).map(m => m.id);
+  if(unreadIds.length){
+    await supabaseClient.from('circle_messages').update({ read_at: new Date().toISOString() }).in('id', unreadIds);
+  }
+  if(circleView && circleView.step === 'messages' && messagesTab === 'dm' && dmPeerId === peerId) renderCircleMessages();
+}
+
+function switchMessagesTab(tab){
+  messagesTab = tab;
+  dmPeerId = null;
+  render();
+  if(tab === 'feed') refreshFeedMessages();
+}
+
+async function pickDmPeer(peerId){
+  dmPeerId = peerId;
+  messagesTab = 'dm';
+  render();
+  await refreshDmMessages(peerId);
+}
+
+function onMessageInput(){ const el = document.getElementById('messageInput'); if(el) messageDraft = el.value; }
+
+function setMessagesStatus(text, ok){
+  const el = document.getElementById('messagesStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
+async function sendCircleMessage(){
+  const text = (messageDraft || '').trim();
+  if(!text) return;
+  if(messagesTab === 'dm' && !dmPeerId){ setMessagesStatus('Pick someone to message first.', false); return; }
+
+  const row = {
+    circle_id: myCircle.circle.id,
+    sender_id: session.user.id,
+    recipient_user_id: messagesTab === 'dm' ? dmPeerId : null,
+    content: text
+  };
+  const { error } = await supabaseClient.from('circle_messages').insert(row);
+  if(error){ setMessagesStatus(error.message, false); return; }
+
+  messageDraft = '';
+  const box = document.getElementById('messageInput');
+  if(box) box.value = '';
+  if(messagesTab === 'feed') await refreshFeedMessages();
+  else await refreshDmMessages(dmPeerId);
+}
+
+function renderCircleMessages(){
+  const app = document.getElementById('app');
+  const roster = (myCircle && myCircle.roster) || [];
+  const me = session.user.id;
+  const nameById = rosterNameMap();
+
+  const peerRows = roster.filter(m => m.user_id !== me).map(m => `
+    <div class="roster-row" style="cursor:pointer;${dmPeerId === m.user_id ? 'border-color:var(--gold-bright);' : ''}" onclick="pickDmPeer('${m.user_id}')">
+      <div class="rname">${esc(nameById[m.user_id])}</div>
+    </div>
+  `).join('') || '<p class="hint">No one else here yet.</p>';
+
+  const feedRows = feedMessages.map(m => `
+    <div class="msg-row ${m.sender_id === me ? 'mine' : ''}">
+      <div class="msg-meta">${esc(nameById[m.sender_id] || 'Unknown')} · ${new Date(m.created_at).toLocaleString()}</div>
+      <div class="msg-body">${esc(m.content)}</div>
+    </div>
+  `).join('') || '<p class="hint">No messages yet — say hello.</p>';
+
+  const dmRows = dmMessages.map(m => `
+    <div class="msg-row ${m.sender_id === me ? 'mine' : ''}">
+      <div class="msg-meta">${esc(nameById[m.sender_id] || 'Unknown')} · ${new Date(m.created_at).toLocaleString()}</div>
+      <div class="msg-body">${esc(m.content)}</div>
+    </div>
+  `).join('') || '<p class="hint">No messages yet.</p>';
+
+  const canSend = messagesTab === 'feed' || (messagesTab === 'dm' && dmPeerId);
+
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">${esc(myCircle.circle.name)} — Messages</h2>
+      <div class="choice-row" style="margin-bottom:16px;">
+        <div class="choice ${messagesTab === 'feed' ? 'selected' : ''}" style="width:140px;" onclick="switchMessagesTab('feed')"><div class="label">Circle Chat</div></div>
+        <div class="choice ${messagesTab === 'dm' ? 'selected' : ''}" style="width:140px;" onclick="switchMessagesTab('dm')"><div class="label">Direct Messages</div></div>
+      </div>
+
+      ${messagesTab === 'dm' ? `<p class="section-label">Whisper to</p><div style="margin-bottom:16px;">${peerRows}</div>` : ''}
+
+      <div class="msg-list">${messagesTab === 'feed' ? feedRows : (dmPeerId ? dmRows : '<p class="hint">Pick someone above to message.</p>')}</div>
+
+      ${canSend ? `
+        <div style="display:flex;gap:10px;margin-top:14px;">
+          <input type="text" id="messageInput" maxlength="500" placeholder="Say something…" value="${esc(messageDraft)}" oninput="onMessageInput()" onkeydown="if(event.key==='Enter') sendCircleMessage();" style="margin:0;flex:1;">
+          <button onclick="sendCircleMessage()">Send</button>
+        </div>
+      ` : ''}
+      <div class="status" id="messagesStatus"></div>
+      <button class="secondary" style="margin-top:16px;" onclick="backToCircleHomeFromMessages()">Back to your Circle</button>
+    </div>
+  `;
+}
+
+/* ---------------- circle altar (Phase 4d) ---------------- */
+
+function formatRemaining(msRemaining){
+  if(msRemaining <= 0) return 'Ready';
+  const totalMin = Math.ceil(msRemaining / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if(h >= 24){
+    const d = Math.floor(h / 24);
+    return `${d}d ${h % 24}h`;
+  }
+  if(h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+async function openCircleAltar(circleId){
+  circleView = { step: 'altar' };
+  altarCircleId = circleId;
+  altarData = null;
+  altarPickerPlot = null;
+  altarPickerTab = 'plant';
+  offerAmountDraft = '';
+  render();
+  await refreshAltar();
+  startAltarTicking();
+}
+
+async function refreshAltar(){
+  const data = await circleFetch('altar-view', { circleId: altarCircleId });
+  altarData = data.ok ? data : null;
+  if(circleView && circleView.step === 'altar') render();
+}
+
+function startAltarTicking(){
+  stopAltarTicking();
+  // Just a re-render so plot countdowns stay roughly live — refreshAltar()
+  // only needs to run when something actually changed server-side.
+  altarTickTimer = setInterval(() => {
+    if(!circleView || circleView.step !== 'altar'){ stopAltarTicking(); return; }
+    render();
+  }, 30000);
+}
+function stopAltarTicking(){
+  if(altarTickTimer){ clearInterval(altarTickTimer); altarTickTimer = null; }
+}
+
+function backFromAltar(){
+  stopAltarTicking();
+  circleView = (myCircle && myCircle.circle) ? { step: 'home' } : { step: 'browse' };
+  altarData = null;
+  render();
+}
+
+function setAltarStatus(text, ok){
+  const el = document.getElementById('altarStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
+function onAltarPlotClick(plotIndex){
+  if(!altarData || !altarData.isOwnCircle) return;
+  const plot = (altarData.plots || []).find(p => p.plot_index === plotIndex) || { content_type: 'empty' };
+  if(plot.content_type === 'decoration') return; // no remove/rearrange yet
+  if(plot.content_type === 'seed'){
+    const remaining = plot.ready_at ? (new Date(plot.ready_at) - new Date()) : 0;
+    if(remaining <= 0) doHarvestPlot(plotIndex);
+    return;
+  }
+  altarPickerPlot = (altarPickerPlot === plotIndex) ? null : plotIndex;
+  altarPickerTab = 'plant';
+  render();
+}
+
+function switchAltarPickerTab(tab){ altarPickerTab = tab; render(); }
+
+async function doPlantSeed(seedKey){
+  const data = await circleFetch('altar-plant', { plotIndex: altarPickerPlot, seedKey });
+  if(!data.ok){ setAltarStatus(data.error || 'Could not plant.', false); return; }
+  altarPickerPlot = null;
+  await refreshAltar();
+}
+
+async function doPlaceDecoration(decorationKey){
+  const data = await circleFetch('altar-place', { plotIndex: altarPickerPlot, decorationKey });
+  if(!data.ok){ setAltarStatus(data.error || 'Could not place.', false); return; }
+  altarPickerPlot = null;
+  await refreshAltar();
+}
+
+async function doHarvestPlot(plotIndex){
+  const data = await circleFetch('altar-harvest', { plotIndex });
+  if(!data.ok){ setAltarStatus(data.error || 'Could not harvest.', false); return; }
+  setAltarStatus(`Harvested ${data.devotionGained} Devotion.` + (data.foundDecoration ? ' A new decoration was found!' : ''), true);
+  await refreshAltar();
+}
+
+async function doBuyDecoration(key){
+  const data = await circleFetch('altar-buy-decoration', { decorationKey: key });
+  setAltarStatus(data.ok ? 'Purchased.' : (data.error || 'Could not buy.'), data.ok);
+  if(data.ok) await refreshAltar();
+}
+
+async function doClaimUnlock(key){
+  const data = await circleFetch('altar-claim-unlock', { decorationKey: key });
+  setAltarStatus(data.ok ? 'Unlocked!' : (data.error || 'Not yet.'), data.ok);
+  if(data.ok) await refreshAltar();
+}
+
+function onOfferAmountInput(){ const el = document.getElementById('offerAmountInput'); if(el) offerAmountDraft = el.value; }
+
+async function doLeaveOffering(){
+  const amount = parseAmount(offerAmountDraft);
+  if(!amount){ setAltarStatus('Enter a positive whole number first.', false); return; }
+  const data = await circleFetch('altar-offer', { circleId: altarCircleId, amount });
+  if(!data.ok){ setAltarStatus(data.error || 'Could not leave an offering.', false); return; }
+  offerAmountDraft = '';
+  setAltarStatus(`Left an offering of ${amount} Essence.`, true);
+  await loadGuardian();
+  await refreshAltar();
+}
+
+function renderCircleAltar(){
+  const app = document.getElementById('app');
+  if(!altarData){
+    app.innerHTML = `<div class="card"><p class="status">Approaching the altar…</p></div>`;
+    return;
+  }
+  const c = altarData.circle;
+  const isOwn = altarData.isOwnCircle;
+  const plots = altarData.plots || [];
+  const unlockedKeys = new Set((altarData.unlocks || []).map(u => u.decoration_key));
+  const placedKeys = new Set(plots.filter(p => p.content_type === 'decoration').map(p => p.content_key));
+  const decoByKey = {};
+  (altarData.decorationCatalog || []).forEach(d => { decoByKey[d.key] = d; });
+  const seedByKey = {};
+  (altarData.seedCatalog || []).forEach(s => { seedByKey[s.key] = s; });
+
+  const gridCells = Array.from({ length: 20 }, (_, i) => {
+    const plot = plots.find(p => p.plot_index === i) || { plot_index: i, content_type: 'empty' };
+    let cls = 'altar-plot ' + plot.content_type;
+    let label = '';
+    let clickable = false;
+    if(plot.content_type === 'empty'){
+      label = isOwn ? '+' : '';
+      clickable = isOwn;
+      if(clickable) cls += ' clickable';
+    }else if(plot.content_type === 'seed'){
+      const seed = seedByKey[plot.content_key];
+      const remaining = plot.ready_at ? (new Date(plot.ready_at) - new Date()) : 0;
+      if(remaining <= 0) cls += ' ready';
+      label = `${seed ? esc(seed.name) : 'Seed'}<br>${formatRemaining(remaining)}`;
+      clickable = isOwn && remaining <= 0;
+    }else if(plot.content_type === 'decoration'){
+      const dec = decoByKey[plot.content_key];
+      label = dec ? esc(dec.name) : 'Decoration';
+    }
+    return `<div class="${cls}" ${clickable ? `onclick="onAltarPlotClick(${i})"` : ''}>${label}</div>`;
+  }).join('');
+
+  let pickerBlock = '';
+  if(isOwn && altarPickerPlot !== null){
+    const plantRows = (altarData.seedCatalog || []).map(s => `
+      <div class="altar-catalog-row">
+        <div><div class="aname">${esc(s.name)}</div><div class="adesc">${s.cost_devotion} Devotion · grows in ${formatRemaining(s.grow_hours * 3600 * 1000)} · yields ${s.yield_devotion_min}-${s.yield_devotion_max} Devotion</div></div>
+        <button class="secondary" ${c.devotion_balance < s.cost_devotion ? 'disabled' : ''} onclick="doPlantSeed('${esc(s.key)}')">Plant</button>
+      </div>
+    `).join('') || '<p class="hint">No seeds in the catalog.</p>';
+
+    const ownedNotPlaced = (altarData.unlocks || []).filter(u => !placedKeys.has(u.decoration_key));
+    const decorateRows = ownedNotPlaced.map(u => {
+      const dec = decoByKey[u.decoration_key] || {};
+      return `<div class="altar-catalog-row">
+        <div><div class="aname">${esc(dec.name || u.decoration_key)}</div><div class="adesc">${esc(dec.description || '')}</div></div>
+        <button class="secondary" onclick="doPlaceDecoration('${esc(u.decoration_key)}')">Place</button>
+      </div>`;
+    }).join('') || `<p class="hint">Nothing in your Circle's inventory yet — buy, find, or unlock a decoration below.</p>`;
+
+    pickerBlock = `
+      <div class="altar-picker">
+        <div class="choice-row" style="margin-bottom:12px;">
+          <div class="choice ${altarPickerTab === 'plant' ? 'selected' : ''}" style="width:130px;" onclick="switchAltarPickerTab('plant')"><div class="label">Plant a Seed</div></div>
+          <div class="choice ${altarPickerTab === 'decorate' ? 'selected' : ''}" style="width:130px;" onclick="switchAltarPickerTab('decorate')"><div class="label">Place a Decoration</div></div>
+        </div>
+        ${altarPickerTab === 'plant' ? plantRows : decorateRows}
+      </div>
+    `;
+  }
+
+  let catalogBlock = '';
+  if(isOwn){
+    const rows = (altarData.decorationCatalog || []).map(d => {
+      const owned = unlockedKeys.has(d.key);
+      let action;
+      if(owned) action = '<span class="role-badge initiate">Owned</span>';
+      else if(d.source === 'buy') action = `<button class="secondary" ${c.devotion_balance < d.cost_devotion ? 'disabled' : ''} onclick="doBuyDecoration('${esc(d.key)}')">Buy — ${d.cost_devotion} Devotion</button>`;
+      else if(d.source === 'find') action = '<span class="hint" style="margin:0;">Found by harvesting</span>';
+      else action = `<button class="secondary" onclick="doClaimUnlock('${esc(d.key)}')">Claim</button>`;
+      return `<div class="altar-catalog-row">
+        <div><div class="aname">${esc(d.name)}</div><div class="adesc">${esc(d.description)}</div></div>
+        <div>${action}</div>
+      </div>`;
+    }).join('');
+    catalogBlock = `<h2 style="margin-top:26px;">Decoration Catalog</h2>${rows}`;
+  }
+
+  const guestbookRows = (altarData.offerings || []).map(o => `
+    <div class="roster-row"><div class="rname">${esc(o.visitorName)} left ${o.amount} Essence</div><div class="cblurb">${new Date(o.created_at).toLocaleString()}</div></div>
+  `).join('') || '<p class="hint">No offerings yet — be the first to visit.</p>';
+
+  const offerForm = !isOwn ? `
+    <h2 style="margin-top:26px;">Leave an Offering</h2>
+    <p class="hint">Spend your own Essence — it becomes Devotion for this Circle, not yours.</p>
+    <div style="display:flex;gap:10px;justify-content:center;align-items:center;">
+      <input type="text" inputmode="numeric" id="offerAmountInput" placeholder="Amount" value="${esc(offerAmountDraft)}" oninput="onOfferAmountInput()" style="width:110px;margin:0;">
+      <button class="secondary" onclick="doLeaveOffering()">Leave offering</button>
+    </div>
+  ` : '';
+
+  app.innerHTML = `
+    <div class="card" style="text-align:center;">
+      ${bannerSVG(c.banner_shape, c.banner_primary, c.banner_secondary, 120)}
+      <h2>${esc(c.name)}'s Altar</h2>
+      <p class="ccount">${altarData.memberCount} members · Devotion: ${c.devotion_balance}</p>
+    </div>
+
+    <div class="card">
+      <div class="altar-grid">${gridCells}</div>
+      ${pickerBlock}
+      <div class="status" id="altarStatus"></div>
+      ${catalogBlock}
+      <h2 style="margin-top:26px;">Guestbook</h2>
+      ${guestbookRows}
+      ${offerForm}
+      <div style="text-align:center;margin-top:20px;">
+        <button class="secondary" onclick="backFromAltar()">Back</button>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------------- circle dragons (Phase 5a) ---------------- */
+
+async function openCircleDragon(){
+  if(!myCircle || !myCircle.circle) return;
+  circleView = { step: 'dragon' };
+  dragonStatus = null;
+  render();
+  await refreshDragonStatus();
+}
+
+async function refreshDragonStatus(){
+  const data = await circleFetch('dragon-status');
+  dragonStatus = data.ok ? data : null;
+  if(circleView && circleView.step === 'dragon') render();
+}
+
+function backFromDragon(){
+  circleView = { step: 'home' };
+  render();
+}
+
+function setDragonActionStatus(text, ok){
+  const el = document.getElementById('dragonActionStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
+async function doDragonAttack(){
+  setDragonActionStatus('The blow lands…');
+  const data = await circleFetch('dragon-attack');
+  if(!data.ok){ setDragonActionStatus(data.error || 'Could not attack.', false); await refreshDragonStatus(); return; }
+
+  if(data.repelled){
+    setDragonActionStatus(`Repelled! The dragon hit back for ${data.damageTaken}${data.dragonCrit ? ' (critical!)' : ''} before your strike landed — no damage dealt this time.`, false);
+  }else if(data.defeated){
+    const bits = [`${esc(data.dragonName)} falls!`, `You dealt ${data.damage}${data.crit ? ' (critical!)' : ''} and took ${data.damageTaken} in return.`, `The Circle gained ${data.rewardDevotion} Devotion and ${data.rewardRank} rank.`];
+    if(data.yourShare) bits.push(`You personally earned ${data.yourShare} Essence.`);
+    if(data.decorationWon) bits.push('A new Altar decoration was won!');
+    setDragonActionStatus(bits.join(' '), true);
+  }else{
+    setDragonActionStatus(`Hit for ${data.damage}${data.crit ? ' (critical!)' : ''} — took ${data.damageTaken} in return. ${data.hpRemaining}/${data.hpTotal} HP left.`, true);
+  }
+  await loadGuardian();
+  await refreshDragonStatus();
+}
+
+function renderCircleDragon(){
+  const app = document.getElementById('app');
+  if(!dragonStatus){
+    app.innerHTML = `<div class="card"><p class="status">Approaching the lair…</p></div>`;
+    return;
+  }
+
+  const defeatedRows = (dragonStatus.defeatedDragons || []).map(d => `
+    <div class="roster-row"><div class="rname">${esc(d.name)}</div><span class="role-badge high_priest">Defeated</span></div>
+  `).join('') || '<p class="hint">No dragons defeated yet.</p>';
+
+  let mainBlock;
+  if(dragonStatus.ladderComplete){
+    mainBlock = '<p class="hint" style="text-align:center;">Your Circle has defeated every dragon on the ladder. Watch this space — more may join it later.</p>';
+  }else{
+    const fight = dragonStatus.activeFight;
+    const nextDragon = dragonStatus.nextDragon;
+    if(fight){
+      const pct = Math.max(0, Math.round((fight.hp_remaining / fight.hp_total) * 100));
+      const remaining = formatRemaining(new Date(fight.closes_at) - new Date());
+      mainBlock = `
+        <h2 style="text-align:center;">${esc(nextDragon ? nextDragon.name : 'The Dragon')}</h2>
+        <div class="hp-row"><span class="hp-name">HP</span><span class="hp-name">${fight.hp_remaining} / ${fight.hp_total}</span></div>
+        <div class="hp-bar-track"><div class="hp-bar-fill opponent" style="width:${pct}%;"></div></div>
+        <p class="hint" style="text-align:center;">Window closes in ${remaining}.</p>
+        <button onclick="doDragonAttack()">Attack</button>
+      `;
+    }else if(dragonStatus.usedThisPhase){
+      mainBlock = `<p class="hint" style="text-align:center;">Your Circle has already used this moon phase's dragon window. Try again next phase.</p>`;
+    }else{
+      mainBlock = `
+        <h2 style="text-align:center;">${esc(nextDragon.name)}</h2>
+        <p class="hint" style="text-align:center;">${nextDragon.hp_pool} HP · no window open yet — the first attack opens one.</p>
+        <button onclick="doDragonAttack()">Attack</button>
+      `;
+    }
+  }
+
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">Dragon's Lair</h2>
+      <p class="hint" style="text-align:center;">Tier ${dragonStatus.highestTierDefeated + 1} of the ladder. One window per moon phase — any member can open or join it, and the dragon fights back.</p>
+      ${mainBlock}
+      <div class="status" id="dragonActionStatus"></div>
+    </div>
+    <div class="card">
+      <h2>Defeated</h2>
+      ${defeatedRows}
+      <button class="secondary" style="margin-top:14px;" onclick="backFromDragon()">Back to your Circle</button>
+    </div>
+  `;
+}
+
+/* ---------------- circle invasions (Phase 5b) ---------------- */
+
+async function openCircleInvasions(){
+  if(!myCircle || !myCircle.circle) return;
+  circleView = { step: 'invasions' };
+  invasionStatus = null;
+  render();
+  await refreshInvasionStatus();
+}
+
+async function refreshInvasionStatus(){
+  const data = await circleFetch('invasion-status');
+  invasionStatus = data.ok ? data : null;
+
+  if(data.ok){
+    const ids = new Set();
+    (data.pending || []).forEach(inv => { ids.add(inv.attacker_circle_id); ids.add(inv.defender_circle_id); });
+    (data.history || []).forEach(inv => { ids.add(inv.attacker_circle_id); ids.add(inv.defender_circle_id); });
+    if(ids.size){
+      const { data: rows } = await supabaseClient.from('circles').select('id, name').in('id', Array.from(ids));
+      (rows || []).forEach(r => { invasionCircleNames[r.id] = r.name; });
+    }
+  }
+  if(circleView && circleView.step === 'invasions') render();
+}
+
+function backFromInvasions(){
+  circleView = { step: 'home' };
+  render();
+}
+
+function setInvasionActionStatus(text, ok){
+  const el = document.getElementById('invasionActionStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
+async function doDeclareInvasion(targetCircleId){
+  circleStatus = 'Declaring invasion…';
+  render();
+  const data = await circleFetch('invasion-declare', { targetCircleId });
+  circleStatus = data.ok ? "Invasion declared — check your Circle's Invasions panel." : (data.error || 'Could not declare invasion.');
+  render();
+  if(data.ok) await loadMyCircle();
+}
+
+async function doCommitInvasion(invasionId){
+  const data = await circleFetch('invasion-commit', { invasionId });
+  setInvasionActionStatus(data.ok ? `Committed ${Math.round(data.power)} power to the ${data.side === 'attacker' ? 'attack' : 'defense'}.` : (data.error || 'Could not commit.'), data.ok);
+  if(data.ok) await refreshInvasionStatus();
+}
+
+function renderCircleInvasions(){
+  const app = document.getElementById('app');
+  if(!invasionStatus){
+    app.innerHTML = `<div class="card"><p class="status">Reading the war council's notes…</p></div>`;
+    return;
+  }
+
+  const myCircleId = myCircle.circle.id;
+  const pending = invasionStatus.pending || [];
+  const pendingBlocks = pending.length ? pending.map(inv => {
+    const asAttacker = inv.attacker_circle_id === myCircleId;
+    const oppId = asAttacker ? inv.defender_circle_id : inv.attacker_circle_id;
+    const oppName = invasionCircleNames[oppId] || 'an unknown Circle';
+    const closesIn = formatRemaining(new Date(inv.resolves_at) - new Date());
+    return `
+      <div class="card">
+        <h2 style="text-align:center;">${asAttacker ? 'Attacking ' + esc(oppName) : 'Under invasion by ' + esc(oppName)}</h2>
+        <p class="hint" style="text-align:center;">Resolves in ${closesIn}. Committing adds your guardian's full power to your side — anyone can, more than once isn't needed.</p>
+        <button onclick="doCommitInvasion('${esc(inv.id)}')">Commit your guardian</button>
+      </div>
+    `;
+  }).join('') : '<div class="card"><p class="hint" style="text-align:center;">No invasion in progress.</p></div>';
+
+  const historyRows = (invasionStatus.history || []).map(inv => {
+    const asAttacker = inv.attacker_circle_id === myCircleId;
+    const oppId = asAttacker ? inv.defender_circle_id : inv.attacker_circle_id;
+    const oppName = invasionCircleNames[oppId] || 'an unknown Circle';
+    const won = inv.winner_circle_id === myCircleId;
+    return `<div class="roster-row">
+      <div><div class="rname">${asAttacker ? 'Attacked' : 'Defended against'} ${esc(oppName)} — ${won ? 'Victory' : 'Defeat'}</div>
+      <div class="cblurb">${new Date(inv.resolved_at).toLocaleString()} · ${inv.essence_seized} Essence seized · ${won ? '+' : '-'}${inv.rank_delta} rank</div></div>
+    </div>`;
+  }).join('') || '<p class="hint">No invasions yet.</p>';
+
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">Invasions</h2>
+      <p class="hint" style="text-align:center;">Officers declare from another Circle's listing while browsing. Once a fight is underway, any member on either side can commit.</p>
+      <div class="status" id="invasionActionStatus"></div>
+    </div>
+    ${pendingBlocks}
+    <div class="card">
+      <h2>History</h2>
+      ${historyRows}
+      <button class="secondary" style="margin-top:14px;" onclick="backFromInvasions()">Back to your Circle</button>
+    </div>
+  `;
+}
+
+/* ---------------- raw PvP (Phase 5c) ---------------- */
+
+async function pvpFetch(action, extra){
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/pvp', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify(Object.assign({ action }, extra || {}))
+    });
+    return await resp.json();
+  }catch(e){
+    return { ok: false, error: 'Could not reach the relay: ' + e.message };
+  }
+}
+
+async function openPvpArena(){
+  if(session.user.is_anonymous){
+    pvpView = { step: 'locked' };
+    render();
+    return;
+  }
+  pvpView = { step: 'home' };
+  pvpStatus = null;
+  pvpLastMatch = null;
+  render();
+  await refreshPvpStatus();
+}
+
+async function refreshPvpStatus(){
+  const data = await pvpFetch('status');
+  pvpStatus = data.ok ? data : null;
+  if(pvpView && pvpView.step === 'home') render();
+}
+
+function backFromPvp(){
+  pvpView = null;
+  pvpBrowseResults = [];
+  pvpBrowseQuery = '';
+  render();
+}
+
+function backFromPvpSub(){
+  pvpView = { step: 'home' };
+  render();
+}
+
+function setPvpActionStatus(text, ok){
+  const el = document.getElementById('pvpActionStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
+function openPvpBrowse(){
+  pvpView = { step: 'browse' };
+  pvpBrowseResults = [];
+  pvpBrowseQuery = '';
+  render();
+  loadPvpLineup();
+}
+
+async function loadPvpLineup(){
+  const data = await pvpFetch('browse');
+  pvpBrowseResults = data.ok ? (data.results || []) : [];
+  if(pvpView && pvpView.step === 'browse') render();
+}
+
+let pvpSearchTimer = null;
+function onPvpSearchInput(){
+  const el = document.getElementById('pvpSearchInput');
+  pvpBrowseQuery = el ? el.value : '';
+  if(pvpSearchTimer) clearTimeout(pvpSearchTimer);
+  pvpSearchTimer = setTimeout(async () => {
+    if(pvpBrowseQuery.trim().length >= 2){
+      const data = await pvpFetch('browse', { query: pvpBrowseQuery.trim() });
+      pvpBrowseResults = data.ok ? (data.results || []) : [];
+    }else{
+      await loadPvpLineup();
+      return;
+    }
+    if(pvpView && pvpView.step === 'browse') render();
+  }, 350);
+}
+
+async function openPvpLeaderboard(){
+  pvpView = { step: 'leaderboard' };
+  pvpLeaderboard = [];
+  render();
+  const data = await pvpFetch('leaderboard');
+  pvpLeaderboard = data.ok ? (data.leaderboard || []) : [];
+  if(pvpView && pvpView.step === 'leaderboard') render();
+}
+
+async function doPvpChallenge(targetUserId){
+  const data = await pvpFetch('challenge', { targetUserId });
+  if(!data.ok){ setPvpActionStatus(data.error || 'Could not send challenge.', false); return; }
+  pvpView = { step: 'home' };
+  render();
+  setPvpActionStatus('Challenge sent.', true);
+  await refreshPvpStatus();
+}
+
+async function doPvpRespond(challengeId, decision){
+  setPvpActionStatus(decision === 'accept' ? 'The duel begins…' : 'Declining…');
+  const data = await pvpFetch('respond', { challengeId, decision });
+  if(!data.ok){ setPvpActionStatus(data.error || 'Could not respond.', false); return; }
+  if(decision === 'decline'){ setPvpActionStatus('Challenge declined.', true); await refreshPvpStatus(); return; }
+  pvpLastMatch = data.match;
+  await refreshPvpStatus();
+}
+
+async function doPvpCancel(challengeId){
+  const data = await pvpFetch('cancel', { challengeId });
+  setPvpActionStatus(data.ok ? 'Challenge cancelled.' : (data.error || 'Could not cancel.'), data.ok);
+  if(data.ok) await refreshPvpStatus();
+}
+
+function dismissPvpMatch(){
+  pvpLastMatch = null;
+  render();
+}
+
+function renderPvpArena(){
+  if(pvpView.step === 'locked') return renderPvpLocked();
+  if(pvpView.step === 'home') return renderPvpHome();
+  if(pvpView.step === 'browse') return renderPvpBrowse();
+  if(pvpView.step === 'leaderboard') return renderPvpLeaderboard();
+}
+
+function renderPvpLocked(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">The Arena</h2>
+      <p class="hint" style="text-align:center;">Duels need a permanent account — claim this Seeker with an email first (see the card on your guardian's page), then come back.</p>
+      <button class="secondary" onclick="backFromPvp()">Back to your guardian</button>
+    </div>
+  `;
+}
+
+function renderPvpHome(){
+  const app = document.getElementById('app');
+  if(!pvpStatus){
+    app.innerHTML = `<div class="card"><p class="status">Walking the arena floor…</p></div>`;
+    return;
+  }
+
+  if(pvpLastMatch){
+    const m = pvpLastMatch;
+    const won = m.winner_user_id === session.user.id;
+    const yourOldPos = won ? m.winner_old_position : m.loser_old_position;
+    const yourNewPos = won ? m.winner_new_position : m.loser_new_position;
+    app.innerHTML = `
+      <div class="card verdict-card">
+        <div class="verdict-badge ${won ? 'full' : 'partial'}">${won ? 'Victory' : 'Defeat'}</div>
+        <p class="verdict-text">${won ? 'You won the duel.' : 'You lost the duel.'}</p>
+        <p class="gain-note">${m.swapped ? `Ranks swapped — you moved from #${yourOldPos} to #${yourNewPos}.` : `No change in rank — #${yourOldPos} was already correctly ordered.`}</p>
+        <button onclick="dismissPvpMatch()">Continue</button>
+      </div>
+    `;
+    return;
+  }
+
+  const outgoing = pvpStatus.outgoing;
+  const incoming = pvpStatus.incoming;
+
+  const outgoingBlock = outgoing ? `
+    <div class="card">
+      <h2>Your Challenge</h2>
+      <p class="hint">Waiting for a response — expires if ignored.</p>
+      <button class="secondary" onclick="doPvpCancel('${esc(outgoing.id)}')">Cancel</button>
+    </div>
+  ` : '';
+
+  const incomingBlock = incoming ? `
+    <div class="card">
+      <h2>Incoming Challenge</h2>
+      <p class="hint">Someone has challenged you to a duel. Accepting resolves it immediately.</p>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button onclick="doPvpRespond('${esc(incoming.id)}','accept')">Accept</button>
+        <button class="secondary" onclick="doPvpRespond('${esc(incoming.id)}','decline')">Decline</button>
+      </div>
+    </div>
+  ` : '';
+
+  const historyRows = (pvpStatus.history || []).map(m => {
+    const won = m.winner_user_id === session.user.id;
+    return `<div class="roster-row">
+      <div><div class="rname">${won ? 'Victory' : 'Defeat'}</div>
+      <div class="cblurb">${new Date(m.resolved_at).toLocaleString()}${m.swapped ? ' · ranks swapped' : ''}</div></div>
+    </div>`;
+  }).join('') || '<p class="hint">No duels yet.</p>';
+
+  app.innerHTML = `
+    <div class="card" style="text-align:center;">
+      <h2>The Arena</h2>
+      <p class="hint">Your ladder position: <strong style="color:var(--gold-bright);">${pvpStatus.ladderPosition ? '#' + pvpStatus.ladderPosition : 'unranked — play a duel to join the ladder'}</strong></p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <button onclick="openPvpBrowse()">Find an opponent</button>
+        <button class="secondary" onclick="openPvpLeaderboard()">Leaderboard</button>
+      </div>
+      <div class="status" id="pvpActionStatus"></div>
+    </div>
+    ${outgoingBlock}
+    ${incomingBlock}
+    <div class="card">
+      <h2>Recent Duels</h2>
+      ${historyRows}
+      <button class="secondary" style="margin-top:14px;" onclick="backFromPvp()">Back to your guardian</button>
+    </div>
+  `;
+}
+
+function renderPvpBrowse(){
+  const app = document.getElementById('app');
+  const rows = pvpBrowseResults.map(r => `
+    <div class="roster-row">
+      <div class="rname">${esc(r.name)}${r.ladder_position ? ' <span class="role-badge initiate">#' + r.ladder_position + '</span>' : ''}</div>
+      <div class="ractions"><button class="secondary" onclick="doPvpChallenge('${esc(r.owner_user_id)}')">Challenge</button></div>
+    </div>
+  `).join('') || '<p class="hint">No one found.</p>';
+
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">Find an Opponent</h2>
+      <p class="hint" style="text-align:center;">Search by guardian name, or leave it blank to browse the ladder near your own position.</p>
+      <input type="text" id="pvpSearchInput" placeholder="Search by guardian name…" value="${esc(pvpBrowseQuery)}" oninput="onPvpSearchInput()">
+      ${rows}
+      <div class="status" id="pvpActionStatus"></div>
+      <button class="secondary" style="margin-top:14px;" onclick="backFromPvpSub()">Back</button>
+    </div>
+  `;
+}
+
+function renderPvpLeaderboard(){
+  const app = document.getElementById('app');
+  const rows = (pvpLeaderboard || []).map(g => `
+    <div class="roster-row"><div class="rname">#${g.ladder_position} ${esc(g.name)}</div></div>
+  `).join('') || '<p class="hint">The ladder is empty so far — be the first to duel.</p>';
+
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">The Ladder</h2>
+      ${rows}
+      <button class="secondary" style="margin-top:14px;" onclick="backFromPvpSub()">Back</button>
+    </div>
+  `;
 }
 
 init();
