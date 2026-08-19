@@ -492,12 +492,12 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>Deity signature moves (optional overrides)</h2>
-        <p class="hint">Give a specific deity its own Power and/or Control move instead of sharing the affinity baseline above. Leave a name blank to fall back to the baseline for that slot — nothing needs filling in for every deity, only the ones you want to stand out.</p>
+        <p class="hint">Give a specific deity its own Power and/or Control move instead of sharing the affinity baseline above. Leave a name blank to fall back to the baseline for that slot — nothing needs filling in for every deity, only the ones you want to stand out. A move can also carry a real triggered effect on top of its damage: <code>lifesteal_pct</code> (heal this % of the hit's damage), <code>stun_pct</code> (this % chance to skip the target's next action), <code>crit_bonus_pct</code> (+this many points of crit chance on this hit), or <code>burn_flat</code> (this much ongoing damage/round added to the target for the rest of the fight). Any other effect key is recorded but does nothing in combat yet.</p>
         <input class="search-box" type="text" id="deityMoveSearch" placeholder="Search by name…">
         <div class="scroll-table">
           <table>
-            <thead><tr><th>God</th><th>Pantheon</th><th>Power name</th><th>Power</th><th>Control name</th><th>Control</th><th>Control shave</th></tr></thead>
-            <tbody id="deityMoveRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+            <thead><tr><th>God</th><th>Pantheon</th><th>Power name</th><th>Power</th><th>Power effect key</th><th>Power effect amt</th><th>Control name</th><th>Control</th><th>Control shave</th><th>Control effect key</th><th>Control effect amt</th></tr></thead>
+            <tbody id="deityMoveRows"><tr><td colspan="11">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -511,12 +511,12 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-blessings">
       <div class="card">
         <h2>Deity Blessings (placeholders — approve with Active)</h2>
-        <p class="hint">A one-time stat bonus applied the moment a guardian's mark with this deity is newly earned or upgraded to FULL — on top of the normal mark reward, never reapplied on repeat petitions. Every row ships inactive on purpose — set a stat/amount and check Active when you're ready for it to go live. Blank = no blessing for that deity, same as leaving it unset.</p>
+        <p class="hint">Two independent bonuses, either or both: a Stat key/amount is a one-time permanent bump applied the moment a guardian's mark with this deity is newly earned or upgraded to FULL (never reapplied on repeat petitions). An Effect key/amount is a passive ability active for the guardian's <em>entire</em> fight whenever that deity's full mark is actually fielded in the loadout — <code>crit_bonus_pct</code> (+points of crit chance, all fight), <code>lifesteal_pct</code> (heal this % of all damage dealt, all fight), <code>ward_bonus_pct</code> (this % more effective Ward against incoming hits, all fight), or <code>essence_bonus_pct</code> (this % bonus Essence on a Gauntlet win). Any other effect key is recorded but inert. Every row ships inactive on purpose — fill in what you want and check Active when you're ready to go live.</p>
         <input class="search-box" type="text" id="blessingSearch" placeholder="Search by name…">
         <div class="scroll-table">
           <table>
-            <thead><tr><th>God</th><th>Pantheon</th><th>Name</th><th>Description</th><th>Stat key</th><th>Stat amount</th><th>Active</th></tr></thead>
-            <tbody id="blessingRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+            <thead><tr><th>God</th><th>Pantheon</th><th>Name</th><th>Description</th><th>Stat key</th><th>Stat amount</th><th>Effect key</th><th>Effect amount</th><th>Active</th></tr></thead>
+            <tbody id="blessingRows"><tr><td colspan="9">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -530,13 +530,13 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-guardianitems">
       <div class="card">
         <h2>Guardian item catalog</h2>
-        <p class="hint">What God Shards can be crafted into. A stat boost applies immediately at craft time. A cosmetic is owned forever — ownership is the effect. A consumable sits in inventory until a player uses it; the effect key is recorded honestly but needs matching game logic elsewhere before it does anything.</p>
+        <p class="hint">What God Shards can be crafted into. A stat boost applies immediately at craft time. A cosmetic is owned forever — ownership is the effect. A consumable sits in inventory until a player uses it; its effect key is recorded honestly but needs matching game logic elsewhere before it does anything. An enchantment is owned forever like a cosmetic, but grants a real passive combat ability for as long as it's owned: <code>crit_bonus_pct</code>, <code>lifesteal_pct</code>, <code>ward_bonus_pct</code>, or <code>essence_bonus_pct</code> (same wired vocabulary and all-fight behavior as Deity Blessings' Effect key) — any other effect key is recorded but inert.</p>
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr>
-              <th>Key</th><th>Name</th><th>Description</th><th>Type</th><th>Stat key</th><th>Stat amount</th><th>Consumable effect</th><th>Shard cost</th><th>Active</th>
+              <th>Key</th><th>Name</th><th>Description</th><th>Type</th><th>Stat key</th><th>Stat amount</th><th>Consumable effect</th><th>Enchant effect key</th><th>Enchant effect amt</th><th>Shard cost</th><th>Active</th>
             </tr></thead>
-            <tbody id="guardianItemRows"><tr><td colspan="9">Loading…</td></tr></tbody>
+            <tbody id="guardianItemRows"><tr><td colspan="11">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -552,6 +552,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
               <option value="stat_boost">Stat boost</option>
               <option value="cosmetic">Cosmetic</option>
               <option value="consumable">Consumable</option>
+              <option value="enchantment">Enchantment</option>
             </select>
           </div>
           <div class="field"><label>Shard cost</label><input type="number" min="1" id="newGuardianItemCost" style="max-width:110px;"></div>
@@ -569,6 +570,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           </div>
           <div class="field" id="newGuardianItemStatAmountField"><label>Stat amount</label><input type="number" min="1" id="newGuardianItemStatAmount" style="max-width:110px;"></div>
           <div class="field" id="newGuardianItemEffectField" style="display:none;"><label>Consumable effect key</label><input type="text" id="newGuardianItemEffect" placeholder="e.g. essence_surge" style="max-width:180px;"></div>
+          <div class="field" id="newGuardianItemEnchantKeyField" style="display:none;"><label>Enchant effect key</label><input type="text" id="newGuardianItemEnchantKey" placeholder="e.g. crit_bonus_pct" style="max-width:180px;"></div>
+          <div class="field" id="newGuardianItemEnchantAmountField" style="display:none;"><label>Enchant effect amount</label><input type="number" step="0.01" id="newGuardianItemEnchantAmount" style="max-width:130px;"></div>
         </div>
         <div class="field" style="max-width:none;">
           <label>Description (shown to players)</label>
@@ -3064,16 +3067,20 @@ async function loadDeityMoves(){
   const rows = document.getElementById('deityMoveRows');
   rows.innerHTML = FLAT_DEITIES.map(d => {
     const o = deityMoveOverrides[d.id] || {};
-    const power = o.power || { name: '', power: '' };
-    const control = o.control || { name: '', power: '', swiftness_shave: '' };
+    const power = o.power || { name: '', power: '', effect_key: '', effect_amount: '' };
+    const control = o.control || { name: '', power: '', swiftness_shave: '', effect_key: '', effect_amount: '' };
     return `<tr data-name="${esc(d.name.toLowerCase())}">
       <td>${esc(d.name)}</td>
       <td class="dim">${esc(d.pantheonLabel)}</td>
       <td><input type="text" id="dmPowerName_${d.id}" value="${esc(power.name || '')}" placeholder="baseline" style="max-width:150px;"></td>
       <td><input type="number" step="0.01" min="0.01" id="dmPowerVal_${d.id}" value="${power.power ?? ''}" style="max-width:80px;"></td>
+      <td><input type="text" id="dmPowerEffectKey_${d.id}" value="${esc(power.effect_key || '')}" placeholder="e.g. stun_pct" style="max-width:130px;"></td>
+      <td><input type="number" step="0.01" id="dmPowerEffectAmt_${d.id}" value="${power.effect_amount ?? ''}" style="max-width:90px;"></td>
       <td><input type="text" id="dmControlName_${d.id}" value="${esc(control.name || '')}" placeholder="baseline" style="max-width:150px;"></td>
       <td><input type="number" step="0.01" min="0.01" id="dmControlVal_${d.id}" value="${control.power ?? ''}" style="max-width:80px;"></td>
       <td><input type="number" min="1" id="dmControlShave_${d.id}" value="${control.swiftness_shave ?? ''}" style="max-width:80px;"></td>
+      <td><input type="text" id="dmControlEffectKey_${d.id}" value="${esc(control.effect_key || '')}" placeholder="e.g. burn_flat" style="max-width:130px;"></td>
+      <td><input type="number" step="0.01" id="dmControlEffectAmt_${d.id}" value="${control.effect_amount ?? ''}" style="max-width:90px;"></td>
     </tr>`;
   }).join('');
 }
@@ -3092,9 +3099,13 @@ async function saveDeityMoves(){
   for(const d of FLAT_DEITIES){
     const powerName = document.getElementById('dmPowerName_' + d.id).value.trim();
     const powerVal = document.getElementById('dmPowerVal_' + d.id).value;
+    const powerEffectKey = document.getElementById('dmPowerEffectKey_' + d.id).value.trim();
+    const powerEffectAmt = document.getElementById('dmPowerEffectAmt_' + d.id).value;
     const controlName = document.getElementById('dmControlName_' + d.id).value.trim();
     const controlVal = document.getElementById('dmControlVal_' + d.id).value;
     const controlShave = document.getElementById('dmControlShave_' + d.id).value;
+    const controlEffectKey = document.getElementById('dmControlEffectKey_' + d.id).value.trim();
+    const controlEffectAmt = document.getElementById('dmControlEffectAmt_' + d.id).value;
     const had = deityMoveOverrides[d.id] || {};
 
     // Only write a row if there's something to say (a name set) or a row
@@ -3104,7 +3115,9 @@ async function saveDeityMoves(){
       rows.push({
         deity_id: d.id, pantheon_id: d.pantheonId, kind: 'power',
         name: powerName, power: powerVal === '' ? null : parseFloat(powerVal),
-        swiftness_shave: null, active: true, updated_at: new Date().toISOString()
+        swiftness_shave: null, active: true, updated_at: new Date().toISOString(),
+        effect_key: powerEffectKey || null,
+        effect_amount: powerEffectAmt === '' ? null : parseFloat(powerEffectAmt)
       });
     }
     if(controlName || had.control){
@@ -3112,7 +3125,9 @@ async function saveDeityMoves(){
         deity_id: d.id, pantheon_id: d.pantheonId, kind: 'control',
         name: controlName, power: controlVal === '' ? null : parseFloat(controlVal),
         swiftness_shave: controlShave === '' ? null : parseInt(controlShave, 10),
-        active: true, updated_at: new Date().toISOString()
+        active: true, updated_at: new Date().toISOString(),
+        effect_key: controlEffectKey || null,
+        effect_amount: controlEffectAmt === '' ? null : parseFloat(controlEffectAmt)
       });
     }
   }
@@ -3122,7 +3137,7 @@ async function saveDeityMoves(){
   if(!rows.length) return;
   const { error } = await supabaseClient.from('deity_moves').upsert(rows, { onConflict: 'deity_id,kind' });
   status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. A blank name/power falls back to the affinity baseline. Applies to the next fight, no redeploy needed.';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. A blank name/power falls back to the affinity baseline. Wired effect keys: lifesteal_pct, stun_pct, crit_bonus_pct, burn_flat — anything else is recorded but inert. Applies to the next fight, no redeploy needed.';
   if(!error) loadDeityMoves();
 }
 
@@ -3140,7 +3155,7 @@ async function loadDeityBlessings(){
 
   const rows = document.getElementById('blessingRows');
   rows.innerHTML = FLAT_DEITIES.map(d => {
-    const o = deityBlessings[d.id] || { name: '', description: '', stat_key: '', stat_amount: '', active: false };
+    const o = deityBlessings[d.id] || { name: '', description: '', stat_key: '', stat_amount: '', effect_key: '', effect_amount: '', active: false };
     return `<tr data-name="${esc(d.name.toLowerCase())}">
       <td>${esc(d.name)}</td>
       <td class="dim">${esc(d.pantheonLabel)}</td>
@@ -3157,6 +3172,8 @@ async function loadDeityBlessings(){
         </select>
       </td>
       <td><input type="number" min="1" id="blsStatAmount_${d.id}" value="${o.stat_amount ?? ''}" style="max-width:90px;"></td>
+      <td><input type="text" id="blsEffectKey_${d.id}" value="${esc(o.effect_key || '')}" placeholder="e.g. crit_bonus_pct" style="max-width:150px;"></td>
+      <td><input type="number" step="0.01" id="blsEffectAmount_${d.id}" value="${o.effect_amount ?? ''}" style="max-width:100px;"></td>
       <td><input type="checkbox" id="blsActive_${d.id}" ${o.active ? 'checked' : ''}></td>
     </tr>`;
   }).join('');
@@ -3176,6 +3193,8 @@ async function saveDeityBlessings(){
     .map(d => {
       const statKey = document.getElementById('blsStatKey_' + d.id).value;
       const statAmount = document.getElementById('blsStatAmount_' + d.id).value;
+      const effectKey = document.getElementById('blsEffectKey_' + d.id).value.trim();
+      const effectAmount = document.getElementById('blsEffectAmount_' + d.id).value;
       return {
         deity_id: d.id,
         pantheon_id: d.pantheonId,
@@ -3183,11 +3202,13 @@ async function saveDeityBlessings(){
         description: document.getElementById('blsDesc_' + d.id).value.trim(),
         stat_key: statKey || null,
         stat_amount: statAmount === '' ? null : parseInt(statAmount, 10),
+        effect_key: effectKey || null,
+        effect_amount: effectAmount === '' ? null : parseFloat(effectAmount),
         active: document.getElementById('blsActive_' + d.id).checked,
         updated_at: new Date().toISOString()
       };
     })
-    .filter(r => r.name !== '' || r.description !== '' || r.stat_key || deityBlessings[r.deity_id]);
+    .filter(r => r.name !== '' || r.description !== '' || r.stat_key || r.effect_key || deityBlessings[r.deity_id]);
 
   status.className = 'status';
   status.textContent = rows.length ? 'Saving…' : 'Nothing to save yet.';
@@ -3252,13 +3273,15 @@ function updateNewGuardianItemTypeFields(){
   document.getElementById('newGuardianItemStatKeyField').style.display = type === 'stat_boost' ? '' : 'none';
   document.getElementById('newGuardianItemStatAmountField').style.display = type === 'stat_boost' ? '' : 'none';
   document.getElementById('newGuardianItemEffectField').style.display = type === 'consumable' ? '' : 'none';
+  document.getElementById('newGuardianItemEnchantKeyField').style.display = type === 'enchantment' ? '' : 'none';
+  document.getElementById('newGuardianItemEnchantAmountField').style.display = type === 'enchantment' ? '' : 'none';
 }
 
 async function loadGuardianItemCatalog(){
   const { data, error } = await supabaseClient.from('guardian_item_catalog').select('*').order('key', { ascending: true });
   const rows = document.getElementById('guardianItemRows');
   if(error){
-    rows.innerHTML = '<tr><td colspan="9">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="11">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = (data || []).map(i => `<tr data-key="${esc(i.key)}">
@@ -3270,6 +3293,7 @@ async function loadGuardianItemCatalog(){
         <option value="stat_boost" ${i.item_type === 'stat_boost' ? 'selected' : ''}>stat_boost</option>
         <option value="cosmetic" ${i.item_type === 'cosmetic' ? 'selected' : ''}>cosmetic</option>
         <option value="consumable" ${i.item_type === 'consumable' ? 'selected' : ''}>consumable</option>
+        <option value="enchantment" ${i.item_type === 'enchantment' ? 'selected' : ''}>enchantment</option>
       </select>
     </td>
     <td>
@@ -3280,9 +3304,11 @@ async function loadGuardianItemCatalog(){
     </td>
     <td><input type="number" min="1" id="giStatAmount_${esc(i.key)}" value="${i.stat_amount ?? ''}" style="max-width:90px;"></td>
     <td><input type="text" id="giEffect_${esc(i.key)}" value="${esc(i.consumable_effect || '')}" style="max-width:150px;"></td>
+    <td><input type="text" id="giEnchantKey_${esc(i.key)}" value="${esc(i.effect_key || '')}" placeholder="e.g. ward_bonus_pct" style="max-width:150px;"></td>
+    <td><input type="number" step="0.01" id="giEnchantAmount_${esc(i.key)}" value="${i.effect_amount ?? ''}" style="max-width:100px;"></td>
     <td><input type="number" min="1" id="giCost_${esc(i.key)}" value="${i.shard_cost}" style="max-width:90px;"></td>
     <td><input type="checkbox" id="giActive_${esc(i.key)}" ${i.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="9">No items yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="11">No items yet.</td></tr>';
 }
 
 async function saveGuardianItemCatalog(){
@@ -3291,6 +3317,7 @@ async function saveGuardianItemCatalog(){
   const rows = Array.from(trs).map(tr => {
     const key = tr.getAttribute('data-key');
     const statAmountVal = document.getElementById('giStatAmount_' + key).value;
+    const enchantAmountVal = document.getElementById('giEnchantAmount_' + key).value;
     return {
       key,
       name: document.getElementById('giName_' + key).value.trim(),
@@ -3299,6 +3326,8 @@ async function saveGuardianItemCatalog(){
       stat_key: document.getElementById('giStatKey_' + key).value || null,
       stat_amount: statAmountVal === '' ? null : parseInt(statAmountVal, 10),
       consumable_effect: document.getElementById('giEffect_' + key).value.trim() || null,
+      effect_key: document.getElementById('giEnchantKey_' + key).value.trim() || null,
+      effect_amount: enchantAmountVal === '' ? null : parseFloat(enchantAmountVal),
       shard_cost: parseInt(document.getElementById('giCost_' + key).value, 10),
       active: document.getElementById('giActive_' + key).checked
     };
@@ -3307,7 +3336,7 @@ async function saveGuardianItemCatalog(){
   status.textContent = 'Saving…';
   const { error } = await supabaseClient.from('guardian_item_catalog').upsert(rows, { onConflict: 'key' });
   status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Enchantment effect keys wired in combat: crit_bonus_pct, lifesteal_pct, ward_bonus_pct, essence_bonus_pct.';
   if(!error) loadGuardianItemCatalog();
 }
 
@@ -3321,6 +3350,8 @@ async function addGuardianItem(){
   const statKey = document.getElementById('newGuardianItemStatKey').value;
   const statAmountVal = document.getElementById('newGuardianItemStatAmount').value;
   const effect = document.getElementById('newGuardianItemEffect').value.trim();
+  const enchantKey = document.getElementById('newGuardianItemEnchantKey').value.trim();
+  const enchantAmountVal = document.getElementById('newGuardianItemEnchantAmount').value;
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -3331,6 +3362,9 @@ async function addGuardianItem(){
   if(itemType === 'consumable' && !effect){
     status.className = 'status err'; status.textContent = 'Consumables need an effect key.'; return;
   }
+  if(itemType === 'enchantment' && !enchantKey){
+    status.className = 'status err'; status.textContent = 'Enchantments need an effect key.'; return;
+  }
 
   status.className = 'status';
   status.textContent = 'Adding…';
@@ -3338,13 +3372,15 @@ async function addGuardianItem(){
     key, name, description, item_type: itemType, shard_cost: cost,
     stat_key: itemType === 'stat_boost' ? statKey : null,
     stat_amount: itemType === 'stat_boost' ? parseInt(statAmountVal, 10) : null,
-    consumable_effect: itemType === 'consumable' ? effect : null
+    consumable_effect: itemType === 'consumable' ? effect : null,
+    effect_key: itemType === 'enchantment' ? enchantKey : null,
+    effect_amount: itemType === 'enchantment' ? (enchantAmountVal === '' ? null : parseFloat(enchantAmountVal)) : null
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
 
   status.className = 'status ok';
-  status.textContent = name + ' added to the crafting catalog.' + (itemType === 'consumable' ? ' Remember: this only records the effect key — real game logic for it is separate wiring.' : '');
-  ['newGuardianItemKey','newGuardianItemName','newGuardianItemCost','newGuardianItemStatAmount','newGuardianItemEffect','newGuardianItemDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  status.textContent = name + ' added to the crafting catalog.' + (itemType === 'consumable' ? ' Remember: this only records the effect key — real game logic for it is separate wiring.' : '') + (itemType === 'enchantment' && !['crit_bonus_pct','lifesteal_pct','ward_bonus_pct','essence_bonus_pct'].includes(enchantKey) ? ' Note: that effect key isn\'t one of the wired ones — it will be owned but inert until code catches up.' : '');
+  ['newGuardianItemKey','newGuardianItemName','newGuardianItemCost','newGuardianItemStatAmount','newGuardianItemEffect','newGuardianItemEnchantKey','newGuardianItemEnchantAmount','newGuardianItemDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
   updateNewGuardianItemTypeFields();
   loadGuardianItemCatalog();
 }
