@@ -97,6 +97,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
   <p class="sub">Full administrative control: pricing, catalog, Circles, currencies, deities, and every leaderboard at a glance.</p>
 
   <div id="gateMsg" class="gate-msg">Checking your session…</div>
+  <div id="signOutRow" style="display:none;text-align:center;margin-top:10px;">
+    <button class="secondary" id="signOutBtn">Sign out and try a different account</button>
+  </div>
 
   <div id="loginModal" class="modal-inline">
     <button class="secondary" id="googleBtn">Continue with Google</button>
@@ -1008,6 +1011,10 @@ async function init(){
   document.getElementById('grantScopeType').addEventListener('change', updateGrantScopeVisibility);
   updateGrantScopeVisibility();
 
+  document.getElementById('signOutBtn').addEventListener('click', async () => {
+    await supabaseClient.auth.signOut();
+  });
+
   const { data: { session } } = await supabaseClient.auth.getSession();
   await handleSession(session);
 
@@ -1025,11 +1032,13 @@ async function handleSession(session){
   const gateMsg = document.getElementById('gateMsg');
   const loginModal = document.getElementById('loginModal');
   const adminArea = document.getElementById('adminArea');
+  const signOutRow = document.getElementById('signOutRow');
 
   if(!session){
     gateMsg.textContent = 'Sign in with the same account you use as the site owner.';
     loginModal.classList.add('active');
     adminArea.style.display = 'none';
+    signOutRow.style.display = 'none';
     return;
   }
 
@@ -1040,12 +1049,14 @@ async function handleSession(session){
     .maybeSingle();
 
   if(error || !profile?.is_admin){
-    gateMsg.textContent = "You're signed in, but this account isn't marked as an admin.";
+    gateMsg.textContent = `You're signed in as ${session.user.email || 'this account'}, but it isn't marked as an admin.`;
     loginModal.classList.remove('active');
     adminArea.style.display = 'none';
+    signOutRow.style.display = 'block';
     return;
   }
 
+  signOutRow.style.display = 'none';
   gateMsg.textContent = '';
   loginModal.classList.remove('active');
   adminArea.style.display = 'block';
