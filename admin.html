@@ -114,12 +114,14 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn active" data-tab="overview" onclick="showTab('overview')">Overview</button>
       <button class="tab-btn" data-tab="leaderboards" onclick="showTab('leaderboards')">Leaderboards</button>
       <button class="tab-btn" data-tab="circles" onclick="showTab('circles')">Circles</button>
+      <button class="tab-btn" data-tab="circlebonuses" onclick="showTab('circlebonuses')">Circle Patron Bonuses</button>
       <button class="tab-btn" data-tab="currencies" onclick="showTab('currencies')">Currencies &amp; Gifts</button>
       <button class="tab-btn" data-tab="checkins" onclick="showTab('checkins')">Check-ins &amp; Events</button>
       <button class="tab-btn" data-tab="progression" onclick="showTab('progression')">Guardian Progression</button>
       <button class="tab-btn" data-tab="dragons" onclick="showTab('dragons')">Big Baddies</button>
       <button class="tab-btn" data-tab="gauntlet" onclick="showTab('gauntlet')">Gauntlet</button>
       <button class="tab-btn" data-tab="moves" onclick="showTab('moves')">Moves</button>
+      <button class="tab-btn" data-tab="blessings" onclick="showTab('blessings')">Deity Blessings</button>
       <button class="tab-btn" data-tab="guardianitems" onclick="showTab('guardianitems')">Guardian Items</button>
       <button class="tab-btn" data-tab="arenastore" onclick="showTab('arenastore')">Arena Store</button>
       <button class="tab-btn" data-tab="deities" onclick="showTab('deities')">Deity Personalities</button>
@@ -218,6 +220,24 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
         <div class="circle-detail" id="circleDetail">
           <p class="empty">Search for a Circle above to load its roster and controls.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================== CIRCLE PATRON BONUSES ============================== -->
+    <div class="tab-content" id="tab-circlebonuses">
+      <div class="card">
+        <h2>Circle Patron Bonuses (placeholders — approve with Active)</h2>
+        <p class="hint">A Circle's patron is whichever deity its members hold the most FULL marks from; that deity's affinity picks the row below. Every row ships inactive on purpose — write in a name/description/effect and check Active when you're ready for it to go live. Only effect key <code>devotion_yield_pct</code> is actually wired right now (a % bonus added to Altar Devotion harvests) — any other effect key is honestly recorded but has no game logic behind it yet.</p>
+        <div class="scroll-table" style="max-height:420px;">
+          <table>
+            <thead><tr><th>Affinity</th><th>Name</th><th>Description</th><th>Effect key</th><th>Effect amount</th><th>Active</th></tr></thead>
+            <tbody id="circleBonusRows"><tr><td colspan="6">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveCircleBonusesBtn">Save changes</button>
+          <div class="status" id="circleBonusStatus"></div>
         </div>
       </div>
     </div>
@@ -483,6 +503,25 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="save-bar">
           <button id="saveDeityMovesBtn">Save changes</button>
           <div class="status" id="deityMoveStatus"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================== DEITY BLESSINGS ============================== -->
+    <div class="tab-content" id="tab-blessings">
+      <div class="card">
+        <h2>Deity Blessings (placeholders — approve with Active)</h2>
+        <p class="hint">A one-time stat bonus applied the moment a guardian's mark with this deity is newly earned or upgraded to FULL — on top of the normal mark reward, never reapplied on repeat petitions. Every row ships inactive on purpose — set a stat/amount and check Active when you're ready for it to go live. Blank = no blessing for that deity, same as leaving it unset.</p>
+        <input class="search-box" type="text" id="blessingSearch" placeholder="Search by name…">
+        <div class="scroll-table">
+          <table>
+            <thead><tr><th>God</th><th>Pantheon</th><th>Name</th><th>Description</th><th>Stat key</th><th>Stat amount</th><th>Active</th></tr></thead>
+            <tbody id="blessingRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveBlessingsBtn">Save changes</button>
+          <div class="status" id="blessingStatus"></div>
         </div>
       </div>
     </div>
@@ -1156,6 +1195,8 @@ async function handleSession(session){
   loadGauntletOpponents();
   loadAffinityMoves();
   loadDeityMoves();
+  loadDeityBlessings();
+  loadCirclePatronBonuses();
   loadGuardianItemCatalog();
   loadArenaShopCatalog();
   loadLeaderboards();
@@ -1267,6 +1308,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveAffinityMovesBtn').addEventListener('click', saveAffinityMoves);
   document.getElementById('saveDeityMovesBtn').addEventListener('click', saveDeityMoves);
   document.getElementById('deityMoveSearch').addEventListener('input', filterDeityMoveRows);
+
+  document.getElementById('saveBlessingsBtn').addEventListener('click', saveDeityBlessings);
+  document.getElementById('blessingSearch').addEventListener('input', filterBlessingRows);
+
+  document.getElementById('saveCircleBonusesBtn').addEventListener('click', saveCirclePatronBonuses);
 
   document.getElementById('saveGuardianItemsBtn').addEventListener('click', saveGuardianItemCatalog);
   document.getElementById('addGuardianItemBtn').addEventListener('click', addGuardianItem);
@@ -3078,6 +3124,123 @@ async function saveDeityMoves(){
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. A blank name/power falls back to the affinity baseline. Applies to the next fight, no redeploy needed.';
   if(!error) loadDeityMoves();
+}
+
+/* =====================================================================
+   DEITY BLESSINGS (placeholders — inactive until approved)
+   ===================================================================== */
+
+let deityBlessings = {};
+
+async function loadDeityBlessings(){
+  const { data, error } = await supabaseClient.from('deity_blessings').select('*');
+  deityBlessings = {};
+  (data || []).forEach(r => { deityBlessings[r.deity_id] = r; });
+  if(error) console.error('deity_blessings load failed', error);
+
+  const rows = document.getElementById('blessingRows');
+  rows.innerHTML = FLAT_DEITIES.map(d => {
+    const o = deityBlessings[d.id] || { name: '', description: '', stat_key: '', stat_amount: '', active: false };
+    return `<tr data-name="${esc(d.name.toLowerCase())}">
+      <td>${esc(d.name)}</td>
+      <td class="dim">${esc(d.pantheonLabel)}</td>
+      <td><input type="text" id="blsName_${d.id}" value="${esc(o.name || '')}" style="max-width:160px;"></td>
+      <td><input type="text" id="blsDesc_${d.id}" value="${esc(o.description || '')}" style="max-width:260px;"></td>
+      <td>
+        <select id="blsStatKey_${d.id}">
+          <option value="">—</option>
+          <option value="vitality" ${o.stat_key === 'vitality' ? 'selected' : ''}>vitality</option>
+          <option value="might" ${o.stat_key === 'might' ? 'selected' : ''}>might</option>
+          <option value="ward" ${o.stat_key === 'ward' ? 'selected' : ''}>ward</option>
+          <option value="swiftness" ${o.stat_key === 'swiftness' ? 'selected' : ''}>swiftness</option>
+          <option value="cunning" ${o.stat_key === 'cunning' ? 'selected' : ''}>cunning</option>
+        </select>
+      </td>
+      <td><input type="number" min="1" id="blsStatAmount_${d.id}" value="${o.stat_amount ?? ''}" style="max-width:90px;"></td>
+      <td><input type="checkbox" id="blsActive_${d.id}" ${o.active ? 'checked' : ''}></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterBlessingRows(){
+  const q = document.getElementById('blessingSearch').value.trim().toLowerCase();
+  document.querySelectorAll('#blessingRows tr').forEach(tr => {
+    const name = tr.getAttribute('data-name') || '';
+    tr.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+}
+
+async function saveDeityBlessings(){
+  const status = document.getElementById('blessingStatus');
+  const rows = FLAT_DEITIES
+    .map(d => {
+      const statKey = document.getElementById('blsStatKey_' + d.id).value;
+      const statAmount = document.getElementById('blsStatAmount_' + d.id).value;
+      return {
+        deity_id: d.id,
+        pantheon_id: d.pantheonId,
+        name: document.getElementById('blsName_' + d.id).value.trim(),
+        description: document.getElementById('blsDesc_' + d.id).value.trim(),
+        stat_key: statKey || null,
+        stat_amount: statAmount === '' ? null : parseInt(statAmount, 10),
+        active: document.getElementById('blsActive_' + d.id).checked,
+        updated_at: new Date().toISOString()
+      };
+    })
+    .filter(r => r.name !== '' || r.description !== '' || r.stat_key || deityBlessings[r.deity_id]);
+
+  status.className = 'status';
+  status.textContent = rows.length ? 'Saving…' : 'Nothing to save yet.';
+  if(!rows.length) return;
+  const { error } = await supabaseClient.from('deity_blessings').upsert(rows, { onConflict: 'deity_id' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Rows stay inactive until you check Active — nothing changes for players until then.';
+  if(!error) loadDeityBlessings();
+}
+
+/* =====================================================================
+   CIRCLE PATRON BONUSES (placeholders — inactive until approved)
+   ===================================================================== */
+
+async function loadCirclePatronBonuses(){
+  const { data, error } = await supabaseClient.from('circle_patron_bonuses').select('*').order('affinity', { ascending: true });
+  const rows = document.getElementById('circleBonusRows');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="6">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = (data || []).map(b => `<tr data-affinity="${esc(b.affinity)}">
+    <td class="dim">${esc(b.affinity)}</td>
+    <td><input type="text" id="cbName_${esc(b.affinity)}" value="${esc(b.name || '')}" style="max-width:160px;"></td>
+    <td><input type="text" id="cbDesc_${esc(b.affinity)}" value="${esc(b.description || '')}" style="max-width:260px;"></td>
+    <td><input type="text" id="cbEffectKey_${esc(b.affinity)}" value="${esc(b.effect_key || '')}" placeholder="e.g. devotion_yield_pct" style="max-width:180px;"></td>
+    <td><input type="number" step="0.01" id="cbEffectAmount_${esc(b.affinity)}" value="${b.effect_amount ?? ''}" style="max-width:100px;"></td>
+    <td><input type="checkbox" id="cbActive_${esc(b.affinity)}" ${b.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="6">No rows found.</td></tr>';
+}
+
+async function saveCirclePatronBonuses(){
+  const status = document.getElementById('circleBonusStatus');
+  const trs = document.querySelectorAll('#circleBonusRows tr[data-affinity]');
+  const rows = Array.from(trs).map(tr => {
+    const affinity = tr.getAttribute('data-affinity');
+    const effectAmount = document.getElementById('cbEffectAmount_' + affinity).value;
+    return {
+      affinity,
+      name: document.getElementById('cbName_' + affinity).value.trim(),
+      description: document.getElementById('cbDesc_' + affinity).value.trim(),
+      effect_key: document.getElementById('cbEffectKey_' + affinity).value.trim(),
+      effect_amount: effectAmount === '' ? null : parseFloat(effectAmount),
+      active: document.getElementById('cbActive_' + affinity).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('circle_patron_bonuses').upsert(rows, { onConflict: 'affinity' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Only effect key devotion_yield_pct is actually wired (Altar Devotion harvests) — anything else is recorded but inert. Rows stay inactive until you check Active.';
+  if(!error) loadCirclePatronBonuses();
 }
 
 /* =====================================================================
