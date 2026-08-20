@@ -336,6 +336,10 @@ let craftInventory = [];      // this guardian's guardian_items, reloaded each t
 
 let redeemView = null;        // null | {step:'pick'} — spend God Tokens to fully unlock a deity
 
+let expeditionView = null;     // null | {step:'home'} | {step:'result', result:{...}} — top-level, NOT circle-scoped
+let expeditionCatalog = null;  // per-guardian: artifacts + fragments owned + daily cap, reloaded each time Expeditions opens
+let expeditionStatus = null;   // this guardian's current trip, if any — null | {ready:false, readyAt} | {ready:true, clueText, choices, ...}
+
 async function loadCircleShopItems(){
   if(circleShopItems.length) return;
   const { data, error } = await supabaseClient.from('circle_shop_items').select('*').eq('active', true).order('cost_devotion');
@@ -410,6 +414,7 @@ function render(){
   if(guardian && combatView){ renderCombat(); return; }
   if(guardian && craftView){ renderCraft(); return; }
   if(guardian && redeemView){ renderRedeem(); return; }
+  if(guardian && expeditionView){ renderExpedition(); return; }
   if(guardian && pvpView){ renderPvpArena(); return; }
   if(guardian && circleView){ renderCircle(); return; }
   guardian ? renderGuardianHome() : renderHatchFlow();
@@ -541,6 +546,7 @@ function renderGuardianHome(){
         <button class="secondary" onclick="openProving()">Enter the Gauntlet</button>
         <button class="secondary" onclick="openCircle()">Your Circle</button>
         <button class="secondary" onclick="openPvpArena()">The Arena</button>
+        <button class="secondary" onclick="openExpedition()">Expeditions</button>
         <button class="secondary" onclick="openCraft()">Craft</button>
         <button class="secondary" onclick="openRedeem()">Redeem a Token</button>
       </div>
@@ -2220,6 +2226,185 @@ function renderCircleInvasions(){
 }
 
 /* ---------------- Shard crafting (new economy layer) ---------------- */
+
+/* ---------------- Expeditions ---------------- */
+
+async function loadExpeditionCatalog(){
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/expedition', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'catalog', guardianId: guardian.id })
+    });
+    const data = await resp.json();
+    if(!data.ok){ console.error('expedition catalog load failed', data.error); return; }
+    expeditionCatalog = data;
+  }catch(e){ console.error('expedition catalog load failed', e); }
+}
+
+async function loadExpeditionStatus(){
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/expedition', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'status', guardianId: guardian.id })
+    });
+    const data = await resp.json();
+    if(!data.ok){ console.error('expedition status load failed', data.error); return; }
+    expeditionStatus = data.expedition;
+  }catch(e){ console.error('expedition status load failed', e); }
+}
+
+async function openExpedition(){
+  expeditionView = { step: 'home' };
+  render();
+  await Promise.all([loadExpeditionCatalog(), loadExpeditionStatus()]);
+  if(expeditionView) render();
+}
+
+function backFromExpedition(){
+  expeditionView = null;
+  render();
+}
+
+function backFromExpeditionResult(){
+  expeditionView = { step: 'home' };
+  render();
+}
+
+function setExpeditionMsg(text, ok){
+  const el = document.getElementById('expeditionMsg');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
+async function refreshExpeditionStatus(){
+  setExpeditionMsg('Checking…');
+  await loadExpeditionStatus();
+  render();
+}
+
+async function doStartExpedition(artifactKey, fragmentIndex){
+  setExpeditionMsg('Setting out…');
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/expedition', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'start', guardianId: guardian.id, artifactKey, fragmentIndex })
+    });
+    const data = await resp.json();
+    if(!data.ok){ setExpeditionMsg(data.error || 'Could not start that expedition.', false); return; }
+    await Promise.all([loadExpeditionCatalog(), loadExpeditionStatus()]);
+    render();
+    setExpeditionMsg(`Your guardian set out for ${data.regionName}.`, true);
+  }catch(e){
+    setExpeditionMsg('Could not reach the relay: ' + e.message, false);
+  }
+}
+
+async function doAnswerExpedition(choiceIndex){
+  if(!expeditionStatus) return;
+  setExpeditionMsg('Answering…');
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/expedition', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'answer', guardianId: guardian.id, expeditionId: expeditionStatus.id, choiceIndex })
+    });
+    const data = await resp.json();
+    if(!data.ok){ setExpeditionMsg(data.error || 'Could not submit that answer.', false); return; }
+    expeditionView = { step: 'result', result: data };
+    await loadExpeditionCatalog();
+    expeditionStatus = null;
+    if(data.artifactCompleted) await loadGuardian();
+    render();
+  }catch(e){
+    setExpeditionMsg('Could not reach the relay: ' + e.message, false);
+  }
+}
+
+function renderExpedition(){
+  const app = document.getElementById('app');
+
+  if(!expeditionCatalog){
+    app.innerHTML = `<div class="card" style="text-align:center;"><h2>Expeditions</h2><p class="hint">Loading…</p></div>`;
+    return;
+  }
+
+  if(expeditionView.step === 'result'){
+    const r = expeditionView.result;
+    const correctText = (r.choices || [])[r.correctIndex] ?? '';
+    app.innerHTML = `
+      <div class="card" style="text-align:center;">
+        <h2>${r.correct ? 'Found it!' : 'Not quite'}</h2>
+        <p class="hint">${esc(r.regionName || '')}</p>
+        <p>${r.correct ? 'Correct — the fragment is yours.' : `The correct answer was: <strong>${esc(correctText)}</strong>`}</p>
+        <p class="hint">${esc(r.funFact || '')}</p>
+        ${r.artifactCompleted ? `<p class="status ok" style="display:block;">Artifact complete — a deity has taken notice of you. Check your pantheon list.</p>` : ''}
+        <div class="status" id="expeditionMsg"></div>
+        <button class="secondary" onclick="backFromExpeditionResult()">Continue</button>
+      </div>
+    `;
+    return;
+  }
+
+  let travelCard = '';
+  if(expeditionStatus && !expeditionStatus.ready){
+    const readyDate = new Date(expeditionStatus.readyAt);
+    travelCard = `
+      <div class="card" style="text-align:center;">
+        <h2>Away exploring</h2>
+        <p class="hint">Your guardian is traveling. It'll be ready to report back at ${readyDate.toLocaleString()}.</p>
+        <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
+      </div>`;
+  } else if(expeditionStatus && expeditionStatus.ready){
+    const choices = expeditionStatus.choices || [];
+    travelCard = `
+      <div class="card" style="text-align:center;">
+        <h2>${esc(expeditionStatus.regionName || 'Your guardian has arrived')}</h2>
+        <p>${esc(expeditionStatus.clueText || '')}</p>
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:420px;margin:10px auto 0;">
+          ${choices.map((c, i) => `<button class="secondary" onclick="doAnswerExpedition(${i})">${esc(c)}</button>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  const hasActiveTrip = !!expeditionStatus;
+  const capReached = expeditionCatalog.expeditionsRemainingToday <= 0;
+  const capNote = `${expeditionCatalog.expeditionsRemainingToday} of ${expeditionCatalog.expeditionsPerDay} expeditions left today.`;
+
+  const artifactCards = (expeditionCatalog.artifacts || []).map(a => {
+    const owned = new Set(a.fragmentsOwned || []);
+    const complete = owned.size >= a.total_fragments;
+    const fragmentButtons = Array.from({ length: a.total_fragments }, (_, i) => i + 1).map(idx => {
+      if(owned.has(idx)) return `<span style="display:inline-block;padding:4px 10px;border-radius:12px;background:rgba(255,255,255,0.08);margin:2px;">Fragment ${idx} ✓</span>`;
+      const disabled = hasActiveTrip || capReached;
+      return `<button class="secondary" style="margin:2px;" ${disabled ? 'disabled' : ''} onclick="doStartExpedition('${esc(a.key)}', ${idx})">Send for Fragment ${idx}</button>`;
+    }).join(' ');
+    const statusLabel = complete ? (a.deityAlreadyUnlocked ? 'Unlocked' : 'Complete!') : `${owned.size}/${a.total_fragments} fragments`;
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(a.name)} — ${esc(statusLabel)}</div>
+      <div class="cblurb">${esc(a.description || '')}</div></div>
+      <div class="ractions" style="flex-wrap:wrap;">${complete ? '' : fragmentButtons}</div>
+    </div>`;
+  }).join('') || '<p class="hint">No expeditions are available right now — check back later.</p>';
+
+  app.innerHTML = `
+    <div class="card" style="text-align:center;">
+      <h2>Expeditions</h2>
+      <p class="hint">Send your guardian to real places in search of ancient artifact fragments. Answer honestly, learn something true either way, and reassemble a full set to draw a deity's attention.</p>
+      <p class="hint">${capNote}</p>
+      <div class="status" id="expeditionMsg"></div>
+    </div>
+    ${travelCard}
+    <div class="card">
+      <h2>Artifacts</h2>
+      ${artifactCards}
+      <button class="secondary" style="margin-top:14px;" onclick="backFromExpedition()">Back to your guardian</button>
+    </div>
+  `;
+}
 
 async function loadCraftCatalog(){
   if(craftCatalog.length) return;
