@@ -68,6 +68,14 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 .form-row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;}
 .form-row .field{margin-bottom:0;}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:22px;}
+.checkin-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:18px;}
+.checkin-day-cell{border:1px solid var(--line);border-radius:4px;padding:8px;background:rgba(0,0,0,0.2);}
+.checkin-day-cell .day-num{font-family:'Cinzel',serif;font-size:12px;color:var(--gold-bright);margin-bottom:6px;}
+.checkin-day-cell select,.checkin-day-cell input[type=text],.checkin-day-cell input[type=number]{width:100%;padding:5px 6px;font-size:12px;margin-bottom:5px;}
+.checkin-day-cell .active-row{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--parchment-dim);}
+.checkin-day-cell.inactive{opacity:0.55;}
+@media (max-width:900px){.checkin-calendar-grid{grid-template-columns:repeat(4,1fr);}}
+@media (max-width:560px){.checkin-calendar-grid{grid-template-columns:repeat(2,1fr);}}
 .stat-tile{border:1px solid var(--line);border-radius:3px;padding:16px;text-align:center;}
 .stat-tile .num{font-family:'Cinzel',serif;font-size:26px;color:var(--gold-bright);}
 .stat-tile .label{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--parchment-dim);margin-top:4px;}
@@ -329,27 +337,13 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <!-- ============================== CHECK-INS & EVENTS ============================== -->
     <div class="tab-content" id="tab-checkins">
       <div class="card">
-        <h2>Daily check-in rewards</h2>
-        <p class="hint">streak_day 0 is the baseline reward, granted on every successful tend. Any other streak_day is a one-time milestone bonus fired the exact day a streak reaches it (doesn't repeat).</p>
-        <div class="scroll-table" style="max-height:280px;">
-          <table>
-            <thead><tr><th>Streak day</th><th>Currency</th><th>Amount</th><th>Label</th><th>Active</th></tr></thead>
-            <tbody id="checkinRows"><tr><td colspan="5">Loading…</td></tr></tbody>
-          </table>
-        </div>
+        <h2>Monthly check-in calendar</h2>
+        <p class="hint">One reward per day of the month, 1 through 31, the same every month — day 31 simply doesn't fire in shorter months, no other bookkeeping needed. Replaces the old streak-milestone system. Every day ships with Active unchecked so nothing pays out until you've reviewed and approved it — fill in a currency/amount/label per day, then check Active when it's ready.</p>
+        <div class="checkin-calendar-grid" id="checkinCalendarGrid"><p class="hint">Loading…</p></div>
         <div class="save-bar">
-          <button id="saveCheckinsBtn">Save changes</button>
-          <div class="status" id="checkinStatus"></div>
+          <button id="saveCheckinCalendarBtn">Save changes</button>
+          <div class="status" id="checkinCalendarStatus"></div>
         </div>
-        <h3>Add a milestone</h3>
-        <div class="form-row">
-          <div class="field"><label>Streak day (0 = baseline)</label><input type="number" min="0" id="newCheckinDay" style="max-width:140px;"></div>
-          <div class="field"><label>Currency</label><select id="newCheckinCurrency" style="max-width:150px;"></select></div>
-          <div class="field"><label>Amount</label><input type="number" min="1" id="newCheckinAmount" style="max-width:110px;"></div>
-          <div class="field"><label>Label</label><input type="text" id="newCheckinLabel" placeholder="e.g. Two Week Streak" style="max-width:200px;"></div>
-          <button id="addCheckinBtn">Add</button>
-        </div>
-        <div class="status" id="newCheckinStatus"></div>
       </div>
 
       <div class="card">
@@ -1267,7 +1261,7 @@ async function handleSession(session){
   loadCustomers();
 
   loadDeityPersonalities();
-  loadCheckinRewards();
+  loadCheckinCalendar();
   loadPromoEvents();
   loadGuardianProgression();
   loadDragonCatalog();
@@ -1371,8 +1365,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('bulkGrantScope').addEventListener('change', updateBulkGrantScopeVisibility);
   updateBulkGrantScopeVisibility();
 
-  document.getElementById('saveCheckinsBtn').addEventListener('click', saveCheckinRewards);
-  document.getElementById('addCheckinBtn').addEventListener('click', addCheckinReward);
+  document.getElementById('saveCheckinCalendarBtn').addEventListener('click', saveCheckinCalendar);
   document.getElementById('addPromoBtn').addEventListener('click', createPromoEvent);
   document.getElementById('newPromoScope').addEventListener('change', updateNewPromoScopeVisibility);
   updateNewPromoScopeVisibility();
@@ -2691,67 +2684,54 @@ async function sendBulkGrant(){
    CHECK-INS & EVENTS
    ===================================================================== */
 
-async function loadCheckinRewards(){
-  const { data, error } = await supabaseClient.from('daily_checkin_rewards').select('*').order('streak_day', { ascending: true });
-  const rows = document.getElementById('checkinRows');
+async function loadCheckinCalendar(){
+  const { data, error } = await supabaseClient.from('checkin_calendar_days').select('*').order('day_of_month', { ascending: true });
+  const grid = document.getElementById('checkinCalendarGrid');
   if(error){
-    rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>';
+    grid.innerHTML = '<p class="hint">Failed to load: ' + esc(error.message) + '</p>';
     return;
   }
-  rows.innerHTML = (data || []).map(r => `<tr data-id="${esc(r.id)}">
-    <td class="dim">${r.streak_day === 0 ? '0 (baseline)' : r.streak_day}</td>
-    <td>
-      <select id="chkCur_${esc(r.id)}">
-        ${Object.values(currencyDefs).filter(c => c.scope === 'personal').map(c => `<option value="${esc(c.key)}" ${c.key === r.currency_key ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
-      </select>
-    </td>
-    <td><input type="number" min="1" id="chkAmt_${esc(r.id)}" value="${r.amount}"></td>
-    <td><input type="text" id="chkLabel_${esc(r.id)}" value="${esc(r.label)}"></td>
-    <td><input type="checkbox" id="chkActive_${esc(r.id)}" ${r.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="5">No rewards configured.</td></tr>';
+  const personalCurrencies = Object.values(currencyDefs).filter(c => c.scope === 'personal');
+  grid.innerHTML = (data || []).map(d => `<div class="checkin-day-cell${d.active ? '' : ' inactive'}" data-day="${d.day_of_month}">
+    <div class="day-num">Day ${d.day_of_month}</div>
+    <select id="ccCur_${d.day_of_month}">
+      ${personalCurrencies.map(c => `<option value="${esc(c.key)}" ${c.key === d.currency_key ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
+    </select>
+    <input type="number" min="1" id="ccAmt_${d.day_of_month}" value="${d.amount}" placeholder="Amount">
+    <input type="text" id="ccLabel_${d.day_of_month}" value="${esc(d.label || '')}" placeholder="Label">
+    <div class="active-row"><input type="checkbox" id="ccActive_${d.day_of_month}" ${d.active ? 'checked' : ''}><label for="ccActive_${d.day_of_month}">Active</label></div>
+  </div>`).join('') || '<p class="hint">No calendar rows found — run the migration that seeds days 1-31.</p>';
 }
 
-async function saveCheckinRewards(){
-  const status = document.getElementById('checkinStatus');
-  const trs = document.querySelectorAll('#checkinRows tr[data-id]');
-  const rows = Array.from(trs).map(tr => {
-    const id = tr.getAttribute('data-id');
+async function saveCheckinCalendar(){
+  const status = document.getElementById('checkinCalendarStatus');
+  const cells = document.querySelectorAll('#checkinCalendarGrid .checkin-day-cell[data-day]');
+  const rows = Array.from(cells).map(cell => {
+    const day = cell.getAttribute('data-day');
     return {
-      id,
-      currency_key: document.getElementById('chkCur_' + id).value,
-      amount: parseInt(document.getElementById('chkAmt_' + id).value || '0', 10),
-      label: document.getElementById('chkLabel_' + id).value.trim(),
-      active: document.getElementById('chkActive_' + id).checked
+      day_of_month: parseInt(day, 10),
+      currency_key: document.getElementById('ccCur_' + day).value,
+      amount: parseInt(document.getElementById('ccAmt_' + day).value || '0', 10),
+      label: document.getElementById('ccLabel_' + day).value.trim(),
+      active: document.getElementById('ccActive_' + day).checked,
+      updated_at: new Date().toISOString()
     };
   });
+  const badRow = rows.find(r => r.active && (isNaN(r.amount) || r.amount <= 0));
+  if(badRow){
+    status.className = 'status err';
+    status.textContent = `Day ${badRow.day_of_month} is marked Active but needs an amount greater than 0.`;
+    return;
+  }
+  // A row with no valid amount but not Active just gets a safe non-zero
+  // placeholder on save instead of failing — it's inert either way.
+  rows.forEach(r => { if(isNaN(r.amount) || r.amount <= 0) r.amount = 1; });
   status.className = 'status';
   status.textContent = 'Saving…';
-  const { error } = await supabaseClient.from('daily_checkin_rewards').upsert(rows, { onConflict: 'id' });
+  const { error } = await supabaseClient.from('checkin_calendar_days').upsert(rows, { onConflict: 'day_of_month' });
   status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
-  if(!error) loadCheckinRewards();
-}
-
-async function addCheckinReward(){
-  const status = document.getElementById('newCheckinStatus');
-  const streakDay = parseInt(document.getElementById('newCheckinDay').value, 10);
-  const currencyKey = document.getElementById('newCheckinCurrency').value;
-  const amount = parseInt(document.getElementById('newCheckinAmount').value, 10);
-  const label = document.getElementById('newCheckinLabel').value.trim();
-
-  if(isNaN(streakDay) || streakDay < 0){ status.className = 'status err'; status.textContent = 'Enter a valid streak day (0 or more).'; return; }
-  if(!currencyKey){ status.className = 'status err'; status.textContent = 'No personal currency available — add one in Currencies & Gifts first.'; return; }
-  if(isNaN(amount) || amount <= 0){ status.className = 'status err'; status.textContent = 'Enter an amount greater than 0.'; return; }
-
-  status.className = 'status';
-  status.textContent = 'Adding…';
-  const { error } = await supabaseClient.from('daily_checkin_rewards').insert({ streak_day: streakDay, currency_key: currencyKey, amount, label });
-  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That streak day + currency combination already exists.' : ('Failed: ' + error.message); return; }
-
-  status.className = 'status ok';
-  status.textContent = 'Added.';
-  ['newCheckinDay','newCheckinAmount','newCheckinLabel'].forEach(fid => { document.getElementById(fid).value = ''; });
-  loadCheckinRewards();
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies to the next tend, no redeploy needed.';
+  if(!error) loadCheckinCalendar();
 }
 
 let promoEvents = [];
