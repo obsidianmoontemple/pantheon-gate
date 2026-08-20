@@ -123,6 +123,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="moves" onclick="showTab('moves')">Moves</button>
       <button class="tab-btn" data-tab="blessings" onclick="showTab('blessings')">Deity Blessings</button>
       <button class="tab-btn" data-tab="guardianitems" onclick="showTab('guardianitems')">Guardian Items</button>
+      <button class="tab-btn" data-tab="expeditions" onclick="showTab('expeditions')">Expeditions</button>
       <button class="tab-btn" data-tab="arenastore" onclick="showTab('arenastore')">Arena Store</button>
       <button class="tab-btn" data-tab="deities" onclick="showTab('deities')">Deity Personalities</button>
       <button class="tab-btn" data-tab="pricing" onclick="showTab('pricing')">Pricing &amp; Store</button>
@@ -404,6 +405,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Stat gain, partial mark</label><input type="number" min="0" id="progPartialGain" style="max-width:150px;"></div>
           <div class="field"><label>Dominant affinity locks in at</label><input type="number" min="0" id="progAffinityMarks" style="max-width:170px;"></div>
         </div>
+        <h3>Expeditions</h3>
+        <div class="form-row">
+          <div class="field"><label>Expeditions per guardian per day</label><input type="number" min="1" id="progExpeditionsPerDay" style="max-width:170px;"></div>
+        </div>
         <div class="save-bar">
           <button id="saveProgressionBtn">Save changes</button>
           <div class="status" id="progressionStatus"></div>
@@ -578,6 +583,77 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <input type="text" id="newGuardianItemDescription" style="max-width:none;">
         </div>
         <div class="status" id="newGuardianItemStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== EXPEDITIONS ============================== -->
+    <div class="tab-content" id="tab-expeditions">
+      <div class="card">
+        <h2>Expedition artifacts</h2>
+        <p class="hint">Real-world artifact hunts. A guardian collects every fragment below to reassemble one of these and unlock the deity it's tied to — a brand-new secret deity (mark it for_sale=false over in Deity Personalities' partner tab, Pantheons &amp; Gods) or a free earn-it path to an existing paid one, your call per artifact. The daily expedition cap is set in Guardian Progression.</p>
+        <div class="scroll-table" style="max-height:300px;">
+          <table>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Total fragments</th><th>Unlock pantheon</th><th>Unlock deity</th><th>Active</th></tr></thead>
+            <tbody id="artifactRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveArtifactsBtn">Save changes</button>
+          <div class="status" id="artifactStatus"></div>
+        </div>
+        <h3>Add a new artifact</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newArtifactKey" style="max-width:150px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newArtifactName" style="max-width:160px;"></div>
+          <div class="field"><label>Total fragments</label><input type="number" min="1" id="newArtifactTotalFragments" style="max-width:110px;"></div>
+          <div class="field"><label>Unlock pantheon id</label><input type="text" id="newArtifactPantheon" placeholder="e.g. egyptian" style="max-width:140px;"></div>
+          <div class="field"><label>Unlock deity id</label><input type="text" id="newArtifactDeity" placeholder="e.g. thoth" style="max-width:140px;"></div>
+          <button id="addArtifactBtn">Add artifact</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (shown to players)</label>
+          <input type="text" id="newArtifactDescription" style="max-width:none;">
+        </div>
+        <div class="status" id="newArtifactStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Expedition fragments (clues)</h2>
+        <p class="hint">Each fragment is one real destination with one real multiple-choice question — this is the "educational" half, so keep it factually accurate. correct_index is 0 for the first choice, 1 for the second, and so on. Choices are entered as one option per line. travel_hours is how long the guardian is away before the clue becomes answerable.</p>
+        <div class="form-row">
+          <div class="field"><label>Artifact</label><select id="fragmentArtifactSelect" style="max-width:220px;"></select></div>
+        </div>
+        <div class="scroll-table" style="max-height:420px;">
+          <table>
+            <thead><tr><th>#</th><th>Region</th><th>Clue</th><th>Choices (one per line)</th><th>Correct #</th><th>Fun fact</th><th>Travel hrs</th><th>Active</th></tr></thead>
+            <tbody id="fragmentRows"><tr><td colspan="8">Pick an artifact above.</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveFragmentsBtn">Save changes</button>
+          <div class="status" id="fragmentStatus"></div>
+        </div>
+        <h3>Add a new fragment to this artifact</h3>
+        <div class="form-row">
+          <div class="field"><label>Fragment #</label><input type="number" min="1" id="newFragmentIndex" style="max-width:100px;"></div>
+          <div class="field"><label>Region name</label><input type="text" id="newFragmentRegion" style="max-width:200px;"></div>
+          <div class="field"><label>Correct # (0-based)</label><input type="number" min="0" id="newFragmentCorrectIndex" style="max-width:110px;"></div>
+          <div class="field"><label>Travel hours</label><input type="number" min="0.5" step="0.5" id="newFragmentTravelHours" value="4" style="max-width:110px;"></div>
+          <button id="addFragmentBtn">Add fragment</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Clue text (the question shown to the player)</label>
+          <input type="text" id="newFragmentClue" style="max-width:none;">
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Choices (one per line)</label>
+          <textarea id="newFragmentChoices" rows="4" style="width:100%;"></textarea>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Fun fact (shown after answering, correct or not)</label>
+          <input type="text" id="newFragmentFunFact" style="max-width:none;">
+        </div>
+        <div class="status" id="newFragmentStatus"></div>
       </div>
     </div>
 
@@ -1201,6 +1277,7 @@ async function handleSession(session){
   loadDeityBlessings();
   loadCirclePatronBonuses();
   loadGuardianItemCatalog();
+  loadExpeditionArtifacts();
   loadArenaShopCatalog();
   loadLeaderboards();
 }
@@ -1321,6 +1398,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addGuardianItemBtn').addEventListener('click', addGuardianItem);
   document.getElementById('newGuardianItemType').addEventListener('change', updateNewGuardianItemTypeFields);
   updateNewGuardianItemTypeFields();
+
+  document.getElementById('saveArtifactsBtn').addEventListener('click', saveExpeditionArtifacts);
+  document.getElementById('addArtifactBtn').addEventListener('click', addExpeditionArtifact);
+  document.getElementById('fragmentArtifactSelect').addEventListener('change', loadExpeditionFragments);
+  document.getElementById('saveFragmentsBtn').addEventListener('click', saveExpeditionFragments);
+  document.getElementById('addFragmentBtn').addEventListener('click', addExpeditionFragment);
 
   document.getElementById('saveArenaItemsBtn').addEventListener('click', saveArenaShopCatalog);
   document.getElementById('addArenaItemBtn').addEventListener('click', addArenaShopItem);
@@ -2804,6 +2887,7 @@ async function loadGuardianProgression(){
   document.getElementById('progFullGain').value = data.full_mark_stat_gain;
   document.getElementById('progPartialGain').value = data.partial_mark_stat_gain;
   document.getElementById('progAffinityMarks').value = data.dominant_affinity_marks;
+  document.getElementById('progExpeditionsPerDay').value = data.expeditions_per_day;
 }
 
 async function saveGuardianProgression(){
@@ -2811,10 +2895,16 @@ async function saveGuardianProgression(){
   const v = id => parseInt(document.getElementById(id).value, 10);
   const hatchling = v('progHatchling'), fledged = v('progFledged'), ascendant = v('progAscendant'), sovereign = v('progSovereign');
   const fullGain = v('progFullGain'), partialGain = v('progPartialGain'), affinityMarks = v('progAffinityMarks');
+  const expeditionsPerDay = v('progExpeditionsPerDay');
 
   if([hatchling, fledged, ascendant, sovereign, fullGain, partialGain, affinityMarks].some(n => isNaN(n) || n < 0)){
     status.className = 'status err';
     status.textContent = 'Every field must be a non-negative number.';
+    return;
+  }
+  if(isNaN(expeditionsPerDay) || expeditionsPerDay < 1){
+    status.className = 'status err';
+    status.textContent = 'Expeditions per day must be at least 1.';
     return;
   }
   if(!(hatchling <= fledged && fledged <= ascendant && ascendant <= sovereign)){
@@ -2828,6 +2918,7 @@ async function saveGuardianProgression(){
   const { error } = await supabaseClient.from('guardian_progression_settings').update({
     hatchling_marks: hatchling, fledged_marks: fledged, ascendant_marks: ascendant, sovereign_marks: sovereign,
     full_mark_stat_gain: fullGain, partial_mark_stat_gain: partialGain, dominant_affinity_marks: affinityMarks,
+    expeditions_per_day: expeditionsPerDay,
     updated_at: new Date().toISOString()
   }).eq('id', 1);
   status.className = error ? 'status err' : 'status ok';
@@ -3383,6 +3474,181 @@ async function addGuardianItem(){
   ['newGuardianItemKey','newGuardianItemName','newGuardianItemCost','newGuardianItemStatAmount','newGuardianItemEffect','newGuardianItemEnchantKey','newGuardianItemEnchantAmount','newGuardianItemDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
   updateNewGuardianItemTypeFields();
   loadGuardianItemCatalog();
+}
+
+/* =====================================================================
+   EXPEDITIONS — artifacts + fragments/clues
+   ===================================================================== */
+
+async function loadExpeditionArtifacts(){
+  const { data, error } = await supabaseClient.from('expedition_artifacts').select('*').order('key', { ascending: true });
+  const rows = document.getElementById('artifactRows');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="7">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = (data || []).map(a => `<tr data-key="${esc(a.key)}">
+    <td class="dim">${esc(a.key)}</td>
+    <td><input type="text" id="artName_${esc(a.key)}" value="${esc(a.name)}" style="max-width:160px;"></td>
+    <td><input type="text" id="artDesc_${esc(a.key)}" value="${esc(a.description || '')}" style="max-width:260px;"></td>
+    <td><input type="number" min="1" id="artTotal_${esc(a.key)}" value="${a.total_fragments}" style="max-width:80px;"></td>
+    <td><input type="text" id="artPantheon_${esc(a.key)}" value="${esc(a.unlock_pantheon_id)}" style="max-width:120px;"></td>
+    <td><input type="text" id="artDeity_${esc(a.key)}" value="${esc(a.unlock_deity_id)}" style="max-width:120px;"></td>
+    <td><input type="checkbox" id="artActive_${esc(a.key)}" ${a.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="7">No artifacts yet.</td></tr>';
+
+  // Keep the fragment-editor's artifact picker in sync with the catalog.
+  const sel = document.getElementById('fragmentArtifactSelect');
+  const prev = sel.value;
+  sel.innerHTML = (data || []).map(a => `<option value="${esc(a.key)}">${esc(a.name)} (${esc(a.key)})</option>`).join('') || '<option value="">No artifacts yet</option>';
+  if(prev && (data || []).some(a => a.key === prev)) sel.value = prev;
+  if(sel.value) loadExpeditionFragments();
+}
+
+async function saveExpeditionArtifacts(){
+  const status = document.getElementById('artifactStatus');
+  const trs = document.querySelectorAll('#artifactRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    return {
+      key,
+      name: document.getElementById('artName_' + key).value.trim(),
+      description: document.getElementById('artDesc_' + key).value.trim(),
+      total_fragments: parseInt(document.getElementById('artTotal_' + key).value, 10),
+      unlock_pantheon_id: document.getElementById('artPantheon_' + key).value.trim(),
+      unlock_deity_id: document.getElementById('artDeity_' + key).value.trim(),
+      active: document.getElementById('artActive_' + key).checked
+    };
+  });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('expedition_artifacts').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadExpeditionArtifacts();
+}
+
+async function addExpeditionArtifact(){
+  const status = document.getElementById('newArtifactStatus');
+  const key = document.getElementById('newArtifactKey').value.trim().toLowerCase();
+  const name = document.getElementById('newArtifactName').value.trim();
+  const description = document.getElementById('newArtifactDescription').value.trim();
+  const totalFragments = parseInt(document.getElementById('newArtifactTotalFragments').value, 10);
+  const pantheon = document.getElementById('newArtifactPantheon').value.trim();
+  const deity = document.getElementById('newArtifactDeity').value.trim();
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  if(isNaN(totalFragments) || totalFragments < 1){ status.className = 'status err'; status.textContent = 'Enter a total fragment count of at least 1.'; return; }
+  if(!pantheon || !deity){ status.className = 'status err'; status.textContent = 'Unlock pantheon id and deity id are both required.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('expedition_artifacts').insert({
+    key, name, description, total_fragments: totalFragments, unlock_pantheon_id: pantheon, unlock_deity_id: deity
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+
+  status.className = 'status ok';
+  status.textContent = name + ' added. Now add ' + totalFragments + ' fragment(s) for it below.';
+  ['newArtifactKey','newArtifactName','newArtifactTotalFragments','newArtifactPantheon','newArtifactDeity','newArtifactDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  loadExpeditionArtifacts();
+}
+
+async function loadExpeditionFragments(){
+  const artifactKey = document.getElementById('fragmentArtifactSelect').value;
+  const rows = document.getElementById('fragmentRows');
+  if(!artifactKey){ rows.innerHTML = '<tr><td colspan="8">Pick an artifact above.</td></tr>'; return; }
+
+  const { data, error } = await supabaseClient.from('expedition_fragments').select('*').eq('artifact_key', artifactKey).order('fragment_index', { ascending: true });
+  if(error){
+    rows.innerHTML = '<tr><td colspan="8">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = (data || []).map(f => {
+    const rowId = artifactKey + '_' + f.fragment_index;
+    const choicesText = Array.isArray(f.choices) ? f.choices.join('\n') : '';
+    return `<tr data-artifact="${esc(artifactKey)}" data-index="${f.fragment_index}">
+      <td class="dim">${f.fragment_index}</td>
+      <td><input type="text" id="fragRegion_${rowId}" value="${esc(f.region_name)}" style="max-width:160px;"></td>
+      <td><input type="text" id="fragClue_${rowId}" value="${esc(f.clue_text)}" style="max-width:260px;"></td>
+      <td><textarea id="fragChoices_${rowId}" rows="3" style="max-width:220px;">${esc(choicesText)}</textarea></td>
+      <td><input type="number" min="0" id="fragCorrect_${rowId}" value="${f.correct_index}" style="max-width:70px;"></td>
+      <td><input type="text" id="fragFact_${rowId}" value="${esc(f.fun_fact || '')}" style="max-width:220px;"></td>
+      <td><input type="number" min="0.5" step="0.5" id="fragHours_${rowId}" value="${f.travel_hours}" style="max-width:80px;"></td>
+      <td><input type="checkbox" id="fragActive_${rowId}" ${f.active ? 'checked' : ''}></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8">No fragments yet for this artifact.</td></tr>';
+}
+
+async function saveExpeditionFragments(){
+  const status = document.getElementById('fragmentStatus');
+  const trs = document.querySelectorAll('#fragmentRows tr[data-artifact]');
+  const rows = Array.from(trs).map(tr => {
+    const artifactKey = tr.getAttribute('data-artifact');
+    const fragmentIndex = parseInt(tr.getAttribute('data-index'), 10);
+    const rowId = artifactKey + '_' + fragmentIndex;
+    const choicesLines = document.getElementById('fragChoices_' + rowId).value.split('\n').map(s => s.trim()).filter(Boolean);
+    return {
+      artifact_key: artifactKey,
+      fragment_index: fragmentIndex,
+      region_name: document.getElementById('fragRegion_' + rowId).value.trim(),
+      clue_text: document.getElementById('fragClue_' + rowId).value.trim(),
+      choices: choicesLines,
+      correct_index: parseInt(document.getElementById('fragCorrect_' + rowId).value, 10),
+      fun_fact: document.getElementById('fragFact_' + rowId).value.trim(),
+      travel_hours: parseFloat(document.getElementById('fragHours_' + rowId).value),
+      active: document.getElementById('fragActive_' + rowId).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  const badRow = rows.find(r => r.correct_index >= r.choices.length);
+  if(badRow){
+    status.className = 'status err';
+    status.textContent = `Fragment #${badRow.fragment_index}: correct # (${badRow.correct_index}) is out of range for its ${badRow.choices.length} choice(s).`;
+    return;
+  }
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('expedition_fragments').upsert(rows, { onConflict: 'artifact_key,fragment_index' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadExpeditionFragments();
+}
+
+async function addExpeditionFragment(){
+  const status = document.getElementById('newFragmentStatus');
+  const artifactKey = document.getElementById('fragmentArtifactSelect').value;
+  const fragmentIndex = parseInt(document.getElementById('newFragmentIndex').value, 10);
+  const region = document.getElementById('newFragmentRegion').value.trim();
+  const clue = document.getElementById('newFragmentClue').value.trim();
+  const choicesLines = document.getElementById('newFragmentChoices').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const correctIndex = parseInt(document.getElementById('newFragmentCorrectIndex').value, 10);
+  const funFact = document.getElementById('newFragmentFunFact').value.trim();
+  const travelHours = parseFloat(document.getElementById('newFragmentTravelHours').value);
+
+  if(!artifactKey){ status.className = 'status err'; status.textContent = 'Pick an artifact above first.'; return; }
+  if(isNaN(fragmentIndex) || fragmentIndex < 1){ status.className = 'status err'; status.textContent = 'Enter a fragment # of at least 1.'; return; }
+  if(!region || !clue){ status.className = 'status err'; status.textContent = 'Region name and clue text are both required.'; return; }
+  if(choicesLines.length < 2){ status.className = 'status err'; status.textContent = 'Enter at least 2 choices, one per line.'; return; }
+  if(isNaN(correctIndex) || correctIndex < 0 || correctIndex >= choicesLines.length){
+    status.className = 'status err'; status.textContent = `Correct # must be between 0 and ${choicesLines.length - 1} for these choices.`; return;
+  }
+  if(isNaN(travelHours) || travelHours <= 0){ status.className = 'status err'; status.textContent = 'Enter travel hours greater than 0.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('expedition_fragments').insert({
+    artifact_key: artifactKey, fragment_index: fragmentIndex, region_name: region, clue_text: clue,
+    choices: choicesLines, correct_index: correctIndex, fun_fact: funFact, travel_hours: travelHours
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That fragment # already exists for this artifact.' : ('Failed: ' + error.message); return; }
+
+  status.className = 'status ok';
+  status.textContent = 'Fragment #' + fragmentIndex + ' added to ' + artifactKey + '.';
+  ['newFragmentIndex','newFragmentRegion','newFragmentClue','newFragmentChoices','newFragmentCorrectIndex','newFragmentFunFact'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newFragmentTravelHours').value = '4';
+  loadExpeditionFragments();
 }
 
 /* =====================================================================
