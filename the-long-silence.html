@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -48,6 +47,31 @@ body.map-screen .wrap{max-width:none;margin:0;padding:0;}
   display:flex;align-items:center;justify-content:center;
   background:var(--ink);
 }
+
+/* Real login is now required before anything else loads — no more
+   anonymous-first play. Same "escape .wrap via position:fixed, hide the
+   mast/footer via a body class" trick as the map screen, but this one
+   crops to fill (background-size:cover with no aspect-ratio lock) since
+   there's no hotspot grid to keep aligned here, just a login card
+   floating over a hero image. */
+body.login-screen{overflow:hidden;}
+body.login-screen .mast, body.login-screen footer.notice{display:none;}
+body.login-screen .wrap{max-width:none;margin:0;padding:0;}
+.login-screen-wrap{
+  position:fixed;inset:0;z-index:5;
+  display:flex;align-items:center;justify-content:center;
+  background:url('https://static.wixstatic.com/media/d6c75e_6e127e24b9ce43e2a468ef72aa9dd73a~mv2.jpg') center/cover no-repeat;
+}
+.login-card{
+  background:rgba(10,8,16,0.74);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  border:1px solid var(--line);border-radius:6px;
+  padding:38px 32px;max-width:360px;width:calc(100% - 40px);text-align:center;
+}
+.login-card h1{font-size:clamp(24px,5vw,32px);margin:0 0 10px;color:var(--parchment);text-shadow:0 0 24px rgba(200,162,74,0.25);}
+.login-card .hint{margin:0 0 22px;}
+.login-card input{margin-bottom:12px;}
+.login-divider{display:flex;align-items:center;gap:10px;color:var(--parchment-dim);font-size:11px;text-transform:uppercase;letter-spacing:0.1em;margin:20px 0;}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--line);}
 
 .card{background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--line);border-radius:4px;padding:28px;margin-bottom:24px;}
 .card h2{font-size:18px;color:var(--gold-bright);margin:0 0 8px;}
@@ -290,13 +314,11 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
     <h1>The Long Silence</h1>
     <div class="rule"></div>
     <p class="sub">The gods did not leave. They were silenced. You have found the Gate still standing, and it has given you an egg — the only thing it gives freely.</p>
-    <a class="backlink" href="index.html">&larr; Return to the Gate</a>
   </header>
 
   <div id="app">
     <div class="card" style="text-align:center;padding:48px 28px;">
-      <p class="hint" style="margin:0 0 26px;">Somewhere past the Gate, an egg is waiting for a keeper. Petition the silent gods, raise what hatches, and see what still answers.</p>
-      <button onclick="enterGate()">Enter the Gate</button>
+      <p class="hint" style="margin:0;">Loading…</p>
     </div>
   </div>
 
@@ -446,11 +468,37 @@ let campaignData = null;   // cached response from campaign/list: {level, xp, ch
 let campaignMsg = '';      // transient status shown on the browse screen after returning from a fight/choice (XP/level-up summary)
 
 // The map hub (renderMapHub()) is the landing screen once a guardian
-// exists — see render()'s fallback below. Guardian Home (stats/Bond/Claim
-// this Seeker) is no longer that fallback; it's just another destination,
-// reached only via the map's "Guardian Page" hotspot (openGuardianHome()),
-// same as every other room on the map.
+// exists — see render()'s fallback below. Guardian Home (stats/Bond) is
+// no longer that fallback; it's just another destination, reached only
+// via the map's "Guardian Page" hotspot (openGuardianHome()), same as
+// every other room on the map. "Claim this Seeker" is gone entirely —
+// every account is a real login now (see the boot()/login screen below),
+// nothing left to claim.
 let guardianHomeView = null; // null | {step:'home'} — top-level (Map hub's "Guardian Page" hotspot)
+
+// Message quota (how many deity chat replies are left this month) is
+// surfaced on Profile rather than its own screen — loaded lazily, same
+// convention as everything else here, straight from the same
+// pricing_settings/message_usage/profiles rows index.html's authbar reads.
+let profileMessageStatus = null; // null | {includedPerMonth, usedThisMonth, bonusMessages}
+
+/* ---------------- shop (opened from Profile) ----------------
+   Real-money purchasing — pantheons, individual gods, the flat
+   subscription, named subscription tiers, and message packs — used to
+   live only on index.html's Gate. It still calls the exact same
+   create-checkout edge function with the exact same {type, scopeId}
+   body; this is a new frontend for it, not a new backend. Age-gating
+   reuses index.html's own localStorage keys (pg_age_verified /
+   pg_age_warned_<id>) so a warning cleared on one page stays cleared on
+   the other. */
+let shopPricing = { deity: 100, pantheon: 300, subscription: 500, includedPerMonth: 0, packSize: 50, packPrice: 200 };
+let shopDeitySettings = {};     // deity id -> {price_cents, is_free, for_sale, age_restricted, age_warning}
+let shopPantheonSettings = {};  // pantheon id -> {price_cents, for_sale, age_restricted, age_warning}
+let shopStoreItems = [];        // active store_items — message/gift packs
+let shopSubscriptionTiers = []; // active subscription_tiers
+let shopDeitySearch = '';       // filter text for the deity-unlock list — ~150 gods is too many to browse unfiltered
+let shopView = null;            // null | {step:'browse'} | {step:'ageGate', pending:{type,scopeId,label,pantheonId,deityId,warningText}}
+let shopStatusMsg = '';
 
 async function loadCircleShopItems(){
   if(circleShopItems.length) return;
@@ -459,28 +507,16 @@ async function loadCircleShopItems(){
   circleShopItems = data || [];
 }
 
-// ---------------- title / entry splash ----------------
-// Shown first, every load, before anything reaches the backend — clicking
-// through is the deliberate "title screen" moment the game was missing.
-// Anonymous sign-in and the guardian fetch only start once the player
-// actually chooses to enter, not the instant the page loads.
-function showSplash(){
-  const app = document.getElementById('app');
-  app.innerHTML = `
-    <div class="card" style="text-align:center;padding:48px 28px;">
-      <p class="hint" style="margin:0 0 26px;">Somewhere past the Gate, an egg is waiting for a keeper. Petition the silent gods, raise what hatches, and see what still answers.</p>
-      <button onclick="enterGate()">Enter the Gate</button>
-    </div>
-  `;
-}
-
-async function enterGate(){
-  const app = document.getElementById('app');
-  app.innerHTML = '<div class="card"><p class="hint" style="margin:0;text-align:center;">Finding your way through the Gate…</p></div>';
-  await init();
-}
-
-async function init(){
+// ---------------- login (real accounts only — no more anonymous play) ----------------
+// boot() is the very first thing this page does. Real login (Google or an
+// emailed magic link) is required before anything else loads — no more
+// "Enter the Gate" title screen, no more signInAnonymously() fallback,
+// and no more "Claim this Seeker" upgrade-later flow, since every session
+// already has a real identity from the moment a guardian can exist at
+// all. index.html keeps its own separate Google/email login for exactly
+// this reason; this is the same pattern, just this page's own copy of it
+// so this page never has to send anyone through index.html to sign in.
+async function boot(){
   if(SUPABASE_URL.indexOf('PASTE_YOUR') === 0){
     document.getElementById('app').innerHTML = '<div class="card"><p class="hint" style="margin:0;">Backend not configured yet.</p></div>';
     return;
@@ -489,21 +525,92 @@ async function init(){
 
   const { data: { session: existing } } = await supabaseClient.auth.getSession();
   session = existing;
-  if(!session){
-    const { data, error } = await supabaseClient.auth.signInAnonymously();
-    if(error){
-      document.getElementById('app').innerHTML =
-        '<div class="card"><p class="hint" style="margin:0;">Could not reach the Gate: ' + esc(error.message) + '. If you are the site owner, check that anonymous sign-ins are enabled in Supabase Auth settings.</p></div>';
-      return;
-    }
-    session = data.session;
+  if(session){
+    await afterLogin();
+  } else {
+    renderLoginScreen();
   }
 
+  // Covers both redirect-back paths (Google OAuth and the magic-link
+  // email) landing on a page load that already found no session above —
+  // supabase-js resolves the token from the URL asynchronously, so this
+  // fires afterward rather than being caught by the getSession() call.
+  supabaseClient.auth.onAuthStateChange(async (_event, newSession) => {
+    if(newSession && !session){
+      session = newSession;
+      await afterLogin();
+    } else if(!newSession && session){
+      session = null;
+      guardian = null;
+      petitionView = null; combatView = null; craftView = null; redeemView = null;
+      expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
+      profileView = null; shrineView = null; mailView = null; backpackView = null;
+      checkinView = null; promoView = null; campaignView = null; guardianHomeView = null;
+      shopView = null;
+      renderLoginScreen();
+    }
+  });
+}
+
+async function afterLogin(){
+  document.body.classList.remove('login-screen');
+  document.getElementById('app').innerHTML = '<div class="card"><p class="hint" style="margin:0;text-align:center;">Finding your way through the Gate…</p></div>';
   await loadCustomDeitiesIntoCatalog().catch(e => console.error('custom deities fold-in failed', e));
   await loadGuardian();
   if(guardian) await loadMarks();
   loadMoonPhase().catch(e => console.error('moon phase load failed', e));
   render();
+
+  // Stripe lands back here now (create-checkout's success_url/cancel_url
+  // point at this page, not index.html) — land on the Shop with the
+  // result instead of just the bare map.
+  const params = new URLSearchParams(window.location.search);
+  const checkoutResult = params.get('checkout');
+  if(checkoutResult && guardian){
+    window.history.replaceState({}, '', window.location.pathname);
+    await openShop();
+    shopStatusMsg = checkoutResult === 'success' ? 'Payment received — your unlock should be active now.' : 'Checkout cancelled — nothing was charged.';
+    render();
+  }
+}
+
+function renderLoginScreen(){
+  document.body.classList.add('login-screen');
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="login-screen-wrap">
+      <div class="login-card">
+        <h1>The Long Silence</h1>
+        <p class="hint">Somewhere past the Gate, an egg is waiting for a keeper. Sign in to claim it.</p>
+        <button onclick="loginWithGoogle()">Sign in with Google</button>
+        <div class="login-divider">or</div>
+        <input type="email" id="loginEmail" placeholder="you@example.com">
+        <button class="secondary" onclick="loginWithMagicLink()">Email me a sign-in link</button>
+        <div class="status" id="loginStatus"></div>
+      </div>
+    </div>
+  `;
+}
+
+async function loginWithGoogle(){
+  await supabaseClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname }
+  });
+}
+
+async function loginWithMagicLink(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const status = document.getElementById('loginStatus');
+  if(!email){ status.className = 'status err'; status.textContent = 'Enter an email first.'; return; }
+  status.className = 'status';
+  status.textContent = 'Sending…';
+  const { error } = await supabaseClient.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.origin + window.location.pathname }
+  });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? error.message : 'Check your email for a sign-in link.';
 }
 
 async function loadGuardian(){
@@ -544,6 +651,7 @@ function render(){
   // Only renderMapHub() (below) turns this back on — every other screen
   // renders inside the normal .wrap column.
   document.body.classList.remove('map-screen');
+  document.body.classList.remove('login-screen');
   if(!circleView || circleView.step !== 'messages') stopMessagesPolling();
   if(!circleView || circleView.step !== 'altar') stopAltarTicking();
   if(!personalAltarView) stopPersonalAltarTicking();
@@ -562,6 +670,7 @@ function render(){
   if(guardian && checkinView){ renderCheckin(); return; }
   if(guardian && promoView){ renderPromo(); return; }
   if(guardian && campaignView){ renderCampaign(); return; }
+  if(guardian && shopView){ renderShop(); return; }
   if(guardian && guardianHomeView){ renderGuardianHome(); return; }
   // Default landing screen once a guardian exists: the map hub itself,
   // not the guardian stats page — see the Guardian Home note above.
@@ -758,14 +867,6 @@ function renderGuardianHome(){
         : (marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.')}</p>
       <button class="secondary" style="margin-top:14px;" onclick="returnToMapHub()">Back to the map</button>
     </div>
-
-    <div class="card" id="claimCard">
-      <h2>Claim this Seeker</h2>
-      <p class="hint">Right now this guardian only exists on this browser. Add an email and it's yours for good — same account everywhere, and required later if you want to join a Circle.</p>
-      <input type="email" id="claimEmail" placeholder="you@example.com">
-      <button class="secondary" onclick="claimWithEmail()">Send confirmation link</button>
-      <div class="status" id="claimStatus"></div>
-    </div>
   `;
 }
 
@@ -830,30 +931,43 @@ async function doTendBond(){
   if(s2){ s2.className = 'status ok'; s2.textContent = 'Bond deepens.'; }
 }
 
-async function claimWithEmail(){
-  const status = document.getElementById('claimStatus');
-  const email = document.getElementById('claimEmail').value.trim();
-  if(!email){ status.className = 'status err'; status.textContent = 'Enter an email first.'; return; }
-  status.className = 'status';
-  status.textContent = 'Sending…';
-  const { error } = await supabaseClient.auth.updateUser(
-    { email },
-    { emailRedirectTo: window.location.origin + window.location.pathname }
-  );
-  status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? error.message : 'Check your email and confirm the link — this Seeker is yours for good after that.';
-}
-
 /* ---------------- profile (Map hub's "Profile" hotspot) ---------------- */
 
 function openProfile(){
   profileView = { step: 'home' };
   render();
+  loadProfileMessageStatus().then(() => { if(profileView) render(); });
 }
 
 function backFromProfile(){
   profileView = null;
   render();
+}
+
+async function loadProfileMessageStatus(){
+  const period = new Date().toISOString().slice(0, 7); // 'YYYY-MM', matches message_usage's period column
+  const [{ data: priceRow }, { data: usageRow }, { data: profileRow }] = await Promise.all([
+    supabaseClient.from('pricing_settings').select('included_messages_per_month').eq('id', 1).maybeSingle(),
+    supabaseClient.from('message_usage').select('count').eq('user_id', session.user.id).eq('period', period).maybeSingle(),
+    supabaseClient.from('profiles').select('bonus_messages').eq('id', session.user.id).maybeSingle()
+  ]);
+  profileMessageStatus = {
+    includedPerMonth: priceRow ? (priceRow.included_messages_per_month || 0) : 0,
+    usedThisMonth: usageRow ? usageRow.count : 0,
+    bonusMessages: profileRow ? (profileRow.bonus_messages || 0) : 0
+  };
+}
+
+// Same "included_messages_per_month <= 0 means unlimited" convention as
+// index.html's own messagesRemainingLabel().
+function profileMessagesRemainingLabel(){
+  if(!profileMessageStatus) return 'Loading…';
+  if(!profileMessageStatus.includedPerMonth || profileMessageStatus.includedPerMonth <= 0){
+    return profileMessageStatus.bonusMessages > 0 ? ('Unlimited + ' + profileMessageStatus.bonusMessages + ' bonus') : 'Unlimited';
+  }
+  const includedLeft = Math.max(0, profileMessageStatus.includedPerMonth - profileMessageStatus.usedThisMonth);
+  const total = includedLeft + profileMessageStatus.bonusMessages;
+  return total + ' message' + (total === 1 ? '' : 's') + ' left this month';
 }
 
 function renderProfile(){
@@ -884,9 +998,23 @@ function renderProfile(){
       </div>
 
       <p class="marks-note">${marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.'}</p>
-      <button class="secondary" style="margin-top:10px;" onclick="backFromProfile()">Back to the map</button>
+
+      <div class="essence-row" style="margin-top:18px;">
+        <span class="essence-label">Deity messages</span>
+        <span class="essence-value" style="font-size:16px;">${esc(profileMessagesRemainingLabel())}</span>
+      </div>
+      <button class="secondary" style="margin-top:6px;" onclick="openShop()">Open the Shop</button>
+
+      <button class="secondary" style="margin-top:14px;display:block;margin-left:auto;margin-right:auto;" onclick="backFromProfile()">Back to the map</button>
+      <button class="secondary" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto;" onclick="signOutOfGate()">Sign out</button>
     </div>
   `;
+}
+
+async function signOutOfGate(){
+  await supabaseClient.auth.signOut();
+  // The onAuthStateChange listener in boot() picks this up (newSession is
+  // null) and swaps back to the login screen on its own.
 }
 
 /* ---------------- shrine (Map hub's "Temple of the Gods" hotspot) ----------------
@@ -1170,6 +1298,233 @@ function renderPromo(){
   `;
 }
 
+/* ---------------- shop (opened from Profile — real-money purchasing) ----------------
+   Pantheons, individual gods, the flat subscription, named subscription
+   tiers, and message packs. Calls the exact same create-checkout edge
+   function index.html's Shop/paywall buttons always have, with the exact
+   same {type, scopeId} body — this only had to be a new frontend for it,
+   not a new backend. "Already unlocked" reuses shrineEntitlements/
+   isDeityUnlocked (Shrine already loads and maintains that). */
+
+function shopFmtUsd(cents){ return '$' + (cents / 100).toFixed(2); }
+function shopIsFree(deityId){ const s = shopDeitySettings[deityId]; return s ? s.is_free : false; }
+function shopDeityForSale(deityId){ const s = shopDeitySettings[deityId]; return s ? s.for_sale : true; }
+function shopPantheonForSale(pid){ const s = shopPantheonSettings[pid]; return s ? s.for_sale : true; }
+function shopDeityPrice(deityId){ const s = shopDeitySettings[deityId]; return (s && s.price_cents != null) ? s.price_cents : shopPricing.deity; }
+function shopPantheonPrice(pid){ const s = shopPantheonSettings[pid]; return (s && s.price_cents != null) ? s.price_cents : shopPricing.pantheon; }
+
+function shopIsAgeRestricted(pantheonId, deityId){
+  const ds = deityId ? shopDeitySettings[deityId] : null;
+  const ps = shopPantheonSettings[pantheonId];
+  return !!(ds && ds.age_restricted) || !!(ps && ps.age_restricted);
+}
+function shopAgeWarningText(pantheonId, deityId){
+  const ds = deityId ? shopDeitySettings[deityId] : null;
+  const ps = shopPantheonSettings[pantheonId];
+  if(ds && ds.age_restricted && ds.age_warning) return ds.age_warning;
+  if(ps && ps.age_restricted && ps.age_warning) return ps.age_warning;
+  return 'This content is intended for mature audiences.';
+}
+// Same localStorage keys as index.html's own age gate, deliberately — a
+// warning cleared on one page stays cleared on the other.
+function shopAgeVerified(){ return localStorage.getItem('pg_age_verified') === 'true'; }
+function shopAgeWarnedKey(id){ return 'pg_age_warned_' + id; }
+function shopAgeWarned(id){ return localStorage.getItem(shopAgeWarnedKey(id)) === 'true'; }
+
+async function openShop(){
+  shopView = { step: 'browse' };
+  shopStatusMsg = '';
+  shopDeitySearch = '';
+  render();
+  await Promise.all([loadShopCatalog(), loadShrineEntitlements()]);
+  if(shopView) render();
+}
+
+function backFromShop(){
+  shopView = null;
+  render();
+}
+
+async function loadShopCatalog(){
+  const [{ data: priceRow }, { data: deityRows }, { data: pantheonRows }, { data: items, error: itemsErr }, { data: tiers, error: tiersErr }] = await Promise.all([
+    supabaseClient.from('pricing_settings').select('deity_price_cents, pantheon_price_cents, subscription_price_cents, included_messages_per_month, message_pack_size, message_pack_price_cents').eq('id', 1).maybeSingle(),
+    supabaseClient.from('deity_settings').select('deity_id, price_cents, is_free, for_sale, age_restricted, age_warning'),
+    supabaseClient.from('pantheon_settings').select('pantheon_id, price_cents, for_sale, age_restricted, age_warning'),
+    supabaseClient.from('store_items').select('id, name, description, price_cents').eq('active', true).order('sort_order', { ascending: true }),
+    supabaseClient.from('subscription_tiers').select('id, name, description, price_cents').eq('active', true).order('sort_order', { ascending: true })
+  ]);
+  if(priceRow){
+    shopPricing = {
+      deity: priceRow.deity_price_cents, pantheon: priceRow.pantheon_price_cents, subscription: priceRow.subscription_price_cents,
+      includedPerMonth: priceRow.included_messages_per_month, packSize: priceRow.message_pack_size, packPrice: priceRow.message_pack_price_cents
+    };
+  }
+  shopDeitySettings = {};
+  (deityRows || []).forEach(r => { shopDeitySettings[r.deity_id] = r; });
+  shopPantheonSettings = {};
+  (pantheonRows || []).forEach(r => { shopPantheonSettings[r.pantheon_id] = r; });
+  if(itemsErr) console.error('store_items fetch failed', itemsErr);
+  if(tiersErr) console.error('subscription_tiers fetch failed', tiersErr);
+  shopStoreItems = items || [];
+  shopSubscriptionTiers = tiers || [];
+}
+
+function renderShop(){
+  if(shopView.step === 'ageGate') return renderShopAgeGate();
+  return renderShopBrowse();
+}
+
+function shopBuyPantheon(pid, label){
+  if(shopIsAgeRestricted(pid, null) && !(shopAgeVerified() && shopAgeWarned(pid))){
+    shopView = { step: 'ageGate', pending: { type: 'pantheon', scopeId: pid, label, pantheonId: pid, deityId: null, warningText: shopAgeWarningText(pid, null) } };
+    render();
+    return;
+  }
+  shopStartCheckout('pantheon', pid);
+}
+
+function shopBuyDeity(deityId, label, pantheonId){
+  if(shopIsAgeRestricted(pantheonId, deityId) && !(shopAgeVerified() && shopAgeWarned(deityId))){
+    shopView = { step: 'ageGate', pending: { type: 'deity', scopeId: deityId, label, pantheonId, deityId, warningText: shopAgeWarningText(pantheonId, deityId) } };
+    render();
+    return;
+  }
+  shopStartCheckout('deity', deityId);
+}
+
+function renderShopAgeGate(){
+  const app = document.getElementById('app');
+  const v = shopView.pending;
+  const needsBirthdate = !shopAgeVerified();
+  app.innerHTML = `
+    <div class="card" style="text-align:center;">
+      <h2>Age restricted</h2>
+      <p class="hint">${esc(v.label)}: ${esc(v.warningText)}</p>
+      ${needsBirthdate ? `<input type="date" id="shopAgeBirthdate" style="max-width:220px;">` : ''}
+      <div class="status" id="shopAgeGateStatus"></div>
+      <button onclick="confirmShopAgeGate()">I confirm I am 18 or older</button>
+      <button class="secondary" style="margin-top:10px;" onclick="cancelShopAgeGate()">Cancel</button>
+    </div>
+  `;
+}
+
+function cancelShopAgeGate(){
+  shopView = { step: 'browse' };
+  render();
+}
+
+function confirmShopAgeGate(){
+  const status = document.getElementById('shopAgeGateStatus');
+  const pending = shopView.pending;
+  if(!shopAgeVerified()){
+    const val = document.getElementById('shopAgeBirthdate').value;
+    if(!val){ status.className = 'status err'; status.textContent = 'Enter your birthdate to continue.'; return; }
+    const today = new Date();
+    const birthdate = new Date(val);
+    let age = today.getFullYear() - birthdate.getFullYear();
+    const m = today.getMonth() - birthdate.getMonth();
+    if(m < 0 || (m === 0 && today.getDate() < birthdate.getDate())) age--;
+    if(age < 18){ status.className = 'status err'; status.textContent = 'You must be 18 or older to view this content.'; return; }
+    localStorage.setItem('pg_age_verified', 'true');
+  }
+  localStorage.setItem(shopAgeWarnedKey(pending.deityId || pending.pantheonId), 'true');
+  shopStartCheckout(pending.type, pending.scopeId);
+}
+
+async function shopStartCheckout(type, scopeId){
+  const status = document.getElementById('shopAgeGateStatus') || document.getElementById('shopStatus');
+  if(status){ status.className = 'status'; status.textContent = 'Opening checkout…'; }
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/create-checkout', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ type, scopeId })
+    });
+    const data = await resp.json();
+    if(data.ok && data.url){
+      window.location.href = data.url;
+    } else if(status){
+      status.className = 'status err';
+      status.textContent = data.error || 'Could not start checkout.';
+    }
+  }catch(e){
+    if(status){ status.className = 'status err'; status.textContent = 'Could not reach checkout: ' + e.message; }
+  }
+}
+
+function filterShopDeities(val){
+  shopDeitySearch = val;
+  renderShopBrowse();
+}
+
+function renderShopBrowse(){
+  const app = document.getElementById('app');
+  const search = shopDeitySearch.trim().toLowerCase();
+
+  const tierRows = shopSubscriptionTiers.map(t => `
+    <div class="roster-row">
+      <div><div class="rname">${esc(t.name)} — ${shopFmtUsd(t.price_cents)}/mo</div>
+      <div class="cblurb">${esc(t.description || '')}</div></div>
+      <button class="secondary" onclick="shopStartCheckout('tier','${esc(t.id)}')">Subscribe</button>
+    </div>`).join('');
+
+  const packRows = shopStoreItems.map(i => `
+    <div class="roster-row">
+      <div><div class="rname">${esc(i.name)} — ${shopFmtUsd(i.price_cents)}</div>
+      <div class="cblurb">${esc(i.description || '')}</div></div>
+      <button class="secondary" onclick="shopStartCheckout('store_item','${esc(i.id)}')">Buy</button>
+    </div>`).join('');
+
+  const pantheonRows = Object.keys(CATALOG).map(pid => {
+    const owned = shrineEntitlements.some(e => (e.scope_type === 'all') || (e.scope_type === 'pantheon' && e.scope_id === pid));
+    if(owned || !shopPantheonForSale(pid)) return '';
+    const label = CATALOG[pid].label;
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(label)}</div>
+      <div class="cblurb">Unlocks every god in this pantheon at once.</div></div>
+      <button class="secondary" onclick="shopBuyPantheon('${esc(pid)}','${esc(label)}')">${shopFmtUsd(shopPantheonPrice(pid))}</button>
+    </div>`;
+  }).join('') || '<p class="hint">Every pantheon is already unlocked.</p>';
+
+  const deityRows = Object.keys(CATALOG).flatMap(pid => CATALOG[pid].deities
+    .filter(([id, name]) => !search || name.toLowerCase().includes(search))
+    .filter(([id]) => !isDeityUnlocked(pid, id))
+    .filter(([id]) => shopIsFree(id) === false && shopDeityForSale(id) !== false)
+    .map(([id, name]) => `<div class="roster-row">
+      <div><div class="rname">${esc(name)}</div><div class="cblurb">${esc(CATALOG[pid].label)}</div></div>
+      <button class="secondary" onclick="shopBuyDeity('${esc(id)}','${esc(name)}','${esc(pid)}')">${shopFmtUsd(shopDeityPrice(id))}</button>
+    </div>`)
+  ).join('') || '<p class="hint">No matching gods — everything shown is already unlocked, free, or not currently for sale.</p>';
+
+  app.innerHTML = `
+    <div class="card">
+      <h2 style="text-align:center;">Shop</h2>
+      <div class="status" id="shopStatus">${esc(shopStatusMsg)}</div>
+      ${tierRows ? `<h3>Subscriptions</h3>${tierRows}` : ''}
+      <div class="roster-row">
+        <div><div class="rname">Full site access — ${shopFmtUsd(shopPricing.subscription)}/mo</div>
+        <div class="cblurb">Every pantheon, every god, for as long as it's active.</div></div>
+        <button class="secondary" onclick="shopStartCheckout('all', null)">Subscribe</button>
+      </div>
+      <div class="roster-row">
+        <div><div class="rname">Message pack — ${shopPricing.packSize} messages — ${shopFmtUsd(shopPricing.packPrice)}</div>
+        <div class="cblurb">Bonus messages that never expire, on top of whatever's included monthly.</div></div>
+        <button class="secondary" onclick="shopStartCheckout('messages', null)">Buy</button>
+      </div>
+      ${packRows}
+
+      <h3 style="margin-top:22px;">Pantheons</h3>
+      ${pantheonRows}
+
+      <h3 style="margin-top:22px;">Individual gods</h3>
+      <input type="text" placeholder="Search by name…" value="${esc(shopDeitySearch)}" oninput="filterShopDeities(this.value)">
+      <div style="max-height:320px;overflow-y:auto;border:1px solid var(--line);border-radius:4px;padding:10px;">${deityRows}</div>
+
+      <button class="secondary" style="margin-top:18px;" onclick="backFromShop()">Back to the map</button>
+    </div>
+  `;
+}
+
 /* ---------------- campaign (Map hub's "The Divine Realms" title hotspot, Phase 4) ----------------
    Chapters made of encounters — combat (reuses the existing Gauntlet
    battle engine via combatView, tagged with source:'campaign', see the
@@ -1345,6 +1700,7 @@ function returnToMapHub(){
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
   checkinView = null; promoView = null; campaignView = null; guardianHomeView = null;
+  shopView = null;
   render();
 }
 
@@ -4153,7 +4509,7 @@ function renderPvpLeaderboard(){
   `;
 }
 
-showSplash();
+boot();
 </script>
 </body>
 </html>
