@@ -418,6 +418,13 @@ let campaignView = null;   // null | {step:'browse'} | {step:'choice', encounter
 let campaignData = null;   // cached response from campaign/list: {level, xp, chapters:[{key,name,requiredLevel,unlocked,encounters:[...]}]}
 let campaignMsg = '';      // transient status shown on the browse screen after returning from a fight/choice (XP/level-up summary)
 
+// The map hub (renderMapHub()) is the landing screen once a guardian
+// exists — see render()'s fallback below. Guardian Home (stats/Bond/Claim
+// this Seeker) is no longer that fallback; it's just another destination,
+// reached only via the map's "Guardian Page" hotspot (openGuardianHome()),
+// same as every other room on the map.
+let guardianHomeView = null; // null | {step:'home'} — top-level (Map hub's "Guardian Page" hotspot)
+
 async function loadCircleShopItems(){
   if(circleShopItems.length) return;
   const { data, error } = await supabaseClient.from('circle_shop_items').select('*').eq('active', true).order('cost_devotion');
@@ -525,7 +532,10 @@ function render(){
   if(guardian && checkinView){ renderCheckin(); return; }
   if(guardian && promoView){ renderPromo(); return; }
   if(guardian && campaignView){ renderCampaign(); return; }
-  guardian ? renderGuardianHome() : renderHatchFlow();
+  if(guardian && guardianHomeView){ renderGuardianHome(); return; }
+  // Default landing screen once a guardian exists: the map hub itself,
+  // not the guardian stats page — see the Guardian Home note above.
+  guardian ? renderMapHub() : renderHatchFlow();
 }
 
 /* ---------------- hatching ---------------- */
@@ -635,18 +645,38 @@ const MAP_AREAS = [
   // placeholder. Doing so is what makes a god show up at the Temple.
   { id: 'chainedGods',   label: 'Chained Gods',                       left: 70,   top: 56.6, width: 15.3, height: 23.4, action: openRedeem },
   // bottom bar
-  { id: 'guardianPage', label: 'Guardian Page', left: 0,    top: 71.6, width: 21,   height: 23.4, action: returnToMapHub },
+  { id: 'guardianPage', label: 'Guardian Page', left: 0,    top: 71.6, width: 21,   height: 23.4, action: openGuardianHome },
   // Not pictured on the art, so tucked into the open water next to the
   // Guardian Page icon rather than a below-map button.
   { id: 'personalAltar', label: 'Your Altar',   left: 21.5, top: 68,   width: 10,   height: 16,   action: openPersonalAltar },
   { id: 'backpack',     label: 'Backpack',      left: 84.9, top: 71.6, width: 15.1, height: 23.4, action: openBackpack },
 ];
 
-function renderMapHub(){
+function mapHubMarkup(){
   const nodes = MAP_AREAS.map((a, i) => `
     <button class="map-hotspot" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;" title="${esc(a.label)}" aria-label="${esc(a.label)}" onclick="MAP_AREAS[${i}].action()"></button>
   `).join('');
   return `<div class="map-hub" id="mapHub">${nodes}</div>`;
+}
+
+// The landing screen once a guardian exists (render()'s fallback) — every
+// hotspot on the map opens its own top-level view; "Guardian Page" opens
+// openGuardianHome() below, and every screen's "Back to the map" button
+// (really: nulling its own view var and calling render()) lands back here.
+function renderMapHub(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="card" style="text-align:center;">
+      <h2>The Divine Realms</h2>
+      <p class="hint">Welcome back, ${esc(guardian.name)}. Choose where to go.</p>
+      ${mapHubMarkup()}
+    </div>
+  `;
+}
+
+function openGuardianHome(){
+  guardianHomeView = { step: 'home' };
+  render();
 }
 
 function renderGuardianHome(){
@@ -698,7 +728,7 @@ function renderGuardianHome(){
       <p class="marks-note">${guardian.stage === 'egg'
         ? 'Still an egg. It hatches the moment a god marks it for the first time.'
         : (marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.')}</p>
-      ${renderMapHub()}
+      <button class="secondary" style="margin-top:14px;" onclick="returnToMapHub()">Back to the map</button>
     </div>
 
     <div class="card" id="claimCard">
@@ -826,7 +856,7 @@ function renderProfile(){
       </div>
 
       <p class="marks-note">${marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.'}</p>
-      <button class="secondary" style="margin-top:10px;" onclick="backFromProfile()">Back to your guardian</button>
+      <button class="secondary" style="margin-top:10px;" onclick="backFromProfile()">Back to the map</button>
     </div>
   `;
 }
@@ -900,7 +930,7 @@ function renderShrine(){
         ? 'Every god who has granted you an audience — chat any time, and see whether their blessing has found your guardian yet.'
         : 'No gods have granted you an audience yet. Unlock one through the Gate, or redeem a God Token at Chained Gods.'}</p>
       ${groups}
-      <button class="secondary" style="margin-top:10px;" onclick="backFromShrine()">Back to your guardian</button>
+      <button class="secondary" style="margin-top:10px;" onclick="backFromShrine()">Back to the map</button>
     </div>
   `;
 }
@@ -973,7 +1003,7 @@ function renderMail(){
       <p class="hint" style="text-align:center;">Announcements and gifts sent your way. Claim a gift once and it's yours — checking again never takes anything back.</p>
       <div class="status" id="mailStatus"></div>
       ${rows}
-      <button class="secondary" style="margin-top:14px;" onclick="backFromMail()">Back to your guardian</button>
+      <button class="secondary" style="margin-top:14px;" onclick="backFromMail()">Back to the map</button>
     </div>
   `;
 }
@@ -1025,7 +1055,7 @@ function renderBackpack(){
     <div class="card"><h2>Crafted Items</h2>${craftRows}<button class="secondary" style="margin-top:10px;" onclick="openCraft()">Go to Crafting</button></div>
     <div class="card"><h2>Arena Items</h2>${arenaRows}<button class="secondary" style="margin-top:10px;" onclick="openPvpArena()">Go to the Arena</button></div>
     <div class="card"><h2>Artifact Fragments</h2>${artifactRows}<button class="secondary" style="margin-top:10px;" onclick="openExpedition()">Go to Expeditions</button></div>
-    <div class="card"><button class="secondary" onclick="backFromBackpack()">Back to your guardian</button></div>
+    <div class="card"><button class="secondary" onclick="backFromBackpack()">Back to the map</button></div>
   `;
 }
 
@@ -1055,7 +1085,7 @@ function renderCheckin(){
       ${guardian.checkin_streak > 0 ? `<p class="hint" style="margin:-4px 0 10px;">${guardian.checkin_streak} day streak</p>` : ''}
       <button ${tendedToday ? 'disabled' : ''} onclick="tendGuardian()">${tendedToday ? 'Checked in today' : 'Check in'}</button>
       <div class="status" id="checkinStatus"></div>
-      <button class="secondary" style="margin-top:14px;" onclick="backFromCheckin()">Back to your guardian</button>
+      <button class="secondary" style="margin-top:14px;" onclick="backFromCheckin()">Back to the map</button>
     </div>
   `;
 }
@@ -1107,7 +1137,7 @@ function renderPromo(){
       <h2 style="text-align:center;">Promotions</h2>
       <p class="hint" style="text-align:center;">Active and recent site events. Rewards here are granted automatically — nothing to claim.</p>
       ${rows}
-      <button class="secondary" style="margin-top:14px;" onclick="backFromPromo()">Back to your guardian</button>
+      <button class="secondary" style="margin-top:14px;" onclick="backFromPromo()">Back to the map</button>
     </div>
   `;
 }
@@ -1188,7 +1218,7 @@ function renderCampaignBrowse(){
     </div>
     <div class="card">
       ${chapters}
-      <button class="secondary" style="margin-top:10px;" onclick="backFromCampaign()">Back to your guardian</button>
+      <button class="secondary" style="margin-top:10px;" onclick="backFromCampaign()">Back to the map</button>
     </div>
   `;
 }
@@ -1286,7 +1316,7 @@ function returnToMapHub(){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null;
   render();
 }
 
@@ -1332,7 +1362,7 @@ function renderPetitionPicker(){
       ${phaseLine}
       <div id="pickerStatus" class="status"></div>
       ${groups}
-      <button class="secondary" style="margin-top:10px;" onclick="backToGuardianHome()">Back to your guardian</button>
+      <button class="secondary" style="margin-top:10px;" onclick="backToGuardianHome()">Back to the map</button>
     </div>
   `;
 }
@@ -1554,7 +1584,7 @@ function renderProvingPicker(){
       <h2 style="text-align:center;">The Gauntlet</h2>
       <p class="hint" style="text-align:center;">Fixed trial grounds, always open, no moon required. Clear one to open the next. Wins and losses both pay Essence.</p>
       ${rows}
-      <button class="secondary" style="margin-top:10px;" onclick="cancelCombat()">Back to your guardian</button>
+      <button class="secondary" style="margin-top:10px;" onclick="cancelCombat()">Back to the map</button>
     </div>
   `;
 }
@@ -2092,7 +2122,7 @@ function renderCircleLocked(){
     <div class="card">
       <h2 style="text-align:center;">Your Circle</h2>
       <p class="hint" style="text-align:center;">Circles need a permanent account — claim this Seeker with an email first (see the card below), then come back.</p>
-      <button class="secondary" onclick="backToGuardianHomeFromCircle()">Back to your guardian</button>
+      <button class="secondary" onclick="backToGuardianHomeFromCircle()">Back to the map</button>
     </div>
   `;
 }
@@ -2133,7 +2163,7 @@ function renderCircleBrowse(){
       ${circleStatus ? `<div class="status ${circleStatus.toLowerCase().includes('sent') ? 'ok' : 'err'}">${esc(circleStatus)}</div>` : ''}
       <button style="margin-bottom:18px;" onclick="openCreateCircle()">Found a Circle</button>
       ${rows}
-      <button class="secondary" style="margin-top:14px;" onclick="backToGuardianHomeFromCircle()">Back to your guardian</button>
+      <button class="secondary" style="margin-top:14px;" onclick="backToGuardianHomeFromCircle()">Back to the map</button>
     </div>
   `;
 }
@@ -2384,7 +2414,7 @@ function renderCircleHome(){
         ${isLeader ? '<button class="secondary" onclick="openEditBanner()">Redesign banner</button>' : ''}
         <button class="secondary" onclick="doLeaveCircle()">Leave Circle</button>
         ${isLeader ? '<button class="secondary" onclick="doDisbandCircle()">Disband Circle</button>' : ''}
-        <button class="secondary" onclick="backToGuardianHomeFromCircle()">Back to your guardian</button>
+        <button class="secondary" onclick="backToGuardianHomeFromCircle()">Back to the map</button>
       </div>
     </div>
   `;
@@ -3558,7 +3588,7 @@ function renderExpedition(){
     <div class="card">
       <h2>Artifacts</h2>
       ${artifactCards}
-      <button class="secondary" style="margin-top:14px;" onclick="backFromExpedition()">Back to your guardian</button>
+      <button class="secondary" style="margin-top:14px;" onclick="backFromExpedition()">Back to the map</button>
     </div>
   `;
 }
@@ -3701,7 +3731,7 @@ function renderCraft(){
     <div class="card">
       <h2>Your Items</h2>
       ${inventoryRows}
-      <button class="secondary" style="margin-top:14px;" onclick="backFromCraft()">Back to your guardian</button>
+      <button class="secondary" style="margin-top:14px;" onclick="backFromCraft()">Back to the map</button>
     </div>
   `;
 }
@@ -3760,7 +3790,7 @@ function renderRedeem(){
       <div class="essence-row"><span class="essence-label">God Tokens</span><span class="essence-value">${guardian.god_tokens || 0}</span></div>
       <div id="redeemStatus" class="status"></div>
       ${groups}
-      <button class="secondary" style="margin-top:10px;" onclick="backFromRedeem()">Back to your guardian</button>
+      <button class="secondary" style="margin-top:10px;" onclick="backFromRedeem()">Back to the map</button>
     </div>
   `;
 }
@@ -3979,7 +4009,7 @@ function renderPvpLocked(){
     <div class="card">
       <h2 style="text-align:center;">The Arena</h2>
       <p class="hint" style="text-align:center;">Duels need a permanent account — claim this Seeker with an email first (see the card on your guardian's page), then come back.</p>
-      <button class="secondary" onclick="backFromPvp()">Back to your guardian</button>
+      <button class="secondary" onclick="backFromPvp()">Back to the map</button>
     </div>
   `;
 }
@@ -4054,7 +4084,7 @@ function renderPvpHome(){
     <div class="card">
       <h2>Recent Duels</h2>
       ${historyRows}
-      <button class="secondary" style="margin-top:14px;" onclick="backFromPvp()">Back to your guardian</button>
+      <button class="secondary" style="margin-top:14px;" onclick="backFromPvp()">Back to the map</button>
     </div>
   `;
 }
