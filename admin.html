@@ -131,6 +131,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="moves" onclick="showTab('moves')">Moves</button>
       <button class="tab-btn" data-tab="blessings" onclick="showTab('blessings')">Deity Blessings</button>
       <button class="tab-btn" data-tab="guardianitems" onclick="showTab('guardianitems')">Guardian Items</button>
+      <button class="tab-btn" data-tab="giftablerewards" onclick="showTab('giftablerewards')">Giftable Rewards</button>
       <button class="tab-btn" data-tab="expeditions" onclick="showTab('expeditions')">Expeditions</button>
       <button class="tab-btn" data-tab="arenastore" onclick="showTab('arenastore')">Arena Store</button>
       <button class="tab-btn" data-tab="deities" onclick="showTab('deities')">Deity Personalities</button>
@@ -580,6 +581,68 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
     </div>
 
+    <!-- ============================== GIFTABLE REWARDS ============================== -->
+    <div class="tab-content" id="tab-giftablerewards">
+      <div class="card">
+        <h2>Giftable rewards catalog</h2>
+        <p class="hint">A named, reusable "gift package" every gifting surface — broadcasts, the store, the check-in calendar — can hand out by key: a currency amount, a full access unlock, a specific guardian item, an expedition fragment (or every fragment of an artifact at once, if Fragment # is left blank), or bonus chat messages. Build the package once here, then pick it by name over in Access &amp; Broadcasts, Pricing &amp; Store, or Check-ins &amp; Events. Only the columns matching a row's Type actually do anything — same convention as Guardian Items' stat/consumable/enchant columns above.</p>
+        <div class="scroll-table" style="max-height:420px;">
+          <table>
+            <thead><tr>
+              <th>Key</th><th>Name</th><th>Description</th><th>Type</th><th>Currency</th><th>Amount</th><th>Scope type</th><th>Scope id</th><th>Guardian item</th><th>Artifact</th><th>Fragment #</th><th>Bonus msgs</th><th>Active</th>
+            </tr></thead>
+            <tbody id="giftableRewardRows"><tr><td colspan="13">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveGiftableRewardsBtn">Save changes</button>
+          <div class="status" id="giftableRewardStatus"></div>
+        </div>
+        <h3>Add a new reward</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newRewardKey" style="max-width:150px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newRewardName" style="max-width:160px;"></div>
+          <div class="field"><label>Type</label>
+            <select id="newRewardType" style="max-width:170px;">
+              <option value="currency">Currency</option>
+              <option value="entitlement">Entitlement (unlock)</option>
+              <option value="guardian_item">Guardian item</option>
+              <option value="expedition_fragment">Expedition fragment</option>
+              <option value="bonus_messages">Bonus messages</option>
+            </select>
+          </div>
+          <button id="addRewardBtn">Add reward</button>
+        </div>
+        <div class="form-row">
+          <div class="field" id="newRewardCurrencyKeyField"><label>Currency</label>
+            <select id="newRewardCurrencyKey" style="max-width:170px;"></select>
+          </div>
+          <div class="field" id="newRewardCurrencyAmountField"><label>Amount</label><input type="number" min="1" id="newRewardCurrencyAmount" style="max-width:110px;"></div>
+          <div class="field" id="newRewardScopeTypeField" style="display:none;"><label>Scope</label>
+            <select id="newRewardScopeType" style="max-width:150px;">
+              <option value="all">Full site access</option>
+              <option value="pantheon">One pantheon</option>
+              <option value="deity">One god</option>
+            </select>
+          </div>
+          <div class="field" id="newRewardScopeIdField" style="display:none;"><label>God or pantheon id</label><input type="text" id="newRewardScopeId" placeholder="e.g. hera or norse" style="max-width:160px;"></div>
+          <div class="field" id="newRewardGuardianItemField" style="display:none;"><label>Guardian item</label>
+            <select id="newRewardGuardianItem" style="max-width:200px;"></select>
+          </div>
+          <div class="field" id="newRewardArtifactField" style="display:none;"><label>Artifact</label>
+            <select id="newRewardArtifact" style="max-width:200px;"></select>
+          </div>
+          <div class="field" id="newRewardFragmentIndexField" style="display:none;"><label>Fragment # (blank = every fragment)</label><input type="number" min="1" id="newRewardFragmentIndex" style="max-width:170px;"></div>
+          <div class="field" id="newRewardBonusMessagesField" style="display:none;"><label>Bonus messages amount</label><input type="number" min="1" id="newRewardBonusMessagesAmount" style="max-width:160px;"></div>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (shown to players)</label>
+          <input type="text" id="newRewardDescription" style="max-width:none;">
+        </div>
+        <div class="status" id="newRewardStatus"></div>
+      </div>
+    </div>
+
     <!-- ============================== EXPEDITIONS ============================== -->
     <div class="tab-content" id="tab-expeditions">
       <div class="card">
@@ -837,6 +900,12 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <input type="number" step="1" min="1" id="newItemGiftAmount" style="max-width:110px;">
           </div>
         </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Also hand out a reward package? (optional)</label>
+            <select id="newItemRewardKey" style="max-width:220px;"><option value="">Nothing — no reward package</option></select>
+          </div>
+        </div>
         <div class="field" style="max-width:none;">
           <label>Description (shown to players)</label>
           <input type="text" id="newItemDescription" style="max-width:none;">
@@ -1054,6 +1123,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <label>Which item</label>
             <select id="broadcastGiftStoreItem" style="max-width:200px;"><option value="">Loading…</option></select>
           </div>
+          <div class="field">
+            <label>Also attach a reward package? (optional)</label>
+            <select id="broadcastGiftRewardKey" style="max-width:220px;"><option value="">Nothing — no reward package</option></select>
+          </div>
           <button id="postBroadcastBtn">Post announcement</button>
         </div>
         <div class="status" id="broadcastStatus"></div>
@@ -1122,6 +1195,7 @@ let deitySettings = {};
 let pantheonSettings = {};
 let currencyDefs = {}; // key -> row, refreshed by loadCurrencyDefinitions()
 let storeItemsCache = []; // active store_items rows, refreshed by loadStoreItems() — also feeds the broadcast "give away a store item" picker
+let giftableRewardsCache = []; // active giftable_rewards rows, refreshed by loadGiftableRewards() — feeds the "Reward package" pickers in broadcasts, store items, and the check-in calendar
 
 /* ---------------- tabs ---------------- */
 
@@ -1247,6 +1321,7 @@ async function handleSession(session){
   loadPricing();
   loadSubscriptionTiers();
   await loadCurrencyDefinitions();
+  await loadGiftableRewards();
   loadStoreItems();
   await loadCustomPantheonsIntoCatalog();
   loadPantheonSettings();
@@ -1391,6 +1466,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addGuardianItemBtn').addEventListener('click', addGuardianItem);
   document.getElementById('newGuardianItemType').addEventListener('change', updateNewGuardianItemTypeFields);
   updateNewGuardianItemTypeFields();
+
+  document.getElementById('saveGiftableRewardsBtn').addEventListener('click', saveGiftableRewardCatalog);
+  document.getElementById('addRewardBtn').addEventListener('click', addGiftableReward);
+  document.getElementById('newRewardType').addEventListener('change', updateNewRewardTypeFields);
+  updateNewRewardTypeFields();
 
   document.getElementById('saveArtifactsBtn').addEventListener('click', saveExpeditionArtifacts);
   document.getElementById('addArtifactBtn').addEventListener('click', addExpeditionArtifact);
@@ -1822,7 +1902,7 @@ async function loadStoreItems(){
   const rows = document.getElementById('itemRows');
   const { data, error } = await supabaseClient
     .from('store_items')
-    .select('id, name, price_cents, gift_bonus_messages, gift_scope_type, gift_scope_id, gift_currency_key, gift_currency_amount, active')
+    .select('id, name, price_cents, gift_bonus_messages, gift_scope_type, gift_scope_id, gift_currency_key, gift_currency_amount, gift_reward_key, active')
     .eq('active', true)
     .order('sort_order', { ascending: true });
   if(error){
@@ -1840,6 +1920,7 @@ async function loadStoreItems(){
     if(i.gift_bonus_messages) parts.push('+' + i.gift_bonus_messages + ' messages');
     if(i.gift_scope_type) parts.push(grantLabel(i.gift_scope_type, i.gift_scope_id));
     if(i.gift_currency_key) parts.push('+' + i.gift_currency_amount + ' ' + (currencyDefs[i.gift_currency_key]?.name || i.gift_currency_key));
+    if(i.gift_reward_key) parts.push(giftableRewardsCache.find(r => r.key === i.gift_reward_key)?.name || i.gift_reward_key);
     return `<tr>
       <td>${esc(i.name)}</td>
       <td class="dim">${fmtUsd(i.price_cents)}</td>
@@ -1860,6 +1941,7 @@ async function addStoreItem(){
   const grantId = document.getElementById('newItemGrantId').value.trim();
   const giftCurrency = document.getElementById('newItemGiftCurrency').value;
   const giftAmountVal = document.getElementById('newItemGiftAmount').value.trim();
+  const giftRewardKey = document.getElementById('newItemRewardKey').value;
 
   if(!/^[a-z0-9]+$/.test(id)){
     status.className = 'status err';
@@ -1884,9 +1966,9 @@ async function addStoreItem(){
       return;
     }
   }
-  if(!bonus && !grantType && !giftCurrency){
+  if(!bonus && !grantType && !giftCurrency && !giftRewardKey){
     status.className = 'status err';
-    status.textContent = 'Give it bonus messages, an unlock, a currency grant, or some combination — it needs to grant something.';
+    status.textContent = 'Give it bonus messages, an unlock, a currency grant, a reward package, or some combination — it needs to grant something.';
     return;
   }
 
@@ -1898,7 +1980,8 @@ async function addStoreItem(){
     gift_scope_type: grantType || null,
     gift_scope_id: (grantType === 'pantheon' || grantType === 'deity') ? grantId : null,
     gift_currency_key: giftCurrency || null,
-    gift_currency_amount: giftAmount
+    gift_currency_amount: giftAmount,
+    gift_reward_key: giftRewardKey || null
   });
   if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
 
@@ -1907,6 +1990,7 @@ async function addStoreItem(){
   ['newItemId','newItemName','newItemPrice','newItemBonus','newItemDescription','newItemGrantId','newItemGiftAmount'].forEach(fid => { document.getElementById(fid).value = ''; });
   document.getElementById('newItemGrantType').value = '';
   document.getElementById('newItemGiftCurrency').value = '';
+  document.getElementById('newItemRewardKey').value = '';
   updateNewItemGrantField();
   updateNewItemGiftCurrencyField();
   loadStoreItems();
@@ -2024,6 +2108,8 @@ async function postBroadcast(){
     return;
   }
 
+  const giftRewardKey = document.getElementById('broadcastGiftRewardKey').value || null;
+
   let giftBonus = null, giftScopeType = null, giftScopeId = null, giftStoreItemId = null;
   if(giftType === 'bonus_messages'){
     giftBonus = parseInt(document.getElementById('broadcastGiftBonus').value || '0', 10);
@@ -2059,7 +2145,8 @@ async function postBroadcast(){
     p_gift_scope_type: giftScopeType,
     p_gift_scope_id: giftScopeId,
     p_target_email: targetType === 'one' ? targetEmail : null,
-    p_gift_store_item_id: giftStoreItemId
+    p_gift_store_item_id: giftStoreItemId,
+    p_gift_reward_key: giftRewardKey
   });
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) :
@@ -2069,6 +2156,7 @@ async function postBroadcast(){
     document.getElementById('broadcastGiftBonus').value = '';
     document.getElementById('broadcastGiftScopeId').value = '';
     document.getElementById('broadcastGiftType').value = 'none';
+    document.getElementById('broadcastGiftRewardKey').value = '';
     document.getElementById('broadcastTargetEmail').value = '';
     document.getElementById('broadcastTargetType').value = 'everyone';
     updateBroadcastGiftFields();
@@ -2081,7 +2169,7 @@ async function loadBroadcasts(){
   const rows = document.getElementById('broadcastRows');
   const { data, error } = await supabaseClient
     .from('broadcasts')
-    .select('id, message, gift_bonus_messages, gift_scope_type, gift_scope_id, gift_store_item_id, created_at, target_user_id, profiles!broadcasts_target_user_id_fkey(email)')
+    .select('id, message, gift_bonus_messages, gift_scope_type, gift_scope_id, gift_store_item_id, gift_reward_key, created_at, target_user_id, profiles!broadcasts_target_user_id_fkey(email)')
     .eq('active', true)
     .order('created_at', { ascending: false })
     .limit(50);
@@ -2095,10 +2183,13 @@ async function loadBroadcasts(){
     return;
   }
   rows.innerHTML = data.map(b => {
-    const gift = b.gift_store_item_id ? ('Store item: ' + (storeItemsCache.find(i => i.id === b.gift_store_item_id)?.name || b.gift_store_item_id)) :
-      b.gift_bonus_messages ? ('+' + b.gift_bonus_messages + ' messages') :
-      b.gift_scope_type === 'all' ? 'Full access' :
-      b.gift_scope_type ? (b.gift_scope_type + ': ' + (b.gift_scope_id || '')) : '—';
+    const giftParts = [];
+    if(b.gift_store_item_id) giftParts.push('Store item: ' + (storeItemsCache.find(i => i.id === b.gift_store_item_id)?.name || b.gift_store_item_id));
+    if(b.gift_bonus_messages) giftParts.push('+' + b.gift_bonus_messages + ' messages');
+    if(b.gift_scope_type === 'all') giftParts.push('Full access');
+    else if(b.gift_scope_type) giftParts.push(b.gift_scope_type + ': ' + (b.gift_scope_id || ''));
+    if(b.gift_reward_key) giftParts.push(giftableRewardsCache.find(r => r.key === b.gift_reward_key)?.name || b.gift_reward_key);
+    const gift = giftParts.join(', ') || '—';
     const to = b.target_user_id ? (b.profiles?.email || '(unknown player)') : 'Everyone';
     return `<tr>
       <td class="dim">${esc(to)}</td>
@@ -2699,6 +2790,10 @@ async function loadCheckinCalendar(){
     </select>
     <input type="number" min="1" id="ccAmt_${d.day_of_month}" value="${d.amount}" placeholder="Amount">
     <input type="text" id="ccLabel_${d.day_of_month}" value="${esc(d.label || '')}" placeholder="Label">
+    <select id="ccReward_${d.day_of_month}">
+      <option value="">No reward package</option>
+      ${giftableRewardsCache.map(r => `<option value="${esc(r.key)}" ${r.key === d.reward_key ? 'selected' : ''}>${esc(r.name)}${r.active ? '' : ' (inactive)'}</option>`).join('')}
+    </select>
     <div class="active-row"><input type="checkbox" id="ccActive_${d.day_of_month}" ${d.active ? 'checked' : ''}><label for="ccActive_${d.day_of_month}">Active</label></div>
   </div>`).join('') || '<p class="hint">No calendar rows found — run the migration that seeds days 1-31.</p>';
 }
@@ -2713,6 +2808,7 @@ async function saveCheckinCalendar(){
       currency_key: document.getElementById('ccCur_' + day).value,
       amount: parseInt(document.getElementById('ccAmt_' + day).value || '0', 10),
       label: document.getElementById('ccLabel_' + day).value.trim(),
+      reward_key: document.getElementById('ccReward_' + day).value || null,
       active: document.getElementById('ccActive_' + day).checked,
       updated_at: new Date().toISOString()
     };
@@ -3454,6 +3550,201 @@ async function addGuardianItem(){
   ['newGuardianItemKey','newGuardianItemName','newGuardianItemCost','newGuardianItemStatAmount','newGuardianItemEffect','newGuardianItemEnchantKey','newGuardianItemEnchantAmount','newGuardianItemDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
   updateNewGuardianItemTypeFields();
   loadGuardianItemCatalog();
+}
+
+/* =====================================================================
+   GIFTABLE REWARDS — one reusable reward package every gifting surface
+   (broadcasts, store items, the check-in calendar) can hand out by key.
+   ===================================================================== */
+
+let giftableGuardianItemsList = []; // [{key,name}], refreshed by loadGiftableRewards()
+let giftableArtifactsList = []; // [{key,name}], refreshed by loadGiftableRewards()
+
+function updateNewRewardTypeFields(){
+  const type = document.getElementById('newRewardType').value;
+  document.getElementById('newRewardCurrencyKeyField').style.display = type === 'currency' ? '' : 'none';
+  document.getElementById('newRewardCurrencyAmountField').style.display = type === 'currency' ? '' : 'none';
+  document.getElementById('newRewardScopeTypeField').style.display = type === 'entitlement' ? '' : 'none';
+  document.getElementById('newRewardScopeIdField').style.display = type === 'entitlement' ? '' : 'none';
+  document.getElementById('newRewardGuardianItemField').style.display = type === 'guardian_item' ? '' : 'none';
+  document.getElementById('newRewardArtifactField').style.display = type === 'expedition_fragment' ? '' : 'none';
+  document.getElementById('newRewardFragmentIndexField').style.display = type === 'expedition_fragment' ? '' : 'none';
+  document.getElementById('newRewardBonusMessagesField').style.display = type === 'bonus_messages' ? '' : 'none';
+}
+
+function populateRewardPackagePickers(){
+  // Pickers used to attach a NEW gift only offer active rewards — picking
+  // an inactive one would silently do nothing when claimed.
+  const opts = '<option value="">Nothing — no reward package</option>' +
+    giftableRewardsCache.filter(r => r.active).map(r => `<option value="${esc(r.key)}">${esc(r.name)}</option>`).join('');
+  ['broadcastGiftRewardKey', 'newItemRewardKey'].forEach(id => {
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    const current = sel.value;
+    sel.innerHTML = opts;
+    if(current && giftableRewardsCache.some(r => r.key === current)) sel.value = current;
+  });
+}
+
+async function loadGiftableRewards(){
+  const [{ data, error }, { data: items }, { data: artifacts }] = await Promise.all([
+    supabaseClient.from('giftable_rewards').select('*').order('key', { ascending: true }),
+    supabaseClient.from('guardian_item_catalog').select('key, name').order('key', { ascending: true }),
+    supabaseClient.from('expedition_artifacts').select('key, name').order('key', { ascending: true })
+  ]);
+  giftableGuardianItemsList = items || [];
+  giftableArtifactsList = artifacts || [];
+
+  const rows = document.getElementById('giftableRewardRows');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="13">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  // Keep the full list (active and inactive) so a day/broadcast/item that
+  // already points at a since-deactivated reward still shows and keeps its
+  // selection on save, instead of silently reverting to blank.
+  giftableRewardsCache = data || [];
+  populateRewardPackagePickers();
+
+  const personalCurrencies = Object.values(currencyDefs).filter(c => c.scope === 'personal');
+  document.getElementById('newRewardCurrencyKey').innerHTML =
+    personalCurrencies.map(c => `<option value="${esc(c.key)}">${esc(c.name)}</option>`).join('');
+  document.getElementById('newRewardGuardianItem').innerHTML =
+    giftableGuardianItemsList.map(i => `<option value="${esc(i.key)}">${esc(i.name)}</option>`).join('') || '<option value="">No guardian items yet</option>';
+  document.getElementById('newRewardArtifact').innerHTML =
+    giftableArtifactsList.map(a => `<option value="${esc(a.key)}">${esc(a.name)}</option>`).join('') || '<option value="">No artifacts yet</option>';
+
+  const typeOptions = [
+    ['currency', 'currency'], ['entitlement', 'entitlement'], ['guardian_item', 'guardian_item'],
+    ['expedition_fragment', 'expedition_fragment'], ['bonus_messages', 'bonus_messages']
+  ];
+  rows.innerHTML = (data || []).map(r => `<tr data-key="${esc(r.key)}">
+    <td class="dim">${esc(r.key)}</td>
+    <td><input type="text" id="grName_${esc(r.key)}" value="${esc(r.name)}" style="max-width:140px;"></td>
+    <td><input type="text" id="grDesc_${esc(r.key)}" value="${esc(r.description || '')}" style="max-width:180px;"></td>
+    <td>
+      <select id="grType_${esc(r.key)}">
+        ${typeOptions.map(([v]) => `<option value="${v}" ${v === r.reward_type ? 'selected' : ''}>${v}</option>`).join('')}
+      </select>
+    </td>
+    <td>
+      <select id="grCurrency_${esc(r.key)}">
+        <option value="">—</option>
+        ${personalCurrencies.map(c => `<option value="${esc(c.key)}" ${c.key === r.currency_key ? 'selected' : ''}>${esc(c.key)}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="number" min="1" id="grAmount_${esc(r.key)}" value="${r.currency_amount ?? ''}" style="max-width:80px;"></td>
+    <td>
+      <select id="grScopeType_${esc(r.key)}">
+        <option value="">—</option>
+        <option value="all" ${r.scope_type === 'all' ? 'selected' : ''}>all</option>
+        <option value="pantheon" ${r.scope_type === 'pantheon' ? 'selected' : ''}>pantheon</option>
+        <option value="deity" ${r.scope_type === 'deity' ? 'selected' : ''}>deity</option>
+      </select>
+    </td>
+    <td><input type="text" id="grScopeId_${esc(r.key)}" value="${esc(r.scope_id || '')}" style="max-width:110px;"></td>
+    <td>
+      <select id="grGuardianItem_${esc(r.key)}">
+        <option value="">—</option>
+        ${giftableGuardianItemsList.map(i => `<option value="${esc(i.key)}" ${i.key === r.guardian_item_key ? 'selected' : ''}>${esc(i.key)}</option>`).join('')}
+      </select>
+    </td>
+    <td>
+      <select id="grArtifact_${esc(r.key)}">
+        <option value="">—</option>
+        ${giftableArtifactsList.map(a => `<option value="${esc(a.key)}" ${a.key === r.artifact_key ? 'selected' : ''}>${esc(a.key)}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="number" min="1" id="grFragment_${esc(r.key)}" value="${r.fragment_index ?? ''}" style="max-width:80px;"></td>
+    <td><input type="number" min="1" id="grBonusMsgs_${esc(r.key)}" value="${r.bonus_messages_amount ?? ''}" style="max-width:90px;"></td>
+    <td><input type="checkbox" id="grActive_${esc(r.key)}" ${r.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="13">No reward packages yet.</td></tr>';
+}
+
+async function saveGiftableRewardCatalog(){
+  const status = document.getElementById('giftableRewardStatus');
+  const trs = document.querySelectorAll('#giftableRewardRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    const amountVal = document.getElementById('grAmount_' + key).value;
+    const fragmentVal = document.getElementById('grFragment_' + key).value;
+    const bonusVal = document.getElementById('grBonusMsgs_' + key).value;
+    return {
+      key,
+      name: document.getElementById('grName_' + key).value.trim(),
+      description: document.getElementById('grDesc_' + key).value.trim(),
+      reward_type: document.getElementById('grType_' + key).value,
+      currency_key: document.getElementById('grCurrency_' + key).value || null,
+      currency_amount: amountVal === '' ? null : parseInt(amountVal, 10),
+      scope_type: document.getElementById('grScopeType_' + key).value || null,
+      scope_id: document.getElementById('grScopeId_' + key).value.trim() || null,
+      guardian_item_key: document.getElementById('grGuardianItem_' + key).value || null,
+      artifact_key: document.getElementById('grArtifact_' + key).value || null,
+      fragment_index: fragmentVal === '' ? null : parseInt(fragmentVal, 10),
+      bonus_messages_amount: bonusVal === '' ? null : parseInt(bonusVal, 10),
+      active: document.getElementById('grActive_' + key).checked
+    };
+  });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('giftable_rewards').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. A row must match its Type\'s required columns (e.g. currency needs Currency + Amount) or the database will reject it.';
+  if(!error) loadGiftableRewards();
+}
+
+async function addGiftableReward(){
+  const status = document.getElementById('newRewardStatus');
+  const key = document.getElementById('newRewardKey').value.trim().toLowerCase();
+  const name = document.getElementById('newRewardName').value.trim();
+  const description = document.getElementById('newRewardDescription').value.trim();
+  const rewardType = document.getElementById('newRewardType').value;
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+
+  const payload = { key, name, description, reward_type: rewardType, active: true };
+
+  if(rewardType === 'currency'){
+    const currencyKey = document.getElementById('newRewardCurrencyKey').value;
+    const amountVal = document.getElementById('newRewardCurrencyAmount').value;
+    const amount = parseInt(amountVal, 10);
+    if(!currencyKey || isNaN(amount) || amount < 1){ status.className = 'status err'; status.textContent = 'Currency rewards need a currency and an amount greater than 0.'; return; }
+    payload.currency_key = currencyKey;
+    payload.currency_amount = amount;
+  } else if(rewardType === 'entitlement'){
+    const scopeType = document.getElementById('newRewardScopeType').value;
+    const scopeId = document.getElementById('newRewardScopeId').value.trim();
+    if((scopeType === 'pantheon' || scopeType === 'deity') && !scopeId){ status.className = 'status err'; status.textContent = 'Enter a god or pantheon id.'; return; }
+    payload.scope_type = scopeType;
+    payload.scope_id = (scopeType === 'pantheon' || scopeType === 'deity') ? scopeId : null;
+  } else if(rewardType === 'guardian_item'){
+    const itemKey = document.getElementById('newRewardGuardianItem').value;
+    if(!itemKey){ status.className = 'status err'; status.textContent = 'Pick a guardian item, or add one first in Guardian Items.'; return; }
+    payload.guardian_item_key = itemKey;
+  } else if(rewardType === 'expedition_fragment'){
+    const artifactKey = document.getElementById('newRewardArtifact').value;
+    const fragmentVal = document.getElementById('newRewardFragmentIndex').value.trim();
+    if(!artifactKey){ status.className = 'status err'; status.textContent = 'Pick an artifact, or add one first in Expeditions.'; return; }
+    payload.artifact_key = artifactKey;
+    payload.fragment_index = fragmentVal === '' ? null : parseInt(fragmentVal, 10);
+  } else if(rewardType === 'bonus_messages'){
+    const amountVal = document.getElementById('newRewardBonusMessagesAmount').value;
+    const amount = parseInt(amountVal, 10);
+    if(isNaN(amount) || amount < 1){ status.className = 'status err'; status.textContent = 'Enter a bonus messages amount greater than 0.'; return; }
+    payload.bonus_messages_amount = amount;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('giftable_rewards').insert(payload);
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+
+  status.className = 'status ok';
+  status.textContent = name + ' added — pick it by name in Access & Broadcasts, Pricing & Store, or Check-ins & Events.';
+  ['newRewardKey','newRewardName','newRewardCurrencyAmount','newRewardScopeId','newRewardFragmentIndex','newRewardBonusMessagesAmount','newRewardDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  updateNewRewardTypeFields();
+  loadGiftableRewards();
 }
 
 /* =====================================================================
