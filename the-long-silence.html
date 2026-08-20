@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -33,6 +34,20 @@ header.mast p.sub{font-style:italic;color:var(--parchment-dim);max-width:480px;m
 .rule{width:120px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:22px auto;}
 .backlink{display:block;text-align:center;color:var(--parchment-dim);text-decoration:none;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;font-family:'Cinzel',serif;margin-top:10px;}
 .backlink:hover{color:var(--gold-bright);}
+
+/* The map hub is the landing screen and it means the whole picture, full
+   viewport, edge to edge — not a bordered widget boxed into the 760px
+   .wrap column. body.map-screen (toggled by render(), see renderMapHub())
+   hides the mast/footer and lets .map-hub-screen take over the entire
+   browser window via position:fixed, independent of .wrap's max-width. */
+body.map-screen{overflow:hidden;}
+body.map-screen .mast, body.map-screen footer.notice{display:none;}
+body.map-screen .wrap{max-width:none;margin:0;padding:0;}
+.map-hub-screen{
+  position:fixed;inset:0;z-index:5;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--ink);
+}
 
 .card{background:linear-gradient(180deg,var(--ink-2),var(--ink));border:1px solid var(--line);border-radius:4px;padding:28px;margin-bottom:24px;}
 .card h2{font-size:18px;color:var(--gold-bright);margin:0 0 8px;}
@@ -89,14 +104,26 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
    the art itself is the only affordance ("place the nodes... then hide
    the nodes so that they are only clicking on the map background"). */
 .map-hub{
-  position:relative;width:100%;aspect-ratio:1408/768;margin:22px 0 6px;
-  border:1px solid var(--line);border-radius:6px;overflow:hidden;
-  background:url('assets/map-divine-realms.jpg') center/cover no-repeat;
+  position:relative;overflow:hidden;
+  /* As large as the viewport allows while staying locked to the source
+     art's exact 1408x768 ratio — the hotspot percentages below were
+     measured against that ratio, so this can't crop/stretch to fill the
+     screen the way a plain background-size:cover would; it has to grow
+     within it instead. Whichever dimension is the tighter fit wins. */
+  width:min(100vw, calc(100vh * 1408 / 768));
+  aspect-ratio:1408/768;
+  background:url('https://static.wixstatic.com/media/d6c75e_11a7f28595a041d49639dce6f72788d7~mv2.jpg') center/cover no-repeat;
 }
 .map-hotspot{
   position:absolute;background:transparent;border:none;padding:0;margin:0;cursor:pointer;
   -webkit-tap-highlight-color:transparent;
 }
+/* The global button/button:hover rules above (background:var(--gold) /
+   var(--gold-bright)) win a specificity tie against plain .map-hotspot on
+   hover/active/focus — that's the solid gold fill that was blotting out
+   the map art under whichever region the cursor sat over. Force it
+   transparent in every interactive state so the art is always visible. */
+.map-hotspot:hover,.map-hotspot:active,.map-hotspot:focus{background:transparent!important;}
 .map-hotspot:focus-visible{outline:2px solid rgba(230,199,119,0.55);outline-offset:2px;}
 
 .phase-note{text-align:center;color:var(--parchment-dim);font-size:12.5px;font-style:italic;margin-bottom:18px;}
@@ -514,6 +541,9 @@ async function petitionHeaders(){
 }
 
 function render(){
+  // Only renderMapHub() (below) turns this back on — every other screen
+  // renders inside the normal .wrap column.
+  document.body.classList.remove('map-screen');
   if(!circleView || circleView.step !== 'messages') stopMessagesPolling();
   if(!circleView || circleView.step !== 'altar') stopAltarTicking();
   if(!personalAltarView) stopPersonalAltarTicking();
@@ -663,15 +693,13 @@ function mapHubMarkup(){
 // hotspot on the map opens its own top-level view; "Guardian Page" opens
 // openGuardianHome() below, and every screen's "Back to the map" button
 // (really: nulling its own view var and calling render()) lands back here.
+// The map is the whole background here, full viewport — see the
+// body.map-screen / .map-hub-screen CSS. render() clears the class by
+// default on every call; this is the only place that turns it back on.
 function renderMapHub(){
+  document.body.classList.add('map-screen');
   const app = document.getElementById('app');
-  app.innerHTML = `
-    <div class="card" style="text-align:center;">
-      <h2>The Divine Realms</h2>
-      <p class="hint">Welcome back, ${esc(guardian.name)}. Choose where to go.</p>
-      ${mapHubMarkup()}
-    </div>
-  `;
+  app.innerHTML = `<div class="map-hub-screen">${mapHubMarkup()}</div>`;
 }
 
 function openGuardianHome(){
