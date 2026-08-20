@@ -83,6 +83,39 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
 
 .marks-note{text-align:center;color:var(--parchment-dim);font-style:italic;font-size:14px;margin:20px 0 0;}
 
+/* Map hub — placeholder background until custom map art is ready. Swap
+   the background shorthand below for background:url('map.jpg') center/cover
+   and re-tune each MAP_AREAS xPct/yPct in the script to match the new art;
+   everything else (nodes, labels, click targets) keeps working as-is. */
+.map-hub{
+  position:relative;width:100%;aspect-ratio:16/10;margin:22px 0 6px;
+  border:1px solid var(--line);border-radius:6px;overflow:hidden;
+  background:
+    radial-gradient(ellipse at 28% 22%, rgba(200,162,74,0.14), transparent 55%),
+    radial-gradient(ellipse at 76% 68%, rgba(138,107,184,0.16), transparent 55%),
+    radial-gradient(ellipse at 50% 95%, rgba(161,70,42,0.10), transparent 60%),
+    linear-gradient(180deg,var(--ink-2),var(--ink));
+}
+.map-node{
+  position:absolute;transform:translate(-50%,-50%);
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:none;border:none;padding:0;margin:0;width:auto;
+  font-family:'Cinzel',serif;cursor:pointer;
+}
+.map-node-icon{
+  width:44px;height:44px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:19px;
+  background:rgba(23,19,31,0.88);border:1.5px solid var(--gold);
+  box-shadow:0 0 12px rgba(200,162,74,0.22);
+  transition:transform .15s, box-shadow .15s;
+}
+.map-node:hover .map-node-icon{transform:scale(1.12);box-shadow:0 0 18px rgba(230,199,119,0.5);}
+.map-node-label{
+  font-size:10.5px;letter-spacing:0.05em;text-transform:uppercase;color:var(--parchment-dim);
+  background:rgba(16,14,22,0.8);padding:2px 7px;border-radius:3px;white-space:nowrap;
+}
+@media (max-width:560px){.map-node-label{display:none;}.map-node-icon{width:38px;height:38px;font-size:16px;}}
+
 .phase-note{text-align:center;color:var(--parchment-dim);font-size:12.5px;font-style:italic;margin-bottom:18px;}
 .phase-note strong{color:var(--gold-bright);font-style:normal;}
 
@@ -214,7 +247,10 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
   </header>
 
   <div id="app">
-    <div class="card"><p class="hint" style="margin:0;text-align:center;">Finding your way through the Gate…</p></div>
+    <div class="card" style="text-align:center;padding:48px 28px;">
+      <p class="hint" style="margin:0 0 26px;">Somewhere past the Gate, an egg is waiting for a keeper. Petition the silent gods, raise what hatches, and see what still answers.</p>
+      <button onclick="enterGate()">Enter the Gate</button>
+    </div>
   </div>
 
   <footer class="notice">The Long Silence · a Pantheon Gate chapter, still being written</footer>
@@ -345,6 +381,27 @@ async function loadCircleShopItems(){
   const { data, error } = await supabaseClient.from('circle_shop_items').select('*').eq('active', true).order('cost_devotion');
   if(error){ console.error('circle shop load failed', error); return; }
   circleShopItems = data || [];
+}
+
+// ---------------- title / entry splash ----------------
+// Shown first, every load, before anything reaches the backend — clicking
+// through is the deliberate "title screen" moment the game was missing.
+// Anonymous sign-in and the guardian fetch only start once the player
+// actually chooses to enter, not the instant the page loads.
+function showSplash(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="card" style="text-align:center;padding:48px 28px;">
+      <p class="hint" style="margin:0 0 26px;">Somewhere past the Gate, an egg is waiting for a keeper. Petition the silent gods, raise what hatches, and see what still answers.</p>
+      <button onclick="enterGate()">Enter the Gate</button>
+    </div>
+  `;
+}
+
+async function enterGate(){
+  const app = document.getElementById('app');
+  app.innerHTML = '<div class="card"><p class="hint" style="margin:0;text-align:center;">Finding your way through the Gate…</p></div>';
+  await init();
 }
 
 async function init(){
@@ -494,6 +551,31 @@ async function hatchGuardian(){
 
 const STAGE_LABEL = { egg: 'Egg', hatchling: 'Hatchling', fledged: 'Fledged', ascendant: 'Ascendant', sovereign: 'Sovereign' };
 
+// Map hub — replaces the old flat button row. Positions are percentages
+// of the .map-hub box, placeholder-arranged for now; once the custom map
+// image is ready, just edit xPct/yPct per area to match it (and see the
+// .map-hub CSS comment for swapping the background itself). action is
+// called with no arguments, same functions the old buttons already used.
+const MAP_AREAS = [
+  { id: 'petition',    label: 'Petition a God', icon: '🛕', xPct: 50, yPct: 14, action: openPetitionPicker },
+  { id: 'gauntlet',    label: 'The Gauntlet',   icon: '⚔️', xPct: 80, yPct: 30, action: openProving },
+  { id: 'circle',      label: 'Your Circle',    icon: '🏛️', xPct: 20, yPct: 30, action: openCircle },
+  { id: 'craft',       label: 'Craft',          icon: '🔨', xPct: 50, yPct: 52, action: openCraft },
+  { id: 'expeditions', label: 'Expeditions',    icon: '🗺️', xPct: 14, yPct: 72, action: openExpedition },
+  { id: 'arena',       label: 'The Arena',      icon: '🏟️', xPct: 86, yPct: 72, action: openPvpArena },
+  { id: 'redeem',      label: 'Redeem a Token', icon: '🎟️', xPct: 50, yPct: 90, action: openRedeem },
+];
+
+function renderMapHub(){
+  const nodes = MAP_AREAS.map((a, i) => `
+    <button class="map-node" style="left:${a.xPct}%;top:${a.yPct}%;" title="${esc(a.label)}" onclick="MAP_AREAS[${i}].action()">
+      <span class="map-node-icon">${a.icon}</span>
+      <span class="map-node-label">${esc(a.label)}</span>
+    </button>
+  `).join('');
+  return `<div class="map-hub" id="mapHub">${nodes}</div>`;
+}
+
 function renderGuardianHome(){
   const app = document.getElementById('app');
   const evolved = (guardian.stage === 'ascendant' || guardian.stage === 'sovereign') && guardian.dominant_affinity;
@@ -541,15 +623,7 @@ function renderGuardianHome(){
       <p class="marks-note">${guardian.stage === 'egg'
         ? 'Still an egg. It hatches the moment a god marks it for the first time.'
         : (marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.')}</p>
-      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:14px;">
-        <button onclick="openPetitionPicker()">Petition a god</button>
-        <button class="secondary" onclick="openProving()">Enter the Gauntlet</button>
-        <button class="secondary" onclick="openCircle()">Your Circle</button>
-        <button class="secondary" onclick="openPvpArena()">The Arena</button>
-        <button class="secondary" onclick="openExpedition()">Expeditions</button>
-        <button class="secondary" onclick="openCraft()">Craft</button>
-        <button class="secondary" onclick="openRedeem()">Redeem a Token</button>
-      </div>
+      ${renderMapHub()}
     </div>
 
     <div class="card" id="claimCard">
@@ -2938,7 +3012,7 @@ function renderPvpLeaderboard(){
   `;
 }
 
-init();
+showSplash();
 </script>
 </body>
 </html>
