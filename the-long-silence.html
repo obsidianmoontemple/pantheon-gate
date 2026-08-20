@@ -166,7 +166,28 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .dmg-float{position:absolute;right:4px;top:-6px;font-family:'Cinzel',serif;font-size:15px;color:var(--ember);pointer-events:none;animation:dmgFloat 0.9s ease forwards;text-shadow:0 1px 3px rgba(0,0,0,0.6);}
 .dmg-float.crit{color:var(--gold-bright);font-size:18px;}
 .dmg-float.control{color:var(--moon);font-size:13px;}
+.dmg-float.heal{color:#7fbf6a;}
+.dmg-float.burntick{color:var(--ember);font-size:13px;}
+.dmg-float.stunlabel{left:4px;right:auto;color:var(--moon);font-size:12px;letter-spacing:0.06em;text-transform:uppercase;}
 @keyframes dmgFloat{ 0%{opacity:1;transform:translateY(0);} 100%{opacity:0;transform:translateY(-28px);} }
+
+/* Particle bursts — lightweight CSS-only, layered on top of the existing
+   flash/float impact beat. Each particle is a plain absolutely-positioned
+   div; per-particle trajectory is set inline via --tx/--ty custom props so
+   one shared keyframe animation drives every burst. Color is themed by the
+   move's affinity (AFFINITY_COLORS) for plain hits, and by a fixed palette
+   for crit (gold), control (moon), heal (green), burn (ember), stun (moon
+   stars) so those reads stay consistent regardless of affinity. */
+.particle{position:absolute;top:50%;left:50%;width:var(--p-size,5px);height:var(--p-size,5px);margin:calc(var(--p-size,5px) / -2) 0 0 calc(var(--p-size,5px) / -2);border-radius:50%;background:var(--p-color,#e6c777);pointer-events:none;animation-name:particleBurst;animation-timing-function:ease-out;animation-fill-mode:forwards;box-shadow:0 0 5px var(--p-color,#e6c777);}
+.particle.spark{border-radius:1px;}
+.particle.star{border-radius:0;clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);}
+.particle.wisp{border-radius:50% 50% 50% 0;}
+@keyframes particleBurst{
+  0%{transform:translate(0,0) scale(1);opacity:1;}
+  100%{transform:translate(var(--tx),var(--ty)) scale(0.25);opacity:0;}
+}
+.status-badge{position:absolute;left:50%;top:-4px;transform:translateX(-50%);font-size:15px;pointer-events:none;animation:badgePop 0.9s ease forwards;text-shadow:0 1px 3px rgba(0,0,0,0.6);}
+@keyframes badgePop{ 0%{opacity:0;transform:translate(-50%,4px) scale(0.6);} 30%{opacity:1;transform:translate(-50%,-4px) scale(1.15);} 70%{opacity:1;transform:translate(-50%,-8px) scale(1);} 100%{opacity:0;transform:translate(-50%,-16px) scale(1);} }
 
 .move-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:18px 0;}
 .move-btn{background:transparent;border:1px solid var(--gold);color:var(--gold-bright);padding:10px 18px;font-family:'Cinzel',serif;font-size:11.5px;letter-spacing:0.08em;text-transform:uppercase;border-radius:3px;cursor:pointer;}
@@ -176,6 +197,8 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .battle-log{max-height:150px;overflow-y:auto;border-top:1px solid var(--line);margin-top:16px;padding-top:12px;font-size:13px;color:var(--parchment-dim);text-align:left;}
 .battle-log .entry{margin-bottom:5px;}
 .battle-log .crit{color:var(--gold-bright);}
+.battle-log .entry.burntick{color:var(--ember);font-style:italic;}
+.battle-log .entry.stunskip{color:var(--moon);font-style:italic;}
 
 .affinity-glow{border-radius:50%;filter:drop-shadow(0 0 26px var(--glow-color, transparent));}
 
@@ -1039,8 +1062,15 @@ function renderBattleScreen(){
   const logHtml = v.log.slice().reverse().map(entry => {
     const lines = entry.events.map(e => {
       const who = e.actor === 'guardian' ? esc(guardian.name) : esc(v.opponentName);
+      if(e.move === undefined && e.burnTick !== undefined){
+        return `<div class="entry burntick">Round ${entry.round}: ${who} takes ${e.burnTick} burn damage.</div>`;
+      }
+      if(e.move === undefined && e.stunned){
+        return `<div class="entry stunskip">Round ${entry.round}: ${who} is stunned and cannot act!</div>`;
+      }
       const tag = e.crit ? ' (critical!)' : (e.control ? ' (swiftness shaved)' : '');
-      return `<div class="entry${e.crit ? ' crit' : ''}">Round ${entry.round}: ${who} used ${esc(e.move)}${tag} — ${e.damage} damage.</div>`;
+      const extra = (e.healed ? ` (+${e.healed} lifesteal)` : '') + (e.stunned ? ' (stunned!)' : '') + (e.burn ? ' (burning)' : '');
+      return `<div class="entry${e.crit ? ' crit' : ''}">Round ${entry.round}: ${who} used ${esc(e.move)}${tag} — ${e.damage} damage${extra}.</div>`;
     }).join('');
     return lines;
   }).join('');
@@ -1070,21 +1100,124 @@ function sleep(ms){ return new Promise(res => setTimeout(res, ms)); }
    render() call, so the HP bars can animate in sequence before the
    authoritative state lands and the screen redraws (or moves to the
    result screen). No new art, just motion — same placeholder-first
-   approach as everything else on this page. */
-function animateHit(side, damage, crit, control, hpAfter, maxHp){
+   approach as everything else on this page.
+
+   spawnParticles() is the shared burst primitive every beat below uses —
+   plain CSS-animated dots, colored/sized/counted per moment, rather than a
+   canvas engine. Keeps this cheap on mobile and needs no new libraries. */
+function spawnParticles(wrap, opts){
+  if(!wrap) return;
+  opts = opts || {};
+  const n = opts.count || 8;
+  const dist = opts.distance || 34;
+  const dur = opts.duration || 650;
+  for(let i = 0; i < n; i++){
+    const angle = (Math.PI * 2 * i / n) + (Math.random() * 0.6 - 0.3);
+    const d = dist * (0.55 + Math.random() * 0.6);
+    const tx = Math.cos(angle) * d;
+    const ty = Math.sin(angle) * d - (opts.lift || 0);
+    const p = document.createElement('div');
+    p.className = 'particle' + (opts.shape ? ' ' + opts.shape : '');
+    p.style.setProperty('--tx', tx.toFixed(1) + 'px');
+    p.style.setProperty('--ty', ty.toFixed(1) + 'px');
+    p.style.setProperty('--p-color', opts.color || '#e6c777');
+    p.style.setProperty('--p-size', (opts.size || 5) + 'px');
+    p.style.animationDuration = dur + 'ms';
+    wrap.appendChild(p);
+    setTimeout(() => p.remove(), dur + 60);
+  }
+}
+
+// Basic-hit particle color: themed by the move's affinity when it has one
+// (matching the affinity's evolution-glow/banner color elsewhere in this
+// file), a neutral gold for basic/affinity-less strikes.
+function hitColor(affinity){
+  return AFFINITY_COLORS[affinity] || '#c8a24a';
+}
+
+function animateHit(side, damage, crit, control, hpAfter, maxHp, affinity){
   const fill = document.getElementById(side === 'guardian' ? 'gHpFill' : 'oHpFill');
   const text = document.getElementById(side === 'guardian' ? 'gHpText' : 'oHpText');
   const wrap = document.getElementById(side === 'guardian' ? 'gHpWrap' : 'oHpWrap');
   if(fill) fill.style.width = Math.max(0, Math.round((hpAfter / maxHp) * 100)) + '%';
   if(text) text.textContent = hpAfter + ' / ' + maxHp;
-  if(wrap){
-    wrap.classList.remove('flash-hit'); void wrap.offsetWidth; wrap.classList.add('flash-hit');
-    const num = document.createElement('div');
-    num.className = 'dmg-float' + (crit ? ' crit' : '') + (control ? ' control' : '');
-    num.textContent = (crit ? 'CRIT ' : '') + '-' + damage;
-    wrap.appendChild(num);
-    setTimeout(() => num.remove(), 900);
+  if(!wrap) return;
+  wrap.classList.remove('flash-hit'); void wrap.offsetWidth; wrap.classList.add('flash-hit');
+  const num = document.createElement('div');
+  num.className = 'dmg-float' + (crit ? ' crit' : '') + (control ? ' control' : '');
+  num.textContent = (crit ? 'CRIT ' : '') + '-' + damage;
+  wrap.appendChild(num);
+  setTimeout(() => num.remove(), 900);
+
+  if(crit){
+    spawnParticles(wrap, { count: 14, color: '#e6c777', size: 6, distance: 46, duration: 700, shape: 'spark' });
+  } else if(control){
+    spawnParticles(wrap, { count: 6, color: 'var(--moon)', size: 5, distance: 30, duration: 750, shape: 'star' });
+  } else {
+    spawnParticles(wrap, { count: 8, color: hitColor(affinity), size: 5, distance: 32, duration: 600, shape: 'spark' });
   }
+}
+
+// Burn ticking at the top of a round — no attacker, the affliction just
+// bites. Ember-colored regardless of the move that originally applied it.
+function animateBurnTick(side, amount, hpAfter, maxHp){
+  const fill = document.getElementById(side === 'guardian' ? 'gHpFill' : 'oHpFill');
+  const text = document.getElementById(side === 'guardian' ? 'gHpText' : 'oHpText');
+  const wrap = document.getElementById(side === 'guardian' ? 'gHpWrap' : 'oHpWrap');
+  if(fill) fill.style.width = Math.max(0, Math.round((hpAfter / maxHp) * 100)) + '%';
+  if(text) text.textContent = hpAfter + ' / ' + maxHp;
+  if(!wrap) return;
+  wrap.classList.remove('flash-hit'); void wrap.offsetWidth; wrap.classList.add('flash-hit');
+  const num = document.createElement('div');
+  num.className = 'dmg-float burntick';
+  num.textContent = '-' + amount;
+  wrap.appendChild(num);
+  setTimeout(() => num.remove(), 900);
+  spawnParticles(wrap, { count: 7, color: '#c05a34', size: 5, distance: 24, duration: 650, lift: 10, shape: 'wisp' });
+}
+
+// A stunned turn — no damage, the side just loses its action. Moon-colored
+// star burst plus a text badge in place of a damage number.
+function animateStunSkip(side){
+  const wrap = document.getElementById(side === 'guardian' ? 'gHpWrap' : 'oHpWrap');
+  if(!wrap) return;
+  wrap.classList.remove('flash-hit'); void wrap.offsetWidth; wrap.classList.add('flash-hit');
+  const num = document.createElement('div');
+  num.className = 'dmg-float stunlabel';
+  num.textContent = 'STUNNED';
+  wrap.appendChild(num);
+  setTimeout(() => num.remove(), 900);
+  spawnParticles(wrap, { count: 8, color: 'var(--moon)', size: 5, distance: 28, duration: 750, shape: 'star' });
+}
+
+// Lifesteal — the actor's own bar rises. Upward green wisps instead of an
+// outward burst, so it reads as "recovering" rather than "getting hit".
+function animateHeal(side, amount, hpAfter, maxHp){
+  const fill = document.getElementById(side === 'guardian' ? 'gHpFill' : 'oHpFill');
+  const text = document.getElementById(side === 'guardian' ? 'gHpText' : 'oHpText');
+  const wrap = document.getElementById(side === 'guardian' ? 'gHpWrap' : 'oHpWrap');
+  if(fill) fill.style.width = Math.max(0, Math.round((hpAfter / maxHp) * 100)) + '%';
+  if(text) text.textContent = hpAfter + ' / ' + maxHp;
+  if(!wrap) return;
+  const num = document.createElement('div');
+  num.className = 'dmg-float heal';
+  num.textContent = '+' + amount;
+  wrap.appendChild(num);
+  setTimeout(() => num.remove(), 900);
+  spawnParticles(wrap, { count: 6, color: '#7fbf6a', size: 4, distance: 20, duration: 800, lift: 16, shape: 'wisp' });
+}
+
+// A status proc riding along on a normal hit (stun/burn just applied to the
+// target, before it ever ticks/skips a turn) — a small floating icon badge,
+// no HP change of its own.
+function animateStatusProc(side, kind){
+  const wrap = document.getElementById(side === 'guardian' ? 'gHpWrap' : 'oHpWrap');
+  if(!wrap) return;
+  const badge = document.createElement('div');
+  badge.className = 'status-badge';
+  badge.textContent = kind === 'burn' ? '🔥' : '💫';
+  wrap.appendChild(badge);
+  setTimeout(() => badge.remove(), 950);
 }
 
 async function actMove(moveIndex){
@@ -1108,14 +1241,44 @@ async function actMove(moveIndex){
 
     let gHp = combatView.guardianHp, oHp = combatView.opponentHp;
     for(const ev of data.events){
+      // Burn tick: no attacker, actor is simply taking its own DoT damage.
+      if(ev.move === undefined && ev.burnTick !== undefined){
+        if(ev.actor === 'guardian') gHp = Math.max(0, gHp - ev.burnTick); else oHp = Math.max(0, oHp - ev.burnTick);
+        animateBurnTick(ev.actor, ev.burnTick, ev.actor === 'guardian' ? gHp : oHp,
+          ev.actor === 'guardian' ? combatView.guardianMaxHp : combatView.opponentMaxHp);
+        await sleep(550);
+        continue;
+      }
+      // Stunned skip: actor loses the whole turn, no damage either way.
+      if(ev.move === undefined && ev.stunned){
+        animateStunSkip(ev.actor);
+        await sleep(550);
+        continue;
+      }
+      // A landed move: actor deals damage to the other side.
       const targetIsOpponent = ev.actor === 'guardian';
       if(targetIsOpponent) oHp = Math.max(0, oHp - ev.damage); else gHp = Math.max(0, gHp - ev.damage);
       animateHit(
         targetIsOpponent ? 'opponent' : 'guardian', ev.damage, ev.crit, ev.control,
         targetIsOpponent ? oHp : gHp,
-        targetIsOpponent ? combatView.opponentMaxHp : combatView.guardianMaxHp
+        targetIsOpponent ? combatView.opponentMaxHp : combatView.guardianMaxHp,
+        ev.affinity
       );
       await sleep(650);
+
+      // Secondary effects riding this same move, layered on after the beat.
+      if(ev.stunned){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'stun'); await sleep(350); }
+      if(ev.burn){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'burn'); await sleep(350); }
+      if(ev.healed){
+        if(ev.actor === 'guardian'){
+          gHp = Math.min(combatView.guardianMaxHp, gHp + ev.healed);
+          animateHeal('guardian', ev.healed, gHp, combatView.guardianMaxHp);
+        } else {
+          oHp = Math.min(combatView.opponentMaxHp, oHp + ev.healed);
+          animateHeal('opponent', ev.healed, oHp, combatView.opponentMaxHp);
+        }
+        await sleep(400);
+      }
     }
 
     combatView.guardianHp = data.guardianHp;
