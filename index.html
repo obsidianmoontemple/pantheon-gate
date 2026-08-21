@@ -193,6 +193,11 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .hp-bar-track{background:rgba(0,0,0,0.4);border:1px solid var(--line);border-radius:20px;height:10px;overflow:hidden;margin-bottom:18px;}
 .hp-bar-fill{height:100%;background:linear-gradient(90deg,var(--ember),var(--gold-bright));transition:width .35s ease;}
 .hp-bar-fill.opponent{background:linear-gradient(90deg,var(--amethyst,#8a6bb8),var(--moon));}
+.battle-arena{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px;}
+.battle-side{flex:1;min-width:0;display:flex;flex-direction:column;align-items:stretch;}
+.battle-sprite{display:flex;align-items:flex-end;justify-content:center;height:100px;margin-bottom:6px;}
+.battle-vs{flex:none;font-family:'Cinzel',serif;font-size:14px;color:var(--parchment-dim);padding:0 2px;align-self:flex-start;margin-top:40px;}
+@media (max-width:520px){.battle-arena{gap:6px;} .battle-sprite{height:70px;}}
 .hp-wrap{position:relative;}
 .hp-wrap.flash-hit{animation:hitFlash 0.45s ease;}
 .hp-wrap.control-hit .hp-bar-track{box-shadow:0 0 0 1px var(--moon);}
@@ -390,6 +395,21 @@ function imgFor(species, stage, size){
     return `<img src="familiar_${species}_${stage}.png" alt="" style="max-width:${size}px;max-height:${size}px;width:auto;height:auto;object-fit:contain;display:block;margin:0 auto;">`;
   }
   return `<div style="width:${size}px;height:${size}px;max-width:${size}px;display:flex;align-items:center;justify-content:center;margin:0 auto;border:1px dashed var(--line);border-radius:6px;color:var(--parchment-dim);font-size:11px;text-align:center;padding:4px;">No art set</div>`;
+}
+
+/* Battle-screen opponent portrait — same idea as imgFor() but for a
+   Gauntlet/Campaign foe, which has no local bundled art at all. If the
+   admin hasn't set an image_url for this opponent, fall back to an
+   affinity-tinted placeholder circle (using the same hitColor() palette
+   already used for hit-particle colors) instead of a blank box, so the
+   battle screen always shows *something* on both sides. */
+function opponentImgFor(url, affinity, size){
+  size = size || 130;
+  if(url){
+    return `<img src="${esc(url)}" alt="" style="max-width:${size}px;max-height:${size}px;width:auto;height:auto;object-fit:contain;display:block;margin:0 auto;">`;
+  }
+  const tint = (typeof hitColor === 'function' ? hitColor(affinity) : '#8899aa');
+  return `<div style="width:${Math.round(size*0.75)}px;height:${Math.round(size*0.75)}px;border-radius:50%;margin:0 auto;background:radial-gradient(circle at 35% 30%, ${tint}55, ${tint}22 60%, transparent 75%);border:1px solid ${tint}88;display:flex;align-items:center;justify-content:center;color:${tint};font-size:11px;text-align:center;padding:4px;">${esc(affinity||'')}</div>`;
 }
 
 /* Evolution glow at Ascendant+ — per the GDD's art-budget note, affinity
@@ -2278,7 +2298,7 @@ let PROVING_TIERS = [];
 
 async function loadGauntletOpponents(){
   if(PROVING_TIERS.length) return;
-  const { data, error } = await supabaseClient.from('gauntlet_opponents').select('key, name, affinity, tier').eq('active', true).order('tier', { ascending: true });
+  const { data, error } = await supabaseClient.from('gauntlet_opponents').select('key, name, affinity, tier, image_url').eq('active', true).order('tier', { ascending: true });
   if(error){ console.error('gauntlet opponents load failed', error); return; }
   PROVING_TIERS = data || [];
 }
@@ -2319,7 +2339,7 @@ function renderProvingPicker(){
   // that's open to reveal the next.
   const rows = PROVING_TIERS.length ? PROVING_TIERS.filter(t => t.tier <= guardian.proving_rank).map(t => {
     return `<div class="tier-row" onclick="selectOpponent('${esc(t.key)}')">
-      <span class="tname">${esc(t.name)}</span>
+      <span style="display:flex;align-items:center;gap:8px;">${shopThumb(t.image_url)}<span class="tname">${esc(t.name)}</span></span>
       <span class="taff">${esc(t.affinity)}-touched</span>
     </div>`;
   }).join('') : '<p class="hint">Loading the trial grounds…</p>';
@@ -2412,6 +2432,7 @@ async function startBattle(){
       battleId: data.battleId,
       opponentName: data.opponentName,
       opponentAffinity: data.opponentAffinity,
+      opponentImageUrl: data.opponentImageUrl,
       guardianHp: data.guardianHp, guardianMaxHp: data.guardianMaxHp,
       opponentHp: data.opponentHp, opponentMaxHp: data.opponentMaxHp,
       moves: data.moves,
@@ -2450,13 +2471,22 @@ function renderBattleScreen(){
   app.innerHTML = `
     <div class="card"${bgAttr('combat')}>
       <h2 style="text-align:center;">${esc(guardian.name)} vs. ${esc(v.opponentName)}</h2>
-      <div class="hp-wrap" id="gHpWrap">
-        <div class="hp-row"><span class="hp-name">${esc(guardian.name)}</span><span class="hp-name" id="gHpText">${v.guardianHp} / ${v.guardianMaxHp}</span></div>
-        <div class="hp-bar-track"><div class="hp-bar-fill" id="gHpFill" style="width:${gPct}%;"></div></div>
-      </div>
-      <div class="hp-wrap" id="oHpWrap">
-        <div class="hp-row"><span class="hp-name">${esc(v.opponentName)}</span><span class="hp-name" id="oHpText">${v.opponentHp} / ${v.opponentMaxHp}</span></div>
-        <div class="hp-bar-track"><div class="hp-bar-fill opponent" id="oHpFill" style="width:${oPct}%;"></div></div>
+      <div class="battle-arena">
+        <div class="battle-side">
+          <div class="battle-sprite">${imgFor(guardian.species, guardian.stage, 110)}</div>
+          <div class="hp-wrap" id="gHpWrap">
+            <div class="hp-row"><span class="hp-name">${esc(guardian.name)}</span><span class="hp-name" id="gHpText">${v.guardianHp} / ${v.guardianMaxHp}</span></div>
+            <div class="hp-bar-track"><div class="hp-bar-fill" id="gHpFill" style="width:${gPct}%;"></div></div>
+          </div>
+        </div>
+        <div class="battle-vs">VS</div>
+        <div class="battle-side">
+          <div class="battle-sprite">${opponentImgFor(v.opponentImageUrl, v.opponentAffinity, 110)}</div>
+          <div class="hp-wrap" id="oHpWrap">
+            <div class="hp-row"><span class="hp-name">${esc(v.opponentName)}</span><span class="hp-name" id="oHpText">${v.opponentHp} / ${v.opponentMaxHp}</span></div>
+            <div class="hp-bar-track"><div class="hp-bar-fill opponent" id="oHpFill" style="width:${oPct}%;"></div></div>
+          </div>
+        </div>
       </div>
 
       <div class="move-row" id="moveRow">${moveButtons}</div>
@@ -4098,10 +4128,15 @@ function renderCircleDragon(){
   }
 
   const dragonBg = bgAttr('circleDragon');
+  const lairDragon = dragonStatus.activeFight ? dragonStatus.nextDragon : (dragonStatus.ladderComplete ? null : dragonStatus.nextDragon);
+  const dragonSprite = (!dragonStatus.ladderComplete && lairDragon)
+    ? `<div class="battle-sprite" style="height:120px;">${opponentImgFor(lairDragon.image_url, null, 130)}</div>`
+    : '';
   app.innerHTML = `
     <div class="card"${dragonBg}>
       <h2 style="text-align:center;">Dragon's Lair</h2>
       <p class="hint" style="text-align:center;">Tier ${dragonStatus.highestTierDefeated + 1} of the ladder. One window per moon phase — any member can open or join it, and the dragon fights back.</p>
+      ${dragonSprite}
       ${mainBlock}
       <div class="status" id="dragonActionStatus"></div>
     </div>
