@@ -2825,17 +2825,22 @@ async function doAttackWorldBoss(){
     const data = await resp.json();
     if(!data.ok){ setWorldBossStatusMsg(data.error || 'Could not land that attack.', false); await refreshWorldBossStatus(); return; }
 
-    if(data.defeated){
+    if(data.repelled){
+      // Direct feedback: "it needs to retaliate." Same shape/messaging as
+      // renderCircleDragon's attack handler — the boss's counter-swing
+      // met or beat your vitality, so this swing dealt nothing.
+      setWorldBossStatusMsg(`Repelled! The boss hit back for ${data.damageTaken}${data.bossCrit ? ' (critical!)' : ''} before your strike landed — no damage dealt this time.`, false);
+    }else if(data.defeated){
       const rewardBits = [];
       if(data.yourEssence) rewardBits.push(`${data.yourEssence} Essence`);
       if(data.yourTokens) rewardBits.push(`${data.yourTokens} God Token${data.yourTokens === 1 ? '' : 's'}`);
       setWorldBossStatusMsg(
-        `${esc(data.bossName)} has fallen! You dealt ${data.yourTotalDamage} total damage${rewardBits.length ? (' — you earned ' + rewardBits.join(' and ') + '.') : '.'}`,
+        `${esc(data.bossName)} falls! You dealt ${data.damage}${data.crit ? ' (critical!)' : ''} and took ${data.damageTaken} in return — ${data.yourTotalDamage} total damage${rewardBits.length ? (', earning ' + rewardBits.join(' and ') + '.') : '.'}`,
         true
       );
       await loadGuardian();
     }else{
-      setWorldBossStatusMsg(`Hit for ${data.damage}${data.crit ? ' (critical!)' : ''}. ${data.hpRemaining.toLocaleString()}/${data.hpTotal.toLocaleString()} HP left.`, true);
+      setWorldBossStatusMsg(`Hit for ${data.damage}${data.crit ? ' (critical!)' : ''} — took ${data.damageTaken} in return. ${data.hpRemaining.toLocaleString()}/${data.hpTotal.toLocaleString()} HP left.`, true);
     }
     await refreshWorldBossStatus();
   }catch(e){
@@ -2884,6 +2889,7 @@ function renderWorldBoss(){
         ${hotspotButtonsMarkup(WORLDBOSS_AREAS, 'WORLDBOSS_AREAS', 'worldBoss')}
         <div class="hub-overlay">
           <h2>${esc(boss.name)}</h2>
+          <div class="art">${opponentImgFor(boss.imageUrl, boss.affinity, 130)}</div>
           ${boss.flavorText ? `<p class="hint">${esc(boss.flavorText)}</p>` : ''}
           <div class="hp-row"><span class="hp-name">HP</span><span class="hp-name">${boss.hpRemaining.toLocaleString()} / ${boss.hpTotal.toLocaleString()}</span></div>
           <div class="hp-bar-track"><div class="hp-bar-fill opponent" style="width:${pct}%;"></div></div>
