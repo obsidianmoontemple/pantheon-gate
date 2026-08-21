@@ -130,7 +130,14 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
 .authbar button:hover{border-color:var(--gold);color:var(--gold-bright);}
 .authbar .who{color:var(--parchment-dim);display:flex;align-items:center;padding:0 4px;}
 
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:50;align-items:center;justify-content:center;}
+/* align-items/justify-content:safe center + overflow-y:auto is a defensive
+   fallback for every modal, at any width: plain center on a box that
+   can't fully fit (a short landscape phone, browser chrome eating into
+   the viewport, etc.) clips whichever edge overflows with no way to
+   scroll to it. "safe" falls back to start-alignment instead, and the
+   overlay itself becoming scrollable means it's always reachable even
+   before the width/height breakpoint below kicks in. */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:50;align-items:safe center;justify-content:safe center;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 0;}
 .modal-overlay.active{display:flex;}
 .modal{background:var(--ink-2);border:1px solid var(--gold);border-radius:4px;padding:32px;max-width:360px;width:90%;position:relative;}
 .modal h3{margin:0 0 18px;font-size:18px;color:var(--gold-bright);}
@@ -147,8 +154,15 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
    click target and just looks like a tiny floating card on a phone.
    Below 480px, dock it to the bottom edge instead: full width, no
    max-width cap, rounded only on top (a familiar mobile "sheet" shape),
-   with room to scroll if content runs tall. */
-@media (max-width:480px){
+   with room to scroll if content runs tall.
+
+   Also fires on short/landscape phones (max-height:480px, touch only —
+   pointer:coarse keeps a narrow desktop window out of this), not just
+   narrow portrait ones: "the intro screen is outside the screen" was
+   this same modal in landscape, where width is well over 480px so this
+   block never used to apply, but height is short enough that the plain
+   centered card could still run taller than the visible screen. */
+@media (max-width:480px), ((max-height:480px) and (pointer:coarse)){
   .modal-overlay{align-items:flex-end;padding:0;}
   .modal{width:100%;max-width:none !important;border-radius:14px 14px 0 0;padding:26px 20px 32px;max-height:85vh;overflow-y:auto;}
   .modal h3{font-size:19px;}
