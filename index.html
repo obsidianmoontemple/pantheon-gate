@@ -383,14 +383,39 @@ async function loadCustomDeitiesIntoCatalog(){
 let supabaseClient = null;
 let session = null;
 let guardian = null;
-// site_settings (0044) — admin-editable background URLs for the two
-// screens that used to have their picture hardcoded into the CSS
-// (everything else got an admin URL field in 0043; these were missed).
-let siteSettings = { mapBackgroundUrl: null, loginBackgroundUrl: null };
-async function loadSiteSettings(){
-  const { data, error } = await supabaseClient.from('site_settings').select('map_background_url, login_background_url').eq('id', 1).maybeSingle();
-  if(error){ console.error('site_settings load failed', error); return; }
-  if(data){ siteSettings.mapBackgroundUrl = data.map_background_url; siteSettings.loginBackgroundUrl = data.login_background_url; }
+// site_backgrounds (0045) — one admin-editable background image per
+// screen, page_key -> url, loaded once at boot. Superseded 0044's
+// site_settings (which only covered map + login) once "every page"
+// turned out to mean every page, not just the two that were still
+// hardcoded into the CSS.
+let siteBackgrounds = {}; // page_key -> background_url
+async function loadSiteBackgrounds(){
+  const { data, error } = await supabaseClient.from('site_backgrounds').select('page_key, background_url');
+  if(error){ console.error('site_backgrounds load failed', error); return; }
+  (data || []).forEach(row => { if(row.background_url) siteBackgrounds[row.page_key] = row.background_url; });
+}
+// Applied to a screen's outer .card (or equivalent) so every screen can
+// carry its own art instead of the flat card color. The gradient layers
+// UNDER the image (declared first, painted last/on top per CSS's
+// background-image stacking) so player-set art never fights with text
+// legibility — same idea as the .card's own default gradient, just with
+// a photo showing through it.
+// extraStyle (optional) is any additional inline CSS a particular card
+// already needed (e.g. "text-align:center;") — merged into the same
+// style attribute rather than emitting two, since HTML doesn't allow
+// duplicate attributes on one element.
+function bgAttr(pageKey, extraStyle){
+  const url = siteBackgrounds[pageKey];
+  const bg = url ? `background-image:linear-gradient(180deg,rgba(23,19,31,0.55),rgba(16,14,22,0.82)),url('${esc(url)}');background-size:cover;background-position:center;` : '';
+  const combined = (extraStyle || '') + bg;
+  return combined ? ` style="${combined}"` : '';
+}
+// Same idea, no overlay — for the two full-bleed wraps (login, map) whose
+// text already sits on its own opaque/translucent panel floating above
+// the background, so there's nothing under the image that needs dimming.
+function bgAttrPlain(pageKey){
+  const url = siteBackgrounds[pageKey];
+  return url ? ` style="background-image:url('${esc(url)}');"` : '';
 }
 let pickedSpecies = null;
 let nameDraft = '';
@@ -535,9 +560,13 @@ async function boot(){
     return;
   }
   supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  loadSiteSettings().catch(e => console.error('site settings load failed', e));
-
-  const { data: { session: existing } } = await supabaseClient.auth.getSession();
+  // Run alongside getSession() rather than after it — awaited together so
+  // the very first paint (the login screen) already has its background,
+  // instead of flashing plain and then filling in a moment later.
+  const [{ data: { session: existing } }] = await Promise.all([
+    supabaseClient.auth.getSession(),
+    loadSiteBackgrounds().catch(e => console.error('site backgrounds load failed', e))
+  ]);
   session = existing;
   // Always land on the login screen first, even with a valid persisted
   // session — a returning player gets a one-click "Continue" there rather
@@ -605,7 +634,7 @@ async function afterLogin(){
 function renderLoginScreen(){
   document.body.classList.add('login-screen');
   const app = document.getElementById('app');
-  const bg = siteSettings.loginBackgroundUrl ? ` style="background-image:url('${esc(siteSettings.loginBackgroundUrl)}');"` : '';
+  const bg = bgAttrPlain('login');
 
   // A still-valid session gets a one-click way through instead of the
   // full sign-in form — see boot()'s comment on why this screen always
@@ -786,7 +815,7 @@ function render(){
 function renderHatchFlow(){
   const app = document.getElementById('app');
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('hatch')}>
       <h2 style="text-align:center;">Choose your companion</h2>
       <p class="hint" style="text-align:center;">This is the only choice here that never changes anything about how your guardian fights — species is yours to wear, not an advantage to chase. The name you give it next is the one part of this you can never take back.</p>
 
@@ -900,8 +929,7 @@ function mapHubMarkup(){
   const nodes = MAP_AREAS.map((a, i) => `
     <button class="map-hotspot" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;" title="${esc(a.label)}" aria-label="${esc(a.label)}" onclick="MAP_AREAS[${i}].action()"></button>
   `).join('');
-  const bgOverride = siteSettings.mapBackgroundUrl ? ` style="background-image:url('${esc(siteSettings.mapBackgroundUrl)}');"` : '';
-  return `<div class="map-hub" id="mapHub"${bgOverride}>${nodes}</div>`;
+  return `<div class="map-hub" id="mapHub"${bgAttrPlain('map')}>${nodes}</div>`;
 }
 
 // The landing screen once a guardian exists (render()'s fallback) — every
@@ -936,7 +964,7 @@ function renderGuardianHome(){
   const bondReady = bondSecondsLeft <= 0;
 
   app.innerHTML = `
-    <div class="card guardian-display">
+    <div class="card guardian-display"${bgAttr('guardianPage')}>
       <div class="art">${art}</div>
       <div class="stage-badge">${esc(STAGE_LABEL[guardian.stage] || guardian.stage)}</div>
       <h2>${esc(guardian.name)}</h2>
@@ -1114,7 +1142,7 @@ function renderProfile(){
       </div>`
     : `<button class="secondary" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto;" onclick="openPasswordForm()">Set / change password</button>`;
   app.innerHTML = `
-    <div class="card" style="text-align:center;">
+    <div class="card"${bgAttr('profile', 'text-align:center;')}>
       <h2>${esc(guardian.name)}'s Profile</h2>
       <div class="species-line">${esc(STAGE_LABEL[guardian.stage] || guardian.stage)} · ${guardian.checkin_streak || 0} day check-in streak</div>
 
@@ -1306,7 +1334,7 @@ function renderShrine(){
   }).join('');
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('shrine')}>
       <h2 style="text-align:center;">The Temple of the Gods</h2>
       <p class="hint" style="text-align:center;">${groups
         ? 'Every god who has granted you an audience — chat any time, and see whether their blessing has found your guardian yet.'
@@ -1381,7 +1409,7 @@ function renderMail(){
   }).join('') || '<p class="hint">Nothing here yet.</p>';
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('mail')}>
       <h2 style="text-align:center;">Mail</h2>
       <p class="hint" style="text-align:center;">Announcements and gifts sent your way. Claim a gift once and it's yours — checking again never takes anything back.</p>
       <div class="status" id="mailStatus"></div>
@@ -1430,15 +1458,16 @@ function renderBackpack(){
     return `<div class="roster-row"><div><div class="rname">${esc(a.name)}</div><div class="cblurb">${complete ? 'Complete' : owned.size + '/' + a.total_fragments + ' fragments'}</div></div></div>`;
   }).join('') || '<p class="hint">No artifact fragments found yet.</p>';
 
+  const backpackBg = bgAttr('backpack');
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${backpackBg}>
       <h2 style="text-align:center;">Backpack</h2>
       <p class="hint" style="text-align:center;">Everything your guardian is holding, in one place. Use or manage items from their home screens — Crafting, the Arena, Expeditions.</p>
     </div>
-    <div class="card"><h2>Crafted Items</h2>${craftRows}<button class="secondary" style="margin-top:10px;" onclick="openCraft()">Go to Crafting</button></div>
-    <div class="card"><h2>Arena Items</h2>${arenaRows}<button class="secondary" style="margin-top:10px;" onclick="openPvpArena()">Go to the Arena</button></div>
-    <div class="card"><h2>Artifact Fragments</h2>${artifactRows}<button class="secondary" style="margin-top:10px;" onclick="openExpedition()">Go to Expeditions</button></div>
-    <div class="card"><button class="secondary" onclick="backFromBackpack()">Back to the map</button></div>
+    <div class="card"${backpackBg}><h2>Crafted Items</h2>${craftRows}<button class="secondary" style="margin-top:10px;" onclick="openCraft()">Go to Crafting</button></div>
+    <div class="card"${backpackBg}><h2>Arena Items</h2>${arenaRows}<button class="secondary" style="margin-top:10px;" onclick="openPvpArena()">Go to the Arena</button></div>
+    <div class="card"${backpackBg}><h2>Artifact Fragments</h2>${artifactRows}<button class="secondary" style="margin-top:10px;" onclick="openExpedition()">Go to Expeditions</button></div>
+    <div class="card"${backpackBg}><button class="secondary" onclick="backFromBackpack()">Back to the map</button></div>
   `;
 }
 
@@ -1462,7 +1491,7 @@ function renderCheckin(){
   const app = document.getElementById('app');
   const tendedToday = guardian.last_tended_at === todayStr();
   app.innerHTML = `
-    <div class="card" style="text-align:center;">
+    <div class="card"${bgAttr('checkin', 'text-align:center;')}>
       <h2>Daily Check-in</h2>
       <p class="hint">Once a day, check in for a streak bonus and whatever today's calendar has waiting.</p>
       ${guardian.checkin_streak > 0 ? `<p class="hint" style="margin:-4px 0 10px;">${guardian.checkin_streak} day streak</p>` : ''}
@@ -1516,7 +1545,7 @@ function renderPromo(){
   }).join('') || '<p class="hint">No promotions running right now — check back later.</p>';
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('promo')}>
       <h2 style="text-align:center;">Promotions</h2>
       <p class="hint" style="text-align:center;">Active and recent site events. Rewards here are granted automatically — nothing to claim.</p>
       ${rows}
@@ -1630,7 +1659,7 @@ function renderShopAgeGate(){
   const v = shopView.pending;
   const needsBirthdate = !shopAgeVerified();
   app.innerHTML = `
-    <div class="card" style="text-align:center;">
+    <div class="card"${bgAttr('shop', 'text-align:center;')}>
       <h2>Age restricted</h2>
       <p class="hint">${esc(v.label)}: ${esc(v.warningText)}</p>
       ${needsBirthdate ? `<input type="date" id="shopAgeBirthdate" style="max-width:220px;">` : ''}
@@ -1730,7 +1759,7 @@ function renderShopBrowse(){
   ).join('') || '<p class="hint">No matching gods — everything shown is already unlocked, free, or not currently for sale.</p>';
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('shop')}>
       <h2 style="text-align:center;">Shop</h2>
       <div class="status" id="shopStatus">${esc(shopStatusMsg)}</div>
       ${tierRows ? `<h3>Subscriptions</h3>${tierRows}` : ''}
@@ -1803,7 +1832,7 @@ function renderCampaign(){
 function renderCampaignBrowse(){
   const app = document.getElementById('app');
   if(!campaignData){
-    app.innerHTML = `<div class="card" style="text-align:center;"><h2>The Divine Realms</h2><p class="hint">Loading…</p></div>`;
+    app.innerHTML = `<div class="card"${bgAttr('campaign', 'text-align:center;')}><h2>The Divine Realms</h2><p class="hint">Loading…</p></div>`;
     return;
   }
   // Locked chapters are fully hidden, not just greyed out — clear/level
@@ -1826,14 +1855,15 @@ function renderCampaignBrowse(){
     return `<div class="pantheon-group"><h3>${esc(c.name)}</h3><p class="hint" style="margin:-4px 0 8px;">${esc(c.description || '')}</p>${rows}</div>`;
   }).join('') || '<p class="hint">No chapters yet — check back soon.</p>';
 
+  const campaignBg = bgAttr('campaign', 'text-align:center;');
   app.innerHTML = `
-    <div class="card" style="text-align:center;">
+    <div class="card"${campaignBg}>
       <h2>The Divine Realms</h2>
       <div class="essence-row"><span class="essence-label">Level</span><span class="essence-value">${campaignData.level}</span></div>
       <p class="hint">${campaignData.xp} XP earned</p>
       ${campaignMsg ? `<p class="status ok" style="display:block;">${esc(campaignMsg)}</p>` : ''}
     </div>
-    <div class="card">
+    <div class="card"${bgAttr('campaign')}>
       ${chapters}
       <button class="secondary" style="margin-top:10px;" onclick="backFromCampaign()">Back to the map</button>
     </div>
@@ -1858,7 +1888,7 @@ function renderCampaignChoice(){
   const v = campaignView;
   const buttons = v.choices.map((c, i) => `<button class="secondary" style="margin:4px 0;display:block;width:100%;" onclick="submitCampaignChoice(${i})">${esc(c)}</button>`).join('');
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('campaign')}>
       <h2 style="text-align:center;">${esc(v.name)}</h2>
       <p class="challenge-text">${esc(v.prompt)}</p>
       <div style="max-width:420px;margin:0 auto;">${buttons}</div>
@@ -1896,7 +1926,7 @@ function renderCampaignChoiceResult(){
   const app = document.getElementById('app');
   const v = campaignView;
   app.innerHTML = `
-    <div class="card verdict-card">
+    <div class="card verdict-card"${bgAttr('campaign')}>
       <div class="verdict-badge ${v.correct ? 'full' : 'partial'}">${v.correct ? 'Correct' : 'Not quite'}</div>
       ${v.correct ? `<p class="verdict-text">${esc(v.xpSummary)}</p>` : `<p class="verdict-text">The right choice was: "${esc(v.choices[v.correctIndex] ?? '')}"</p>`}
       <button onclick="finishCampaignChoice()">Continue</button>
@@ -1978,7 +2008,7 @@ function renderPetitionPicker(){
   }).join('');
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('oracle')}>
       <h2 style="text-align:center;">Choose who to petition</h2>
       <p class="hint" style="text-align:center;">Every honest answer earns something. A god you've already earned a partial mark from can still be petitioned again for the full mark.</p>
       ${phaseLine}
@@ -2026,7 +2056,7 @@ function renderPetitionChallenge(){
     ? `<p class="hint" id="hintBox" style="font-style:italic;">"${esc(v.hint)}"</p>`
     : `<div id="hintBox"></div>`;
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('oracle')}>
       <h2 style="text-align:center;">${esc(v.deityName)} sets a trial</h2>
       <p class="hint" style="text-align:center;">Write whatever answer feels honest to your guardian's keeper — there's no wrong format. Any genuine attempt earns at least a partial mark; a real show of understanding, courage, or wit earns the full one.</p>
       <p class="challenge-text">"${esc(v.challenge)}"</p>
@@ -2166,7 +2196,7 @@ function renderPetitionVerdict(){
     ? `<p class="gain-note">Your ${v.verdict === 'full' ? 'full' : 'partial'} mark also earned <strong style="color:var(--gold-bright);">${esc(v.extraReward.name || 'a reward')}</strong>.</p>`
     : '';
   app.innerHTML = `
-    <div class="card verdict-card">
+    <div class="card verdict-card"${bgAttr('oracle')}>
       <div class="verdict-badge ${v.verdict}" id="verdictBadge" style="position:relative;">${v.verdict === 'full' ? 'Full mark' : 'Partial mark'}</div>
       <p class="verdict-text">"${esc(v.verdictText)}" <span style="opacity:0.7;">— ${esc(v.deityName)}</span></p>
       <p class="gain-note">${esc(gain)} Bond deepens by 1.</p>
@@ -2249,7 +2279,7 @@ function renderProvingPicker(){
   }).join('') : '<p class="hint">Loading the trial grounds…</p>';
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('gauntlet')}>
       <h2 style="text-align:center;">The Gauntlet</h2>
       <p class="hint" style="text-align:center;">Fixed trial grounds, always open, no moon required. Clear one to open the next. Wins and losses both pay Essence.</p>
       ${rows}
@@ -2299,7 +2329,7 @@ function renderLoadoutPicker(){
     : '<p class="hint" style="text-align:center;">No full marks yet — you can still fight with Basic Strike alone, it will just be a harder climb.</p>';
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('combat')}>
       <h2 style="text-align:center;">Choose your loadout</h2>
       <p class="hint" style="text-align:center;">Facing the ${esc(opponentLabel)}. Pick up to five full marks to bring — Basic Strike always comes free. ${loadoutPicks.length}/5 chosen.</p>
       ${rows}
@@ -2372,7 +2402,7 @@ function renderBattleScreen(){
   }).join('');
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('combat')}>
       <h2 style="text-align:center;">${esc(guardian.name)} vs. ${esc(v.opponentName)}</h2>
       <div class="hp-wrap" id="gHpWrap">
         <div class="hp-row"><span class="hp-name">${esc(guardian.name)}</span><span class="hp-name" id="gHpText">${v.guardianHp} / ${v.guardianMaxHp}</span></div>
@@ -2655,7 +2685,7 @@ function renderBattleResult(){
        <button onclick="finishCombat()">Return to your guardian</button>`;
 
   app.innerHTML = `
-    <div class="card verdict-card">
+    <div class="card verdict-card"${bgAttr('combat')}>
       <div class="verdict-badge ${win ? 'full' : 'partial'}">${win ? 'Victory' : 'Defeat'}</div>
       ${bodyHtml}
     </div>
@@ -2827,7 +2857,7 @@ function renderCircle(){
 function renderCircleLocked(){
   const app = document.getElementById('app');
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('circle')}>
       <h2 style="text-align:center;">Your Circle</h2>
       <p class="hint" style="text-align:center;">Circles need a permanent account — claim this Seeker with an email first (see the card below), then come back.</p>
       <button class="secondary" onclick="backToGuardianHomeFromCircle()">Back to the map</button>
@@ -2869,7 +2899,7 @@ function renderCircleBrowse(){
     : '<p class="hint">Quiet so far.</p>';
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('circle')}>
       <h2 style="text-align:center;">Circles</h2>
       <p class="hint" style="text-align:center;">Browse and request to join one, or found your own — founding costs ${FOUNDING_COST_ESSENCE} Essence. An officer can also invite you directly by your guardian's name. Circles are sorted by rank — this list doubles as the Circle leaderboard.</p>
       ${circleStatus ? `<div class="status ${circleStatus.toLowerCase().includes('sent') ? 'ok' : 'err'}">${esc(circleStatus)}</div>` : ''}
@@ -2948,7 +2978,7 @@ function renderCircleForm(){
   `).join('');
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('circle')}>
       <h2 style="text-align:center;">${editing ? 'Redesign the banner' : 'Found a Circle'}</h2>
       ${preview}
       ${editing ? '' : `
@@ -3086,8 +3116,9 @@ function renderCircleHome(){
     </div>
   `).join('');
 
+  const circleHomeBg = bgAttr('circle');
   app.innerHTML = `
-    <div class="card" style="text-align:center;">
+    <div class="card"${bgAttr('circle', 'text-align:center;')}>
       ${bannerSVG(c.banner_shape, c.banner_primary, c.banner_secondary, 140)}
       <h2>${esc(c.name)}</h2>
       <p class="hint">${esc(c.blurb || 'No blurb yet.')}</p>
@@ -3096,7 +3127,7 @@ function renderCircleHome(){
       ${patronLine}
     </div>
 
-    <div class="card">
+    <div class="card"${circleHomeBg}>
       <h2>The Chest &amp; Devotion</h2>
       <p class="hint">The Chest holds pooled Essence any member can deposit and officers can withdraw. Tithing burns your own Essence for good, but mints Devotion for the Circle Shop below.</p>
       <p class="ccount" style="text-align:center;">Chest: ${c.chest_essence} Essence · Devotion: ${c.devotion_balance}</p>
@@ -3112,13 +3143,13 @@ function renderCircleHome(){
       <div class="status" id="chestStatus"></div>
     </div>
 
-    <div class="card">
+    <div class="card"${circleHomeBg}>
       <h2>The Circle Shop</h2>
       <p class="hint">Spends the Circle's shared Devotion — anyone can buy, the blessing lands on your own guardian.</p>
       ${shopRows || '<p class="hint">Nothing in stock yet.</p>'}
     </div>
 
-    <div class="card">
+    <div class="card"${circleHomeBg}>
       <h2>Roster</h2>
       ${rosterRows}
       ${requestsBlock}
@@ -3409,7 +3440,7 @@ function renderCircleMessages(){
   const canSend = messagesTab === 'feed' || (messagesTab === 'dm' && dmPeerId);
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('circle')}>
       <h2 style="text-align:center;">${esc(myCircle.circle.name)} — Messages</h2>
       <div class="choice-row" style="margin-bottom:16px;">
         <div class="choice ${messagesTab === 'feed' ? 'selected' : ''}" style="width:140px;" onclick="switchMessagesTab('feed')"><div class="label">Circle Chat</div></div>
@@ -3660,14 +3691,15 @@ function renderCircleAltar(){
     </div>
   ` : '';
 
+  const circleAltarBg = bgAttr('circleAltar');
   app.innerHTML = `
-    <div class="card" style="text-align:center;">
+    <div class="card"${bgAttr('circleAltar', 'text-align:center;')}>
       ${bannerSVG(c.banner_shape, c.banner_primary, c.banner_secondary, 120)}
       <h2>${esc(c.name)}'s Altar</h2>
       <p class="ccount">${altarData.memberCount} members · Devotion: ${c.devotion_balance}</p>
     </div>
 
-    <div class="card">
+    <div class="card"${circleAltarBg}>
       <div class="altar-grid">${gridCells}</div>
       ${pickerBlock}
       <div class="status" id="altarStatus"></div>
@@ -3879,13 +3911,14 @@ function renderPersonalAltar(){
     </div>`;
   }).join('');
 
+  const palBg = bgAttr('personalAltar');
   app.innerHTML = `
-    <div class="card" style="text-align:center;">
+    <div class="card"${bgAttr('personalAltar', 'text-align:center;')}>
       <h2>${esc(palData.guardian.name)}'s Altar</h2>
       <p class="ccount">Essence: ${palData.guardian.essence}</p>
     </div>
 
-    <div class="card">
+    <div class="card"${palBg}>
       <div class="altar-grid palt">${gridCells}</div>
       ${pickerBlock}
       <div class="status" id="palStatus"></div>
@@ -4012,14 +4045,15 @@ function renderCircleDragon(){
     }
   }
 
+  const dragonBg = bgAttr('circleDragon');
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${dragonBg}>
       <h2 style="text-align:center;">Dragon's Lair</h2>
       <p class="hint" style="text-align:center;">Tier ${dragonStatus.highestTierDefeated + 1} of the ladder. One window per moon phase — any member can open or join it, and the dragon fights back.</p>
       ${mainBlock}
       <div class="status" id="dragonActionStatus"></div>
     </div>
-    <div class="card">
+    <div class="card"${dragonBg}>
       <h2>Defeated</h2>
       ${defeatedRows}
       <button class="secondary" style="margin-top:14px;" onclick="backFromDragon()">Back to your Circle</button>
@@ -4095,13 +4129,13 @@ function renderCircleInvasions(){
     const oppName = invasionCircleNames[oppId] || 'an unknown Circle';
     const closesIn = formatRemaining(new Date(inv.resolves_at) - new Date());
     return `
-      <div class="card">
+      <div class="card"${bgAttr('circleInvasions')}>
         <h2 style="text-align:center;">${asAttacker ? 'Attacking ' + esc(oppName) : 'Under invasion by ' + esc(oppName)}</h2>
         <p class="hint" style="text-align:center;">Resolves in ${closesIn}. Committing adds your guardian's full power to your side — anyone can, more than once isn't needed.</p>
         <button onclick="doCommitInvasion('${esc(inv.id)}')">Commit your guardian</button>
       </div>
     `;
-  }).join('') : '<div class="card"><p class="hint" style="text-align:center;">No invasion in progress.</p></div>';
+  }).join('') : `<div class="card"${bgAttr('circleInvasions')}><p class="hint" style="text-align:center;">No invasion in progress.</p></div>`;
 
   const historyRows = (invasionStatus.history || []).map(inv => {
     const asAttacker = inv.attacker_circle_id === myCircleId;
@@ -4115,13 +4149,13 @@ function renderCircleInvasions(){
   }).join('') || '<p class="hint">No invasions yet.</p>';
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('circleInvasions')}>
       <h2 style="text-align:center;">Invasions</h2>
       <p class="hint" style="text-align:center;">Officers declare from another Circle's listing while browsing. Once a fight is underway, any member on either side can commit.</p>
       <div class="status" id="invasionActionStatus"></div>
     </div>
     ${pendingBlocks}
-    <div class="card">
+    <div class="card"${bgAttr('circleInvasions')}>
       <h2>History</h2>
       ${historyRows}
       <button class="secondary" style="margin-top:14px;" onclick="backFromInvasions()">Back to your Circle</button>
@@ -4232,7 +4266,7 @@ function renderExpedition(){
   const app = document.getElementById('app');
 
   if(!expeditionCatalog){
-    app.innerHTML = `<div class="card" style="text-align:center;"><h2>Expeditions</h2><p class="hint">Loading…</p></div>`;
+    app.innerHTML = `<div class="card"${bgAttr('expeditions', 'text-align:center;')}><h2>Expeditions</h2><p class="hint">Loading…</p></div>`;
     return;
   }
 
@@ -4240,7 +4274,7 @@ function renderExpedition(){
     const r = expeditionView.result;
     const correctText = (r.choices || [])[r.correctIndex] ?? '';
     app.innerHTML = `
-      <div class="card" style="text-align:center;">
+      <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
         <h2>${r.correct ? 'Found it!' : 'Not quite'}</h2>
         <p class="hint">${esc(r.regionName || '')}</p>
         <p>${r.correct ? 'Correct — the fragment is yours.' : `The correct answer was: <strong>${esc(correctText)}</strong>`}</p>
@@ -4257,7 +4291,7 @@ function renderExpedition(){
   if(expeditionStatus && !expeditionStatus.ready){
     const readyDate = new Date(expeditionStatus.readyAt);
     travelCard = `
-      <div class="card" style="text-align:center;">
+      <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
         <h2>Away exploring</h2>
         <p class="hint">Your guardian is traveling. It'll be ready to report back at ${readyDate.toLocaleString()}.</p>
         <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
@@ -4265,7 +4299,7 @@ function renderExpedition(){
   } else if(expeditionStatus && expeditionStatus.ready){
     const choices = expeditionStatus.choices || [];
     travelCard = `
-      <div class="card" style="text-align:center;">
+      <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
         <h2>${esc(expeditionStatus.regionName || 'Your guardian has arrived')}</h2>
         <p>${esc(expeditionStatus.clueText || '')}</p>
         <div style="display:flex;flex-direction:column;gap:8px;max-width:420px;margin:10px auto 0;">
@@ -4295,14 +4329,14 @@ function renderExpedition(){
   }).join('') || '<p class="hint">No expeditions are available right now — check back later.</p>';
 
   app.innerHTML = `
-    <div class="card" style="text-align:center;">
+    <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
       <h2>Expeditions</h2>
       <p class="hint">Send your guardian to real places in search of ancient artifact fragments. Answer honestly, learn something true either way, and reassemble a full set to draw a deity's attention.</p>
       <p class="hint">${capNote}</p>
       <div class="status" id="expeditionMsg"></div>
     </div>
     ${travelCard}
-    <div class="card">
+    <div class="card"${bgAttr('expeditions')}>
       <h2>Artifacts</h2>
       ${artifactCards}
       <button class="secondary" style="margin-top:14px;" onclick="backFromExpedition()">Back to the map</button>
@@ -4428,24 +4462,25 @@ function renderCraft(){
     </div>`;
   }).join('') || '<p class="hint">Nothing crafted yet.</p>';
 
+  const craftBg = bgAttr('craft');
   app.innerHTML = `
-    <div class="card" style="text-align:center;">
+    <div class="card"${bgAttr('craft', 'text-align:center;')}>
       <h2>Shard Crafting</h2>
       <p class="hint">Turn God Shards into a permanent stat boost, a cosmetic, or a consumable — or bank a bonus petition credit that bypasses the one-per-moon-phase gate.</p>
       <div class="essence-row"><span class="essence-label">God Shards</span><span class="essence-value">${guardian.god_shards || 0}</span></div>
       <div class="status" id="craftStatus"></div>
     </div>
-    <div class="card">
+    <div class="card"${craftBg}>
       <h2>Catalog</h2>
       ${catalogRows}
     </div>
-    <div class="card">
+    <div class="card"${craftBg}>
       <h2>Bonus Petition Credit</h2>
       <p class="hint">Costs a set number of Shards, decided by the gods — if you can't afford it, the attempt will tell you the price.</p>
       <p class="hint">You currently hold <strong>${guardian.bonus_petition_credits || 0}</strong> bonus credit${guardian.bonus_petition_credits === 1 ? '' : 's'}.</p>
       <button class="secondary" ${(guardian.god_shards || 0) > 0 ? '' : 'disabled'} onclick="doCraftPetition()">Craft a petition credit</button>
     </div>
-    <div class="card">
+    <div class="card"${craftBg}>
       <h2>Your Items</h2>
       ${inventoryRows}
       <button class="secondary" style="margin-top:14px;" onclick="backFromCraft()">Back to the map</button>
@@ -4505,7 +4540,7 @@ function renderRedeem(){
   }).join('');
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('chainedGods')}>
       <h2 style="text-align:center;">Redeem a God Token</h2>
       <p class="hint" style="text-align:center;">Spend God Tokens to fully unlock any one god's chat, for good. If you already have access some other way, nothing is spent.</p>
       <div class="essence-row"><span class="essence-label">God Tokens</span><span class="essence-value">${guardian.god_tokens || 0}</span></div>
@@ -4704,19 +4739,20 @@ function renderPvpShop(){
   const shieldNote = guardian.pvp_shield_until && new Date(guardian.pvp_shield_until) > new Date()
     ? `<p class="hint">Warded from challenges until ${new Date(guardian.pvp_shield_until).toLocaleString()}.</p>` : '';
 
+  const arenaBg = bgAttr('arena');
   app.innerHTML = `
-    <div class="card" style="text-align:center;">
+    <div class="card"${bgAttr('arena', 'text-align:center;')}>
       <h2>Arena Store</h2>
       <p class="hint">Spend Favor earned from duels on PvP utility and guardian cosmetics.</p>
       <div class="essence-row"><span class="essence-label">Favor</span><span class="essence-value">${guardian.favor || 0}</span></div>
       ${shieldNote}
       <div class="status" id="pvpActionStatus"></div>
     </div>
-    <div class="card">
+    <div class="card"${arenaBg}>
       <h2>Catalog</h2>
       ${rows}
     </div>
-    <div class="card">
+    <div class="card"${arenaBg}>
       <h2>Owned</h2>
       ${invRows}
       <button class="secondary" style="margin-top:14px;" onclick="backFromPvpSub()">Back</button>
@@ -4727,7 +4763,7 @@ function renderPvpShop(){
 function renderPvpLocked(){
   const app = document.getElementById('app');
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('arena')}>
       <h2 style="text-align:center;">The Arena</h2>
       <p class="hint" style="text-align:center;">Duels need a permanent account — claim this Seeker with an email first (see the card on your guardian's page), then come back.</p>
       <button class="secondary" onclick="backFromPvp()">Back to the map</button>
@@ -4748,7 +4784,7 @@ function renderPvpHome(){
     const yourOldPos = won ? m.winner_old_position : m.loser_old_position;
     const yourNewPos = won ? m.winner_new_position : m.loser_new_position;
     app.innerHTML = `
-      <div class="card verdict-card">
+      <div class="card verdict-card"${bgAttr('arena')}>
         <div class="verdict-badge ${won ? 'full' : 'partial'}">${won ? 'Victory' : 'Defeat'}</div>
         <p class="verdict-text">${won ? 'You won the duel.' : 'You lost the duel.'}</p>
         <p class="gain-note">${m.swapped ? `Ranks swapped — you moved from #${yourOldPos} to #${yourNewPos}.` : `No change in rank — #${yourOldPos} was already correctly ordered.`}</p>
@@ -4762,7 +4798,7 @@ function renderPvpHome(){
   const incoming = pvpStatus.incoming;
 
   const outgoingBlock = outgoing ? `
-    <div class="card">
+    <div class="card"${bgAttr('arena')}>
       <h2>Your Challenge</h2>
       <p class="hint">Waiting for a response — expires if ignored.</p>
       <button class="secondary" onclick="doPvpCancel('${esc(outgoing.id)}')">Cancel</button>
@@ -4770,7 +4806,7 @@ function renderPvpHome(){
   ` : '';
 
   const incomingBlock = incoming ? `
-    <div class="card">
+    <div class="card"${bgAttr('arena')}>
       <h2>Incoming Challenge</h2>
       <p class="hint">Someone has challenged you to a duel. Accepting resolves it immediately.</p>
       <div style="display:flex;gap:10px;justify-content:center;">
@@ -4789,7 +4825,7 @@ function renderPvpHome(){
   }).join('') || '<p class="hint">No duels yet.</p>';
 
   app.innerHTML = `
-    <div class="card" style="text-align:center;">
+    <div class="card"${bgAttr('arena', 'text-align:center;')}>
       <h2>The Arena</h2>
       <p class="hint">Your ladder position: <strong style="color:var(--gold-bright);">${pvpStatus.ladderPosition ? '#' + pvpStatus.ladderPosition : 'unranked — play a duel to join the ladder'}</strong></p>
       <p class="hint">Favor: <strong style="color:var(--gold-bright);">${guardian.favor || 0}</strong></p>
@@ -4802,7 +4838,7 @@ function renderPvpHome(){
     </div>
     ${outgoingBlock}
     ${incomingBlock}
-    <div class="card">
+    <div class="card"${bgAttr('arena')}>
       <h2>Recent Duels</h2>
       ${historyRows}
       <button class="secondary" style="margin-top:14px;" onclick="backFromPvp()">Back to the map</button>
@@ -4820,7 +4856,7 @@ function renderPvpBrowse(){
   `).join('') || '<p class="hint">No one found.</p>';
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('arena')}>
       <h2 style="text-align:center;">Find an Opponent</h2>
       <p class="hint" style="text-align:center;">Search by guardian name, or leave it blank to browse the ladder near your own position.</p>
       <input type="text" id="pvpSearchInput" placeholder="Search by guardian name…" value="${esc(pvpBrowseQuery)}" oninput="onPvpSearchInput()">
@@ -4838,7 +4874,7 @@ function renderPvpLeaderboard(){
   `).join('') || '<p class="hint">The ladder is empty so far — be the first to duel.</p>';
 
   app.innerHTML = `
-    <div class="card">
+    <div class="card"${bgAttr('arena')}>
       <h2 style="text-align:center;">The Ladder</h2>
       ${rows}
       <button class="secondary" style="margin-top:14px;" onclick="backFromPvpSub()">Back</button>
