@@ -197,7 +197,7 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
 .map-hotspot:hover,.map-hotspot:active,.map-hotspot:focus{background:transparent!important;}
 .map-hotspot:focus-visible{outline:2px solid rgba(230,199,119,0.55);outline-offset:2px;}
 
-/* Guardian Home, converted to the Map Hub's own pattern — direct
+/* Generic "hub" screen shell — originated with Guardian Home, direct
    feedback: "I would actually like the art I provide to lay over the
    entirety of the page covering everything except the buttons." Same
    structure as .map-hub-screen/.map-hub: a fixed full-viewport wrapper
@@ -205,32 +205,41 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
    canvas exactly, same reason as the Map Hub — hotspot percentages only
    line up correctly at that one ratio), background art edge to edge,
    .map-hotspot buttons (reused as-is, not a new class) positioned over
-   it by admin.html's editor under screen key 'guardianPage'.
-   Bond/stats are real per-player numbers art can't encode, so they still
-   render as text — .guardian-home-overlay is a small floating panel
-   instead of the old full-width opaque .card, so most of the art stays
-   visible around it rather than being covered by a text block. */
-body.guardian-home-screen{overflow:hidden;}
-body.guardian-home-screen .mast, body.guardian-home-screen footer.notice{display:none;}
-body.guardian-home-screen .wrap{max-width:none;margin:0;padding:0;}
-.guardian-home-screen{
+   it by admin.html's editor under that screen's own screen_key.
+   Generalized off the one-off .guardian-home-* classes so every screen
+   converted to this pattern (Guardian Home, World Boss, Chained Gods,
+   Daily Check-in, ...) shares one body class + one box/overlay pair
+   instead of duplicating the same CSS per screen. Any live per-player
+   data a screen needs (stats, HP, a streak count) that art can't encode
+   still renders as text — .hub-overlay is a small floating panel instead
+   of a full-width opaque .card, so most of the art stays visible around
+   it rather than being covered by a text block. */
+body.hub-active{overflow:hidden;}
+body.hub-active .mast, body.hub-active footer.notice{display:none;}
+body.hub-active .wrap{max-width:none;margin:0;padding:0;}
+.hub-screen{
   position:fixed;inset:0;z-index:5;
   display:flex;align-items:center;justify-content:center;
   background:var(--ink);
 }
-.guardian-home-box{
+.hub-box{
   position:relative;overflow:hidden;
   width:min(100vw, calc(100vh * 1408 / 768));
   aspect-ratio:1408/768;
 }
-.guardian-home-overlay{
+.hub-overlay{
   position:absolute;left:50%;bottom:4%;transform:translateX(-50%);
   background:rgba(10,8,16,0.72);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
   border:1px solid var(--line);border-radius:6px;padding:14px 22px;
   text-align:center;max-width:90%;pointer-events:none;
+  max-height:74%;overflow-y:auto;
 }
-.guardian-home-overlay .stat-grid{margin:10px 0 2px;pointer-events:none;}
-.guardian-home-overlay .art{margin:0 auto 10px;filter:drop-shadow(0 0 22px rgba(200,162,74,0.22));}
+.hub-overlay .stat-grid{margin:10px 0 2px;pointer-events:none;}
+.hub-overlay .essence-row{pointer-events:none;}
+.hub-overlay .art{margin:0 auto 10px;filter:drop-shadow(0 0 22px rgba(200,162,74,0.22));}
+.hub-overlay button, .hub-overlay a{pointer-events:auto;}
+.hub-overlay .roster-row{text-align:left;pointer-events:none;}
+.hub-overlay .hp-bar-track, .hub-overlay .hp-row{pointer-events:none;}
 
 .phase-note{text-align:center;color:var(--parchment-dim);font-size:12.5px;font-style:italic;margin-bottom:18px;}
 .phase-note strong{color:var(--gold-bright);font-style:normal;}
@@ -578,6 +587,7 @@ async function loadSiteBackgrounds(){
 // style attribute rather than emitting two, since HTML doesn't allow
 // duplicate attributes on one element.
 function bgAttr(pageKey, extraStyle){
+  applyBodyBackdrop(pageKey);
   const url = siteBackgrounds[pageKey];
   const bg = url ? `background-image:linear-gradient(180deg,rgba(23,19,31,0.55),rgba(16,14,22,0.82)),url('${esc(url)}');background-size:cover;background-position:center;` : '';
   const combined = (extraStyle || '') + bg;
@@ -587,8 +597,34 @@ function bgAttr(pageKey, extraStyle){
 // text already sits on its own opaque/translucent panel floating above
 // the background, so there's nothing under the image that needs dimming.
 function bgAttrPlain(pageKey){
+  applyBodyBackdrop(pageKey);
   const url = siteBackgrounds[pageKey];
   return url ? ` style="background-image:url('${esc(url)}');"` : '';
+}
+// Direct feedback: "I would actually like the art I provide to lay over
+// the entirety of the page." Every render*() screen already calls
+// bgAttr()/bgAttrPlain() with its own page_key, so hooking the body-level
+// backdrop in here (rather than touching every render function) makes
+// the admin-set art for the CURRENT screen show through edge-to-edge —
+// behind the mast, the footer, and the margins around every card, not
+// just inside the card itself — with zero per-screen changes needed.
+// The two full-bleed screens (map/guardian home) already cover the whole
+// viewport with their own box, so this is mostly redundant there, but
+// harmless — it's what shows for a half-second during their own art's
+// load and around any letterboxing at odd aspect ratios.
+function applyBodyBackdrop(pageKey){
+  const url = siteBackgrounds[pageKey];
+  if(url){
+    document.body.style.backgroundImage = `linear-gradient(180deg,rgba(16,14,22,0.55),rgba(16,14,22,0.86)),url('${esc(url)}')`;
+    document.body.style.backgroundSize = 'cover';
+    document.body.style.backgroundPosition = 'center';
+    document.body.style.backgroundRepeat = 'no-repeat';
+  }else{
+    document.body.style.backgroundImage = '';
+    document.body.style.backgroundSize = '';
+    document.body.style.backgroundPosition = '';
+    document.body.style.backgroundRepeat = '';
+  }
 }
 let pickedSpecies = null;
 let nameDraft = '';
@@ -964,7 +1000,7 @@ function render(){
   // every other screen renders inside the normal .wrap column.
   document.body.classList.remove('map-screen');
   document.body.classList.remove('login-screen');
-  document.body.classList.remove('guardian-home-screen');
+  document.body.classList.remove('hub-active');
   if(!circleView || circleView.step !== 'messages') stopMessagesPolling();
   if(!circleView || circleView.step !== 'altar') stopAltarTicking();
   if(!personalAltarView) stopPersonalAltarTicking();
@@ -1128,6 +1164,25 @@ const DEFAULT_GUARDIAN_HOME_AREAS = [
 ];
 let GUARDIAN_HOME_AREAS = DEFAULT_GUARDIAN_HOME_AREAS.slice();
 
+const DEFAULT_WORLDBOSS_AREAS = [
+  { id: 'attack',    label: 'Attack the Boss', left: 41, top: 58, width: 18, height: 12, action: doAttackWorldBoss },
+  { id: 'backToMap', label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8,  action: backFromWorldBoss },
+];
+let WORLDBOSS_AREAS = DEFAULT_WORLDBOSS_AREAS.slice();
+
+const DEFAULT_REDEEM_AREAS = [
+  { id: 'godToken',  label: 'Spend a God Token',       left: 20, top: 54, width: 26, height: 11, action: doRedeemGodToken },
+  { id: 'keyOfNight', label: 'Choose with a Key of Night', left: 54, top: 54, width: 26, height: 11, action: openKeyOfNightPicker },
+  { id: 'backToMap', label: 'Back to the Map',          left: 3,  top: 88, width: 18, height: 8,  action: backFromRedeem },
+];
+let REDEEM_AREAS = DEFAULT_REDEEM_AREAS.slice();
+
+const DEFAULT_CHECKIN_AREAS = [
+  { id: 'checkIn',   label: 'Check In',        left: 36, top: 58, width: 28, height: 12, action: tendGuardian },
+  { id: 'backToMap', label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8,  action: backFromCheckin },
+];
+let CHECKIN_AREAS = DEFAULT_CHECKIN_AREAS.slice();
+
 // Generic loader shared by every screen registered in admin.html's Screen
 // Hotspots editor — id/label/action come from that screen's own DEFAULT_*
 // array (a click handler can't live in a database row), only
@@ -1150,6 +1205,9 @@ async function loadHotspotOverrides(screenKey, defaults){
 async function loadMapHotspots(){
   MAP_AREAS = await loadHotspotOverrides('map', DEFAULT_MAP_AREAS);
   GUARDIAN_HOME_AREAS = await loadHotspotOverrides('guardianPage', DEFAULT_GUARDIAN_HOME_AREAS);
+  WORLDBOSS_AREAS = await loadHotspotOverrides('worldBoss', DEFAULT_WORLDBOSS_AREAS);
+  REDEEM_AREAS = await loadHotspotOverrides('chainedGods', DEFAULT_REDEEM_AREAS);
+  CHECKIN_AREAS = await loadHotspotOverrides('checkin', DEFAULT_CHECKIN_AREAS);
 }
 
 // Shared by both full-bleed screens (map hub, Guardian Home) — a set of
@@ -1190,11 +1248,12 @@ function openGuardianHome(){
 // hotspots positioned via admin.html's Screen Hotspots editor (screen key
 // 'guardianPage') instead of visible buttons — see DEFAULT_GUARDIAN_HOME_
 // AREAS above. Bond/currency numbers are real per-player state art can't
-// encode, so they still render as text, in .guardian-home-overlay (a
-// small floating panel, not a full-width opaque card, so most of the art
-// stays visible around it).
+// encode, so they still render as text, in .hub-overlay (a generic small
+// floating panel, not a full-width opaque card, so most of the art stays
+// visible around it — shared with every other screen converted to this
+// same pattern, see the .hub-* CSS above).
 function renderGuardianHome(){
-  document.body.classList.add('guardian-home-screen');
+  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const evolved = (guardian.stage === 'ascendant' || guardian.stage === 'sovereign') && guardian.dominant_affinity;
   const glowColor = evolved ? (AFFINITY_COLORS[guardian.dominant_affinity] || 'transparent') : 'transparent';
@@ -1208,10 +1267,10 @@ function renderGuardianHome(){
   const bondReady = bondSecondsLeft <= 0;
 
   app.innerHTML = `
-    <div class="guardian-home-screen">
-      <div class="guardian-home-box"${bgAttrPlain('guardianPage')}>
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('guardianPage')}>
         ${hotspotButtonsMarkup(GUARDIAN_HOME_AREAS, 'GUARDIAN_HOME_AREAS')}
-        <div class="guardian-home-overlay">
+        <div class="hub-overlay">
           <div class="art">${art}</div>
           <div class="stage-badge">${esc(STAGE_LABEL[guardian.stage] || guardian.stage)}</div>
           <h2 style="margin:4px 0;">${esc(guardian.name)}</h2>
@@ -1738,16 +1797,21 @@ function backFromCheckin(){
 }
 
 function renderCheckin(){
+  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const tendedToday = guardian.last_tended_at === todayStr();
   app.innerHTML = `
-    <div class="card"${bgAttr('checkin', 'text-align:center;')}>
-      <h2>Daily Check-in</h2>
-      <p class="hint">Once a day, check in for a streak bonus and whatever today's calendar has waiting.</p>
-      ${guardian.checkin_streak > 0 ? `<p class="hint" style="margin:-4px 0 10px;">${guardian.checkin_streak} day streak</p>` : ''}
-      <button ${tendedToday ? 'disabled' : ''} onclick="tendGuardian()">${tendedToday ? 'Checked in today' : 'Check in'}</button>
-      <div class="status" id="checkinStatus"></div>
-      <button class="secondary" style="margin-top:14px;" onclick="backFromCheckin()">Back to the map</button>
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('checkin')}>
+        ${hotspotButtonsMarkup(CHECKIN_AREAS, 'CHECKIN_AREAS')}
+        <div class="hub-overlay">
+          <h2>Daily Check-in</h2>
+          <p class="hint">Once a day, check in for a streak bonus and whatever today's calendar has waiting.</p>
+          ${guardian.checkin_streak > 0 ? `<p class="hint" style="margin:-4px 0 10px;">${guardian.checkin_streak} day streak</p>` : ''}
+          <p class="hint" style="margin:6px 0 0;">${tendedToday ? 'Checked in today — come back tomorrow.' : 'Tap to check in.'}</p>
+          <div class="status" id="checkinStatus"></div>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -1885,12 +1949,19 @@ function renderWorldBoss(){
     return;
   }
 
+  document.body.classList.add('hub-active');
+
   if(!worldBossStatus.active){
     app.innerHTML = `
-      <div class="card"${bgAttr('worldBoss', 'text-align:center;')}>
-        <h2>World Boss</h2>
-        <p class="hint">Nothing is stirring right now — check back later.</p>
-        <button class="secondary" onclick="backFromWorldBoss()">Back to the map</button>
+      <div class="hub-screen">
+        <div class="hub-box"${bgAttrPlain('worldBoss')}>
+          ${hotspotButtonsMarkup(WORLDBOSS_AREAS, 'WORLDBOSS_AREAS')}
+          <div class="hub-overlay">
+            <h2>World Boss</h2>
+            <p class="hint">Nothing is stirring right now — check back later.</p>
+            <div class="status" id="worldBossActionStatus"></div>
+          </div>
+        </div>
       </div>
     `;
     return;
@@ -1907,22 +1978,24 @@ function renderWorldBoss(){
   `).join('') || '<p class="hint">No attacks logged yet — be the first.</p>';
 
   app.innerHTML = `
-    <div class="card"${bgAttr('worldBoss', 'text-align:center;')}>
-      <h2>${esc(boss.name)}</h2>
-      ${boss.flavorText ? `<p class="hint">${esc(boss.flavorText)}</p>` : ''}
-      ${boss.imageUrl ? `<img src="${esc(boss.imageUrl)}" alt="" style="max-width:220px;width:100%;border-radius:6px;margin:8px auto 14px;display:block;">` : ''}
-      <div class="hp-row"><span class="hp-name">HP</span><span class="hp-name">${boss.hpRemaining.toLocaleString()} / ${boss.hpTotal.toLocaleString()}</span></div>
-      <div class="hp-bar-track"><div class="hp-bar-fill opponent" style="width:${pct}%;"></div></div>
-      ${defeated
-        ? '<p class="hint">Defeated — rewards have already been paid out to every attacker.</p>'
-        : `<button ${onCooldown ? 'disabled' : ''} onclick="doAttackWorldBoss()">${onCooldown ? 'Recovering (' + formatRemaining(cooldownMs) + ')' : 'Attack'}</button>`
-      }
-      <div class="status" id="worldBossActionStatus"></div>
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('worldBoss')}>
+        ${hotspotButtonsMarkup(WORLDBOSS_AREAS, 'WORLDBOSS_AREAS')}
+        <div class="hub-overlay">
+          <h2>${esc(boss.name)}</h2>
+          ${boss.flavorText ? `<p class="hint">${esc(boss.flavorText)}</p>` : ''}
+          <div class="hp-row"><span class="hp-name">HP</span><span class="hp-name">${boss.hpRemaining.toLocaleString()} / ${boss.hpTotal.toLocaleString()}</span></div>
+          <div class="hp-bar-track"><div class="hp-bar-fill opponent" style="width:${pct}%;"></div></div>
+          ${defeated
+            ? '<p class="hint">Defeated — rewards have already been paid out to every attacker.</p>'
+            : `<p class="hint">${onCooldown ? 'Recovering (' + formatRemaining(cooldownMs) + ')' : 'Tap to attack.'}</p>`
+          }
+          <div class="status" id="worldBossActionStatus"></div>
 
-      <h3 style="margin-top:24px;text-align:left;">Top damage</h3>
-      ${leaderboardRows}
-
-      <button class="secondary" style="margin-top:14px;" onclick="backFromWorldBoss()">Back to the map</button>
+          <h3 style="margin-top:16px;text-align:left;">Top damage</h3>
+          ${leaderboardRows}
+        </div>
+      </div>
     </div>
   `;
 }
@@ -5067,24 +5140,22 @@ async function doRedeemKeyOfNight(pantheonId, deityId, deityName){
 function renderRedeem(){
   if(redeemView.step === 'keyPicker'){ renderKeyOfNightPicker(); return; }
 
+  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const seasonLine = seasonName ? `<p class="hint" style="text-align:center;">This season: <strong>${esc(seasonName)}</strong></p>` : '';
   app.innerHTML = `
-    <div class="card"${bgAttr('chainedGods')}>
-      <h2 style="text-align:center;">Chained Gods</h2>
-      ${seasonLine}
-      <p class="hint" style="text-align:center;">Two ways through the gate this season. A God Token calls whichever of this season's gods answers — you don't choose. A Key of Night lets you choose, but only from that same pool.</p>
-      <div id="redeemStatus" class="status"></div>
-
-      <div class="essence-row"><span class="essence-label">God Tokens</span><span class="essence-value">${guardian.god_tokens || 0}</span></div>
-      <p class="hint" style="margin-top:-6px;">Spend one to fully unlock a random god from this season's pool, for good. If you already hold every god in the pool, nothing is spent.</p>
-      <button onclick="doRedeemGodToken()">Spend a God Token</button>
-
-      <div class="essence-row" style="margin-top:18px;"><span class="essence-label">Key of Night</span><span class="essence-value">${guardian.key_of_night || 0}</span></div>
-      <p class="hint" style="margin-top:-6px;">Spend one to fully unlock any god of your choosing from this season's pool.</p>
-      <button onclick="openKeyOfNightPicker()">Choose with a Key of Night</button>
-
-      <button class="secondary" style="margin-top:14px;" onclick="backFromRedeem()">Back to the map</button>
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('chainedGods')}>
+        ${hotspotButtonsMarkup(REDEEM_AREAS, 'REDEEM_AREAS')}
+        <div class="hub-overlay">
+          <h2 style="text-align:center;">Chained Gods</h2>
+          ${seasonLine}
+          <p class="hint" style="text-align:center;">A God Token calls whichever of this season's gods answers — you don't choose. A Key of Night lets you choose, but only from that same pool.</p>
+          <div id="redeemStatus" class="status"></div>
+          <div class="essence-row"><span class="essence-label">God Tokens</span><span class="essence-value">${guardian.god_tokens || 0}</span></div>
+          <div class="essence-row" style="margin-top:4px;"><span class="essence-label">Key of Night</span><span class="essence-value">${guardian.key_of_night || 0}</span></div>
+        </div>
+      </div>
     </div>
   `;
 }
