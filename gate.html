@@ -120,6 +120,14 @@ header.gate p.sub{font-style:italic;color:var(--parchment-dim);max-width:520px;m
 .chat-input-row button:disabled{opacity:0.5;cursor:default;}
 .chat-input-row button:hover:not(:disabled){background:var(--gold-bright);}
 .chat-hint{font-size:12px;color:var(--parchment-dim);font-style:italic;margin-top:10px;}
+/* Direct feedback: "we need a download or print option for the
+   conversations with the deities." Quiet/secondary look — shouldn't
+   compete with the gold Speak button. */
+.chat-export-row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;}
+.chat-export-row button{background:transparent;border:1px solid var(--gold);color:var(--gold-bright);
+  padding:6px 14px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;
+  border-radius:3px;cursor:pointer;}
+.chat-export-row button:hover{background:rgba(230,199,119,0.12);}
 .typing{color:var(--parchment-dim);font-style:italic;font-size:14px;}
 
 footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-style:italic;margin-top:70px;opacity:0.65;}
@@ -3787,6 +3795,10 @@ function renderDeityDetail(d){
           <input type="text" id="chatInput" maxlength="600" placeholder="Ask ${esc(d.name)} something..." onkeydown="if(event.key==='Enter')sendMessage()">
           <button id="sendBtn" onclick="sendMessage()">Speak</button>
         </div>
+        <div class="chat-export-row">
+          <button onclick="downloadTranscript()">Download</button>
+          <button onclick="printTranscript()">Print</button>
+        </div>
         ` : `
         <div class="paywall">
           <p>${currentUser ? esc(d.name) + ' has not granted you an audience yet.' : 'Sign in to unlock ' + esc(d.name) + '.'}</p>
@@ -3814,6 +3826,68 @@ function renderChat(){
     return '<div class="msg ' + cls + '"><span class="who">' + esc(who) + '</span>' + esc(m.content) + '</div>';
   }).join('');
   win.scrollTop = win.scrollHeight;
+}
+
+/* Direct feedback: "we need a download or print option for the
+   conversations with the deities." chatHistory is purely in-memory
+   (see its declaration above) — never persisted anywhere, gone on
+   refresh — so this is the only way a player keeps a copy of what was
+   actually said. Real messages only (aside notices like connection
+   errors are skipped, same filter sendMessage() already applies before
+   sending history back to the relay). */
+function transcriptTurns(){
+  if(!currentDeity) return [];
+  const hist = chatHistory[historyKey()] || [];
+  return hist.filter(m => !m.aside).map(m => ({
+    who: m.role === 'user' ? 'You' : currentDeity.name,
+    content: m.content,
+  }));
+}
+
+function downloadTranscript(){
+  if(!currentDeity) return;
+  const turns = transcriptTurns();
+  const lines = [
+    'Conversation with ' + currentDeity.name + ' (' + PANTHEONS[currentPantheon].label + ' pantheon)',
+    'Exported ' + new Date().toLocaleString(),
+    '',
+  ];
+  if(!turns.length) lines.push('(No messages yet.)');
+  turns.forEach(t => { lines.push(t.who + ': ' + t.content); lines.push(''); });
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'conversation-with-' + currentDeity.id + '.txt';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function printTranscript(){
+  if(!currentDeity) return;
+  const turns = transcriptTurns();
+  const bodyHtml = turns.length
+    ? turns.map(t => '<p><strong>' + esc(t.who) + ':</strong> ' + esc(t.content) + '</p>').join('')
+    : '<p><em>No messages yet.</em></p>';
+
+  const win = window.open('', '_blank');
+  if(!win){ alert('Please allow pop-ups for this site to print the conversation.'); return; }
+  win.document.write(
+    '<!doctype html><html><head><title>Conversation with ' + esc(currentDeity.name) + '</title>' +
+    '<style>body{font-family:Georgia,serif;max-width:640px;margin:40px auto;padding:0 20px;color:#222;}' +
+    'h1{font-size:20px;margin-bottom:2px;}.meta{color:#666;font-size:13px;margin-bottom:24px;}p{line-height:1.6;}</style>' +
+    '</head><body>' +
+    '<h1>Conversation with ' + esc(currentDeity.name) + '</h1>' +
+    '<div class="meta">' + esc(PANTHEONS[currentPantheon].label) + ' pantheon &middot; ' + esc(new Date().toLocaleString()) + '</div>' +
+    bodyHtml +
+    '</body></html>'
+  );
+  win.document.close();
+  win.focus();
+  win.print();
 }
 
 async function sendMessage(){
