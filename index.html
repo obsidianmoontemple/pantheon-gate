@@ -623,6 +623,7 @@ let mailClaimedIds = new Set(); // broadcast ids this user has already claimed
 let backpackView = null;   // null | {step:'home'} — top-level, read-only aggregator over Craft items / Arena items / Expedition fragments (Map hub's "Backpack" hotspot)
 let checkinView = null;    // null | {step:'home'} — top-level (Map hub's "Check-in" hotspot): the once-a-day streak/calendar-reward action (still tend_guardian() under the hood), now its own screen separate from Bond-tending on the home screen
 let promoView = null;      // null | {step:'home'} — top-level (Map hub's "Promo" hotspot): read-only list of active/recent promo_events via list_visible_promo_events() — separate from Mail
+let worldBossView = null;  // null | {step:'home'} — top-level (Map hub's "World Boss" hotspot, top-right dark corner): shared HP pool every player attacks together, admin-spawned via world-boss/index.ts
 let promoEvents = [];      // cached list for renderPromo()
 let currencyDefs = [];     // currency_definitions cache, shared by renderPromo() for currency name/icon lookup
 
@@ -719,7 +720,7 @@ async function boot(){
       petitionView = null; combatView = null; craftView = null; redeemView = null;
       expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
       profileView = null; shrineView = null; mailView = null; backpackView = null;
-      checkinView = null; promoView = null; campaignView = null; guardianHomeView = null;
+      checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; worldBossView = null;
       shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
       profilePasswordOpen = false;
       renderLoginScreen();
@@ -934,6 +935,7 @@ function render(){
   if(guardian && backpackView){ renderBackpack(); return; }
   if(guardian && checkinView){ renderCheckin(); return; }
   if(guardian && promoView){ renderPromo(); return; }
+  if(guardian && worldBossView){ renderWorldBoss(); return; }
   if(guardian && campaignView){ renderCampaign(); return; }
   if(guardian && shopView){ renderShop(); return; }
   if(guardian && guardianHomeView){ renderGuardianHome(); return; }
@@ -1045,6 +1047,11 @@ const DEFAULT_MAP_AREAS = [
   // affordance to be discoverable at all. The map's own title text reads
   // naturally as "open the chronicle of these realms," so that's the spot.
   { id: 'campaign',      label: 'The Divine Realms (Campaign)',       left: 41,   top: 9,    width: 15,   height: 6,    action: openCampaign },
+  // World Boss (per your note: "top right dark corner area of the map")
+  // — a starting guess, not a measurement; there's no illustrated plaque
+  // there yet to line up against, so drag it into the exact spot in
+  // admin.html's Map Hotspots editor once the art shows what's there.
+  { id: 'worldBoss',     label: 'World Boss',                         left: 81,   top: 1.5,  width: 16,   height: 8.5,  action: openWorldBoss },
   // Chained Gods = redeeming God Tokens (per your note: "that is where you
   // redeem god tokens") — the existing Redeem a Token screen, not a
   // placeholder. Doing so is what makes a god show up at the Temple.
@@ -1367,7 +1374,7 @@ async function confirmReleaseGuardian(){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; worldBossView = null;
   shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
   render();
 }
@@ -1398,7 +1405,7 @@ async function doRestoreGuardian(retiredId){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; worldBossView = null;
   shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
   profilePasswordOpen = false;
   await afterLogin();
@@ -1706,6 +1713,129 @@ function renderPromo(){
       <p class="hint" style="text-align:center;">Active and recent site events. Rewards here are granted automatically — nothing to claim.</p>
       ${rows}
       <button class="secondary" style="margin-top:14px;" onclick="backFromPromo()">Back to the map</button>
+    </div>
+  `;
+}
+
+/* ---------------- World Boss (Map hub's "World Boss" hotspot) ----------------
+   One shared HP pool, every player from every Circle chipping away at the
+   same fight — per your note: "shared hp and all circles fight it
+   together." No retaliation (same reasoning as the Circle dragon fight:
+   the cooldown alone is the cost of a swing, not guardian health); rewards
+   split automatically by % of total damage the instant HP hits 0. Admin
+   spawns/ends it from admin.html's World Boss tab — there's no timer or
+   auto-respawn here. */
+
+let worldBossStatus = null; // {active, boss:{...}, cooldownEndsAt, leaderboard:[...]} | {active:false} | null (not yet loaded)
+
+function openWorldBoss(){
+  worldBossView = { step: 'home' };
+  worldBossStatus = null;
+  render();
+  refreshWorldBossStatus();
+}
+
+function backFromWorldBoss(){
+  worldBossView = null;
+  returnToMapHub();
+}
+
+async function refreshWorldBossStatus(){
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/world-boss', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'status' })
+    });
+    const data = await resp.json();
+    worldBossStatus = data.ok ? data : { active: false };
+  }catch(e){
+    worldBossStatus = { active: false, loadError: e.message };
+  }
+  if(worldBossView) render();
+}
+
+function setWorldBossStatusMsg(text, ok){
+  const el = document.getElementById('worldBossActionStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
+async function doAttackWorldBoss(){
+  setWorldBossStatusMsg('Striking…');
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/world-boss', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'attack' })
+    });
+    const data = await resp.json();
+    if(!data.ok){ setWorldBossStatusMsg(data.error || 'Could not land that attack.', false); await refreshWorldBossStatus(); return; }
+
+    if(data.defeated){
+      const rewardBits = [];
+      if(data.yourEssence) rewardBits.push(`${data.yourEssence} Essence`);
+      if(data.yourTokens) rewardBits.push(`${data.yourTokens} God Token${data.yourTokens === 1 ? '' : 's'}`);
+      setWorldBossStatusMsg(
+        `${esc(data.bossName)} has fallen! You dealt ${data.yourTotalDamage} total damage${rewardBits.length ? (' — you earned ' + rewardBits.join(' and ') + '.') : '.'}`,
+        true
+      );
+      await loadGuardian();
+    }else{
+      setWorldBossStatusMsg(`Hit for ${data.damage}${data.crit ? ' (critical!)' : ''}. ${data.hpRemaining.toLocaleString()}/${data.hpTotal.toLocaleString()} HP left.`, true);
+    }
+    await refreshWorldBossStatus();
+  }catch(e){
+    setWorldBossStatusMsg('Could not reach the relay: ' + e.message, false);
+  }
+}
+
+function renderWorldBoss(){
+  const app = document.getElementById('app');
+  if(!worldBossStatus){
+    app.innerHTML = `<div class="card"${bgAttr('worldBoss', 'text-align:center;')}><p class="status">Scanning the horizon…</p></div>`;
+    return;
+  }
+
+  if(!worldBossStatus.active){
+    app.innerHTML = `
+      <div class="card"${bgAttr('worldBoss', 'text-align:center;')}>
+        <h2>World Boss</h2>
+        <p class="hint">Nothing is stirring right now — check back later.</p>
+        <button class="secondary" onclick="backFromWorldBoss()">Back to the map</button>
+      </div>
+    `;
+    return;
+  }
+
+  const boss = worldBossStatus.boss;
+  const pct = boss.hpTotal > 0 ? Math.max(0, Math.round((boss.hpRemaining / boss.hpTotal) * 100)) : 0;
+  const cooldownMs = worldBossStatus.cooldownEndsAt ? (new Date(worldBossStatus.cooldownEndsAt) - new Date()) : 0;
+  const onCooldown = cooldownMs > 0;
+  const defeated = boss.hpRemaining <= 0;
+
+  const leaderboardRows = (worldBossStatus.leaderboard || []).map((row, i) => `
+    <div class="roster-row"><div class="rname">#${i + 1} ${esc(row.guardianName)}</div><span class="cblurb">${row.totalDamage.toLocaleString()} dmg</span></div>
+  `).join('') || '<p class="hint">No attacks logged yet — be the first.</p>';
+
+  app.innerHTML = `
+    <div class="card"${bgAttr('worldBoss', 'text-align:center;')}>
+      <h2>${esc(boss.name)}</h2>
+      ${boss.flavorText ? `<p class="hint">${esc(boss.flavorText)}</p>` : ''}
+      ${boss.imageUrl ? `<img src="${esc(boss.imageUrl)}" alt="" style="max-width:220px;width:100%;border-radius:6px;margin:8px auto 14px;display:block;">` : ''}
+      <div class="hp-row"><span class="hp-name">HP</span><span class="hp-name">${boss.hpRemaining.toLocaleString()} / ${boss.hpTotal.toLocaleString()}</span></div>
+      <div class="hp-bar-track"><div class="hp-bar-fill opponent" style="width:${pct}%;"></div></div>
+      ${defeated
+        ? '<p class="hint">Defeated — rewards have already been paid out to every attacker.</p>'
+        : `<button ${onCooldown ? 'disabled' : ''} onclick="doAttackWorldBoss()">${onCooldown ? 'Recovering (' + formatRemaining(cooldownMs) + ')' : 'Attack'}</button>`
+      }
+      <div class="status" id="worldBossActionStatus"></div>
+
+      <h3 style="margin-top:24px;text-align:left;">Top damage</h3>
+      ${leaderboardRows}
+
+      <button class="secondary" style="margin-top:14px;" onclick="backFromWorldBoss()">Back to the map</button>
     </div>
   `;
 }
@@ -2125,7 +2255,7 @@ function returnToMapHub(){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; worldBossView = null;
   shopView = null;
   render();
 }
