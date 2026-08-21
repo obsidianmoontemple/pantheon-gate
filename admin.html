@@ -2089,6 +2089,30 @@ const DEFAULT_GUARDIAN_HOME_AREAS_ADMIN = [
   { id: 'backToMap', label: 'Back to the Map',             left: 3,  top: 88, width: 18, height: 8  },
 ];
 
+// World Boss, Chained Gods, and Daily Check-in (0053) — the next batch
+// converted to the same full-bleed-art pattern, per direct feedback: "you
+// are supposed to be making each page editable for me so I can drop the
+// art and move the hotspots — I do not want to go back and forth all
+// day." These three were picked first because, like Guardian Home, their
+// content is a small fixed set of actions/readouts rather than an
+// open-ended list — see the frontend's hub-* CSS/render() notes for why
+// list-heavy screens (Mail, Shrine, Circle chat, Shop, ...) stay on the
+// card-background pattern instead: there's no way to hide a scrolling
+// list under art without hiding the thing the screen exists to show.
+const DEFAULT_WORLDBOSS_AREAS_ADMIN = [
+  { id: 'attack',    label: 'Attack the Boss', left: 41, top: 58, width: 18, height: 12 },
+  { id: 'backToMap', label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8  },
+];
+const DEFAULT_REDEEM_AREAS_ADMIN = [
+  { id: 'godToken',   label: 'Spend a God Token',          left: 20, top: 54, width: 26, height: 11 },
+  { id: 'keyOfNight', label: 'Choose with a Key of Night',  left: 54, top: 54, width: 26, height: 11 },
+  { id: 'backToMap',  label: 'Back to the Map',             left: 3,  top: 88, width: 18, height: 8  },
+];
+const DEFAULT_CHECKIN_AREAS_ADMIN = [
+  { id: 'checkIn',   label: 'Check In',        left: 36, top: 58, width: 28, height: 12 },
+  { id: 'backToMap', label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8  },
+];
+
 // SCREEN_REGISTRY (0052) — every screen the hotspot editor below can edit.
 // Adding a new screen to this generalized editor is just a new entry here
 // (id/label list + which site_backgrounds page_key supplies its canvas
@@ -2100,6 +2124,9 @@ const DEFAULT_GUARDIAN_HOME_AREAS_ADMIN = [
 const SCREEN_REGISTRY = {
   map:          { label: 'Map Hub',       bgKey: 'map',          bgFallback: DEFAULT_MAP_BG, defaultAreas: DEFAULT_MAP_AREAS_ADMIN },
   guardianPage: { label: 'Guardian Home', bgKey: 'guardianPage', bgFallback: '',              defaultAreas: DEFAULT_GUARDIAN_HOME_AREAS_ADMIN },
+  worldBoss:    { label: 'World Boss',       bgKey: 'worldBoss',   bgFallback: '', defaultAreas: DEFAULT_WORLDBOSS_AREAS_ADMIN },
+  chainedGods:  { label: 'Chained Gods (Redeem)', bgKey: 'chainedGods', bgFallback: '', defaultAreas: DEFAULT_REDEEM_AREAS_ADMIN },
+  checkin:      { label: 'Daily Check-in',   bgKey: 'checkin',     bgFallback: '', defaultAreas: DEFAULT_CHECKIN_AREAS_ADMIN },
 };
 let currentHotspotScreen = 'map';
 
