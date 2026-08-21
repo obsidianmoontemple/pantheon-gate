@@ -1151,7 +1151,7 @@ function render(){
   if(guardian && campaignView){ renderCampaign(); return; }
   if(guardian && shopView){ renderShop(); return; }
   if(guardian && guardianHomeView){ renderGuardianHome(); return; }
-  if(guardian && mageView){ renderMage(); return; }
+  if(guardian && mageView){ renderMageGear(); return; }
   if(guardian && guideView){ renderGuide(); return; }
   // Mage creation (0052) comes first now — direct feedback: "the mage
   // becomes who you play as and then you will get your egg shortly
@@ -1365,15 +1365,14 @@ const DEFAULT_MAP_AREAS = [
   // Guardian Page icon rather than a below-map button.
   { id: 'personalAltar', label: 'Your Altar',   left: 21.5, top: 68,   width: 10,   height: 16,   action: openPersonalAltar },
   { id: 'backpack',     label: 'Backpack',      left: 84.9, top: 71.6, width: 15.1, height: 23.4, action: openBackpack },
-  // Mages (0054) — also not pictured on the art yet; another starting
-  // guess next to Your Altar, drag it into place once there's something
-  // to line up against.
-  { id: 'mage',          label: 'Your Mage',    left: 32,   top: 68,   width: 10,   height: 16,   action: openMageHome },
   // The Narrator/Guide (0055) — reopenable anytime, independent of
   // has_seen_guide (that flag only gates the one automatic showing).
-  // Another starting guess, tucked next to Your Mage; drag into place
-  // once there's something on the art to line up against.
-  { id: 'guide',         label: 'Ask Ganymede', left: 44,   top: 68,   width: 10,   height: 16,   action: openGuide },
+  // Another starting guess; drag into place once there's something on
+  // the art to line up against. (The Mage no longer has its own map
+  // hotspot — direct feedback: "I need the mage and familiar both under
+  // the same guardian tab not separate." Both now live together on the
+  // Guardian Page screen, opened the same way as always.)
+  { id: 'guide',         label: 'Ask Ganymede', left: 32,   top: 68,   width: 10,   height: 16,   action: openGuide },
 ];
 // Mutable copy — loadMapHotspots() (see near loadSpeciesCatalog) overrides
 // individual entries' left/top/width/height from the admin-editable
@@ -1382,16 +1381,6 @@ const DEFAULT_MAP_AREAS = [
 // since a click handler can't be stored in a database row — only
 // position moves.
 let MAP_AREAS = DEFAULT_MAP_AREAS.slice();
-
-// Guardian Home's hotspots (0052) — same pattern, second screen converted
-// to full-bleed-art-with-invisible-buttons per "I would actually like the
-// art I provide to lay over the entirety of the page covering everything
-// except the buttons." Only two real actions here today.
-const DEFAULT_GUARDIAN_HOME_AREAS = [
-  { id: 'bondTend',  label: 'Spend Time Together', left: 36, top: 74, width: 28, height: 10, action: doTendBond },
-  { id: 'backToMap', label: 'Back to the Map',      left: 3,  top: 88, width: 18, height: 8,  action: returnToMapHub },
-];
-let GUARDIAN_HOME_AREAS = DEFAULT_GUARDIAN_HOME_AREAS.slice();
 
 const DEFAULT_WORLDBOSS_AREAS = [
   { id: 'attack',    label: 'Attack the Boss', left: 41, top: 58, width: 18, height: 12, action: doAttackWorldBoss },
@@ -1411,14 +1400,6 @@ const DEFAULT_CHECKIN_AREAS = [
   { id: 'backToMap', label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8,  action: backFromCheckin },
 ];
 let CHECKIN_AREAS = DEFAULT_CHECKIN_AREAS.slice();
-
-const DEFAULT_MAGE_HOME_AREAS = [
-  { id: 'train',     label: 'Train',           left: 12, top: 58, width: 20, height: 12, action: doTrainMage },
-  { id: 'duel',      label: 'Duel',            left: 40, top: 58, width: 20, height: 12, action: doDuelMage },
-  { id: 'gear',      label: 'Manage',          left: 68, top: 58, width: 20, height: 12, action: openMageGear },
-  { id: 'backToMap', label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8,  action: backFromMage },
-];
-let MAGE_HOME_AREAS = DEFAULT_MAGE_HOME_AREAS.slice();
 
 // Generic loader shared by every screen registered in admin.html's Screen
 // Hotspots editor — id/label/action come from that screen's own DEFAULT_*
@@ -1441,15 +1422,13 @@ async function loadHotspotOverrides(screenKey, defaults){
 
 async function loadMapHotspots(){
   MAP_AREAS = await loadHotspotOverrides('map', DEFAULT_MAP_AREAS);
-  GUARDIAN_HOME_AREAS = await loadHotspotOverrides('guardianPage', DEFAULT_GUARDIAN_HOME_AREAS);
   WORLDBOSS_AREAS = await loadHotspotOverrides('worldBoss', DEFAULT_WORLDBOSS_AREAS);
   REDEEM_AREAS = await loadHotspotOverrides('chainedGods', DEFAULT_REDEEM_AREAS);
   CHECKIN_AREAS = await loadHotspotOverrides('checkin', DEFAULT_CHECKIN_AREAS);
-  MAGE_HOME_AREAS = await loadHotspotOverrides('mageHome', DEFAULT_MAGE_HOME_AREAS);
 }
 
-// Shared by every full-bleed screen (map hub, Guardian Home, World Boss,
-// Chained Gods, Check-in, Mage Home) — a set of
+// Shared by every full-bleed screen (map hub, World Boss, Chained Gods,
+// Check-in) — a set of
 // {id,label,left,top,width,height,action} hotspots rendered as invisible
 // .map-hotspot buttons over a background image. pageKey is optional and
 // only affects the fallback below.
@@ -1491,24 +1470,29 @@ function renderMapHub(){
   app.innerHTML = `<div class="map-hub-screen">${mapHubMarkup()}</div>`;
 }
 
+// Direct feedback: "I need the mage and familiar both under the same
+// guardian tab not separate." Loads the Mage's gear (needed to show
+// equipped-item names below) alongside opening the screen — same
+// progressive-render pattern as openCheckin()/the old openMageHome():
+// render immediately with whatever's cached, then re-render once the
+// fetch lands.
 function openGuardianHome(){
   guardianHomeView = { step: 'home' };
   render();
+  Promise.all([loadMageGearCatalog(), loadMageGearOwned()]).then(() => { if(guardianHomeView) render(); });
 }
 
-// Converted (0052) to the same full-bleed-art pattern as the Map Hub, per
-// direct feedback: "I would actually like the art I provide to lay over
-// the entirety of the page covering everything except the buttons." The
-// only two real actions (tend Bond, back to the map) are now invisible
-// hotspots positioned via admin.html's Screen Hotspots editor (screen key
-// 'guardianPage') instead of visible buttons — see DEFAULT_GUARDIAN_HOME_
-// AREAS above. Bond/currency numbers are real per-player state art can't
-// encode, so they still render as text, in .hub-overlay (a generic small
-// floating panel, not a full-width opaque card, so most of the art stays
-// visible around it — shared with every other screen converted to this
-// same pattern, see the .hub-* CSS above).
+// Direct feedback: "I need the mage and familiar both under the same
+// guardian tab not separate" — Guardian and Mage used to be two entirely
+// separate top-level screens, each built on the full-bleed-art/invisible-
+// hotspot/floating-overlay pattern ("get rid of that overlay"). Folded
+// into one normal scrollable screen instead: real cards, real visible
+// buttons, nothing that depends on precisely-positioned invisible
+// hotspots or a panel that can get clipped/stuck on a small viewport.
+// "Manage" (equip/craft gear) stays its own screen — renderMageGear,
+// below, unchanged — since that list only grows and was never a good
+// single-page fit even before this merge.
 function renderGuardianHome(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const evolved = (guardian.stage === 'ascendant' || guardian.stage === 'sovereign') && guardian.dominant_affinity;
   const glowColor = evolved ? (AFFINITY_COLORS[guardian.dominant_affinity] || 'transparent') : 'transparent';
@@ -1521,63 +1505,97 @@ function renderGuardianHome(){
   const bondSecondsLeft = lastBondTendMs ? Math.max(0, BOND_COOLDOWN_SECONDS - Math.floor((Date.now() - lastBondTendMs) / 1000)) : 0;
   const bondReady = bondSecondsLeft <= 0;
 
+  const mageArt = mage ? mageArtFor(mage.art_key) : null;
+  const mageStats = mage ? mageEffectiveStats() : null;
+  const xpNeeded = mage ? mageXpToNextLevel(mage.level) : 0;
+  const xpPct = mage ? Math.max(0, Math.min(100, Math.round((mage.xp / xpNeeded) * 100))) : 0;
+  const equippedNames = mage ? ['weapon', 'armor', 'accessory'].map(slot => {
+    const itemId = mage['equipped_' + slot + '_id'];
+    if(!itemId) return null;
+    const owned = mageGearOwned.find(g => g.id === itemId);
+    const cat = owned ? mageGearCatalog.find(c => c.key === owned.gear_key) : null;
+    return cat ? cat.name : null;
+  }).filter(Boolean) : [];
+
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('guardianPage')}>
-        ${hotspotButtonsMarkup(GUARDIAN_HOME_AREAS, 'GUARDIAN_HOME_AREAS', 'guardianPage')}
-        <div class="hub-overlay">
-          <div class="art">${art}</div>
-          <div class="stage-badge">${esc(STAGE_LABEL[guardian.stage] || guardian.stage)}</div>
-          <h2 style="margin:4px 0;">${esc(guardian.name)}</h2>
-          <div class="species-line">${esc(speciesLabel)}${guardian.dominant_affinity ? ' · ' + esc(guardian.dominant_affinity) + '-touched' : ''}</div>
+    <div class="card"${bgAttr('guardianPage', 'text-align:center;')}>
+      <div class="art">${art}</div>
+      <div class="stage-badge">${esc(STAGE_LABEL[guardian.stage] || guardian.stage)}</div>
+      <h2 style="margin:4px 0;">${esc(guardian.name)}</h2>
+      <div class="species-line">${esc(speciesLabel)}${guardian.dominant_affinity ? ' · ' + esc(guardian.dominant_affinity) + '-touched' : ''}</div>
 
-          <div class="bond-row${bondReady ? ' tap-action' : ''}"${bondReady ? ' onclick="doTendBond()"' : ''}>
-            <span class="bond-label">Bond</span>
-            <span class="bond-value">${guardian.bond}</span>
-            <span class="hint" style="margin:0;">${bondReady ? '— tap to spend time together' : '— resting (' + Math.ceil(bondSecondsLeft / 60) + 'm)'}</span>
-          </div>
-          <div class="status" id="bondStatus"></div>
+      <div class="bond-row${bondReady ? ' tap-action' : ''}"${bondReady ? ' onclick="doTendBond()"' : ''}>
+        <span class="bond-label">Bond</span>
+        <span class="bond-value">${guardian.bond}</span>
+        <span class="hint" style="margin:0;">${bondReady ? '— tap to spend time together' : '— resting (' + Math.ceil(bondSecondsLeft / 60) + 'm)'}</span>
+      </div>
+      <div class="status" id="bondStatus"></div>
 
-          <div class="essence-row">
-            <span class="essence-label">Essence</span>
-            <span class="essence-value">${guardian.essence || 0}</span>
-          </div>
+      <div class="essence-row">
+        <span class="essence-label">Essence</span>
+        <span class="essence-value">${guardian.essence || 0}</span>
+      </div>
 
-          <div class="stat-grid">
-            <div class="stat-tile"><div class="num">${guardian.favor || 0}</div><div class="label">Favor</div></div>
-            <div class="stat-tile"><div class="num">${guardian.god_shards || 0}</div><div class="label">God Shards</div></div>
-            <div class="stat-tile"><div class="num">${guardian.god_tokens || 0}</div><div class="label">God Tokens</div></div>
-            <div class="stat-tile"><div class="num">${guardian.key_of_night || 0}</div><div class="label">Key of Night</div></div>
-          </div>
+      <div class="stat-grid">
+        <div class="stat-tile"><div class="num">${guardian.favor || 0}</div><div class="label">Favor</div></div>
+        <div class="stat-tile"><div class="num">${guardian.god_shards || 0}</div><div class="label">God Shards</div></div>
+        <div class="stat-tile"><div class="num">${guardian.god_tokens || 0}</div><div class="label">God Tokens</div></div>
+        <div class="stat-tile"><div class="num">${guardian.key_of_night || 0}</div><div class="label">Key of Night</div></div>
+      </div>
 
-          <div class="stat-grid">
-            <div class="stat-tile"><div class="num">${guardian.vitality}</div><div class="label">Vitality</div></div>
-            <div class="stat-tile"><div class="num">${guardian.might}</div><div class="label">Might</div></div>
-            <div class="stat-tile"><div class="num">${guardian.ward}</div><div class="label">Ward</div></div>
-            <div class="stat-tile"><div class="num">${guardian.swiftness}</div><div class="label">Swiftness</div></div>
-            <div class="stat-tile"><div class="num">${guardian.cunning}</div><div class="label">Cunning</div></div>
-          </div>
+      <div class="stat-grid">
+        <div class="stat-tile"><div class="num">${guardian.vitality}</div><div class="label">Vitality</div></div>
+        <div class="stat-tile"><div class="num">${guardian.might}</div><div class="label">Might</div></div>
+        <div class="stat-tile"><div class="num">${guardian.ward}</div><div class="label">Ward</div></div>
+        <div class="stat-tile"><div class="num">${guardian.swiftness}</div><div class="label">Swiftness</div></div>
+        <div class="stat-tile"><div class="num">${guardian.cunning}</div><div class="label">Cunning</div></div>
+      </div>
 
-          <p class="marks-note">${guardian.stage === 'egg'
-            ? 'Still an egg. It hatches the moment a god marks it for the first time.'
-            : (marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.')}</p>
-        </div>
+      <p class="marks-note">${guardian.stage === 'egg'
+        ? 'Still an egg. It hatches the moment a god marks it for the first time.'
+        : (marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.')}</p>
+    </div>
+
+    ${mage ? `
+    <div class="card"${bgAttr('mageHome', 'text-align:center;')}>
+      <div class="art">${opponentImgFor(MAGE_ART_IMAGES[mage.art_key], mageArt ? mageArt.affinity : null, 90)}</div>
+      <h2 style="margin:4px 0;">${esc(mage.name)}</h2>
+      <div class="species-line">${mageArt ? esc(mageArt.label) : esc(mage.art_key)}${mageArt && mageArt.affinity ? ' · ' + esc(mageArt.affinity) + '-touched' : ''}</div>
+
+      <div class="essence-row">
+        <span class="essence-label">Level ${mage.level}</span>
+        <span class="essence-value">${mage.xp} / ${xpNeeded} XP</span>
+      </div>
+      <div class="hp-bar-track"><div class="hp-bar-fill" style="width:${xpPct}%;"></div></div>
+      ${mage.upgrade_points > 0 ? `<p class="hint">${mage.upgrade_points} upgrade point${mage.upgrade_points === 1 ? '' : 's'} to spend — see Manage Gear.</p>` : ''}
+
+      <div class="stat-grid">
+        <div class="stat-tile"><div class="num">${mageStats.vitality}</div><div class="label">Vitality</div></div>
+        <div class="stat-tile"><div class="num">${mageStats.might}</div><div class="label">Might</div></div>
+        <div class="stat-tile"><div class="num">${mageStats.ward}</div><div class="label">Ward</div></div>
+        <div class="stat-tile"><div class="num">${mageStats.swiftness}</div><div class="label">Swiftness</div></div>
+        <div class="stat-tile"><div class="num">${mageStats.cunning}</div><div class="label">Cunning</div></div>
+      </div>
+
+      <p class="marks-note">${equippedNames.length ? 'Wearing: ' + equippedNames.map(n => esc(n)).join(', ') : 'Nothing equipped yet.'}</p>
+      <div class="status" id="mageActionStatus"></div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">
+        <button onclick="doTrainMage()">Train</button>
+        <button onclick="doDuelMage()">Duel</button>
+        <button class="secondary" onclick="openMageGear()">Manage Gear</button>
       </div>
     </div>
+    ` : ''}
+
+    <button class="secondary" style="display:block;margin:18px auto 0;" onclick="returnToMapHub()">Back to the Map</button>
   `;
 }
 
-/* ---------------- mage home (0054, Map hub's "Your Mage" hotspot) ----------------
-   The Mage's own progression screen — separate XP/level track, its own
-   stats/equipment, and two activities (Train/Duel) that never touch
-   Guardian combat. Built directly on the hub-active/hub-screen/hub-box/
-   hub-overlay full-bleed pattern from this same batch of work, so it's
-   already drag/resize-editable from admin.html's Screen Hotspots tab
-   under screen key 'mageHome'. "Manage" opens a normal card screen
-   (renderMageGear, below) for spending upgrade points and equipping/
-   crafting gear — those lists grow, so unlike Train/Duel they don't fit
-   the hide-everything-but-buttons pattern; see the note on list-heavy
-   screens in the CSS above. */
+/* ---------------- mage gear (0054/0056) ----------------
+   Equip/craft screen for the Mage's gear — its own scrollable card
+   screen (never the hub/overlay pattern; that list only grows). Reached
+   from the combined Guardian Page above via "Manage Gear". */
 
 let mageGearCatalog = []; // mage_gear_catalog, public catalog — loaded once and cached, like craftCatalog
 
@@ -1613,19 +1631,6 @@ async function loadMageGearOwned(){
   mageGearOwned = data || [];
 }
 
-async function openMageHome(){
-  mageView = { step: 'home' };
-  mageActionStatus = '';
-  render();
-  await Promise.all([loadMageGearCatalog(), loadMageGearOwned()]);
-  if(mageView) render();
-}
-
-function backFromMage(){
-  mageView = null;
-  returnToMapHub();
-}
-
 async function openMageGear(){
   mageView = { step: 'gear' };
   render();
@@ -1634,7 +1639,8 @@ async function openMageGear(){
 }
 
 function backFromMageGear(){
-  mageView = { step: 'home' };
+  mageView = null;
+  guardianHomeView = { step: 'home' };
   render();
 }
 
@@ -1716,58 +1722,6 @@ async function doUnequipMageGear(slot){
   await loadMage();
   render();
   setMageActionStatus('Unequipped.', true);
-}
-
-function renderMage(){
-  if(mageView.step === 'gear') return renderMageGear();
-  return renderMageHome();
-}
-
-function renderMageHome(){
-  document.body.classList.add('hub-active');
-  const app = document.getElementById('app');
-  const art = mageArtFor(mage.art_key);
-  const stats = mageEffectiveStats();
-  const xpNeeded = mageXpToNextLevel(mage.level);
-  const xpPct = Math.max(0, Math.min(100, Math.round((mage.xp / xpNeeded) * 100)));
-  const equippedNames = ['weapon', 'armor', 'accessory'].map(slot => {
-    const itemId = mage['equipped_' + slot + '_id'];
-    if(!itemId) return null;
-    const owned = mageGearOwned.find(g => g.id === itemId);
-    const cat = owned ? mageGearCatalog.find(c => c.key === owned.gear_key) : null;
-    return cat ? cat.name : null;
-  }).filter(Boolean);
-
-  app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('mageHome')}>
-        ${hotspotButtonsMarkup(MAGE_HOME_AREAS, 'MAGE_HOME_AREAS', 'mageHome')}
-        <div class="hub-overlay">
-          <div class="art">${opponentImgFor(MAGE_ART_IMAGES[mage.art_key], art ? art.affinity : null, 90)}</div>
-          <h2 style="margin:4px 0;">${esc(mage.name)}</h2>
-          <div class="species-line">${art ? esc(art.label) : esc(mage.art_key)}${art && art.affinity ? ' · ' + esc(art.affinity) + '-touched' : ''}</div>
-
-          <div class="essence-row">
-            <span class="essence-label">Level ${mage.level}</span>
-            <span class="essence-value">${mage.xp} / ${xpNeeded} XP</span>
-          </div>
-          <div class="hp-bar-track"><div class="hp-bar-fill" style="width:${xpPct}%;"></div></div>
-          ${mage.upgrade_points > 0 ? `<p class="hint">${mage.upgrade_points} upgrade point${mage.upgrade_points === 1 ? '' : 's'} to spend — see Manage.</p>` : ''}
-
-          <div class="stat-grid">
-            <div class="stat-tile"><div class="num">${stats.vitality}</div><div class="label">Vitality</div></div>
-            <div class="stat-tile"><div class="num">${stats.might}</div><div class="label">Might</div></div>
-            <div class="stat-tile"><div class="num">${stats.ward}</div><div class="label">Ward</div></div>
-            <div class="stat-tile"><div class="num">${stats.swiftness}</div><div class="label">Swiftness</div></div>
-            <div class="stat-tile"><div class="num">${stats.cunning}</div><div class="label">Cunning</div></div>
-          </div>
-
-          <p class="marks-note">${equippedNames.length ? 'Wearing: ' + equippedNames.map(n => esc(n)).join(', ') : 'Nothing equipped yet.'}</p>
-          <div class="status" id="mageActionStatus"></div>
-        </div>
-      </div>
-    </div>
-  `;
 }
 
 function renderMageGear(){
@@ -2042,8 +1996,21 @@ function renderProfile(){
         <div class="status" id="passwordStatus"></div>
       </div>`
     : `<button class="secondary" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto;" onclick="openPasswordForm()">Set / change password</button>`;
+  // Direct feedback: "we will want the bust of the character they
+  // choose to show up on the profile page" — the character is the
+  // Mage: the portrait tied to whichever Art they picked at creation
+  // (MAGE_ART_IMAGES[mage.art_key], same art shown on the Guardian Page
+  // and the creation screen itself). Falls back to the same affinity-
+  // tinted placeholder circle every other art-less portrait uses if no
+  // image has been set for that Art yet.
+  const mageArt = mage ? mageArtFor(mage.art_key) : null;
+  const mageBustBlock = mage ? `
+    <div class="art">${opponentImgFor(MAGE_ART_IMAGES[mage.art_key], mageArt ? mageArt.affinity : null, 96)}</div>
+    <div class="species-line" style="margin-bottom:10px;">${esc(mage.name)}${mageArt ? ' · ' + esc(mageArt.label) : ''}</div>
+  ` : '';
   app.innerHTML = `
     <div class="card"${bgAttr('profile', 'text-align:center;')}>
+      ${mageBustBlock}
       <h2>${esc(guardian.name)}'s Profile</h2>
       <div class="species-line">${esc(STAGE_LABEL[guardian.stage] || guardian.stage)} · ${guardian.checkin_streak || 0} day check-in streak</div>
 
