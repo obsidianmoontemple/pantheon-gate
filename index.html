@@ -197,6 +197,41 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
 .map-hotspot:hover,.map-hotspot:active,.map-hotspot:focus{background:transparent!important;}
 .map-hotspot:focus-visible{outline:2px solid rgba(230,199,119,0.55);outline-offset:2px;}
 
+/* Guardian Home, converted to the Map Hub's own pattern — direct
+   feedback: "I would actually like the art I provide to lay over the
+   entirety of the page covering everything except the buttons." Same
+   structure as .map-hub-screen/.map-hub: a fixed full-viewport wrapper
+   holding a 1408:768-locked box (matching admin.html's Screen Hotspots
+   canvas exactly, same reason as the Map Hub — hotspot percentages only
+   line up correctly at that one ratio), background art edge to edge,
+   .map-hotspot buttons (reused as-is, not a new class) positioned over
+   it by admin.html's editor under screen key 'guardianPage'.
+   Bond/stats are real per-player numbers art can't encode, so they still
+   render as text — .guardian-home-overlay is a small floating panel
+   instead of the old full-width opaque .card, so most of the art stays
+   visible around it rather than being covered by a text block. */
+body.guardian-home-screen{overflow:hidden;}
+body.guardian-home-screen .mast, body.guardian-home-screen footer.notice{display:none;}
+body.guardian-home-screen .wrap{max-width:none;margin:0;padding:0;}
+.guardian-home-screen{
+  position:fixed;inset:0;z-index:5;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--ink);
+}
+.guardian-home-box{
+  position:relative;overflow:hidden;
+  width:min(100vw, calc(100vh * 1408 / 768));
+  aspect-ratio:1408/768;
+}
+.guardian-home-overlay{
+  position:absolute;left:50%;bottom:4%;transform:translateX(-50%);
+  background:rgba(10,8,16,0.72);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  border:1px solid var(--line);border-radius:6px;padding:14px 22px;
+  text-align:center;max-width:90%;pointer-events:none;
+}
+.guardian-home-overlay .stat-grid{margin:10px 0 2px;pointer-events:none;}
+.guardian-home-overlay .art{margin:0 auto 10px;filter:drop-shadow(0 0 22px rgba(200,162,74,0.22));}
+
 .phase-note{text-align:center;color:var(--parchment-dim);font-size:12.5px;font-style:italic;margin-bottom:18px;}
 .phase-note strong{color:var(--gold-bright);font-style:normal;}
 
@@ -925,10 +960,11 @@ async function petitionHeaders(){
 }
 
 function render(){
-  // Only renderMapHub() (below) turns this back on — every other screen
-  // renders inside the normal .wrap column.
+  // Only renderMapHub()/renderGuardianHome() (below) turn these back on —
+  // every other screen renders inside the normal .wrap column.
   document.body.classList.remove('map-screen');
   document.body.classList.remove('login-screen');
+  document.body.classList.remove('guardian-home-screen');
   if(!circleView || circleView.step !== 'messages') stopMessagesPolling();
   if(!circleView || circleView.step !== 'altar') stopAltarTicking();
   if(!personalAltarView) stopPersonalAltarTicking();
@@ -1082,26 +1118,51 @@ const DEFAULT_MAP_AREAS = [
 // position moves.
 let MAP_AREAS = DEFAULT_MAP_AREAS.slice();
 
-async function loadMapHotspots(){
+// Guardian Home's hotspots (0052) — same pattern, second screen converted
+// to full-bleed-art-with-invisible-buttons per "I would actually like the
+// art I provide to lay over the entirety of the page covering everything
+// except the buttons." Only two real actions here today.
+const DEFAULT_GUARDIAN_HOME_AREAS = [
+  { id: 'bondTend',  label: 'Spend Time Together', left: 36, top: 74, width: 28, height: 10, action: doTendBond },
+  { id: 'backToMap', label: 'Back to the Map',      left: 3,  top: 88, width: 18, height: 8,  action: returnToMapHub },
+];
+let GUARDIAN_HOME_AREAS = DEFAULT_GUARDIAN_HOME_AREAS.slice();
+
+// Generic loader shared by every screen registered in admin.html's Screen
+// Hotspots editor — id/label/action come from that screen's own DEFAULT_*
+// array (a click handler can't live in a database row), only
+// left/top/width/height are ever overridden from map_hotspots.
+async function loadHotspotOverrides(screenKey, defaults){
   const { data, error } = await supabaseClient
     .from('map_hotspots')
     .select('hotspot_key, left_pct, top_pct, width_pct, height_pct')
-    .eq('screen_key', 'map');
-  if(error){ console.error('map_hotspots load failed', error); return; }
-  if(!data || !data.length) return; // keep the DEFAULT_MAP_AREAS fallback
+    .eq('screen_key', screenKey);
+  if(error){ console.error('map_hotspots load failed for ' + screenKey, error); return defaults; }
+  if(!data || !data.length) return defaults; // keep the DEFAULT_* fallback
   const overrides = {};
   data.forEach(r => { overrides[r.hotspot_key] = r; });
-  MAP_AREAS = DEFAULT_MAP_AREAS.map(a => {
+  return defaults.map(a => {
     const o = overrides[a.id];
     return o ? { ...a, left: o.left_pct, top: o.top_pct, width: o.width_pct, height: o.height_pct } : a;
   });
 }
 
-function mapHubMarkup(){
-  const nodes = MAP_AREAS.map((a, i) => `
-    <button class="map-hotspot" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;" title="${esc(a.label)}" aria-label="${esc(a.label)}" onclick="MAP_AREAS[${i}].action()"></button>
+async function loadMapHotspots(){
+  MAP_AREAS = await loadHotspotOverrides('map', DEFAULT_MAP_AREAS);
+  GUARDIAN_HOME_AREAS = await loadHotspotOverrides('guardianPage', DEFAULT_GUARDIAN_HOME_AREAS);
+}
+
+// Shared by both full-bleed screens (map hub, Guardian Home) — a set of
+// {id,label,left,top,width,height,action} hotspots rendered as invisible
+// .map-hotspot buttons over a background image.
+function hotspotButtonsMarkup(areas, arrayName){
+  return areas.map((a, i) => `
+    <button class="map-hotspot" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;" title="${esc(a.label)}" aria-label="${esc(a.label)}" onclick="${arrayName}[${i}].action()"></button>
   `).join('');
-  return `<div class="map-hub" id="mapHub"${bgAttrPlain('map')}>${nodes}</div>`;
+}
+
+function mapHubMarkup(){
+  return `<div class="map-hub" id="mapHub"${bgAttrPlain('map')}>${hotspotButtonsMarkup(MAP_AREAS, 'MAP_AREAS')}</div>`;
 }
 
 // The landing screen once a guardian exists (render()'s fallback) — every
@@ -1122,11 +1183,22 @@ function openGuardianHome(){
   render();
 }
 
+// Converted (0052) to the same full-bleed-art pattern as the Map Hub, per
+// direct feedback: "I would actually like the art I provide to lay over
+// the entirety of the page covering everything except the buttons." The
+// only two real actions (tend Bond, back to the map) are now invisible
+// hotspots positioned via admin.html's Screen Hotspots editor (screen key
+// 'guardianPage') instead of visible buttons — see DEFAULT_GUARDIAN_HOME_
+// AREAS above. Bond/currency numbers are real per-player state art can't
+// encode, so they still render as text, in .guardian-home-overlay (a
+// small floating panel, not a full-width opaque card, so most of the art
+// stays visible around it).
 function renderGuardianHome(){
+  document.body.classList.add('guardian-home-screen');
   const app = document.getElementById('app');
   const evolved = (guardian.stage === 'ascendant' || guardian.stage === 'sovereign') && guardian.dominant_affinity;
   const glowColor = evolved ? (AFFINITY_COLORS[guardian.dominant_affinity] || 'transparent') : 'transparent';
-  const rawArt = imgFor(guardian.species, guardian.stage, 160);
+  const rawArt = imgFor(guardian.species, guardian.stage, 120);
   const art = evolved ? `<div class="affinity-glow" style="--glow-color:${glowColor};">${rawArt}</div>` : rawArt;
   const speciesLabel = (SPECIES.find(s => s.id === guardian.species) || {}).label || guardian.species;
   const fullMarkCount = marks.filter(m => m.mark_type === 'full').length;
@@ -1136,43 +1208,47 @@ function renderGuardianHome(){
   const bondReady = bondSecondsLeft <= 0;
 
   app.innerHTML = `
-    <div class="card guardian-display"${bgAttr('guardianPage')}>
-      <div class="art">${art}</div>
-      <div class="stage-badge">${esc(STAGE_LABEL[guardian.stage] || guardian.stage)}</div>
-      <h2>${esc(guardian.name)}</h2>
-      <div class="species-line">${esc(speciesLabel)}${guardian.dominant_affinity ? ' · ' + esc(guardian.dominant_affinity) + '-touched' : ''}</div>
+    <div class="guardian-home-screen">
+      <div class="guardian-home-box"${bgAttrPlain('guardianPage')}>
+        ${hotspotButtonsMarkup(GUARDIAN_HOME_AREAS, 'GUARDIAN_HOME_AREAS')}
+        <div class="guardian-home-overlay">
+          <div class="art">${art}</div>
+          <div class="stage-badge">${esc(STAGE_LABEL[guardian.stage] || guardian.stage)}</div>
+          <h2 style="margin:4px 0;">${esc(guardian.name)}</h2>
+          <div class="species-line">${esc(speciesLabel)}${guardian.dominant_affinity ? ' · ' + esc(guardian.dominant_affinity) + '-touched' : ''}</div>
 
-      <div class="bond-row">
-        <span class="bond-label">Bond</span>
-        <span class="bond-value">${guardian.bond}</span>
-        <button ${bondReady ? '' : 'disabled'} onclick="doTendBond()">${bondReady ? 'Spend time together' : 'Resting (' + Math.ceil(bondSecondsLeft / 60) + 'm)'}</button>
+          <div class="bond-row">
+            <span class="bond-label">Bond</span>
+            <span class="bond-value">${guardian.bond}</span>
+            <span class="hint" style="margin:0;">${bondReady ? '— tap to spend time together' : '— resting (' + Math.ceil(bondSecondsLeft / 60) + 'm)'}</span>
+          </div>
+          <div class="status" id="bondStatus"></div>
+
+          <div class="essence-row">
+            <span class="essence-label">Essence</span>
+            <span class="essence-value">${guardian.essence || 0}</span>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-tile"><div class="num">${guardian.favor || 0}</div><div class="label">Favor</div></div>
+            <div class="stat-tile"><div class="num">${guardian.god_shards || 0}</div><div class="label">God Shards</div></div>
+            <div class="stat-tile"><div class="num">${guardian.god_tokens || 0}</div><div class="label">God Tokens</div></div>
+            <div class="stat-tile"><div class="num">${guardian.key_of_night || 0}</div><div class="label">Key of Night</div></div>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-tile"><div class="num">${guardian.vitality}</div><div class="label">Vitality</div></div>
+            <div class="stat-tile"><div class="num">${guardian.might}</div><div class="label">Might</div></div>
+            <div class="stat-tile"><div class="num">${guardian.ward}</div><div class="label">Ward</div></div>
+            <div class="stat-tile"><div class="num">${guardian.swiftness}</div><div class="label">Swiftness</div></div>
+            <div class="stat-tile"><div class="num">${guardian.cunning}</div><div class="label">Cunning</div></div>
+          </div>
+
+          <p class="marks-note">${guardian.stage === 'egg'
+            ? 'Still an egg. It hatches the moment a god marks it for the first time.'
+            : (marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.')}</p>
+        </div>
       </div>
-      <div class="status" id="bondStatus"></div>
-
-      <div class="essence-row">
-        <span class="essence-label">Essence</span>
-        <span class="essence-value">${guardian.essence || 0}</span>
-      </div>
-
-      <div class="stat-grid">
-        <div class="stat-tile"><div class="num">${guardian.favor || 0}</div><div class="label">Favor</div></div>
-        <div class="stat-tile"><div class="num">${guardian.god_shards || 0}</div><div class="label">God Shards</div></div>
-        <div class="stat-tile"><div class="num">${guardian.god_tokens || 0}</div><div class="label">God Tokens</div></div>
-        <div class="stat-tile"><div class="num">${guardian.key_of_night || 0}</div><div class="label">Key of Night</div></div>
-      </div>
-
-      <div class="stat-grid">
-        <div class="stat-tile"><div class="num">${guardian.vitality}</div><div class="label">Vitality</div></div>
-        <div class="stat-tile"><div class="num">${guardian.might}</div><div class="label">Might</div></div>
-        <div class="stat-tile"><div class="num">${guardian.ward}</div><div class="label">Ward</div></div>
-        <div class="stat-tile"><div class="num">${guardian.swiftness}</div><div class="label">Swiftness</div></div>
-        <div class="stat-tile"><div class="num">${guardian.cunning}</div><div class="label">Cunning</div></div>
-      </div>
-
-      <p class="marks-note">${guardian.stage === 'egg'
-        ? 'Still an egg. It hatches the moment a god marks it for the first time.'
-        : (marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.')}</p>
-      <button class="secondary" style="margin-top:14px;" onclick="returnToMapHub()">Back to the map</button>
     </div>
   `;
 }
