@@ -2083,7 +2083,12 @@ async function sendNarratorMessage(){
   render();
 
   try{
-    const res = await fetch(FUNCTIONS_URL + '/narrator-chat', {
+    // Deployed under the URL slug "/ganymede" rather than "/narrator-chat"
+    // (the Supabase dashboard's function list shows the label
+    // "narrator-chat" but its actual routing path is "/ganymede") —
+    // pointed at whatever's really live rather than renaming the deployed
+    // function to match.
+    const res = await fetch(FUNCTIONS_URL + '/ganymede', {
       method: 'POST', headers: await petitionHeaders(),
       body: JSON.stringify({ messages: narratorChatView.messages })
     });
