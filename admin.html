@@ -1279,16 +1279,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>Site backgrounds</h2>
-        <p class="hint">The Map hub and the login screen had their background pictures baked into the CSS instead of admin-editable like everything else — these two URL fields fix that. Leave a field blank to fall back to the built-in default.</p>
-        <div class="field" style="max-width:none;">
-          <label>Map hub background image URL</label>
-          <input type="text" id="siteMapBackgroundUrl" style="max-width:none;" placeholder="https://…">
-        </div>
-        <div class="field" style="max-width:none;">
-          <label>Login screen background image URL</label>
-          <input type="text" id="siteLoginBackgroundUrl" style="max-width:none;" placeholder="https://…">
-        </div>
-        <button id="saveSiteSettingsBtn">Save site backgrounds</button>
+        <p class="hint">One background image URL per screen — every page a player can land on, not just the two that used to be hardcoded into the CSS. Leave a field blank to fall back to the built-in dark card look. Saves all of these in one go.</p>
+        <div id="siteBackgroundRows"></div>
+        <button id="saveSiteSettingsBtn" style="margin-top:10px;">Save all backgrounds</button>
         <div class="status" id="siteSettingsStatus"></div>
       </div>
     </div>
@@ -1765,38 +1758,75 @@ async function loadPricing(){
   document.getElementById('packPrice').value = fmt2(data.message_pack_price_cents);
 }
 
-/* ---------------- site settings (map/login background overrides) ---------------- */
+/* ---------------- site backgrounds (0045 — one row per screen) ----------------
+   Superseded 0044's site_settings (which only had a map/login column each)
+   once "every page" turned out to mean every page — this is a generic
+   page_key -> background_url table instead, so a new screen just needs a
+   new entry in PAGE_KEYS below, not a new column and a migration. */
+
+const PAGE_KEYS = [
+  { key: 'login', label: 'Login screen' },
+  { key: 'map', label: 'Map hub' },
+  { key: 'hatch', label: 'Hatching' },
+  { key: 'profile', label: 'Profile' },
+  { key: 'checkin', label: 'Check-in' },
+  { key: 'mail', label: 'Mail' },
+  { key: 'promo', label: 'Promo' },
+  { key: 'shrine', label: 'Temple of the Gods' },
+  { key: 'circleDragon', label: 'Circle Battles Against the Dragons' },
+  { key: 'circle', label: 'The Circle' },
+  { key: 'circleAltar', label: "A Circle's Altar" },
+  { key: 'circleInvasions', label: 'Circle Invasions' },
+  { key: 'gauntlet', label: 'The Gauntlet' },
+  { key: 'arena', label: 'The Arena (PvP)' },
+  { key: 'craft', label: 'Crafting' },
+  { key: 'oracle', label: 'The Oracle (Petitions)' },
+  { key: 'expeditions', label: 'Expeditions' },
+  { key: 'campaign', label: 'The Divine Realms (Campaign)' },
+  { key: 'chainedGods', label: 'Chained Gods (Redeem)' },
+  { key: 'guardianPage', label: 'Guardian Page' },
+  { key: 'personalAltar', label: 'Your Altar (solo)' },
+  { key: 'backpack', label: 'Backpack' },
+  { key: 'shop', label: 'Shop' },
+  { key: 'combat', label: 'Battle screen' },
+  { key: 'chat', label: 'Deity Chat (gate.html)' }
+];
+
+function siteBackgroundInputId(key){ return 'siteBg_' + key; }
 
 async function loadSiteSettings(){
-  const { data, error } = await supabaseClient
-    .from('site_settings')
-    .select('map_background_url, login_background_url')
-    .eq('id', 1)
-    .maybeSingle();
+  const rowsHtml = PAGE_KEYS.map(p => `
+    <div class="field" style="max-width:none;">
+      <label>${p.label}</label>
+      <input type="text" id="${siteBackgroundInputId(p.key)}" style="max-width:none;" placeholder="https://…">
+    </div>
+  `).join('');
+  document.getElementById('siteBackgroundRows').innerHTML = rowsHtml;
+
+  const { data, error } = await supabaseClient.from('site_backgrounds').select('page_key, background_url');
   if(error){
-    document.getElementById('siteSettingsStatus').textContent = 'Could not load site settings: ' + error.message;
+    document.getElementById('siteSettingsStatus').textContent = 'Could not load site backgrounds: ' + error.message;
     return;
   }
-  document.getElementById('siteMapBackgroundUrl').value = (data && data.map_background_url) || '';
-  document.getElementById('siteLoginBackgroundUrl').value = (data && data.login_background_url) || '';
+  const byKey = {};
+  (data || []).forEach(row => { byKey[row.page_key] = row.background_url; });
+  PAGE_KEYS.forEach(p => {
+    const input = document.getElementById(siteBackgroundInputId(p.key));
+    if(input) input.value = byKey[p.key] || '';
+  });
 }
 
 async function saveSiteSettings(){
   const status = document.getElementById('siteSettingsStatus');
-  const mapUrl = document.getElementById('siteMapBackgroundUrl').value.trim();
-  const loginUrl = document.getElementById('siteLoginBackgroundUrl').value.trim();
   status.className = 'status';
   status.textContent = 'Saving…';
-  const { error } = await supabaseClient
-    .from('site_settings')
-    .update({
-      map_background_url: mapUrl || null,
-      login_background_url: loginUrl || null,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', 1);
+  const rows = PAGE_KEYS.map(p => {
+    const input = document.getElementById(siteBackgroundInputId(p.key));
+    return { page_key: p.key, background_url: (input && input.value.trim()) || null, updated_at: new Date().toISOString() };
+  });
+  const { error } = await supabaseClient.from('site_backgrounds').upsert(rows, { onConflict: 'page_key' });
   status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Players will see the new backgrounds next time they load the page.';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Players will see the new backgrounds next time they load each page.';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
