@@ -1508,7 +1508,14 @@ function hotspotButtonsMarkup(areas, arrayName, pageKey){
 }
 
 function mapHubMarkup(){
-  return `<div class="map-hub" id="mapHub"${bgAttrPlain('map')}>${hotspotButtonsMarkup(MAP_AREAS, 'MAP_AREAS', 'map')}</div>`;
+  // Direct feedback: "please get rid of the overlay dotted boxes on the
+  // map hub they look bad and I know where everything is" — no pageKey
+  // passed here means hotspotButtonsMarkup() never falls back to the
+  // labeled/dashed-border style on the Map Hub, regardless of whether
+  // its art is set; hotspots stay fully invisible, same as before that
+  // fallback existed. World Boss/Chained Gods/Check-in still get the
+  // fallback until their own art is in place.
+  return `<div class="map-hub" id="mapHub"${bgAttrPlain('map')}>${hotspotButtonsMarkup(MAP_AREAS, 'MAP_AREAS')}</div>`;
 }
 
 // The landing screen once a guardian exists (render()'s fallback) — every
