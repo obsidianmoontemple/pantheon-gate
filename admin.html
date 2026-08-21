@@ -607,9 +607,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr>
-              <th>Key</th><th>Name</th><th>Tier</th><th>Affinity</th><th>Vitality</th><th>Might</th><th>Ward</th><th>Swiftness</th><th>Cunning</th><th>Active</th>
+              <th>Key</th><th>Name</th><th>Tier</th><th>Affinity</th><th>Vitality</th><th>Might</th><th>Ward</th><th>Swiftness</th><th>Cunning</th><th>Image URL</th><th>Active</th>
             </tr></thead>
-            <tbody id="gauntletRows"><tr><td colspan="10">Loading…</td></tr></tbody>
+            <tbody id="gauntletRows"><tr><td colspan="11">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -623,6 +623,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Tier (unique)</label><input type="number" min="0" id="newGauntletTier" style="max-width:100px;"></div>
           <div class="field"><label>Affinity</label><select id="newGauntletAffinity" style="max-width:140px;"></select></div>
           <div class="field"><label>Vitality</label><input type="number" min="1" id="newGauntletVitality" style="max-width:100px;"></div>
+          <div class="field"><label>Image URL (optional)</label><input type="text" id="newGauntletImageUrl" placeholder="https://…" style="max-width:220px;"></div>
           <button id="addGauntletBtn">Add opponent</button>
         </div>
         <div class="status" id="newGauntletStatus"></div>
@@ -4030,7 +4031,7 @@ async function loadGauntletOpponents(){
   if(affSel && !affSel.options.length) affSel.innerHTML = AFFINITIES.map(a => `<option value="${a}">${a}</option>`).join('');
 
   if(error){
-    rows.innerHTML = '<tr><td colspan="10">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="11">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = (data || []).map(o => `<tr data-key="${esc(o.key)}">
@@ -4047,8 +4048,9 @@ async function loadGauntletOpponents(){
     <td><input type="number" min="0" id="gauWard_${esc(o.key)}" value="${o.ward}" style="max-width:80px;"></td>
     <td><input type="number" min="1" id="gauSwiftness_${esc(o.key)}" value="${o.swiftness}" style="max-width:80px;"></td>
     <td><input type="number" min="0" id="gauCunning_${esc(o.key)}" value="${o.cunning}" style="max-width:80px;"></td>
+    <td><input type="text" id="gauImg_${esc(o.key)}" value="${esc(o.image_url || '')}" style="max-width:180px;"></td>
     <td><input type="checkbox" id="gauActive_${esc(o.key)}" ${o.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="10">No opponents yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="11">No opponents yet.</td></tr>';
 }
 
 async function saveGauntletOpponents(){
@@ -4066,6 +4068,7 @@ async function saveGauntletOpponents(){
       ward: parseInt(document.getElementById('gauWard_' + key).value, 10),
       swiftness: parseInt(document.getElementById('gauSwiftness_' + key).value, 10),
       cunning: parseInt(document.getElementById('gauCunning_' + key).value, 10),
+      image_url: document.getElementById('gauImg_' + key).value.trim() || null,
       active: document.getElementById('gauActive_' + key).checked
     };
   });
@@ -4084,6 +4087,7 @@ async function addGauntletOpponent(){
   const tier = parseInt(document.getElementById('newGauntletTier').value, 10);
   const affinity = document.getElementById('newGauntletAffinity').value;
   const vitality = parseInt(document.getElementById('newGauntletVitality').value, 10);
+  const imageUrl = document.getElementById('newGauntletImageUrl').value.trim();
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -4094,13 +4098,14 @@ async function addGauntletOpponent(){
   status.textContent = 'Adding…';
   const { error } = await supabaseClient.from('gauntlet_opponents').insert({
     key, name, tier, affinity, vitality,
-    might: 10, ward: 10, swiftness: 10, cunning: 10
+    might: 10, ward: 10, swiftness: 10, cunning: 10,
+    image_url: imageUrl || null
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key or tier is already in use.' : ('Failed: ' + error.message); return; }
 
   status.className = 'status ok';
   status.textContent = name + ' added — tune might/ward/swiftness/cunning in the table above (seeded at 10 each).';
-  ['newGauntletKey','newGauntletName','newGauntletTier','newGauntletVitality'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newGauntletKey','newGauntletName','newGauntletTier','newGauntletVitality','newGauntletImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadGauntletOpponents();
 }
 
