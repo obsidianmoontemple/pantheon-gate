@@ -5981,6 +5981,10 @@ function renderCraft(){
 function openRedeem(){
   redeemView = { step: 'hub' };
   render();
+  // Needed for the pool-odds list below (isDeityUnlocked) — a player can
+  // reach Chained Gods straight from the map without ever opening the
+  // Shrine/Shop, which is the only other place this normally loads.
+  loadShrineEntitlements().then(() => { if(redeemView) render(); }).catch(e => console.error('entitlements load failed', e));
 }
 
 function backFromRedeem(){
@@ -6055,6 +6059,40 @@ async function doRedeemKeyOfNight(pantheonId, deityId, deityName){
   }
 }
 
+// Looks a pool entry's display name up in CATALOG the same way
+// renderKeyOfNightPicker already does row-by-row, just as a reusable
+// single lookup for the odds list below.
+function deityNameFromCatalog(pantheonId, deityId){
+  const pantheon = CATALOG[pantheonId];
+  const match = pantheon && pantheon.deities.find(([id]) => id === deityId);
+  return match ? match[1] : deityId;
+}
+
+// Direct feedback: "we need odds on the pool and it should be 100%
+// random everyone just drew the same god." The draw itself
+// (redeem/index.ts) already IS a uniform Math.random() pick — every
+// pool god this player doesn't already hold is an equally likely
+// outcome. If multiple players are landing on the same god, the far
+// more likely explanation is the season pool only has one (or very
+// few) gods actually checked "in season" in admin.html's Chained Gods
+// tab right now — this list makes that immediately visible instead of
+// a mystery, since it mirrors the server's own candidate set exactly
+// (same isDeityUnlocked-style exclusion of gods this player already
+// holds).
+function godTokenOddsMarkup(){
+  if(!seasonPool.length) return '<p class="hint" style="text-align:center;">Nothing is in season right now — check back soon.</p>';
+  const unowned = seasonPool.filter(d => !isDeityUnlocked(d.pantheon_id, d.deity_id));
+  if(!unowned.length) return '<p class="hint" style="text-align:center;">You already hold every god in this season\'s pool.</p>';
+  const pct = (100 / unowned.length).toFixed(unowned.length > 20 ? 1 : 0);
+  const rows = unowned.map(d => `
+    <div class="roster-row"><div class="rname">${esc(deityNameFromCatalog(d.pantheon_id, d.deity_id))}</div><span class="cblurb">1 in ${unowned.length} (${pct}%)</span></div>
+  `).join('');
+  return `
+    <h3 style="margin-top:14px;text-align:left;">God Token odds (${unowned.length} god${unowned.length === 1 ? '' : 's'} eligible)</h3>
+    ${rows}
+  `;
+}
+
 function renderRedeem(){
   if(redeemView.step === 'keyPicker'){ renderKeyOfNightPicker(); return; }
 
@@ -6072,6 +6110,7 @@ function renderRedeem(){
           <div id="redeemStatus" class="status"></div>
           <div class="essence-row"><span class="essence-label">God Tokens</span><span class="essence-value">${guardian.god_tokens || 0}</span></div>
           <div class="essence-row" style="margin-top:4px;"><span class="essence-label">Key of Night</span><span class="essence-value">${guardian.key_of_night || 0}</span></div>
+          ${godTokenOddsMarkup()}
         </div>
       </div>
     </div>
