@@ -366,6 +366,21 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .essence-label{font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--parchment-dim);}
 .essence-value{font-family:'Cinzel',serif;font-size:15px;color:var(--moon);}
 
+/* Ganymede ask-a-question chat (renderNarratorChat) — "from then on
+   would be the chat... a larger version of him to pop in to talk."
+   narrator-portrait-pop is the entrance animation on the .art wrapper
+   already used by renderGuide(); the message log below it reuses
+   .challenge-text's voice/spacing conventions but as a scrollable
+   transcript instead of one static paragraph. */
+@keyframes narratorPopIn{0%{opacity:0;transform:scale(0.7);}60%{opacity:1;transform:scale(1.06);}100%{opacity:1;transform:scale(1);}}
+.narrator-portrait-pop{animation:narratorPopIn 0.45s cubic-bezier(.2,.9,.3,1.3);}
+.narrator-history{max-height:280px;overflow-y:auto;text-align:left;margin:0 0 14px;padding-right:4px;}
+.narrator-msg{margin-bottom:14px;}
+.narrator-msg p{margin:2px 0 0;font-style:italic;line-height:1.5;color:var(--parchment);}
+.narrator-msg-label{font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--parchment-dim);}
+.narrator-msg-you .narrator-msg-label{color:var(--gold);}
+.narrator-msg-you p{font-style:normal;color:var(--parchment-dim);}
+
 .tier-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:3px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;}
 .tier-row:hover{border-color:var(--gold);}
 .tier-row.locked{opacity:0.4;cursor:not-allowed;}
@@ -679,9 +694,14 @@ async function loadMage(){
 // The Narrator/Guide (0055) — both loaded once at boot so they're ready
 // the instant render()'s fallback needs to auto-trigger the intro.
 async function loadNarratorSettings(){
-  const { data, error } = await supabaseClient.from('narrator_settings').select('name, portrait_url').eq('id', 1).maybeSingle();
+  const { data, error } = await supabaseClient.from('narrator_settings').select('name, portrait_url, large_portrait_url, daily_question_limit').eq('id', 1).maybeSingle();
   if(error){ console.error('narrator_settings load failed', error); return; }
-  if(data) narratorSettings = { name: data.name || 'Ganymede', portraitUrl: data.portrait_url };
+  if(data) narratorSettings = {
+    name: data.name || 'Ganymede',
+    portraitUrl: data.portrait_url,
+    largePortraitUrl: data.large_portrait_url,
+    dailyQuestionLimit: data.daily_question_limit ?? 3,
+  };
 }
 
 async function loadGuideSteps(){
@@ -851,7 +871,8 @@ let mageGearOwned = [];       // this mage's mage_gear_items, reloaded each time
 let guideView = null;         // null | {step:'home'} — the intro/reopen screen
 let guideStepIndex = 0;
 let GUIDE_STEPS = [];         // [{key,title,body}], from guide_steps
-let narratorSettings = { name: 'Ganymede', portraitUrl: null };
+let narratorSettings = { name: 'Ganymede', portraitUrl: null, largePortraitUrl: null, dailyQuestionLimit: 3 };
+let narratorChatView = null; // null | {messages:[{role,content}], remaining:number|null, sending:boolean, error:string|null}
 let marks = [];          // [{deity_id, pantheon_id, mark_type}]
 let currentPhase = null; // {cycle_id, phase, phase_index} — flavor + gating text only, edge function re-checks server-side
 let petitionView = null; // null | {step:'pick'} | {step:'challenge', ...} | {step:'verdict', ...}
@@ -1027,7 +1048,7 @@ async function boot(){
       petitionView = null; combatView = null; craftView = null; redeemView = null;
       expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
       profileView = null; shrineView = null; mailView = null; backpackView = null;
-      checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null;
+      checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null;
       shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
       profilePasswordOpen = false;
       renderLoginScreen();
@@ -1253,6 +1274,7 @@ function render(){
   if(guardian && guardianHomeView){ renderGuardianHome(); return; }
   if(guardian && mageView){ renderMageGear(); return; }
   if(guardian && guideView){ renderGuide(); return; }
+  if(guardian && narratorChatView){ renderNarratorChat(); return; }
   // Mage creation (0052) comes first now — direct feedback: "the mage
   // becomes who you play as and then you will get your egg shortly
   // after the game starts." No mage row yet takes priority over
@@ -1956,8 +1978,20 @@ async function markGuideSeen(){
 }
 
 function openGuide(){
+  // Direct feedback: "they really only need what he says at first the
+  // one time from then on would be the chat." First time (has_seen_guide
+  // false), the scripted walkthrough plays exactly as before — and now
+  // marks itself seen the moment it's opened this way too, not only via
+  // render()'s auto-trigger, so a manual first click doesn't leave the
+  // auto-intro armed to fire again later. Every open after that skips
+  // straight to free-form Q&A instead of replaying the steps.
+  if(mage && mage.has_seen_guide){
+    openNarratorChat();
+    return;
+  }
   guideView = { step: 'home' };
   guideStepIndex = 0;
+  markGuideSeen();
   render();
 }
 
@@ -2001,6 +2035,118 @@ function renderGuide(){
         <button onclick="guideNext()">${isLast ? 'Into the Realms' : 'Next'}</button>
       </div>
       ${!isLast ? `<button class="secondary" style="margin-top:14px;" onclick="backFromGuide()">Skip</button>` : ''}
+    </div>
+  `;
+}
+
+/* ---------------- Ganymede: ask-a-question chat ----------------
+   Direct feedback: "I think he will use his current training along with
+   an override modification teaching him about the game I will most
+   likely limit this to only a few times a day to stop misuse. I like
+   the idea of training him on the whys and whats next." Opens instead
+   of the scripted walkthrough once mage.has_seen_guide is true (see
+   openGuide()) — a larger portrait of Ganymede pops in to talk, and the
+   whole conversation (kept in narratorChatView.messages) is sent to
+   supabase/functions/narrator-chat each turn, same shape as the
+   deity-chat relay it's modeled on. The daily question limit is
+   enforced server-side; `remaining` here is just what the last response
+   told us, purely for display — never trusted for gating client-side. */
+
+function openNarratorChat(){
+  // 0 (or unset) means "unlimited" per admin.html's Ask Ganymede card —
+  // represented here as Infinity so the "remaining === 0" disable check
+  // below never fires for an unlimited narrator.
+  const limit = narratorSettings.dailyQuestionLimit;
+  narratorChatView = { messages: [], remaining: (limit && limit > 0) ? limit : Infinity, sending: false, error: null };
+  render();
+}
+
+function backFromNarratorChat(){
+  narratorChatView = null;
+  returnToMapHub();
+}
+
+async function sendNarratorMessage(){
+  if(!narratorChatView || narratorChatView.sending) return;
+  const input = document.getElementById('narratorChatInput');
+  const text = input ? input.value.trim() : '';
+  if(!text) return;
+  if(narratorChatView.remaining === 0){
+    narratorChatView.error = `You've asked ${esc(narratorSettings.name)} all you can for today. Come back tomorrow.`;
+    render();
+    return;
+  }
+
+  narratorChatView.messages.push({ role: 'user', content: text });
+  narratorChatView.sending = true;
+  narratorChatView.error = null;
+  render();
+
+  try{
+    const res = await fetch(FUNCTIONS_URL + '/narrator-chat', {
+      method: 'POST', headers: await petitionHeaders(),
+      body: JSON.stringify({ messages: narratorChatView.messages })
+    });
+    const data = await res.json();
+    if(!narratorChatView) return; // screen was left mid-request
+    if(data.ok){
+      narratorChatView.messages.push({ role: 'assistant', content: data.reply });
+      // Server sends remaining: null explicitly for "unlimited" (JSON has
+      // no Infinity) — see narrator-chat/index.ts's getRemainingToday().
+      if(data.remaining === null) narratorChatView.remaining = Infinity;
+      else if(typeof data.remaining === 'number') narratorChatView.remaining = data.remaining;
+    } else {
+      narratorChatView.messages.pop(); // don't leave an unanswered question in the log
+      narratorChatView.error = data.error || 'Ganymede could not answer that.';
+      if(data.remaining === 0) narratorChatView.remaining = 0;
+    }
+  }catch(e){
+    console.error('narrator-chat failed', e);
+    if(narratorChatView){
+      narratorChatView.messages.pop();
+      narratorChatView.error = 'Could not reach Ganymede — try again in a moment.';
+    }
+  }
+  if(narratorChatView){
+    narratorChatView.sending = false;
+    render();
+  }
+}
+
+function narratorChatKeydown(ev){
+  if(ev.key === 'Enter' && !ev.shiftKey){
+    ev.preventDefault();
+    sendNarratorMessage();
+  }
+}
+
+function renderNarratorChat(){
+  const app = document.getElementById('app');
+  const v = narratorChatView;
+  const portrait = v.messages.length === 0
+    ? opponentImgFor(narratorSettings.largePortraitUrl || narratorSettings.portraitUrl, null, 200)
+    : opponentImgFor(narratorSettings.largePortraitUrl || narratorSettings.portraitUrl, null, 120);
+  const historyMarkup = v.messages.map(m => `
+    <div class="narrator-msg narrator-msg-${m.role === 'user' ? 'you' : 'ganymede'}">
+      <span class="narrator-msg-label">${m.role === 'user' ? 'You' : esc(narratorSettings.name)}</span>
+      <p>${esc(m.content)}</p>
+    </div>
+  `).join('');
+  const remainingLabel = v.remaining === null ? ''
+    : v.remaining === Infinity ? ''
+    : `<p class="hint">${v.remaining} question${v.remaining === 1 ? '' : 's'} left today</p>`;
+  app.innerHTML = `
+    <div class="card verdict-card"${bgAttr('guide')}>
+      <div class="art narrator-portrait-pop">${portrait}</div>
+      <div class="essence-label" style="display:block;margin-bottom:6px;">${esc(narratorSettings.name)}</div>
+      ${v.messages.length === 0 ? `<p class="challenge-text">What do you need to know?</p>` : `<div class="narrator-history">${historyMarkup}</div>`}
+      ${v.error ? `<p class="status err">${esc(v.error)}</p>` : ''}
+      ${remainingLabel}
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <input id="narratorChatInput" type="text" placeholder="Ask ${esc(narratorSettings.name)} something…" maxlength="300" style="flex:1;" onkeydown="narratorChatKeydown(event)" ${v.sending || v.remaining === 0 ? 'disabled' : ''} />
+        <button onclick="sendNarratorMessage()" ${v.sending || v.remaining === 0 ? 'disabled' : ''}>${v.sending ? '…' : 'Ask'}</button>
+      </div>
+      <button class="secondary" style="margin-top:14px;" onclick="backFromNarratorChat()">Back to the map</button>
     </div>
   `;
 }
@@ -2226,7 +2372,7 @@ async function confirmReleaseGuardian(){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null;
   shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
   render();
 }
@@ -2257,7 +2403,7 @@ async function doRestoreGuardian(retiredId){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null;
   shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
   profilePasswordOpen = false;
   await afterLogin();
@@ -3167,7 +3313,7 @@ function returnToMapHub(){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null;
   shopView = null;
   render();
 }
