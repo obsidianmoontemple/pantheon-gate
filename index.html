@@ -275,6 +275,24 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
   text-shadow:0 0 4px rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.6), 0 1px 1px rgba(255,255,255,0.8);
 }
 
+/* Small "something new" dot — direct feedback: "we need notifications
+   blips on the checkin promo and mail pages." Sits in the corner of
+   whichever .map-hotspot it's nested in (top bar's Check-in/Mail/Promo
+   icons — see hotspotBadgeFor()); pointer-events:none so it never steals
+   the click, same reasoning as .map-hotspot-node. Uses the ember/red tone
+   the site already reserves for "needs your attention" (.status.err)
+   rather than the gold used for the decorative glow nodes, so a blip
+   reads as distinct from ordinary map dressing. */
+.map-hotspot-badge{
+  position:absolute;top:2px;right:2px;
+  width:12px;height:12px;border-radius:50%;pointer-events:none;
+  background:var(--ember);
+  border:2px solid var(--ink);
+  box-shadow:0 0 6px 2px rgba(161,70,42,0.6);
+  animation:mapBadgePulse 1.8s ease-in-out infinite;
+}
+@keyframes mapBadgePulse{0%,100%{transform:scale(0.9);opacity:0.9;}50%{transform:scale(1.15);opacity:1;}}
+
 /* Generic "hub" screen shell — originated with Guardian Home, direct
    feedback: "I would actually like the art I provide to lay over the
    entirety of the page covering everything except the buttons." Same
@@ -1081,6 +1099,16 @@ async function afterLogin(){
   // Petition Hall and Redeem both filter on them (see renderPetitionPicker/
   // renderRedeem) and can be reached without ever opening the Shop first.
   loadShopCatalog().then(() => { if(petitionView || redeemView) render(); }).catch(e => console.error('shop catalog preload failed', e));
+  // Notification blips on the Map Hub's Check-in/Mail/Promo icons (see
+  // hotspotBadgeFor()) need mail/promo state loaded before the player ever
+  // opens either screen, not just once they do — loaded here in the
+  // background, same fire-and-forget pattern as the shop catalog line
+  // just above, and re-rendered only if still sitting on the Map Hub
+  // (body.map-screen) by the time it lands.
+  Promise.all([
+    loadMail().catch(e => console.error('mail badge preload failed', e)),
+    loadPromoEvents().catch(e => console.error('promo badge preload failed', e)),
+  ]).then(() => { if(document.body.classList.contains('map-screen')) render(); });
   render();
 
   // Stripe lands back here now (create-checkout's success_url/cancel_url
@@ -1568,10 +1596,36 @@ async function loadMapHotspots(){
 // below. The instant an admin sets real art for that screen, the labels
 // disappear and hotspots go back to fully invisible/art-only, same as
 // always.
+// Direct feedback: "we need notifications blips on the checkin promo and
+// mail pages" — a small red dot on the Map Hub's Check-in/Mail/Promo
+// hotspots when there's something new, so a player notices without having
+// to open each screen to check. Purely a hint (nothing is gated on it) and
+// purely derived from state already loaded elsewhere — no separate "seen"
+// flag to track, so the dot just disappears on its own once the
+// underlying thing is no longer true:
+//   - checkin: today's daily check-in (tend_guardian(), NOT the more
+//     frequent Bond-tending) hasn't been done yet — same condition
+//     renderCheckin() already uses for its own "Tap to check in" prompt.
+//   - mail: at least one active broadcast hasn't been claimed/marked read
+//     yet (mailBroadcasts/mailClaimedIds — loaded eagerly at login now,
+//     see afterLogin(), not just when Mail is actually opened, so the dot
+//     is there before the player ever visits the screen).
+//   - promo: at least one promo_events row is currently 'active' (the
+//     other possible status is 'ended' — see list_visible_promo_events()).
+//     No per-player "seen" concept exists for promos (they're
+//     auto-granted, nothing to claim), so the dot simply tracks "something
+//     is running right now" and clears when the promotion ends.
+function hotspotBadgeFor(id){
+  if(id === 'checkin') return !!guardian && guardian.last_tended_at !== todayStr();
+  if(id === 'mail') return mailBroadcasts.some(b => !mailClaimedIds.has(b.id));
+  if(id === 'promo') return promoEvents.some(e => e.status === 'active');
+  return false;
+}
+
 function hotspotButtonsMarkup(areas, arrayName, pageKey){
   const fallback = pageKey ? !siteBackgrounds[pageKey] : false;
   return areas.map((a, i) => `
-    <button class="map-hotspot${fallback ? ' map-hotspot-fallback' : ''}" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;" title="${esc(a.label)}" aria-label="${esc(a.label)}" onclick="${arrayName}[${i}].action()">${fallback ? esc(a.label) : (a.glow ? `<span class="map-hotspot-node" aria-hidden="true"></span><span class="map-hotspot-node-label" aria-hidden="true">${esc(a.label)}</span>` : '')}</button>
+    <button class="map-hotspot${fallback ? ' map-hotspot-fallback' : ''}" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;" title="${esc(a.label)}" aria-label="${esc(a.label)}" onclick="${arrayName}[${i}].action()">${fallback ? esc(a.label) : (a.glow ? `<span class="map-hotspot-node" aria-hidden="true"></span><span class="map-hotspot-node-label" aria-hidden="true">${esc(a.label)}</span>` : '')}${hotspotBadgeFor(a.id) ? '<span class="map-hotspot-badge" aria-hidden="true"></span>' : ''}</button>
   `).join('');
 }
 
