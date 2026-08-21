@@ -129,6 +129,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="dragons" onclick="showTab('dragons')">Big Baddies</button>
       <button class="tab-btn" data-tab="altars" onclick="showTab('altars')">Altars</button>
       <button class="tab-btn" data-tab="gauntlet" onclick="showTab('gauntlet')">Gauntlet</button>
+      <button class="tab-btn" data-tab="species" onclick="showTab('species')">Guardian Species</button>
       <button class="tab-btn" data-tab="moves" onclick="showTab('moves')">Moves</button>
       <button class="tab-btn" data-tab="blessings" onclick="showTab('blessings')">Deity Blessings</button>
       <button class="tab-btn" data-tab="guardianitems" onclick="showTab('guardianitems')">Guardian Items</button>
@@ -461,8 +462,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <p class="hint">Plantable seeds for the Circle Altar's 20-slot grid. Cost and yield are in Devotion (the Circle Shop / Altar currency, minted only by tithing Essence).</p>
         <div class="scroll-table" style="max-height:280px;">
           <table>
-            <thead><tr><th>Key</th><th>Name</th><th>Cost Devotion</th><th>Grow hrs</th><th>Yield min</th><th>Yield max</th><th>Find chance</th><th>Active</th></tr></thead>
-            <tbody id="altarSeedRows"><tr><td colspan="8">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Name</th><th>Cost Devotion</th><th>Grow hrs</th><th>Yield min</th><th>Yield max</th><th>Find chance</th><th>Image URL</th><th>Active</th></tr></thead>
+            <tbody id="altarSeedRows"><tr><td colspan="9">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -480,6 +481,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Find chance (0-1)</label><input type="number" step="0.01" min="0" max="1" id="newAltarSeedFindChance" style="max-width:110px;"></div>
           <button id="addAltarSeedBtn">Add seed</button>
         </div>
+        <div class="field" style="max-width:none;">
+          <label>Image URL (optional)</label>
+          <input type="text" id="newAltarSeedImageUrl" style="max-width:none;" placeholder="https://…">
+        </div>
         <div class="status" id="newAltarSeedStatus"></div>
       </div>
 
@@ -488,8 +493,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <p class="hint">source governs how a Circle gets one: buy (spend Devotion here), find (a harvest can drop it — no cost), unlock (a milestone — set Unlock rule to <code>members_10</code>, <code>members_20</code>, <code>members_30</code>, <code>devotion_1000</code>, or <code>devotion_2500</code>, the only rules the edge function currently checks), or dragon (won from a dragon fight — set this decoration as a dragon's "Deco key" over in Big Baddies).</p>
         <div class="scroll-table" style="max-height:320px;">
           <table>
-            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Source</th><th>Cost Devotion</th><th>Unlock rule</th><th>Active</th></tr></thead>
-            <tbody id="altarDecorationRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Source</th><th>Cost Devotion</th><th>Unlock rule</th><th>Image URL</th><th>Active</th></tr></thead>
+            <tbody id="altarDecorationRows"><tr><td colspan="8">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -516,6 +521,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <label>Description (shown to players)</label>
           <input type="text" id="newAltarDecoDescription" style="max-width:none;">
         </div>
+        <div class="field" style="max-width:none;">
+          <label>Image URL (optional)</label>
+          <input type="text" id="newAltarDecoImageUrl" style="max-width:none;" placeholder="https://…">
+        </div>
         <div class="status" id="newAltarDecoStatus"></div>
       </div>
 
@@ -524,8 +533,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <p class="hint">Plantable seeds for the solo Personal Altar's 12-slot grid. Cost and yield are in the guardian's own Essence.</p>
         <div class="scroll-table" style="max-height:280px;">
           <table>
-            <thead><tr><th>Key</th><th>Name</th><th>Cost Essence</th><th>Grow hrs</th><th>Yield min</th><th>Yield max</th><th>Find chance</th><th>Active</th></tr></thead>
-            <tbody id="personalAltarSeedRows"><tr><td colspan="8">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Name</th><th>Cost Essence</th><th>Grow hrs</th><th>Yield min</th><th>Yield max</th><th>Find chance</th><th>Image URL</th><th>Active</th></tr></thead>
+            <tbody id="personalAltarSeedRows"><tr><td colspan="9">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -543,6 +552,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Find chance (0-1)</label><input type="number" step="0.01" min="0" max="1" id="newPersonalAltarSeedFindChance" style="max-width:110px;"></div>
           <button id="addPersonalAltarSeedBtn">Add seed</button>
         </div>
+        <div class="field" style="max-width:none;">
+          <label>Image URL (optional)</label>
+          <input type="text" id="newPersonalAltarSeedImageUrl" style="max-width:none;" placeholder="https://…">
+        </div>
         <div class="status" id="newPersonalAltarSeedStatus"></div>
       </div>
 
@@ -551,8 +564,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <p class="hint">Same source vocabulary as the Circle Altar, minus dragon (dragon fights stay Circle-scoped). Unlock rule options the edge function checks: <code>marks_3</code>, <code>marks_6</code> (full Deity Marks), <code>streak_14</code> (check-in streak), <code>essence_500</code> (current Essence balance).</p>
         <div class="scroll-table" style="max-height:320px;">
           <table>
-            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Source</th><th>Cost Essence</th><th>Unlock rule</th><th>Active</th></tr></thead>
-            <tbody id="personalAltarDecorationRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Source</th><th>Cost Essence</th><th>Unlock rule</th><th>Image URL</th><th>Active</th></tr></thead>
+            <tbody id="personalAltarDecorationRows"><tr><td colspan="8">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -577,6 +590,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="field" style="max-width:none;">
           <label>Description (shown to players)</label>
           <input type="text" id="newPersonalAltarDecoDescription" style="max-width:none;">
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Image URL (optional)</label>
+          <input type="text" id="newPersonalAltarDecoImageUrl" style="max-width:none;" placeholder="https://…">
         </div>
         <div class="status" id="newPersonalAltarDecoStatus"></div>
       </div>
@@ -613,6 +630,43 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     </div>
 
     <!-- ============================== MOVES ============================== -->
+    <!-- ============================== GUARDIAN SPECIES (creation + per-stage art) ============================== -->
+    <div class="tab-content" id="tab-species">
+      <div class="card">
+        <h2>Guardian species — creation &amp; art</h2>
+        <p class="hint">The species list a player picks from when hatching a guardian (renamed from a hardcoded list to a real table). Each has five image URL fields, one per life stage — leave any of them blank to keep that stage's built-in art (only the five species below ship with bundled art; a new species you add here has no fallback, so give it art before making it active). Sort order controls left-to-right position on the hatch screen.</p>
+        <div class="scroll-table" style="max-height:460px;">
+          <table>
+            <thead><tr><th>Key</th><th>Label</th><th>Blurb</th><th>Sort</th><th>Egg URL</th><th>Hatchling URL</th><th>Fledged URL</th><th>Ascendant URL</th><th>Sovereign URL</th><th>Active</th></tr></thead>
+            <tbody id="speciesCatalogRows"><tr><td colspan="10">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveSpeciesCatalogBtn">Save changes</button>
+          <div class="status" id="speciesCatalogStatus"></div>
+        </div>
+        <h3>Add a new species</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newSpeciesKey" placeholder="e.g. moonhare" style="max-width:140px;"></div>
+          <div class="field"><label>Label</label><input type="text" id="newSpeciesLabel" placeholder="e.g. Moon Hare" style="max-width:150px;"></div>
+          <div class="field"><label>Sort order</label><input type="number" id="newSpeciesSort" value="0" style="max-width:90px;"></div>
+          <button id="addSpeciesBtn">Add species</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Blurb (shown on the hatch screen)</label>
+          <input type="text" id="newSpeciesBlurb" style="max-width:none;">
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Egg URL</label><input type="text" id="newSpeciesEggUrl" placeholder="https://…" style="max-width:170px;"></div>
+          <div class="field"><label>Hatchling URL</label><input type="text" id="newSpeciesHatchlingUrl" placeholder="https://…" style="max-width:170px;"></div>
+          <div class="field"><label>Fledged URL</label><input type="text" id="newSpeciesFledgedUrl" placeholder="https://…" style="max-width:170px;"></div>
+          <div class="field"><label>Ascendant URL</label><input type="text" id="newSpeciesAscendantUrl" placeholder="https://…" style="max-width:170px;"></div>
+          <div class="field"><label>Sovereign URL</label><input type="text" id="newSpeciesSovereignUrl" placeholder="https://…" style="max-width:170px;"></div>
+        </div>
+        <div class="status" id="newSpeciesStatus"></div>
+      </div>
+    </div>
+
     <div class="tab-content" id="tab-moves">
       <div class="card">
         <h2>Affinity moves (baseline)</h2>
@@ -1723,6 +1777,7 @@ async function handleSession(session){
   loadPersonalAltarDecorationCatalog();
   loadGauntletOpponents();
   loadAffinityMoves();
+  loadSpeciesCatalog();
   loadSpeciesMoves();
   loadDeityMoves();
   loadDeityBlessings();
@@ -1921,6 +1976,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addPersonalAltarDecoBtn').addEventListener('click', addPersonalAltarDecoration);
   document.getElementById('newPersonalAltarDecoSource').addEventListener('change', updateNewPersonalAltarDecoSourceFields);
   updateNewPersonalAltarDecoSourceFields();
+
+  document.getElementById('saveSpeciesCatalogBtn').addEventListener('click', saveSpeciesCatalog);
+  document.getElementById('addSpeciesBtn').addEventListener('click', addSpeciesCatalogEntry);
 
   document.getElementById('saveGauntletBtn').addEventListener('click', saveGauntletOpponents);
   document.getElementById('addGauntletBtn').addEventListener('click', addGauntletOpponent);
@@ -3672,8 +3730,9 @@ async function loadAltarSeedCatalog(){
     <td><input type="number" min="0" id="asdYieldMin_${esc(s.key)}" value="${s.yield_devotion_min}" style="max-width:90px;"></td>
     <td><input type="number" min="0" id="asdYieldMax_${esc(s.key)}" value="${s.yield_devotion_max}" style="max-width:90px;"></td>
     <td><input type="number" step="0.01" min="0" max="1" id="asdFind_${esc(s.key)}" value="${s.find_chance}" style="max-width:90px;"></td>
+    <td><input type="text" id="asdImg_${esc(s.key)}" value="${esc(s.image_url || '')}" style="max-width:170px;" placeholder="https://…"></td>
     <td><input type="checkbox" id="asdActive_${esc(s.key)}" ${s.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="8">No seeds yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="9">No seeds yet.</td></tr>';
 }
 
 async function saveAltarSeedCatalog(){
@@ -3689,6 +3748,7 @@ async function saveAltarSeedCatalog(){
       yield_devotion_min: parseInt(document.getElementById('asdYieldMin_' + key).value, 10),
       yield_devotion_max: parseInt(document.getElementById('asdYieldMax_' + key).value, 10),
       find_chance: parseFloat(document.getElementById('asdFind_' + key).value || '0'),
+      image_url: document.getElementById('asdImg_' + key).value.trim() || null,
       active: document.getElementById('asdActive_' + key).checked
     };
   });
@@ -3708,6 +3768,7 @@ async function addAltarSeed(){
   const yieldMin = parseInt(document.getElementById('newAltarSeedYieldMin').value, 10);
   const yieldMax = parseInt(document.getElementById('newAltarSeedYieldMax').value, 10);
   const findChance = parseFloat(document.getElementById('newAltarSeedFindChance').value || '0');
+  const imageUrl = document.getElementById('newAltarSeedImageUrl').value.trim();
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -3718,11 +3779,12 @@ async function addAltarSeed(){
   status.className = 'status'; status.textContent = 'Adding…';
   const { error } = await supabaseClient.from('altar_seed_catalog').insert({
     key, name, cost_devotion: cost, grow_hours: growHours,
-    yield_devotion_min: yieldMin, yield_devotion_max: yieldMax, find_chance: isNaN(findChance) ? 0 : findChance
+    yield_devotion_min: yieldMin, yield_devotion_max: yieldMax, find_chance: isNaN(findChance) ? 0 : findChance,
+    image_url: imageUrl || null
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
   status.className = 'status ok'; status.textContent = name + ' added to the Circle Altar seed catalog.';
-  ['newAltarSeedKey','newAltarSeedName','newAltarSeedCost','newAltarSeedGrowHours','newAltarSeedYieldMin','newAltarSeedYieldMax','newAltarSeedFindChance'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newAltarSeedKey','newAltarSeedName','newAltarSeedCost','newAltarSeedGrowHours','newAltarSeedYieldMin','newAltarSeedYieldMax','newAltarSeedFindChance','newAltarSeedImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadAltarSeedCatalog();
 }
 
@@ -3750,8 +3812,9 @@ async function loadAltarDecorationCatalog(){
     </td>
     <td><input type="number" min="1" id="addCost_${esc(d.key)}" value="${d.cost_devotion ?? ''}" style="max-width:90px;"></td>
     <td><input type="text" id="addRule_${esc(d.key)}" value="${esc(d.unlock_rule || '')}" style="max-width:130px;"></td>
+    <td><input type="text" id="addImg_${esc(d.key)}" value="${esc(d.image_url || '')}" style="max-width:170px;" placeholder="https://…"></td>
     <td><input type="checkbox" id="addActive_${esc(d.key)}" ${d.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="7">No decorations yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="8">No decorations yet.</td></tr>';
 }
 
 async function saveAltarDecorationCatalog(){
@@ -3767,6 +3830,7 @@ async function saveAltarDecorationCatalog(){
       source: document.getElementById('addSource_' + key).value,
       cost_devotion: costVal === '' ? null : parseInt(costVal, 10),
       unlock_rule: document.getElementById('addRule_' + key).value.trim() || null,
+      image_url: document.getElementById('addImg_' + key).value.trim() || null,
       active: document.getElementById('addActive_' + key).checked
     };
   });
@@ -3785,6 +3849,7 @@ async function addAltarDecoration(){
   const source = document.getElementById('newAltarDecoSource').value;
   const costVal = document.getElementById('newAltarDecoCost').value;
   const rule = document.getElementById('newAltarDecoRule').value.trim();
+  const imageUrl = document.getElementById('newAltarDecoImageUrl').value.trim();
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -3795,11 +3860,12 @@ async function addAltarDecoration(){
   const { error } = await supabaseClient.from('altar_decoration_catalog').insert({
     key, name, description, source,
     cost_devotion: source === 'buy' ? parseInt(costVal, 10) : null,
-    unlock_rule: source === 'unlock' ? rule : null
+    unlock_rule: source === 'unlock' ? rule : null,
+    image_url: imageUrl || null
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
   status.className = 'status ok'; status.textContent = name + ' added to the Circle Altar decoration catalog.';
-  ['newAltarDecoKey','newAltarDecoName','newAltarDecoCost','newAltarDecoRule','newAltarDecoDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newAltarDecoKey','newAltarDecoName','newAltarDecoCost','newAltarDecoRule','newAltarDecoDescription','newAltarDecoImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadAltarDecorationCatalog();
 }
 
@@ -3815,8 +3881,9 @@ async function loadPersonalAltarSeedCatalog(){
     <td><input type="number" min="0" id="pasdYieldMin_${esc(s.key)}" value="${s.yield_essence_min}" style="max-width:90px;"></td>
     <td><input type="number" min="0" id="pasdYieldMax_${esc(s.key)}" value="${s.yield_essence_max}" style="max-width:90px;"></td>
     <td><input type="number" step="0.01" min="0" max="1" id="pasdFind_${esc(s.key)}" value="${s.find_chance}" style="max-width:90px;"></td>
+    <td><input type="text" id="pasdImg_${esc(s.key)}" value="${esc(s.image_url || '')}" style="max-width:170px;" placeholder="https://…"></td>
     <td><input type="checkbox" id="pasdActive_${esc(s.key)}" ${s.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="8">No seeds yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="9">No seeds yet.</td></tr>';
 }
 
 async function savePersonalAltarSeedCatalog(){
@@ -3832,6 +3899,7 @@ async function savePersonalAltarSeedCatalog(){
       yield_essence_min: parseInt(document.getElementById('pasdYieldMin_' + key).value, 10),
       yield_essence_max: parseInt(document.getElementById('pasdYieldMax_' + key).value, 10),
       find_chance: parseFloat(document.getElementById('pasdFind_' + key).value || '0'),
+      image_url: document.getElementById('pasdImg_' + key).value.trim() || null,
       active: document.getElementById('pasdActive_' + key).checked
     };
   });
@@ -3851,6 +3919,7 @@ async function addPersonalAltarSeed(){
   const yieldMin = parseInt(document.getElementById('newPersonalAltarSeedYieldMin').value, 10);
   const yieldMax = parseInt(document.getElementById('newPersonalAltarSeedYieldMax').value, 10);
   const findChance = parseFloat(document.getElementById('newPersonalAltarSeedFindChance').value || '0');
+  const imageUrl = document.getElementById('newPersonalAltarSeedImageUrl').value.trim();
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -3861,11 +3930,12 @@ async function addPersonalAltarSeed(){
   status.className = 'status'; status.textContent = 'Adding…';
   const { error } = await supabaseClient.from('personal_altar_seed_catalog').insert({
     key, name, cost_essence: cost, grow_hours: growHours,
-    yield_essence_min: yieldMin, yield_essence_max: yieldMax, find_chance: isNaN(findChance) ? 0 : findChance
+    yield_essence_min: yieldMin, yield_essence_max: yieldMax, find_chance: isNaN(findChance) ? 0 : findChance,
+    image_url: imageUrl || null
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
   status.className = 'status ok'; status.textContent = name + ' added to the Personal Altar seed catalog.';
-  ['newPersonalAltarSeedKey','newPersonalAltarSeedName','newPersonalAltarSeedCost','newPersonalAltarSeedGrowHours','newPersonalAltarSeedYieldMin','newPersonalAltarSeedYieldMax','newPersonalAltarSeedFindChance'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newPersonalAltarSeedKey','newPersonalAltarSeedName','newPersonalAltarSeedCost','newPersonalAltarSeedGrowHours','newPersonalAltarSeedYieldMin','newPersonalAltarSeedYieldMax','newPersonalAltarSeedFindChance','newPersonalAltarSeedImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadPersonalAltarSeedCatalog();
 }
 
@@ -3892,8 +3962,9 @@ async function loadPersonalAltarDecorationCatalog(){
     </td>
     <td><input type="number" min="1" id="paddCost_${esc(d.key)}" value="${d.cost_essence ?? ''}" style="max-width:90px;"></td>
     <td><input type="text" id="paddRule_${esc(d.key)}" value="${esc(d.unlock_rule || '')}" style="max-width:130px;"></td>
+    <td><input type="text" id="paddImg_${esc(d.key)}" value="${esc(d.image_url || '')}" style="max-width:170px;" placeholder="https://…"></td>
     <td><input type="checkbox" id="paddActive_${esc(d.key)}" ${d.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="7">No decorations yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="8">No decorations yet.</td></tr>';
 }
 
 async function savePersonalAltarDecorationCatalog(){
@@ -3909,6 +3980,7 @@ async function savePersonalAltarDecorationCatalog(){
       source: document.getElementById('paddSource_' + key).value,
       cost_essence: costVal === '' ? null : parseInt(costVal, 10),
       unlock_rule: document.getElementById('paddRule_' + key).value.trim() || null,
+      image_url: document.getElementById('paddImg_' + key).value.trim() || null,
       active: document.getElementById('paddActive_' + key).checked
     };
   });
@@ -3927,6 +3999,7 @@ async function addPersonalAltarDecoration(){
   const source = document.getElementById('newPersonalAltarDecoSource').value;
   const costVal = document.getElementById('newPersonalAltarDecoCost').value;
   const rule = document.getElementById('newPersonalAltarDecoRule').value.trim();
+  const imageUrl = document.getElementById('newPersonalAltarDecoImageUrl').value.trim();
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -3937,11 +4010,12 @@ async function addPersonalAltarDecoration(){
   const { error } = await supabaseClient.from('personal_altar_decoration_catalog').insert({
     key, name, description, source,
     cost_essence: source === 'buy' ? parseInt(costVal, 10) : null,
-    unlock_rule: source === 'unlock' ? rule : null
+    unlock_rule: source === 'unlock' ? rule : null,
+    image_url: imageUrl || null
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
   status.className = 'status ok'; status.textContent = name + ' added to the Personal Altar decoration catalog.';
-  ['newPersonalAltarDecoKey','newPersonalAltarDecoName','newPersonalAltarDecoCost','newPersonalAltarDecoRule','newPersonalAltarDecoDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newPersonalAltarDecoKey','newPersonalAltarDecoName','newPersonalAltarDecoCost','newPersonalAltarDecoRule','newPersonalAltarDecoDescription','newPersonalAltarDecoImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadPersonalAltarDecorationCatalog();
 }
 
@@ -4080,6 +4154,79 @@ async function saveAffinityMoves(){
    ===================================================================== */
 
 const SPECIES_LIST = ['bat', 'griffin', 'icedragon', 'phoenix', 'earthdragon'];
+
+/* =====================================================================
+   GUARDIAN SPECIES — the hatch-screen species list + per-stage art,
+   previously a hardcoded array in index.html with hardcoded local image
+   files. Same bulk-save-plus-add-new pattern as dragon_catalog etc.
+   ===================================================================== */
+
+const SPECIES_STAGE_COLS = [
+  ['egg', 'egg_image_url'], ['hatchling', 'hatchling_image_url'], ['fledged', 'fledged_image_url'],
+  ['ascendant', 'ascendant_image_url'], ['sovereign', 'sovereign_image_url']
+];
+
+async function loadSpeciesCatalog(){
+  const { data, error } = await supabaseClient.from('species_catalog').select('*').order('sort_order', { ascending: true });
+  const rows = document.getElementById('speciesCatalogRows');
+  if(error){ rows.innerHTML = '<tr><td colspan="10">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  rows.innerHTML = (data || []).map(s => `<tr data-key="${esc(s.key)}">
+    <td class="dim">${esc(s.key)}</td>
+    <td><input type="text" id="spcLabel_${esc(s.key)}" value="${esc(s.label)}" style="max-width:130px;"></td>
+    <td><input type="text" id="spcBlurb_${esc(s.key)}" value="${esc(s.blurb || '')}" style="max-width:220px;"></td>
+    <td><input type="number" id="spcSort_${esc(s.key)}" value="${s.sort_order}" style="max-width:70px;"></td>
+    ${SPECIES_STAGE_COLS.map(([stage, col]) => `<td><input type="text" id="spc_${col}_${esc(s.key)}" value="${esc(s[col] || '')}" style="max-width:150px;" placeholder="https://…"></td>`).join('')}
+    <td><input type="checkbox" id="spcActive_${esc(s.key)}" ${s.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="10">No species yet — run the migration that seeds the original five.</td></tr>';
+}
+
+async function saveSpeciesCatalog(){
+  const status = document.getElementById('speciesCatalogStatus');
+  const trs = document.querySelectorAll('#speciesCatalogRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    const row = {
+      key,
+      label: document.getElementById('spcLabel_' + key).value.trim(),
+      blurb: document.getElementById('spcBlurb_' + key).value.trim(),
+      sort_order: parseInt(document.getElementById('spcSort_' + key).value, 10) || 0,
+      active: document.getElementById('spcActive_' + key).checked,
+      updated_at: new Date().toISOString()
+    };
+    SPECIES_STAGE_COLS.forEach(([stage, col]) => {
+      row[col] = document.getElementById('spc_' + col + '_' + key).value.trim() || null;
+    });
+    return row;
+  });
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('species_catalog').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Players see the new species/art next time they load the page.';
+  if(!error) loadSpeciesCatalog();
+}
+
+async function addSpeciesCatalogEntry(){
+  const status = document.getElementById('newSpeciesStatus');
+  const key = document.getElementById('newSpeciesKey').value.trim().toLowerCase();
+  const label = document.getElementById('newSpeciesLabel').value.trim();
+  const blurb = document.getElementById('newSpeciesBlurb').value.trim();
+  const sortOrder = parseInt(document.getElementById('newSpeciesSort').value, 10) || 0;
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!label){ status.className = 'status err'; status.textContent = 'Label is required.'; return; }
+
+  const row = { key, label, blurb, sort_order: sortOrder, active: true };
+  SPECIES_STAGE_COLS.forEach(([stage, col]) => {
+    row[col] = document.getElementById('newSpecies' + stage.charAt(0).toUpperCase() + stage.slice(1) + 'Url').value.trim() || null;
+  });
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('species_catalog').insert(row);
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+  status.className = 'status ok'; status.textContent = label + ' added — give it art on every stage above before players can see it clearly.';
+  ['newSpeciesKey','newSpeciesLabel','newSpeciesSort','newSpeciesBlurb','newSpeciesEggUrl','newSpeciesHatchlingUrl','newSpeciesFledgedUrl','newSpeciesAscendantUrl','newSpeciesSovereignUrl'].forEach(fid => { document.getElementById(fid).value = fid === 'newSpeciesSort' ? '0' : ''; });
+  loadSpeciesCatalog();
+}
 
 async function loadSpeciesMoves(){
   const { data, error } = await supabaseClient.from('species_moves').select('*').order('species', { ascending: true }).order('kind', { ascending: true });
