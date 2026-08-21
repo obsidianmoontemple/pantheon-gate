@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -134,6 +133,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="blessings" onclick="showTab('blessings')">Deity Blessings</button>
       <button class="tab-btn" data-tab="guardianitems" onclick="showTab('guardianitems')">Guardian Items</button>
       <button class="tab-btn" data-tab="giftablerewards" onclick="showTab('giftablerewards')">Giftable Rewards</button>
+      <button class="tab-btn" data-tab="rewardbundles" onclick="showTab('rewardbundles')">Reward Bundles</button>
       <button class="tab-btn" data-tab="expeditions" onclick="showTab('expeditions')">Expeditions</button>
       <button class="tab-btn" data-tab="arenastore" onclick="showTab('arenastore')">Arena Store</button>
       <button class="tab-btn" data-tab="campaign" onclick="showTab('campaign')">Campaign</button>
@@ -376,6 +376,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           </div>
           <div class="field"><label>Starts (optional)</label><input type="datetime-local" id="newPromoStarts" style="max-width:200px;"></div>
           <div class="field"><label>Ends (optional)</label><input type="datetime-local" id="newPromoEnds" style="max-width:200px;"></div>
+          <div class="field"><label>Image URL (optional)</label><input type="text" id="newPromoImageUrl" placeholder="https://…" style="max-width:280px;"></div>
           <button id="addPromoBtn">Create event</button>
         </div>
         <div class="field" style="max-width:none;">
@@ -407,6 +408,12 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="form-row">
           <div class="field"><label>Expeditions per guardian per day</label><input type="number" min="1" id="progExpeditionsPerDay" style="max-width:170px;"></div>
         </div>
+        <h3>Petition trial rewards</h3>
+        <p class="hint">On top of the stat/XP/blessing split a petition verdict already applies, optionally hand out a reward package — a FULL verdict can give something a PARTIAL one deliberately doesn't. Leave either blank for no extra reward.</p>
+        <div class="form-row">
+          <div class="field"><label>Reward on a FULL petition verdict</label><select id="progFullRewardKey" style="max-width:220px;"><option value="">None</option></select></div>
+          <div class="field"><label>Reward on a PARTIAL petition verdict</label><select id="progPartialRewardKey" style="max-width:220px;"><option value="">None</option></select></div>
+        </div>
         <div class="save-bar">
           <button id="saveProgressionBtn">Save changes</button>
           <div class="status" id="progressionStatus"></div>
@@ -424,9 +431,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <thead><tr>
               <th>Key</th><th>Name</th><th>Tier</th><th>Affinity</th><th>HP</th><th>Ward</th><th>Power</th>
               <th>Window (hrs)</th><th>Expiry penalty</th><th>Reward Devotion</th><th>Reward Essence pool</th>
-              <th>Reward rank Δ</th><th>Deco key</th><th>Deco chance</th><th>Active</th>
+              <th>Reward rank Δ</th><th>Deco key</th><th>Deco chance</th><th>Image URL</th><th>Active</th>
             </tr></thead>
-            <tbody id="dragonRows"><tr><td colspan="15">Loading…</td></tr></tbody>
+            <tbody id="dragonRows"><tr><td colspan="16">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -440,6 +447,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Tier (unique)</label><input type="number" min="1" id="newDragonTier" style="max-width:100px;"></div>
           <div class="field"><label>Affinity</label><select id="newDragonAffinity" style="max-width:140px;"></select></div>
           <div class="field"><label>HP pool</label><input type="number" min="1" id="newDragonHp" style="max-width:110px;"></div>
+          <div class="field"><label>Image URL (optional)</label><input type="text" id="newDragonImageUrl" placeholder="https://…" style="max-width:280px;"></div>
           <button id="addDragonBtn">Add dragon</button>
         </div>
         <div class="status" id="newDragonStatus"></div>
@@ -622,6 +630,21 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
 
       <div class="card">
+        <h2>Species moves (signature Power + Control, unconditional)</h2>
+        <p class="hint">Every familiar species's own Power + Control move, available from the moment it hatches — on top of (not instead of) the affinity/deity move system above. affinity here is thematic flavor for the elemental wheel, not a hard binding.</p>
+        <div class="scroll-table" style="max-height:340px;">
+          <table>
+            <thead><tr><th>Species</th><th>Kind</th><th>Name</th><th>Affinity</th><th>Power</th><th>Swiftness shave</th><th>Active</th></tr></thead>
+            <tbody id="speciesMoveRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveSpeciesMovesBtn">Save changes</button>
+          <div class="status" id="speciesMoveStatus"></div>
+        </div>
+      </div>
+
+      <div class="card">
         <h2>Deity signature moves (optional overrides)</h2>
         <p class="hint">Give a specific deity its own Power and/or Control move instead of sharing the affinity baseline above. Leave a name blank to fall back to the baseline for that slot — nothing needs filling in for every deity, only the ones you want to stand out. A move can also carry a real triggered effect on top of its damage: <code>lifesteal_pct</code> (heal this % of the hit's damage), <code>stun_pct</code> (this % chance to skip the target's next action), <code>crit_bonus_pct</code> (+this many points of crit chance on this hit), or <code>burn_flat</code> (this much ongoing damage/round added to the target for the rest of the fight). Any other effect key is recorded but does nothing in combat yet.</p>
         <input class="search-box" type="text" id="deityMoveSearch" placeholder="Search by name…">
@@ -665,9 +688,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr>
-              <th>Key</th><th>Name</th><th>Description</th><th>Type</th><th>Stat key</th><th>Stat amount</th><th>Consumable effect</th><th>Enchant effect key</th><th>Enchant effect amt</th><th>Shard cost</th><th>Active</th>
+              <th>Key</th><th>Name</th><th>Description</th><th>Type</th><th>Stat key</th><th>Stat amount</th><th>Consumable effect</th><th>Enchant effect key</th><th>Enchant effect amt</th><th>Shard cost</th><th>Image URL</th><th>Active</th>
             </tr></thead>
-            <tbody id="guardianItemRows"><tr><td colspan="11">Loading…</td></tr></tbody>
+            <tbody id="guardianItemRows"><tr><td colspan="12">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -703,6 +726,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field" id="newGuardianItemEffectField" style="display:none;"><label>Consumable effect key</label><input type="text" id="newGuardianItemEffect" placeholder="e.g. essence_surge" style="max-width:180px;"></div>
           <div class="field" id="newGuardianItemEnchantKeyField" style="display:none;"><label>Enchant effect key</label><input type="text" id="newGuardianItemEnchantKey" placeholder="e.g. crit_bonus_pct" style="max-width:180px;"></div>
           <div class="field" id="newGuardianItemEnchantAmountField" style="display:none;"><label>Enchant effect amount</label><input type="number" step="0.01" id="newGuardianItemEnchantAmount" style="max-width:130px;"></div>
+          <div class="field"><label>Image URL (optional)</label><input type="text" id="newGuardianItemImageUrl" placeholder="https://…" style="max-width:280px;"></div>
         </div>
         <div class="field" style="max-width:none;">
           <label>Description (shown to players)</label>
@@ -720,9 +744,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr>
-              <th>Key</th><th>Name</th><th>Description</th><th>Type</th><th>Currency</th><th>Amount</th><th>Scope type</th><th>Scope id</th><th>Guardian item</th><th>Artifact</th><th>Fragment #</th><th>Bonus msgs</th><th>Active</th>
+              <th>Key</th><th>Name</th><th>Description</th><th>Type</th><th>Currency</th><th>Amount</th><th>Scope type</th><th>Scope id</th><th>Guardian item</th><th>Artifact</th><th>Fragment #</th><th>Bonus msgs</th><th>Image URL</th><th>Active</th>
             </tr></thead>
-            <tbody id="giftableRewardRows"><tr><td colspan="13">Loading…</td></tr></tbody>
+            <tbody id="giftableRewardRows"><tr><td colspan="14">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -765,12 +789,64 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           </div>
           <div class="field" id="newRewardFragmentIndexField" style="display:none;"><label>Fragment # (blank = every fragment)</label><input type="number" min="1" id="newRewardFragmentIndex" style="max-width:170px;"></div>
           <div class="field" id="newRewardBonusMessagesField" style="display:none;"><label>Bonus messages amount</label><input type="number" min="1" id="newRewardBonusMessagesAmount" style="max-width:160px;"></div>
+          <div class="field"><label>Image URL (optional)</label><input type="text" id="newRewardImageUrl" placeholder="https://…" style="max-width:280px;"></div>
         </div>
         <div class="field" style="max-width:none;">
           <label>Description (shown to players)</label>
           <input type="text" id="newRewardDescription" style="max-width:none;">
         </div>
         <div class="status" id="newRewardStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== REWARD BUNDLES ============================== -->
+    <div class="tab-content" id="tab-rewardbundles">
+      <div class="card">
+        <h2>Reward bundles catalog</h2>
+        <p class="hint">A named, reusable group of giftable rewards — pick it once by name in Access &amp; Broadcasts, Pricing &amp; Store, or Check-ins &amp; Events, and every reward package inside it (with its own quantity) is granted in one shot via <code>grant_reward_bundle</code>. Add the individual reward packages below, in the "Bundle contents" card.</p>
+        <div class="scroll-table" style="max-height:300px;">
+          <table>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Active</th></tr></thead>
+            <tbody id="rewardBundleRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveRewardBundlesBtn">Save changes</button>
+          <div class="status" id="rewardBundleStatus"></div>
+        </div>
+        <h3>Create a new bundle</h3>
+        <div class="form-row">
+          <div class="field"><label>Bundle key (lowercase, no spaces)</label><input type="text" id="newBundleKey" placeholder="e.g. welcome_pack" style="max-width:180px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newBundleName" style="max-width:180px;"></div>
+          <div class="field"><label>Active</label><input type="checkbox" id="newBundleActive" checked style="width:auto;"></div>
+          <button id="addBundleBtn">Create bundle</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (shown to players)</label>
+          <input type="text" id="newBundleDescription" style="max-width:none;">
+        </div>
+        <div class="status" id="newBundleStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Bundle contents</h2>
+        <p class="hint">Pick a bundle above, then add reward packages (and how many times each is granted) to it. Add a reward package here first in Giftable Rewards if the one you want isn't listed.</p>
+        <div class="form-row">
+          <div class="field"><label>Bundle</label><select id="bundleContentsSelect" style="max-width:220px;"></select></div>
+        </div>
+        <div class="scroll-table" style="max-height:280px;">
+          <table>
+            <thead><tr><th>Reward package</th><th>Qty</th><th></th></tr></thead>
+            <tbody id="bundleItemRows"><tr><td colspan="3">Pick a bundle above.</td></tr></tbody>
+          </table>
+        </div>
+        <h3>Add a reward package to this bundle</h3>
+        <div class="form-row">
+          <div class="field"><label>Reward package</label><select id="newBundleItemRewardKey" style="max-width:220px;"></select></div>
+          <div class="field"><label>Qty</label><input type="number" min="1" value="1" id="newBundleItemQty" style="max-width:100px;"></div>
+          <button id="addBundleItemBtn">Add to bundle</button>
+        </div>
+        <div class="status" id="newBundleItemStatus"></div>
       </div>
     </div>
 
@@ -853,9 +929,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr>
-              <th>Key</th><th>Name</th><th>Description</th><th>Category</th><th>Effect key</th><th>Effect hours</th><th>Cost (Favor)</th><th>Active</th>
+              <th>Key</th><th>Name</th><th>Description</th><th>Category</th><th>Effect key</th><th>Effect hours</th><th>Cost (Favor)</th><th>Image URL</th><th>Active</th>
             </tr></thead>
-            <tbody id="arenaItemRows"><tr><td colspan="8">Loading…</td></tr></tbody>
+            <tbody id="arenaItemRows"><tr><td colspan="9">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -878,6 +954,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="form-row" id="newArenaItemEffectRow">
           <div class="field"><label>Effect key</label><input type="text" id="newArenaItemEffect" placeholder="e.g. challenge_shield" style="max-width:180px;"></div>
           <div class="field"><label>Effect hours</label><input type="number" min="1" id="newArenaItemEffectHours" style="max-width:110px;"></div>
+          <div class="field"><label>Image URL (optional)</label><input type="text" id="newArenaItemImageUrl" placeholder="https://…" style="max-width:280px;"></div>
         </div>
         <div class="field" style="max-width:none;">
           <label>Description (shown to players)</label>
@@ -919,9 +996,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="scroll-table" style="max-height:340px;">
           <table>
             <thead><tr>
-              <th>Key</th><th>Name</th><th>Description</th><th>Affinity</th><th>Vitality</th><th>Might</th><th>Ward</th><th>Swiftness</th><th>Cunning</th><th>Active</th>
+              <th>Key</th><th>Name</th><th>Description</th><th>Affinity</th><th>Vitality</th><th>Might</th><th>Ward</th><th>Swiftness</th><th>Cunning</th><th>Image URL</th><th>Active</th>
             </tr></thead>
-            <tbody id="campaignCreatureRows"><tr><td colspan="10">Loading…</td></tr></tbody>
+            <tbody id="campaignCreatureRows"><tr><td colspan="11">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -934,6 +1011,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Name</label><input type="text" id="newCampaignCreatureName" style="max-width:160px;"></div>
           <div class="field"><label>Affinity</label><select id="newCampaignCreatureAffinity" style="max-width:140px;"></select></div>
           <div class="field"><label>Vitality</label><input type="number" min="1" id="newCampaignCreatureVitality" style="max-width:100px;"></div>
+          <div class="field"><label>Image URL (optional)</label><input type="text" id="newCampaignCreatureImageUrl" placeholder="https://…" style="max-width:280px;"></div>
           <button id="addCampaignCreatureBtn">Add creature</button>
         </div>
         <div class="field" style="max-width:none;">
@@ -949,9 +1027,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="scroll-table" style="max-height:340px;">
           <table>
             <thead><tr>
-              <th>Key</th><th>Name</th><th>Description</th><th>Sort order</th><th>Required level</th><th>Active</th>
+              <th>Key</th><th>Name</th><th>Description</th><th>Sort order</th><th>Required level</th><th>Image URL</th><th>Active</th>
             </tr></thead>
-            <tbody id="campaignChapterRows"><tr><td colspan="6">Loading…</td></tr></tbody>
+            <tbody id="campaignChapterRows"><tr><td colspan="7">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -963,6 +1041,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newCampaignChapterKey" style="max-width:150px;"></div>
           <div class="field"><label>Name</label><input type="text" id="newCampaignChapterName" style="max-width:160px;"></div>
           <div class="field"><label>Required level</label><input type="number" min="1" id="newCampaignChapterLevel" value="1" style="max-width:120px;"></div>
+          <div class="field"><label>Image URL (optional)</label><input type="text" id="newCampaignChapterImageUrl" placeholder="https://…" style="max-width:280px;"></div>
           <button id="addCampaignChapterBtn">Add chapter</button>
         </div>
         <div class="field" style="max-width:none;">
@@ -978,9 +1057,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="scroll-table" style="max-height:380px;">
           <table>
             <thead><tr>
-              <th>Key</th><th>Chapter</th><th>Name</th><th>Description</th><th>Sort order</th><th>Type</th><th>Creature</th><th>Prompt</th><th>Choices (one per line)</th><th>Correct #</th><th>XP (first)</th><th>XP (replay)</th><th>Reward package</th><th>Active</th>
+              <th>Key</th><th>Chapter</th><th>Name</th><th>Description</th><th>Sort order</th><th>Type</th><th>Creature</th><th>Prompt</th><th>Choices (one per line)</th><th>Correct #</th><th>XP (first)</th><th>XP (replay)</th><th>Reward package</th><th>Image URL</th><th>Active</th>
             </tr></thead>
-            <tbody id="campaignEncounterRows"><tr><td colspan="14">Loading…</td></tr></tbody>
+            <tbody id="campaignEncounterRows"><tr><td colspan="15">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -1013,6 +1092,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="form-row">
           <div class="field"><label>XP (first clear)</label><input type="number" min="0" id="newCampaignEncounterXp" value="0" style="max-width:120px;"></div>
           <div class="field"><label>XP (replay)</label><input type="number" min="0" id="newCampaignEncounterReplayXp" value="0" style="max-width:120px;"></div>
+          <div class="field"><label>Image URL (optional)</label><input type="text" id="newCampaignEncounterImageUrl" placeholder="https://…" style="max-width:280px;"></div>
         </div>
         <div class="field" style="max-width:none;">
           <label>Description (shown to players)</label>
@@ -1102,6 +1182,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <label>God or pantheon id</label>
             <input type="text" id="newTierGrantId" placeholder="e.g. hera or norse" style="max-width:160px;">
           </div>
+          <div class="field">
+            <label>Image URL (optional)</label>
+            <input type="text" id="newTierImageUrl" placeholder="https://…" style="max-width:280px;">
+          </div>
           <button id="addTierBtn">Add tier</button>
         </div>
         <div class="field" style="max-width:none;">
@@ -1171,6 +1255,14 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <label>Also hand out a reward package? (optional)</label>
             <select id="newItemRewardKey" style="max-width:220px;"><option value="">Nothing — no reward package</option></select>
           </div>
+          <div class="field">
+            <label>Also hand out a reward bundle? (optional)</label>
+            <select id="newItemGiftBundleKey" style="max-width:220px;"><option value="">Nothing — no reward bundle</option></select>
+          </div>
+          <div class="field">
+            <label>Image URL (optional)</label>
+            <input type="text" id="newItemImageUrl" placeholder="https://…" style="max-width:280px;">
+          </div>
         </div>
         <div class="field" style="max-width:none;">
           <label>Description (shown to players)</label>
@@ -1214,6 +1306,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field">
             <label>Label (shown on the tab)</label>
             <input type="text" id="newPantheonLabel" placeholder="e.g. Slavic" style="max-width:200px;">
+          </div>
+          <div class="field">
+            <label>Image URL (optional)</label>
+            <input type="text" id="newPantheonImageUrl" placeholder="https://…" style="max-width:280px;">
           </div>
           <button id="addPantheonBtn">Add pantheon</button>
         </div>
@@ -1393,6 +1489,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <label>Also attach a reward package? (optional)</label>
             <select id="broadcastGiftRewardKey" style="max-width:220px;"><option value="">Nothing — no reward package</option></select>
           </div>
+          <div class="field">
+            <label>Also attach a reward bundle? (optional)</label>
+            <select id="broadcastGiftBundleKey" style="max-width:220px;"><option value="">Nothing — no reward bundle</option></select>
+          </div>
           <button id="postBroadcastBtn">Post announcement</button>
         </div>
         <div class="status" id="broadcastStatus"></div>
@@ -1462,6 +1562,7 @@ let pantheonSettings = {};
 let currencyDefs = {}; // key -> row, refreshed by loadCurrencyDefinitions()
 let storeItemsCache = []; // active store_items rows, refreshed by loadStoreItems() — also feeds the broadcast "give away a store item" picker
 let giftableRewardsCache = []; // active giftable_rewards rows, refreshed by loadGiftableRewards() — feeds the "Reward package" pickers in broadcasts, store items, and the check-in calendar
+let giftableRewardBundlesCache = []; // active+inactive giftable_reward_bundles rows, refreshed by loadRewardBundles() — feeds the "Reward bundle" pickers in broadcasts, store items, and the check-in calendar
 
 /* ---------------- tabs ---------------- */
 
@@ -1588,6 +1689,7 @@ async function handleSession(session){
   loadSubscriptionTiers();
   await loadCurrencyDefinitions();
   await loadGiftableRewards();
+  await loadRewardBundles();
   loadStoreItems();
   await loadCustomPantheonsIntoCatalog();
   loadPantheonSettings();
@@ -1612,6 +1714,7 @@ async function handleSession(session){
   loadPersonalAltarDecorationCatalog();
   loadGauntletOpponents();
   loadAffinityMoves();
+  loadSpeciesMoves();
   loadDeityMoves();
   loadDeityBlessings();
   loadCirclePatronBonuses();
@@ -1742,6 +1845,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addGauntletBtn').addEventListener('click', addGauntletOpponent);
 
   document.getElementById('saveAffinityMovesBtn').addEventListener('click', saveAffinityMoves);
+  document.getElementById('saveSpeciesMovesBtn').addEventListener('click', saveSpeciesMoves);
   document.getElementById('saveDeityMovesBtn').addEventListener('click', saveDeityMoves);
   document.getElementById('deityMoveSearch').addEventListener('input', filterDeityMoveRows);
 
@@ -1759,6 +1863,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addRewardBtn').addEventListener('click', addGiftableReward);
   document.getElementById('newRewardType').addEventListener('change', updateNewRewardTypeFields);
   updateNewRewardTypeFields();
+
+  document.getElementById('saveRewardBundlesBtn').addEventListener('click', saveRewardBundles);
+  document.getElementById('addBundleBtn').addEventListener('click', addRewardBundle);
+  document.getElementById('bundleContentsSelect').addEventListener('change', loadBundleItems);
+  document.getElementById('addBundleItemBtn').addEventListener('click', addBundleItem);
 
   document.getElementById('saveArtifactsBtn').addEventListener('click', saveExpeditionArtifacts);
   document.getElementById('addArtifactBtn').addEventListener('click', addExpeditionArtifact);
@@ -1873,6 +1982,7 @@ async function addCustomPantheon(){
   const id = document.getElementById('newPantheonId').value.trim().toLowerCase();
   const label = document.getElementById('newPantheonLabel').value.trim();
   const blurb = document.getElementById('newPantheonBlurb').value.trim();
+  const imageUrl = document.getElementById('newPantheonImageUrl').value.trim();
 
   if(!/^[a-z0-9]+$/.test(id)){
     status.className = 'status err';
@@ -1892,7 +2002,7 @@ async function addCustomPantheon(){
 
   status.className = 'status';
   status.textContent = 'Adding…';
-  const { error } = await supabaseClient.from('custom_pantheons').insert({ id, label, blurb });
+  const { error } = await supabaseClient.from('custom_pantheons').insert({ id, label, blurb, image_url: imageUrl || null });
   if(error){
     status.className = 'status err';
     status.textContent = 'Failed: ' + error.message;
@@ -1906,6 +2016,7 @@ async function addCustomPantheon(){
   document.getElementById('newPantheonId').value = '';
   document.getElementById('newPantheonLabel').value = '';
   document.getElementById('newPantheonBlurb').value = '';
+  document.getElementById('newPantheonImageUrl').value = '';
 
   populateNewGodPantheonOptions();
   loadPantheonSettings();
@@ -2146,6 +2257,7 @@ async function addTier(){
   const description = document.getElementById('newTierDescription').value.trim();
   const grantType = document.getElementById('newTierGrantType').value;
   const grantId = document.getElementById('newTierGrantId').value.trim();
+  const imageUrl = document.getElementById('newTierImageUrl').value.trim();
 
   if(!/^[a-z0-9]+$/.test(id)){
     status.className = 'status err';
@@ -2166,13 +2278,14 @@ async function addTier(){
   const { error } = await supabaseClient.from('subscription_tiers').insert({
     id, name, description, price_cents: price,
     grant_scope_type: grantType,
-    grant_scope_id: (grantType === 'pantheon' || grantType === 'deity') ? grantId : null
+    grant_scope_id: (grantType === 'pantheon' || grantType === 'deity') ? grantId : null,
+    image_url: imageUrl || null
   });
   if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
 
   status.className = 'status ok';
   status.textContent = name + ' tier is live.';
-  ['newTierId','newTierName','newTierPrice','newTierDescription','newTierGrantId'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newTierId','newTierName','newTierPrice','newTierDescription','newTierGrantId','newTierImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   document.getElementById('newTierGrantType').value = 'all';
   updateNewTierGrantField();
   loadSubscriptionTiers();
@@ -2201,7 +2314,7 @@ async function loadStoreItems(){
   const rows = document.getElementById('itemRows');
   const { data, error } = await supabaseClient
     .from('store_items')
-    .select('id, name, price_cents, gift_bonus_messages, gift_scope_type, gift_scope_id, gift_currency_key, gift_currency_amount, gift_reward_key, active')
+    .select('id, name, price_cents, gift_bonus_messages, gift_scope_type, gift_scope_id, gift_currency_key, gift_currency_amount, gift_reward_key, gift_bundle_key, active')
     .eq('active', true)
     .order('sort_order', { ascending: true });
   if(error){
@@ -2220,6 +2333,7 @@ async function loadStoreItems(){
     if(i.gift_scope_type) parts.push(grantLabel(i.gift_scope_type, i.gift_scope_id));
     if(i.gift_currency_key) parts.push('+' + i.gift_currency_amount + ' ' + (currencyDefs[i.gift_currency_key]?.name || i.gift_currency_key));
     if(i.gift_reward_key) parts.push(giftableRewardsCache.find(r => r.key === i.gift_reward_key)?.name || i.gift_reward_key);
+    if(i.gift_bundle_key) parts.push('Bundle: ' + (giftableRewardBundlesCache.find(b => b.bundle_key === i.gift_bundle_key)?.name || i.gift_bundle_key));
     return `<tr>
       <td>${esc(i.name)}</td>
       <td class="dim">${fmtUsd(i.price_cents)}</td>
@@ -2241,6 +2355,8 @@ async function addStoreItem(){
   const giftCurrency = document.getElementById('newItemGiftCurrency').value;
   const giftAmountVal = document.getElementById('newItemGiftAmount').value.trim();
   const giftRewardKey = document.getElementById('newItemRewardKey').value;
+  const giftBundleKey = document.getElementById('newItemGiftBundleKey').value;
+  const imageUrl = document.getElementById('newItemImageUrl').value.trim();
 
   if(!/^[a-z0-9]+$/.test(id)){
     status.className = 'status err';
@@ -2265,9 +2381,9 @@ async function addStoreItem(){
       return;
     }
   }
-  if(!bonus && !grantType && !giftCurrency && !giftRewardKey){
+  if(!bonus && !grantType && !giftCurrency && !giftRewardKey && !giftBundleKey){
     status.className = 'status err';
-    status.textContent = 'Give it bonus messages, an unlock, a currency grant, a reward package, or some combination — it needs to grant something.';
+    status.textContent = 'Give it bonus messages, an unlock, a currency grant, a reward package/bundle, or some combination — it needs to grant something.';
     return;
   }
 
@@ -2280,16 +2396,19 @@ async function addStoreItem(){
     gift_scope_id: (grantType === 'pantheon' || grantType === 'deity') ? grantId : null,
     gift_currency_key: giftCurrency || null,
     gift_currency_amount: giftAmount,
-    gift_reward_key: giftRewardKey || null
+    gift_reward_key: giftRewardKey || null,
+    gift_bundle_key: giftBundleKey || null,
+    image_url: imageUrl || null
   });
   if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
 
   status.className = 'status ok';
   status.textContent = name + ' is live in the shop.';
-  ['newItemId','newItemName','newItemPrice','newItemBonus','newItemDescription','newItemGrantId','newItemGiftAmount'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newItemId','newItemName','newItemPrice','newItemBonus','newItemDescription','newItemGrantId','newItemGiftAmount','newItemImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   document.getElementById('newItemGrantType').value = '';
   document.getElementById('newItemGiftCurrency').value = '';
   document.getElementById('newItemRewardKey').value = '';
+  document.getElementById('newItemGiftBundleKey').value = '';
   updateNewItemGrantField();
   updateNewItemGiftCurrencyField();
   loadStoreItems();
@@ -2408,6 +2527,7 @@ async function postBroadcast(){
   }
 
   const giftRewardKey = document.getElementById('broadcastGiftRewardKey').value || null;
+  const giftBundleKey = document.getElementById('broadcastGiftBundleKey').value || null;
 
   let giftBonus = null, giftScopeType = null, giftScopeId = null, giftStoreItemId = null;
   if(giftType === 'bonus_messages'){
@@ -2445,7 +2565,8 @@ async function postBroadcast(){
     p_gift_scope_id: giftScopeId,
     p_target_email: targetType === 'one' ? targetEmail : null,
     p_gift_store_item_id: giftStoreItemId,
-    p_gift_reward_key: giftRewardKey
+    p_gift_reward_key: giftRewardKey,
+    p_gift_bundle_key: giftBundleKey
   });
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) :
@@ -2456,6 +2577,7 @@ async function postBroadcast(){
     document.getElementById('broadcastGiftScopeId').value = '';
     document.getElementById('broadcastGiftType').value = 'none';
     document.getElementById('broadcastGiftRewardKey').value = '';
+    document.getElementById('broadcastGiftBundleKey').value = '';
     document.getElementById('broadcastTargetEmail').value = '';
     document.getElementById('broadcastTargetType').value = 'everyone';
     updateBroadcastGiftFields();
@@ -2468,7 +2590,7 @@ async function loadBroadcasts(){
   const rows = document.getElementById('broadcastRows');
   const { data, error } = await supabaseClient
     .from('broadcasts')
-    .select('id, message, gift_bonus_messages, gift_scope_type, gift_scope_id, gift_store_item_id, gift_reward_key, created_at, target_user_id, profiles!broadcasts_target_user_id_fkey(email)')
+    .select('id, message, gift_bonus_messages, gift_scope_type, gift_scope_id, gift_store_item_id, gift_reward_key, gift_bundle_key, created_at, target_user_id, profiles!broadcasts_target_user_id_fkey(email)')
     .eq('active', true)
     .order('created_at', { ascending: false })
     .limit(50);
@@ -2488,6 +2610,7 @@ async function loadBroadcasts(){
     if(b.gift_scope_type === 'all') giftParts.push('Full access');
     else if(b.gift_scope_type) giftParts.push(b.gift_scope_type + ': ' + (b.gift_scope_id || ''));
     if(b.gift_reward_key) giftParts.push(giftableRewardsCache.find(r => r.key === b.gift_reward_key)?.name || b.gift_reward_key);
+    if(b.gift_bundle_key) giftParts.push('Bundle: ' + (giftableRewardBundlesCache.find(bd => bd.bundle_key === b.gift_bundle_key)?.name || b.gift_bundle_key));
     const gift = giftParts.join(', ') || '—';
     const to = b.target_user_id ? (b.profiles?.email || '(unknown player)') : 'Everyone';
     return `<tr>
@@ -3093,6 +3216,11 @@ async function loadCheckinCalendar(){
       <option value="">No reward package</option>
       ${giftableRewardsCache.map(r => `<option value="${esc(r.key)}" ${r.key === d.reward_key ? 'selected' : ''}>${esc(r.name)}${r.active ? '' : ' (inactive)'}</option>`).join('')}
     </select>
+    <select id="ccBundle_${d.day_of_month}">
+      <option value="">No reward bundle</option>
+      ${giftableRewardBundlesCache.map(b => `<option value="${esc(b.bundle_key)}" ${b.bundle_key === d.gift_bundle_key ? 'selected' : ''}>${esc(b.name)}${b.active ? '' : ' (inactive)'}</option>`).join('')}
+    </select>
+    <input type="text" id="ccImg_${d.day_of_month}" value="${esc(d.image_url || '')}" placeholder="Image URL">
     <div class="active-row"><input type="checkbox" id="ccActive_${d.day_of_month}" ${d.active ? 'checked' : ''}><label for="ccActive_${d.day_of_month}">Active</label></div>
   </div>`).join('') || '<p class="hint">No calendar rows found — run the migration that seeds days 1-31.</p>';
 }
@@ -3108,6 +3236,8 @@ async function saveCheckinCalendar(){
       amount: parseInt(document.getElementById('ccAmt_' + day).value || '0', 10),
       label: document.getElementById('ccLabel_' + day).value.trim(),
       reward_key: document.getElementById('ccReward_' + day).value || null,
+      gift_bundle_key: document.getElementById('ccBundle_' + day).value || null,
+      image_url: document.getElementById('ccImg_' + day).value.trim() || null,
       active: document.getElementById('ccActive_' + day).checked,
       updated_at: new Date().toISOString()
     };
@@ -3215,6 +3345,7 @@ async function createPromoEvent(){
   const description = document.getElementById('newPromoDescription').value.trim();
   const startsRaw = document.getElementById('newPromoStarts').value;
   const endsRaw = document.getElementById('newPromoEnds').value;
+  const imageUrl = document.getElementById('newPromoImageUrl').value.trim();
 
   if(!/^[a-z0-9_-]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/dashes/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -3240,7 +3371,14 @@ async function createPromoEvent(){
   status.className = result.ok ? 'status ok' : 'status err';
   status.textContent = result.ok ? 'Created as a draft — flip it to active in the table above when ready.' : ('Failed: ' + result.error);
   if(result.ok){
-    ['newPromoKey','newPromoName','newPromoAmount','newPromoDescription','newPromoCircleName','newPromoStarts','newPromoEnds'].forEach(fid => { document.getElementById(fid).value = ''; });
+    // create-promo-event is an edge function call and doesn't know about
+    // image_url — set it with a direct follow-up update (admins have
+    // direct write access to promo_events via RLS, same as every other
+    // catalog table here).
+    if(imageUrl && result.event?.id){
+      await supabaseClient.from('promo_events').update({ image_url: imageUrl }).eq('id', result.event.id);
+    }
+    ['newPromoKey','newPromoName','newPromoAmount','newPromoDescription','newPromoCircleName','newPromoStarts','newPromoEnds','newPromoImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
     loadPromoEvents();
   }
 }
@@ -3263,6 +3401,25 @@ async function loadGuardianProgression(){
   document.getElementById('progPartialGain').value = data.partial_mark_stat_gain;
   document.getElementById('progAffinityMarks').value = data.dominant_affinity_marks;
   document.getElementById('progExpeditionsPerDay').value = data.expeditions_per_day;
+
+  populatePetitionRewardKeySelects(data.petition_full_reward_key, data.petition_partial_reward_key);
+}
+
+function populatePetitionRewardKeySelects(fullKey, partialKey){
+  // Optional/nullable — a blank "None" option plus every active reward
+  // package, same convention as populateRewardPackagePickers().
+  const opts = '<option value="">None</option>' +
+    giftableRewardsCache.filter(r => r.active).map(r => `<option value="${esc(r.key)}">${esc(r.name)}</option>`).join('');
+  const fullSel = document.getElementById('progFullRewardKey');
+  const partialSel = document.getElementById('progPartialRewardKey');
+  if(fullSel){
+    fullSel.innerHTML = opts;
+    if(fullKey && giftableRewardsCache.some(r => r.key === fullKey)) fullSel.value = fullKey;
+  }
+  if(partialSel){
+    partialSel.innerHTML = opts;
+    if(partialKey && giftableRewardsCache.some(r => r.key === partialKey)) partialSel.value = partialKey;
+  }
 }
 
 async function saveGuardianProgression(){
@@ -3288,12 +3445,16 @@ async function saveGuardianProgression(){
     return;
   }
 
+  const fullRewardKey = document.getElementById('progFullRewardKey').value || null;
+  const partialRewardKey = document.getElementById('progPartialRewardKey').value || null;
+
   status.className = 'status';
   status.textContent = 'Saving…';
   const { error } = await supabaseClient.from('guardian_progression_settings').update({
     hatchling_marks: hatchling, fledged_marks: fledged, ascendant_marks: ascendant, sovereign_marks: sovereign,
     full_mark_stat_gain: fullGain, partial_mark_stat_gain: partialGain, dominant_affinity_marks: affinityMarks,
     expeditions_per_day: expeditionsPerDay,
+    petition_full_reward_key: fullRewardKey, petition_partial_reward_key: partialRewardKey,
     updated_at: new Date().toISOString()
   }).eq('id', 1);
   status.className = error ? 'status err' : 'status ok';
@@ -3311,7 +3472,7 @@ async function loadDragonCatalog(){
   if(affSel && !affSel.options.length) affSel.innerHTML = AFFINITIES.map(a => `<option value="${a}">${a}</option>`).join('');
 
   if(error){
-    rows.innerHTML = '<tr><td colspan="15">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="16">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = (data || []).map(d => `<tr data-key="${esc(d.key)}">
@@ -3333,8 +3494,9 @@ async function loadDragonCatalog(){
     <td><input type="number" id="drgRewardRank_${esc(d.key)}" value="${d.reward_circle_rank_delta}"></td>
     <td><input type="text" id="drgDecoKey_${esc(d.key)}" value="${esc(d.reward_decoration_key || '')}"></td>
     <td><input type="number" step="0.01" min="0" max="1" id="drgDecoChance_${esc(d.key)}" value="${d.reward_decoration_chance}"></td>
+    <td><input type="text" id="drgImg_${esc(d.key)}" value="${esc(d.image_url || '')}" style="max-width:180px;"></td>
     <td><input type="checkbox" id="drgActive_${esc(d.key)}" ${d.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="15">No dragons yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="16">No dragons yet.</td></tr>';
 }
 
 async function saveDragonCatalog(){
@@ -3357,6 +3519,7 @@ async function saveDragonCatalog(){
       reward_circle_rank_delta: parseInt(document.getElementById('drgRewardRank_' + key).value, 10),
       reward_decoration_key: document.getElementById('drgDecoKey_' + key).value.trim() || null,
       reward_decoration_chance: parseFloat(document.getElementById('drgDecoChance_' + key).value || '0'),
+      image_url: document.getElementById('drgImg_' + key).value.trim() || null,
       active: document.getElementById('drgActive_' + key).checked
     };
   });
@@ -3375,6 +3538,7 @@ async function addDragon(){
   const tier = parseInt(document.getElementById('newDragonTier').value, 10);
   const affinity = document.getElementById('newDragonAffinity').value;
   const hpPool = parseInt(document.getElementById('newDragonHp').value, 10);
+  const imageUrl = document.getElementById('newDragonImageUrl').value.trim();
 
   if(!/^[a-z0-9]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -3383,12 +3547,12 @@ async function addDragon(){
 
   status.className = 'status';
   status.textContent = 'Adding…';
-  const { error } = await supabaseClient.from('dragon_catalog').insert({ key, name, tier, affinity, hp_pool: hpPool });
+  const { error } = await supabaseClient.from('dragon_catalog').insert({ key, name, tier, affinity, hp_pool: hpPool, image_url: imageUrl || null });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key or tier is already in use.' : ('Failed: ' + error.message); return; }
 
   status.className = 'status ok';
   status.textContent = name + ' added — tune its power, ward, window and rewards in the table above.';
-  ['newDragonKey','newDragonName','newDragonTier','newDragonHp'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newDragonKey','newDragonName','newDragonTier','newDragonHp','newDragonImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadDragonCatalog();
 }
 
@@ -3809,6 +3973,64 @@ async function saveAffinityMoves(){
   if(!error) loadAffinityMoves();
 }
 
+/* =====================================================================
+   SPECIES MOVES — every familiar species's own signature Power + Control
+   move, unconditional. Same fixed-table-of-rows pattern as Affinity moves
+   above: exactly 10 rows (5 species x power/control), primary key
+   (species, kind), edited and upserted in place.
+   ===================================================================== */
+
+const SPECIES_LIST = ['bat', 'griffin', 'icedragon', 'phoenix', 'earthdragon'];
+
+async function loadSpeciesMoves(){
+  const { data, error } = await supabaseClient.from('species_moves').select('*').order('species', { ascending: true }).order('kind', { ascending: true });
+  const rows = document.getElementById('speciesMoveRows');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="7">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = (data || []).map(m => `<tr data-species="${esc(m.species)}" data-kind="${esc(m.kind)}">
+    <td class="dim">${esc(m.species)}</td>
+    <td class="dim">${esc(m.kind)}</td>
+    <td><input type="text" id="smName_${esc(m.species)}_${esc(m.kind)}" value="${esc(m.name)}" style="max-width:180px;"></td>
+    <td>
+      <select id="smAff_${esc(m.species)}_${esc(m.kind)}">
+        ${AFFINITIES.map(a => `<option value="${a}" ${a === m.affinity ? 'selected' : ''}>${a}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="number" step="0.01" min="0.01" id="smPower_${esc(m.species)}_${esc(m.kind)}" value="${m.power}" style="max-width:90px;"></td>
+    <td>${m.kind === 'control' ? `<input type="number" min="1" id="smShave_${esc(m.species)}_${esc(m.kind)}" value="${m.swiftness_shave ?? ''}" style="max-width:90px;">` : '<span class="dim">—</span>'}</td>
+    <td><input type="checkbox" id="smActive_${esc(m.species)}_${esc(m.kind)}" ${m.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="7">No species moves found — run the migration that seeds them.</td></tr>';
+}
+
+async function saveSpeciesMoves(){
+  const status = document.getElementById('speciesMoveStatus');
+  const trs = document.querySelectorAll('#speciesMoveRows tr[data-species]');
+  const rows = Array.from(trs).map(tr => {
+    const species = tr.getAttribute('data-species');
+    const kind = tr.getAttribute('data-kind');
+    const id = species + '_' + kind;
+    const shaveEl = document.getElementById('smShave_' + id);
+    return {
+      species,
+      kind,
+      name: document.getElementById('smName_' + id).value.trim(),
+      affinity: document.getElementById('smAff_' + id).value,
+      power: parseFloat(document.getElementById('smPower_' + id).value),
+      swiftness_shave: shaveEl ? (shaveEl.value === '' ? null : parseInt(shaveEl.value, 10)) : null,
+      active: document.getElementById('smActive_' + id).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('species_moves').upsert(rows, { onConflict: 'species,kind' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies to the next fight, no redeploy needed.';
+  if(!error) loadSpeciesMoves();
+}
+
 let deityMoveOverrides = {}; // deity_id -> { power: row|null, control: row|null }
 
 async function loadDeityMoves(){
@@ -4037,7 +4259,7 @@ async function loadGuardianItemCatalog(){
   const { data, error } = await supabaseClient.from('guardian_item_catalog').select('*').order('key', { ascending: true });
   const rows = document.getElementById('guardianItemRows');
   if(error){
-    rows.innerHTML = '<tr><td colspan="11">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="12">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = (data || []).map(i => `<tr data-key="${esc(i.key)}">
@@ -4063,8 +4285,9 @@ async function loadGuardianItemCatalog(){
     <td><input type="text" id="giEnchantKey_${esc(i.key)}" value="${esc(i.effect_key || '')}" placeholder="e.g. ward_bonus_pct" style="max-width:150px;"></td>
     <td><input type="number" step="0.01" id="giEnchantAmount_${esc(i.key)}" value="${i.effect_amount ?? ''}" style="max-width:100px;"></td>
     <td><input type="number" min="1" id="giCost_${esc(i.key)}" value="${i.shard_cost}" style="max-width:90px;"></td>
+    <td><input type="text" id="giImg_${esc(i.key)}" value="${esc(i.image_url || '')}" style="max-width:180px;"></td>
     <td><input type="checkbox" id="giActive_${esc(i.key)}" ${i.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="11">No items yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="12">No items yet.</td></tr>';
 }
 
 async function saveGuardianItemCatalog(){
@@ -4085,6 +4308,7 @@ async function saveGuardianItemCatalog(){
       effect_key: document.getElementById('giEnchantKey_' + key).value.trim() || null,
       effect_amount: enchantAmountVal === '' ? null : parseFloat(enchantAmountVal),
       shard_cost: parseInt(document.getElementById('giCost_' + key).value, 10),
+      image_url: document.getElementById('giImg_' + key).value.trim() || null,
       active: document.getElementById('giActive_' + key).checked
     };
   });
@@ -4108,6 +4332,7 @@ async function addGuardianItem(){
   const effect = document.getElementById('newGuardianItemEffect').value.trim();
   const enchantKey = document.getElementById('newGuardianItemEnchantKey').value.trim();
   const enchantAmountVal = document.getElementById('newGuardianItemEnchantAmount').value;
+  const imageUrl = document.getElementById('newGuardianItemImageUrl').value.trim();
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -4130,13 +4355,14 @@ async function addGuardianItem(){
     stat_amount: itemType === 'stat_boost' ? parseInt(statAmountVal, 10) : null,
     consumable_effect: itemType === 'consumable' ? effect : null,
     effect_key: itemType === 'enchantment' ? enchantKey : null,
-    effect_amount: itemType === 'enchantment' ? (enchantAmountVal === '' ? null : parseFloat(enchantAmountVal)) : null
+    effect_amount: itemType === 'enchantment' ? (enchantAmountVal === '' ? null : parseFloat(enchantAmountVal)) : null,
+    image_url: imageUrl || null
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
 
   status.className = 'status ok';
   status.textContent = name + ' added to the crafting catalog.' + (itemType === 'consumable' ? ' Remember: this only records the effect key — real game logic for it is separate wiring.' : '') + (itemType === 'enchantment' && !['crit_bonus_pct','lifesteal_pct','ward_bonus_pct','essence_bonus_pct'].includes(enchantKey) ? ' Note: that effect key isn\'t one of the wired ones — it will be owned but inert until code catches up.' : '');
-  ['newGuardianItemKey','newGuardianItemName','newGuardianItemCost','newGuardianItemStatAmount','newGuardianItemEffect','newGuardianItemEnchantKey','newGuardianItemEnchantAmount','newGuardianItemDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newGuardianItemKey','newGuardianItemName','newGuardianItemCost','newGuardianItemStatAmount','newGuardianItemEffect','newGuardianItemEnchantKey','newGuardianItemEnchantAmount','newGuardianItemDescription','newGuardianItemImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   updateNewGuardianItemTypeFields();
   loadGuardianItemCatalog();
 }
@@ -4186,7 +4412,7 @@ async function loadGiftableRewards(){
 
   const rows = document.getElementById('giftableRewardRows');
   if(error){
-    rows.innerHTML = '<tr><td colspan="13">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="14">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   // Keep the full list (active and inactive) so a day/broadcast/item that
@@ -4194,6 +4420,7 @@ async function loadGiftableRewards(){
   // selection on save, instead of silently reverting to blank.
   giftableRewardsCache = data || [];
   populateRewardPackagePickers();
+  populateNewBundleItemRewardSelect();
 
   const personalCurrencies = Object.values(currencyDefs).filter(c => c.scope === 'personal');
   document.getElementById('newRewardCurrencyKey').innerHTML =
@@ -4246,8 +4473,9 @@ async function loadGiftableRewards(){
     </td>
     <td><input type="number" min="1" id="grFragment_${esc(r.key)}" value="${r.fragment_index ?? ''}" style="max-width:80px;"></td>
     <td><input type="number" min="1" id="grBonusMsgs_${esc(r.key)}" value="${r.bonus_messages_amount ?? ''}" style="max-width:90px;"></td>
+    <td><input type="text" id="grImg_${esc(r.key)}" value="${esc(r.image_url || '')}" style="max-width:180px;"></td>
     <td><input type="checkbox" id="grActive_${esc(r.key)}" ${r.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="13">No reward packages yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="14">No reward packages yet.</td></tr>';
 }
 
 async function saveGiftableRewardCatalog(){
@@ -4271,6 +4499,7 @@ async function saveGiftableRewardCatalog(){
       artifact_key: document.getElementById('grArtifact_' + key).value || null,
       fragment_index: fragmentVal === '' ? null : parseInt(fragmentVal, 10),
       bonus_messages_amount: bonusVal === '' ? null : parseInt(bonusVal, 10),
+      image_url: document.getElementById('grImg_' + key).value.trim() || null,
       active: document.getElementById('grActive_' + key).checked
     };
   });
@@ -4288,11 +4517,12 @@ async function addGiftableReward(){
   const name = document.getElementById('newRewardName').value.trim();
   const description = document.getElementById('newRewardDescription').value.trim();
   const rewardType = document.getElementById('newRewardType').value;
+  const imageUrl = document.getElementById('newRewardImageUrl').value.trim();
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
 
-  const payload = { key, name, description, reward_type: rewardType, active: true };
+  const payload = { key, name, description, reward_type: rewardType, image_url: imageUrl || null, active: true };
 
   if(rewardType === 'currency'){
     const currencyKey = document.getElementById('newRewardCurrencyKey').value;
@@ -4331,9 +4561,166 @@ async function addGiftableReward(){
 
   status.className = 'status ok';
   status.textContent = name + ' added — pick it by name in Access & Broadcasts, Pricing & Store, or Check-ins & Events.';
-  ['newRewardKey','newRewardName','newRewardCurrencyAmount','newRewardScopeId','newRewardFragmentIndex','newRewardBonusMessagesAmount','newRewardDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newRewardKey','newRewardName','newRewardCurrencyAmount','newRewardScopeId','newRewardFragmentIndex','newRewardBonusMessagesAmount','newRewardDescription','newRewardImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   updateNewRewardTypeFields();
   loadGiftableRewards();
+}
+
+/* =====================================================================
+   REWARD BUNDLES — a named group of giftable rewards (with quantities),
+   granted in one shot by grant_reward_bundle(). Pluggable into broadcasts,
+   store items, and the check-in calendar the same way a single
+   giftable_rewards key already is.
+   ===================================================================== */
+
+function populateRewardBundlePickers(){
+  // Same convention as populateRewardPackagePickers(): pickers used to
+  // attach a NEW gift only offer active bundles — picking an inactive one
+  // would silently do nothing when claimed.
+  const opts = '<option value="">Nothing — no reward bundle</option>' +
+    giftableRewardBundlesCache.filter(b => b.active).map(b => `<option value="${esc(b.bundle_key)}">${esc(b.name)}</option>`).join('');
+  ['broadcastGiftBundleKey', 'newItemGiftBundleKey'].forEach(id => {
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    const current = sel.value;
+    sel.innerHTML = opts;
+    if(current && giftableRewardBundlesCache.some(b => b.bundle_key === current)) sel.value = current;
+  });
+}
+
+function populateBundleContentsSelect(){
+  const sel = document.getElementById('bundleContentsSelect');
+  if(!sel) return;
+  const current = sel.value;
+  sel.innerHTML = giftableRewardBundlesCache.map(b => `<option value="${esc(b.bundle_key)}">${esc(b.name)}${b.active ? '' : ' (inactive)'}</option>`).join('') || '<option value="">No bundles yet — create one above</option>';
+  if(current && giftableRewardBundlesCache.some(b => b.bundle_key === current)) sel.value = current;
+}
+
+function populateNewBundleItemRewardSelect(){
+  const sel = document.getElementById('newBundleItemRewardKey');
+  if(!sel) return;
+  sel.innerHTML = giftableRewardsCache.filter(r => r.active).map(r => `<option value="${esc(r.key)}">${esc(r.name)}</option>`).join('') || '<option value="">No reward packages yet — add one in Giftable Rewards</option>';
+}
+
+async function loadRewardBundles(){
+  const { data, error } = await supabaseClient.from('giftable_reward_bundles').select('*').order('bundle_key', { ascending: true });
+  const rows = document.getElementById('rewardBundleRows');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  giftableRewardBundlesCache = data || [];
+  rows.innerHTML = giftableRewardBundlesCache.map(b => `<tr data-key="${esc(b.bundle_key)}">
+    <td class="dim">${esc(b.bundle_key)}</td>
+    <td><input type="text" id="rbName_${esc(b.bundle_key)}" value="${esc(b.name)}" style="max-width:180px;"></td>
+    <td><input type="text" id="rbDesc_${esc(b.bundle_key)}" value="${esc(b.description || '')}" style="min-width:200px;"></td>
+    <td><input type="checkbox" id="rbActive_${esc(b.bundle_key)}" ${b.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="4">No bundles yet.</td></tr>';
+
+  populateRewardBundlePickers();
+  populateBundleContentsSelect();
+  loadBundleItems();
+}
+
+async function saveRewardBundles(){
+  const status = document.getElementById('rewardBundleStatus');
+  const trs = document.querySelectorAll('#rewardBundleRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    return {
+      bundle_key: key,
+      name: document.getElementById('rbName_' + key).value.trim(),
+      description: document.getElementById('rbDesc_' + key).value.trim(),
+      active: document.getElementById('rbActive_' + key).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('giftable_reward_bundles').upsert(rows, { onConflict: 'bundle_key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadRewardBundles();
+}
+
+async function addRewardBundle(){
+  const status = document.getElementById('newBundleStatus');
+  const bundleKey = document.getElementById('newBundleKey').value.trim().toLowerCase();
+  const name = document.getElementById('newBundleName').value.trim();
+  const description = document.getElementById('newBundleDescription').value.trim();
+  const active = document.getElementById('newBundleActive').checked;
+
+  if(!/^[a-z0-9_]+$/.test(bundleKey)){ status.className = 'status err'; status.textContent = 'Bundle key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Creating…';
+  const { error } = await supabaseClient.from('giftable_reward_bundles').insert({ bundle_key: bundleKey, name, description, active });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That bundle key is already in use.' : ('Failed: ' + error.message); return; }
+
+  status.className = 'status ok';
+  status.textContent = name + ' created — add reward packages to it below in Bundle contents.';
+  ['newBundleKey','newBundleName','newBundleDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newBundleActive').checked = true;
+  loadRewardBundles();
+}
+
+async function loadBundleItems(){
+  const bundleKey = document.getElementById('bundleContentsSelect').value;
+  const rows = document.getElementById('bundleItemRows');
+  if(!bundleKey){
+    rows.innerHTML = '<tr><td colspan="3">Create a bundle above first.</td></tr>';
+    return;
+  }
+  const { data, error } = await supabaseClient.from('giftable_reward_bundle_items').select('*').eq('bundle_key', bundleKey).order('reward_key', { ascending: true });
+  if(error){
+    rows.innerHTML = '<tr><td colspan="3">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  if(!data.length){
+    rows.innerHTML = '<tr><td colspan="3">Nothing in this bundle yet — add a reward package below.</td></tr>';
+    return;
+  }
+  rows.innerHTML = data.map(it => {
+    const reward = giftableRewardsCache.find(r => r.key === it.reward_key);
+    const label = reward ? reward.name : it.reward_key;
+    return `<tr>
+      <td>${esc(label)}${reward && !reward.active ? ' <span class="dim">(inactive)</span>' : ''}</td>
+      <td class="dim">${it.qty}</td>
+      <td><button class="small danger" onclick="removeBundleItem('${esc(bundleKey)}','${esc(it.reward_key)}')">Remove</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function addBundleItem(){
+  const status = document.getElementById('newBundleItemStatus');
+  const bundleKey = document.getElementById('bundleContentsSelect').value;
+  const rewardKey = document.getElementById('newBundleItemRewardKey').value;
+  const qty = parseInt(document.getElementById('newBundleItemQty').value, 10);
+
+  if(!bundleKey){ status.className = 'status err'; status.textContent = 'Create a bundle above first.'; return; }
+  if(!rewardKey){ status.className = 'status err'; status.textContent = 'Pick a reward package, or add one first in Giftable Rewards.'; return; }
+  if(isNaN(qty) || qty < 1){ status.className = 'status err'; status.textContent = 'Enter a qty of 1 or more.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('giftable_reward_bundle_items').upsert(
+    { bundle_key: bundleKey, reward_key: rewardKey, qty },
+    { onConflict: 'bundle_key,reward_key' }
+  );
+  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+
+  status.className = 'status ok';
+  status.textContent = 'Added to the bundle.';
+  document.getElementById('newBundleItemQty').value = '1';
+  loadBundleItems();
+}
+
+async function removeBundleItem(bundleKey, rewardKey){
+  if(!confirm('Remove this reward package from the bundle?')) return;
+  const { error } = await supabaseClient.from('giftable_reward_bundle_items').delete().eq('bundle_key', bundleKey).eq('reward_key', rewardKey);
+  if(error){ alert('Failed: ' + error.message); return; }
+  loadBundleItems();
 }
 
 /* =====================================================================
@@ -4519,7 +4906,7 @@ async function loadArenaShopCatalog(){
   const { data, error } = await supabaseClient.from('arena_shop_items').select('*').order('key', { ascending: true });
   const rows = document.getElementById('arenaItemRows');
   if(error){
-    rows.innerHTML = '<tr><td colspan="8">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="9">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = (data || []).map(i => `<tr data-key="${esc(i.key)}">
@@ -4535,8 +4922,9 @@ async function loadArenaShopCatalog(){
     <td><input type="text" id="aiEffect_${esc(i.key)}" value="${esc(i.effect_key || '')}" style="max-width:150px;"></td>
     <td><input type="number" min="1" id="aiEffectHours_${esc(i.key)}" value="${i.effect_hours ?? ''}" style="max-width:90px;"></td>
     <td><input type="number" min="1" id="aiCost_${esc(i.key)}" value="${i.cost_favor}" style="max-width:90px;"></td>
+    <td><input type="text" id="aiImg_${esc(i.key)}" value="${esc(i.image_url || '')}" style="max-width:180px;"></td>
     <td><input type="checkbox" id="aiActive_${esc(i.key)}" ${i.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="8">No items yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="9">No items yet.</td></tr>';
 }
 
 async function saveArenaShopCatalog(){
@@ -4553,6 +4941,7 @@ async function saveArenaShopCatalog(){
       effect_key: document.getElementById('aiEffect_' + key).value.trim() || null,
       effect_hours: hoursVal === '' ? null : parseInt(hoursVal, 10),
       cost_favor: parseInt(document.getElementById('aiCost_' + key).value, 10),
+      image_url: document.getElementById('aiImg_' + key).value.trim() || null,
       active: document.getElementById('aiActive_' + key).checked
     };
   });
@@ -4573,6 +4962,7 @@ async function addArenaShopItem(){
   const cost = parseInt(document.getElementById('newArenaItemCost').value, 10);
   const effect = document.getElementById('newArenaItemEffect').value.trim();
   const hoursVal = document.getElementById('newArenaItemEffectHours').value.trim();
+  const imageUrl = document.getElementById('newArenaItemImageUrl').value.trim();
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -4590,13 +4980,14 @@ async function addArenaShopItem(){
   const { error } = await supabaseClient.from('arena_shop_items').insert({
     key, name, description, category, cost_favor: cost,
     effect_key: category === 'utility' ? effect : (effect || null),
-    effect_hours: effectHours
+    effect_hours: effectHours,
+    image_url: imageUrl || null
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
 
   status.className = 'status ok';
   status.textContent = name + ' added to the Arena Store.' + (effect && effect !== 'challenge_shield' ? ' Remember: only challenge_shield is wired to real game logic — this effect key will be honestly recorded but non-functional until code catches up.' : '');
-  ['newArenaItemKey','newArenaItemName','newArenaItemCost','newArenaItemEffect','newArenaItemEffectHours','newArenaItemDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newArenaItemKey','newArenaItemName','newArenaItemCost','newArenaItemEffect','newArenaItemEffectHours','newArenaItemDescription','newArenaItemImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadArenaShopCatalog();
 }
 
@@ -4692,7 +5083,7 @@ async function loadCampaignCreatures(){
   if(affSel && !affSel.options.length) affSel.innerHTML = AFFINITIES.map(a => `<option value="${a}">${a}</option>`).join('');
 
   if(error){
-    rows.innerHTML = '<tr><td colspan="10">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="11">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   campaignCreaturesCache = data || [];
@@ -4710,8 +5101,9 @@ async function loadCampaignCreatures(){
     <td><input type="number" min="0" id="ccrWard_${esc(c.key)}" value="${c.ward}" style="max-width:80px;"></td>
     <td><input type="number" min="1" id="ccrSwiftness_${esc(c.key)}" value="${c.swiftness}" style="max-width:80px;"></td>
     <td><input type="number" min="0" id="ccrCunning_${esc(c.key)}" value="${c.cunning}" style="max-width:80px;"></td>
+    <td><input type="text" id="ccrImg_${esc(c.key)}" value="${esc(c.image_url || '')}" style="max-width:180px;"></td>
     <td><input type="checkbox" id="ccrActive_${esc(c.key)}" ${c.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="10">No creatures yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="11">No creatures yet.</td></tr>';
 
   // The Encounters tab's Creature dropdown needs this same list.
   populateCampaignEncounterCreatureOptions();
@@ -4732,6 +5124,7 @@ async function saveCampaignCreatures(){
       ward: parseInt(document.getElementById('ccrWard_' + key).value, 10),
       swiftness: parseInt(document.getElementById('ccrSwiftness_' + key).value, 10),
       cunning: parseInt(document.getElementById('ccrCunning_' + key).value, 10),
+      image_url: document.getElementById('ccrImg_' + key).value.trim() || null,
       active: document.getElementById('ccrActive_' + key).checked
     };
   });
@@ -4750,6 +5143,7 @@ async function addCampaignCreature(){
   const description = document.getElementById('newCampaignCreatureDescription').value.trim();
   const affinity = document.getElementById('newCampaignCreatureAffinity').value;
   const vitality = parseInt(document.getElementById('newCampaignCreatureVitality').value, 10);
+  const imageUrl = document.getElementById('newCampaignCreatureImageUrl').value.trim();
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -4759,13 +5153,14 @@ async function addCampaignCreature(){
   status.textContent = 'Adding…';
   const { error } = await supabaseClient.from('campaign_creatures').insert({
     key, name, description, affinity, vitality,
-    might: 10, ward: 10, swiftness: 10, cunning: 10
+    might: 10, ward: 10, swiftness: 10, cunning: 10,
+    image_url: imageUrl || null
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
 
   status.className = 'status ok';
   status.textContent = name + ' added — tune might/ward/swiftness/cunning in the table above (seeded at 10 each).';
-  ['newCampaignCreatureKey','newCampaignCreatureName','newCampaignCreatureVitality','newCampaignCreatureDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newCampaignCreatureKey','newCampaignCreatureName','newCampaignCreatureVitality','newCampaignCreatureDescription','newCampaignCreatureImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadCampaignCreatures();
 }
 
@@ -4775,7 +5170,7 @@ async function loadCampaignChapters(){
   const { data, error } = await supabaseClient.from('campaign_chapters').select('*').order('sort_order', { ascending: true });
   const rows = document.getElementById('campaignChapterRows');
   if(error){
-    rows.innerHTML = '<tr><td colspan="6">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="7">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   campaignChaptersCache = data || [];
@@ -4785,8 +5180,9 @@ async function loadCampaignChapters(){
     <td><input type="text" id="chDesc_${esc(c.key)}" value="${esc(c.description || '')}" style="min-width:200px;"></td>
     <td><input type="number" id="chSort_${esc(c.key)}" value="${c.sort_order}" style="max-width:80px;"></td>
     <td><input type="number" min="1" id="chLevel_${esc(c.key)}" value="${c.required_level}" style="max-width:100px;"></td>
+    <td><input type="text" id="chImg_${esc(c.key)}" value="${esc(c.image_url || '')}" style="max-width:180px;"></td>
     <td><input type="checkbox" id="chActive_${esc(c.key)}" ${c.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="6">No chapters yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="7">No chapters yet.</td></tr>';
 
   // The Encounters tab's Chapter dropdown needs this same list.
   populateCampaignEncounterChapterOptions();
@@ -4803,6 +5199,7 @@ async function saveCampaignChapters(){
       description: document.getElementById('chDesc_' + key).value.trim(),
       sort_order: parseInt(document.getElementById('chSort_' + key).value, 10) || 0,
       required_level: parseInt(document.getElementById('chLevel_' + key).value, 10),
+      image_url: document.getElementById('chImg_' + key).value.trim() || null,
       active: document.getElementById('chActive_' + key).checked
     };
   });
@@ -4820,6 +5217,7 @@ async function addCampaignChapter(){
   const name = document.getElementById('newCampaignChapterName').value.trim();
   const description = document.getElementById('newCampaignChapterDescription').value.trim();
   const requiredLevel = parseInt(document.getElementById('newCampaignChapterLevel').value, 10);
+  const imageUrl = document.getElementById('newCampaignChapterImageUrl').value.trim();
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -4829,12 +5227,12 @@ async function addCampaignChapter(){
   status.textContent = 'Adding…';
   // Ships inactive by default, same "flip it on when it's ready" convention
   // as every other freshly-authored catalog row in this project.
-  const { error } = await supabaseClient.from('campaign_chapters').insert({ key, name, description, required_level: requiredLevel, active: false });
+  const { error } = await supabaseClient.from('campaign_chapters').insert({ key, name, description, required_level: requiredLevel, image_url: imageUrl || null, active: false });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
 
   status.className = 'status ok';
   status.textContent = name + ' added (inactive) — add encounters below, then flip Active on when it\'s ready for players.';
-  ['newCampaignChapterKey','newCampaignChapterName','newCampaignChapterDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newCampaignChapterKey','newCampaignChapterName','newCampaignChapterDescription','newCampaignChapterImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   document.getElementById('newCampaignChapterLevel').value = '1';
   loadCampaignChapters();
 }
@@ -4868,7 +5266,7 @@ async function loadCampaignEncounters(){
   const { data, error } = await supabaseClient.from('campaign_encounters').select('*').order('sort_order', { ascending: true });
   const rows = document.getElementById('campaignEncounterRows');
   if(error){
-    rows.innerHTML = '<tr><td colspan="14">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="15">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = (data || []).map(e => `<tr data-key="${esc(e.key)}">
@@ -4899,8 +5297,9 @@ async function loadCampaignEncounters(){
     <td><input type="number" min="0" id="enXp_${esc(e.key)}" value="${e.xp_reward}" style="max-width:80px;"></td>
     <td><input type="number" min="0" id="enReplayXp_${esc(e.key)}" value="${e.replay_xp_reward}" style="max-width:80px;"></td>
     <td><select id="enReward_${esc(e.key)}">${campaignRewardOptions(e.reward_key)}</select></td>
+    <td><input type="text" id="enImg_${esc(e.key)}" value="${esc(e.image_url || '')}" style="max-width:180px;"></td>
     <td><input type="checkbox" id="enActive_${esc(e.key)}" ${e.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="14">No encounters yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="15">No encounters yet.</td></tr>';
 }
 
 async function saveCampaignEncounters(){
@@ -4940,6 +5339,7 @@ async function saveCampaignEncounters(){
       xp_reward: parseInt(document.getElementById('enXp_' + key).value, 10) || 0,
       replay_xp_reward: parseInt(document.getElementById('enReplayXp_' + key).value, 10) || 0,
       reward_key: document.getElementById('enReward_' + key).value || null,
+      image_url: document.getElementById('enImg_' + key).value.trim() || null,
       active: document.getElementById('enActive_' + key).checked
     });
   }
@@ -4960,6 +5360,7 @@ async function addCampaignEncounter(){
   const encounterType = document.getElementById('newCampaignEncounterType').value;
   const xpReward = parseInt(document.getElementById('newCampaignEncounterXp').value, 10) || 0;
   const replayXpReward = parseInt(document.getElementById('newCampaignEncounterReplayXp').value, 10) || 0;
+  const imageUrl = document.getElementById('newCampaignEncounterImageUrl').value.trim();
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!chapterKey){ status.className = 'status err'; status.textContent = 'Add a chapter first — every encounter needs one.'; return; }
@@ -4969,6 +5370,7 @@ async function addCampaignEncounter(){
     key, chapter_key: chapterKey, name, description,
     encounter_type: encounterType,
     xp_reward: xpReward, replay_xp_reward: replayXpReward,
+    image_url: imageUrl || null,
     active: false
   };
 
@@ -4998,7 +5400,7 @@ async function addCampaignEncounter(){
 
   status.className = 'status ok';
   status.textContent = name + ' added (inactive) — flip Active on in the table above when it\'s ready for players.';
-  ['newCampaignEncounterKey','newCampaignEncounterName','newCampaignEncounterDescription','newCampaignEncounterPrompt','newCampaignEncounterChoices','newCampaignEncounterCorrect','newCampaignEncounterXp','newCampaignEncounterReplayXp'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newCampaignEncounterKey','newCampaignEncounterName','newCampaignEncounterDescription','newCampaignEncounterPrompt','newCampaignEncounterChoices','newCampaignEncounterCorrect','newCampaignEncounterXp','newCampaignEncounterReplayXp','newCampaignEncounterImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   document.getElementById('newCampaignEncounterXp').value = '0';
   document.getElementById('newCampaignEncounterReplayXp').value = '0';
   loadCampaignEncounters();
@@ -5061,4 +5463,3 @@ init();
 </script>
 </body>
 </html>
-
