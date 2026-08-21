@@ -1423,10 +1423,14 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <!-- ============================== MAP HOTSPOTS ============================== -->
     <div class="tab-content" id="tab-maphotspots">
       <div class="card">
-        <h2>Map Hub hotspots</h2>
-        <p class="hint">Drag a box to move it, drag the corner handle to resize it. The canvas below is the exact same 1408:768 frame the live Map Hub renders (using whatever background you've set on Pricing &amp; Store's Site backgrounds card), so what you see here is what players see — no guessing. Boxes are invisible in the actual game; the fill below is just so you can see and grab them while editing.</p>
+        <h2>Screen hotspots</h2>
+        <p class="hint">Pick a screen, drag a box to move it, drag the corner handle to resize it. The canvas below is the exact same 1408:768 frame that screen renders (using whatever background you've set for it on Pricing &amp; Store's Site backgrounds card), so what you see here is what players see — no guessing. Boxes are invisible in the actual game; the fill below is just so you can see and grab them while editing.</p>
 
         <div class="hotspot-controls">
+          <div class="field">
+            <label>Screen</label>
+            <select id="hotspotScreenPicker" style="max-width:220px;"></select>
+          </div>
           <div class="field">
             <label>Box visibility</label>
             <input type="range" id="hotspotAlpha" min="5" max="90" value="35">
@@ -2073,19 +2077,56 @@ const DEFAULT_MAP_AREAS_ADMIN = [
 ];
 const DEFAULT_MAP_BG = "https://static.wixstatic.com/media/d6c75e_11a7f28595a041d49639dce6f72788d7~mv2.jpg";
 
+// Guardian Home (0052) — the first screen converted to the Map Hub's
+// full-bleed-art-with-invisible-buttons pattern, per direct feedback:
+// "I would actually like the art I provide to lay over the entirety of
+// the page covering everything except the buttons." There's no art here
+// yet to line these up against — these are starting guesses, same as
+// World Boss's map hotspot was — drag them into place once there's
+// something to line up against.
+const DEFAULT_GUARDIAN_HOME_AREAS_ADMIN = [
+  { id: 'bondTend',  label: 'Spend Time Together (Bond)', left: 36, top: 74, width: 28, height: 10 },
+  { id: 'backToMap', label: 'Back to the Map',             left: 3,  top: 88, width: 18, height: 8  },
+];
+
+// SCREEN_REGISTRY (0052) — every screen the hotspot editor below can edit.
+// Adding a new screen to this generalized editor is just a new entry here
+// (id/label list + which site_backgrounds page_key supplies its canvas
+// background) — no new table, no new editor code. bgFallback only exists
+// for 'map' since that screen had a working background before any of this
+// admin tooling existed; every screen added after it just shows the
+// editor's own dark placeholder until you set a real background_url on
+// the Site backgrounds card above.
+const SCREEN_REGISTRY = {
+  map:          { label: 'Map Hub',       bgKey: 'map',          bgFallback: DEFAULT_MAP_BG, defaultAreas: DEFAULT_MAP_AREAS_ADMIN },
+  guardianPage: { label: 'Guardian Home', bgKey: 'guardianPage', bgFallback: '',              defaultAreas: DEFAULT_GUARDIAN_HOME_AREAS_ADMIN },
+};
+let currentHotspotScreen = 'map';
+
 let hotspotState = [];   // mutable working copy the editor drags/resizes
 let hotspotDrag = null;  // {mode:'move'|'resize', id, startX, startY, startLeft, startTop, startWidth, startHeight, canvasW, canvasH}
 
+// loadMapHotspots() kept as the name handleSession() already calls on
+// sign-in — it just delegates to whichever screen is currently picked.
 async function loadMapHotspots(){
+  await loadHotspotsForScreen(currentHotspotScreen);
+}
+
+async function loadHotspotsForScreen(screenKey){
+  currentHotspotScreen = screenKey;
+  const registry = SCREEN_REGISTRY[screenKey];
+  const picker = document.getElementById('hotspotScreenPicker');
+  if(picker && picker.value !== screenKey) picker.value = screenKey;
+
   const [{ data: overrideRows, error: overrideErr }, { data: bgRow }] = await Promise.all([
-    supabaseClient.from('map_hotspots').select('hotspot_key, left_pct, top_pct, width_pct, height_pct').eq('screen_key', 'map'),
-    supabaseClient.from('site_backgrounds').select('background_url').eq('page_key', 'map').maybeSingle()
+    supabaseClient.from('map_hotspots').select('hotspot_key, left_pct, top_pct, width_pct, height_pct').eq('screen_key', screenKey),
+    supabaseClient.from('site_backgrounds').select('background_url').eq('page_key', registry.bgKey).maybeSingle()
   ]);
   if(overrideErr) console.error('map_hotspots load failed', overrideErr);
 
   const overrides = {};
   (overrideRows || []).forEach(r => { overrides[r.hotspot_key] = r; });
-  hotspotState = DEFAULT_MAP_AREAS_ADMIN.map(a => {
+  hotspotState = registry.defaultAreas.map(a => {
     const o = overrides[a.id];
     return o
       ? { ...a, left: o.left_pct, top: o.top_pct, width: o.width_pct, height: o.height_pct }
@@ -2093,7 +2134,8 @@ async function loadMapHotspots(){
   });
 
   const canvas = document.getElementById('hotspotCanvas');
-  canvas.style.backgroundImage = `url('${(bgRow && bgRow.background_url) || DEFAULT_MAP_BG}')`;
+  const bgUrl = (bgRow && bgRow.background_url) || registry.bgFallback;
+  canvas.style.backgroundImage = bgUrl ? `url('${bgUrl}')` : 'none';
 
   renderHotspotCanvas();
 }
@@ -2171,8 +2213,8 @@ function hotspotPointerUp(){
 }
 
 function resetHotspotsToDefaults(){
-  if(!confirm('Reset every hotspot to its original position? This only changes the editor here — click Save positions afterward to make it permanent.')) return;
-  hotspotState = DEFAULT_MAP_AREAS_ADMIN.map(a => ({ ...a }));
+  if(!confirm('Reset every hotspot on this screen to its original position? This only changes the editor here — click Save positions afterward to make it permanent.')) return;
+  hotspotState = SCREEN_REGISTRY[currentHotspotScreen].defaultAreas.map(a => ({ ...a }));
   renderHotspotCanvas();
 }
 
@@ -2181,7 +2223,7 @@ async function saveMapHotspots(){
   status.className = 'status';
   status.textContent = 'Saving…';
   const rows = hotspotState.map(h => ({
-    screen_key: 'map',
+    screen_key: currentHotspotScreen,
     hotspot_key: h.id,
     left_pct: h.left,
     top_pct: h.top,
@@ -2191,7 +2233,7 @@ async function saveMapHotspots(){
   }));
   const { error } = await supabaseClient.from('map_hotspots').upsert(rows, { onConflict: 'screen_key,hotspot_key' });
   status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Players will see the new positions next time they load the map.';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Players will see the new positions next time they load this screen.';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -2296,6 +2338,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveSeasonSettingsBtn').addEventListener('click', saveSeasonSettings);
   document.getElementById('saveSeasonPoolBtn').addEventListener('click', saveSeasonPool);
   document.getElementById('seasonPoolSearch').addEventListener('input', filterSeasonPoolRows);
+
+  const hotspotScreenPicker = document.getElementById('hotspotScreenPicker');
+  hotspotScreenPicker.innerHTML = Object.keys(SCREEN_REGISTRY).map(key =>
+    `<option value="${key}">${esc(SCREEN_REGISTRY[key].label)}</option>`
+  ).join('');
+  hotspotScreenPicker.addEventListener('change', (e) => loadHotspotsForScreen(e.target.value));
 
   document.getElementById('hotspotCanvas').addEventListener('pointerdown', hotspotPointerDown);
   document.addEventListener('pointermove', hotspotPointerMove);
