@@ -78,10 +78,10 @@ body.login-screen .wrap{max-width:none;margin:0;padding:0;}
 .card .hint{color:var(--parchment-dim);font-style:italic;font-size:14px;margin:0 0 20px;}
 
 .choice-row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-bottom:22px;}
-.choice{background:rgba(0,0,0,0.25);border:1px solid var(--line);border-radius:4px;padding:18px 16px;text-align:center;cursor:pointer;width:150px;transition:border-color .15s, transform .15s;}
+.choice{background:rgba(0,0,0,0.25);border:1px solid var(--line);border-radius:4px;padding:22px 18px;text-align:center;cursor:pointer;width:190px;transition:border-color .15s, transform .15s;}
 .choice:hover{border-color:var(--gold);transform:translateY(-2px);}
 .choice.selected{border-color:var(--gold-bright);background:rgba(200,162,74,0.08);box-shadow:0 0 0 1px var(--gold-bright);}
-.choice .art{margin:0 auto 10px;display:flex;align-items:center;justify-content:center;height:70px;}
+.choice .art{margin:0 auto 12px;display:flex;align-items:center;justify-content:center;height:104px;}
 .choice .label{font-family:'Cinzel',serif;font-size:12.5px;letter-spacing:0.06em;color:var(--parchment);}
 .choice .blurb{font-size:12px;color:var(--parchment-dim);font-style:italic;margin-top:4px;}
 
@@ -385,6 +385,22 @@ async function loadSpeciesCatalog(){
   SPECIES_ART = art;
 }
 
+/* Chained Gods — the seasonal deity pool. God Tokens draw a random deity
+   from here (server-side, see doRedeemGodToken); the Key of Night picker
+   in renderRedeem() only lists deities present here. Both tables have a
+   select-all RLS policy, same as every other admin-curated catalog. */
+async function loadSeasonInfo(){
+  const [{ data: poolRows, error: poolError }, { data: seasonRow, error: seasonError }] = await Promise.all([
+    supabaseClient.from('deity_season_pool').select('deity_id, pantheon_id').eq('in_season', true),
+    supabaseClient.from('season_settings').select('season_name').eq('id', 1).maybeSingle()
+  ]);
+  if(poolError) console.error('deity_season_pool load failed', poolError);
+  if(seasonError) console.error('season_settings load failed', seasonError);
+  seasonPool = poolRows || [];
+  seasonName = (seasonRow && seasonRow.season_name) || '';
+  if(redeemView) render();
+}
+
 function imgFor(species, stage, size){
   size = size || 130;
   const override = SPECIES_ART[species] && SPECIES_ART[species][stage];
@@ -532,7 +548,9 @@ let craftView = null;         // null | {step:'home'} — top-level, NOT circle-
 let craftCatalog = [];        // guardian_item_catalog, public catalog — loaded once and cached
 let craftInventory = [];      // this guardian's guardian_items, reloaded each time Craft opens
 
-let redeemView = null;        // null | {step:'pick'} — spend God Tokens to fully unlock a deity
+let redeemView = null;        // null | {step:'hub'|'keyPicker'} — Chained Gods: spend a God Token (random) or a Key of Night (chosen)
+let seasonPool = [];          // [{deity_id, pantheon_id}] — deities currently in_season, loaded via loadSeasonInfo()
+let seasonName = '';          // display label from season_settings, loaded via loadSeasonInfo()
 
 let expeditionView = null;     // null | {step:'home'} | {step:'result', result:{...}} — top-level, NOT circle-scoped
 let expeditionCatalog = null;  // per-guardian: artifacts + fragments owned + daily cap, reloaded each time Expeditions opens
@@ -669,6 +687,7 @@ async function afterLogin(){
   document.getElementById('app').innerHTML = '<div class="card"><p class="hint" style="margin:0;text-align:center;">Finding your way through the Gate…</p></div>';
   await loadCustomDeitiesIntoCatalog().catch(e => console.error('custom deities fold-in failed', e));
   await loadSpeciesCatalog().catch(e => console.error('species catalog load failed', e));
+  loadSeasonInfo().catch(e => console.error('season pool load failed', e));
   await loadGuardian();
   if(guardian) await loadMarks();
   loadMoonPhase().catch(e => console.error('moon phase load failed', e));
@@ -809,7 +828,7 @@ async function forgotPassword(){
 async function loadGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, checkin_streak, favor, god_shards, god_tokens, bonus_petition_credits, pvp_shield_until, last_bond_tend_at')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at')
     .eq('owner_user_id', session.user.id)
     .maybeSingle();
   if(error){ console.error('guardian load failed', error); return; }
@@ -882,7 +901,7 @@ function renderHatchFlow(){
       <div class="choice-row" id="speciesRow">
         ${SPECIES.map(s => `
           <div class="choice ${pickedSpecies === s.id ? 'selected' : ''}" onclick="pickSpecies('${s.id}')">
-            <div class="art">${imgFor(s.id, 'hatchling', 60)}</div>
+            <div class="art">${imgFor(s.id, 'hatchling', 92)}</div>
             <div class="label">${esc(s.label)}</div>
             <div class="blurb">${esc(s.blurb)}</div>
           </div>
@@ -925,7 +944,7 @@ async function hatchGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
     .insert({ owner_user_id: session.user.id, species: pickedSpecies, name })
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, checkin_streak, favor, god_shards, god_tokens, bonus_petition_credits, pvp_shield_until, last_bond_tend_at')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at')
     .single();
 
   if(error){
@@ -1046,6 +1065,7 @@ function renderGuardianHome(){
         <div class="stat-tile"><div class="num">${guardian.favor || 0}</div><div class="label">Favor</div></div>
         <div class="stat-tile"><div class="num">${guardian.god_shards || 0}</div><div class="label">God Shards</div></div>
         <div class="stat-tile"><div class="num">${guardian.god_tokens || 0}</div><div class="label">God Tokens</div></div>
+        <div class="stat-tile"><div class="num">${guardian.key_of_night || 0}</div><div class="label">Key of Night</div></div>
       </div>
 
       <div class="stat-grid">
@@ -1069,7 +1089,7 @@ function todayStr(){
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-const CHECKIN_CURRENCY_LABELS = { essence: 'Essence', favor: 'Favor', god_shards: 'God Shards', god_tokens: 'God Tokens', petition_credits: 'Petition Credits' };
+const CHECKIN_CURRENCY_LABELS = { essence: 'Essence', favor: 'Favor', god_shards: 'God Shards', god_tokens: 'God Tokens', key_of_night: 'Key of Night', petition_credits: 'Petition Credits' };
 
 async function tendGuardian(){
   // tend_guardian is the once-a-day Check-in mechanic (streak +
@@ -1215,6 +1235,7 @@ function renderProfile(){
         <div class="stat-tile"><div class="num">${guardian.favor || 0}</div><div class="label">Favor</div></div>
         <div class="stat-tile"><div class="num">${guardian.god_shards || 0}</div><div class="label">God Shards</div></div>
         <div class="stat-tile"><div class="num">${guardian.god_tokens || 0}</div><div class="label">God Tokens</div></div>
+        <div class="stat-tile"><div class="num">${guardian.key_of_night || 0}</div><div class="label">Key of Night</div></div>
       </div>
 
       <div class="stat-grid">
@@ -4575,10 +4596,15 @@ function renderCraft(){
   `;
 }
 
-/* ---------------- God Token redemption (new economy layer) ---------------- */
+/* ---------------- Chained Gods redemption (God Tokens + Key of Night) ----------------
+   Reworked per the season-pool redesign: a God Token now calls a random
+   god from whichever deities admin.html's Chained Gods tab has marked
+   in_season (no player choice); a Key of Night lets the player choose,
+   but only from that same pool. seasonPool/seasonName come from
+   loadSeasonInfo() (see near loadSpeciesCatalog), refreshed at login. */
 
 function openRedeem(){
-  redeemView = { step: 'pick' };
+  redeemView = { step: 'hub' };
   render();
 }
 
@@ -4587,18 +4613,29 @@ function backFromRedeem(){
   render();
 }
 
-async function doRedeemToken(pantheonId, deityId, deityName){
+function openKeyOfNightPicker(){
+  redeemView = { step: 'keyPicker' };
+  render();
+}
+
+function backToRedeemHub(){
+  redeemView = { step: 'hub' };
+  render();
+}
+
+async function doRedeemGodToken(){
   const status = document.getElementById('redeemStatus');
-  if(status){ status.className = 'status'; status.textContent = 'Spending a Token…'; }
+  if(status){ status.className = 'status'; status.textContent = 'Spending a God Token…'; }
   try{
     const resp = await fetch(FUNCTIONS_URL + '/redeem', {
       method: 'POST',
       headers: await petitionHeaders(),
-      body: JSON.stringify({ action: 'redeem-god-token', pantheonId, deityId })
+      body: JSON.stringify({ action: 'redeem-god-token' })
     });
     const data = await resp.json();
+    const s = document.getElementById('redeemStatus');
     if(!data.ok){
-      if(status){ status.className = 'status err'; status.textContent = data.error || 'Could not redeem.'; }
+      if(s){ s.className = 'status err'; s.textContent = data.error || 'Could not redeem.'; }
       return;
     }
     guardian.god_tokens = data.remainingTokens;
@@ -4606,20 +4643,76 @@ async function doRedeemToken(pantheonId, deityId, deityName){
     const s2 = document.getElementById('redeemStatus');
     if(s2){
       s2.className = 'status ok';
-      s2.textContent = `${deityName} fully unlocked. ${data.remainingTokens} Token${data.remainingTokens === 1 ? '' : 's'} remaining.`;
+      s2.textContent = `The gate answered: ${data.deityName} steps forward, fully unlocked. ${data.remainingTokens} Token${data.remainingTokens === 1 ? '' : 's'} remaining.`;
     }
   }catch(e){
-    if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
+    const s = document.getElementById('redeemStatus');
+    if(s){ s.className = 'status err'; s.textContent = 'Could not reach the relay: ' + e.message; }
+  }
+}
+
+async function doRedeemKeyOfNight(pantheonId, deityId, deityName){
+  const status = document.getElementById('redeemStatus');
+  if(status){ status.className = 'status'; status.textContent = 'Spending a Key of Night…'; }
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/redeem', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'redeem-key-of-night', pantheonId, deityId })
+    });
+    const data = await resp.json();
+    if(!data.ok){
+      const s = document.getElementById('redeemStatus');
+      if(s){ s.className = 'status err'; s.textContent = data.error || 'Could not redeem.'; }
+      return;
+    }
+    guardian.key_of_night = data.remainingKeys;
+    redeemView = { step: 'hub' };
+    render();
+    const s2 = document.getElementById('redeemStatus');
+    if(s2){
+      s2.className = 'status ok';
+      s2.textContent = `${deityName} fully unlocked. ${data.remainingKeys} Key${data.remainingKeys === 1 ? '' : 's'} of Night remaining.`;
+    }
+  }catch(e){
+    const s = document.getElementById('redeemStatus');
+    if(s){ s.className = 'status err'; s.textContent = 'Could not reach the relay: ' + e.message; }
   }
 }
 
 function renderRedeem(){
+  if(redeemView.step === 'keyPicker'){ renderKeyOfNightPicker(); return; }
+
   const app = document.getElementById('app');
-  // Not-for-sale deities/pantheons stay off the table here too — a God
-  // Token shouldn't be a back door around the same for_sale flag the Shop
-  // and Petition Hall both respect.
+  const seasonLine = seasonName ? `<p class="hint" style="text-align:center;">This season: <strong>${esc(seasonName)}</strong></p>` : '';
+  app.innerHTML = `
+    <div class="card"${bgAttr('chainedGods')}>
+      <h2 style="text-align:center;">Chained Gods</h2>
+      ${seasonLine}
+      <p class="hint" style="text-align:center;">Two ways through the gate this season. A God Token calls whichever of this season's gods answers — you don't choose. A Key of Night lets you choose, but only from that same pool.</p>
+      <div id="redeemStatus" class="status"></div>
+
+      <div class="essence-row"><span class="essence-label">God Tokens</span><span class="essence-value">${guardian.god_tokens || 0}</span></div>
+      <p class="hint" style="margin-top:-6px;">Spend one to fully unlock a random god from this season's pool, for good. If you already hold every god in the pool, nothing is spent.</p>
+      <button onclick="doRedeemGodToken()">Spend a God Token</button>
+
+      <div class="essence-row" style="margin-top:18px;"><span class="essence-label">Key of Night</span><span class="essence-value">${guardian.key_of_night || 0}</span></div>
+      <p class="hint" style="margin-top:-6px;">Spend one to fully unlock any god of your choosing from this season's pool.</p>
+      <button onclick="openKeyOfNightPicker()">Choose with a Key of Night</button>
+
+      <button class="secondary" style="margin-top:14px;" onclick="backFromRedeem()">Back to the map</button>
+    </div>
+  `;
+}
+
+function renderKeyOfNightPicker(){
+  const app = document.getElementById('app');
+  // Not-for-sale deities/pantheons stay off the table too — a Key
+  // shouldn't be a back door around the same for_sale flag the Shop and
+  // Petition Hall both respect, on top of the season-pool restriction.
+  const poolIds = new Set(seasonPool.map(d => d.deity_id));
   const groups = Object.keys(CATALOG).filter(pid => shopPantheonForSale(pid)).map(pid => {
-    const rows = CATALOG[pid].deities.filter(([id]) => shopDeityForSale(id)).map(([id, name]) => `<div class="deity-row" onclick="doRedeemToken('${esc(pid)}','${esc(id)}','${esc(name)}')">
+    const rows = CATALOG[pid].deities.filter(([id]) => poolIds.has(id) && shopDeityForSale(id)).map(([id, name]) => `<div class="deity-row" onclick="doRedeemKeyOfNight('${esc(pid)}','${esc(id)}','${esc(name)}')">
       <span class="name">${esc(name)}</span>
     </div>`).join('');
     if(!rows) return '';
@@ -4628,12 +4721,12 @@ function renderRedeem(){
 
   app.innerHTML = `
     <div class="card"${bgAttr('chainedGods')}>
-      <h2 style="text-align:center;">Redeem a God Token</h2>
-      <p class="hint" style="text-align:center;">Spend God Tokens to fully unlock any one god's chat, for good. If you already have access some other way, nothing is spent.</p>
-      <div class="essence-row"><span class="essence-label">God Tokens</span><span class="essence-value">${guardian.god_tokens || 0}</span></div>
+      <h2 style="text-align:center;">Choose with a Key of Night</h2>
+      <p class="hint" style="text-align:center;">Only this season's gods are open to a direct choice.</p>
+      <div class="essence-row"><span class="essence-label">Key of Night</span><span class="essence-value">${guardian.key_of_night || 0}</span></div>
       <div id="redeemStatus" class="status"></div>
-      ${groups}
-      <button class="secondary" style="margin-top:10px;" onclick="backFromRedeem()">Back to the map</button>
+      ${groups || '<p class="hint" style="text-align:center;">Nothing is in season right now — check back soon.</p>'}
+      <button class="secondary" style="margin-top:10px;" onclick="backToRedeemHub()">Back</button>
     </div>
   `;
 }
