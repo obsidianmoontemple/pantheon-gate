@@ -341,16 +341,55 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>'
    so there's no separate palette choice anymore (the old palette swatches
    were a stand-in for real color, which this art already has baked in).
    guardians.palette stays in the database default-populated but unused. */
-const SPECIES = [
+const DEFAULT_SPECIES = [
   { id: 'bat',         label: 'Bat',         blurb: 'Void-born, quick in the dark, drawn to secrets.' },
   { id: 'griffin',     label: 'Griffin',     blurb: 'Sky-born, proud, drawn to high places and old oaths.' },
   { id: 'icedragon',   label: 'Ice Dragon',  blurb: 'Patient in the old sense — cold, deep, unhurried.' },
   { id: 'phoenix',     label: 'Phoenix',     blurb: 'Ember-born, restless, remembers every ending.' },
   { id: 'earthdragon', label: 'Earth Dragon',blurb: 'Root-bound, slow to anger, impossible to uproot.' },
 ];
+// The five species these bundled local files cover — familiar_<species>_
+// <stage>.png for each of the five stages. Anything outside this set (an
+// admin-added species with no art URL set yet) has no local file to fall
+// back to, so imgFor() shows a plain placeholder instead of a broken <img>.
+const BUNDLED_SPECIES_IDS = new Set(DEFAULT_SPECIES.map(s => s.id));
+
+// species_catalog (0046) — SPECIES used to be this hardcoded array only;
+// now it's loaded from the database at login (loadSpeciesCatalog(), called
+// alongside the other custom-catalog loads in afterLogin()) so an admin
+// can add new species and override any stage's art without a code change.
+// Starts as the original five so hatching still works even before that
+// load finishes (or if it fails) — same fallback-first pattern as
+// shopPricing/shopDeitySettings above.
+let SPECIES = DEFAULT_SPECIES.slice();
+let SPECIES_ART = {}; // species id -> {egg, hatchling, fledged, ascendant, sovereign} -> url|undefined
+
+async function loadSpeciesCatalog(){
+  const { data, error } = await supabaseClient
+    .from('species_catalog')
+    .select('key, label, blurb, sort_order, active, egg_image_url, hatchling_image_url, fledged_image_url, ascendant_image_url, sovereign_image_url')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+  if(error){ console.error('species_catalog load failed', error); return; }
+  if(!data || !data.length) return; // keep the DEFAULT_SPECIES fallback rather than showing an empty picker
+  SPECIES = data.map(s => ({ id: s.key, label: s.label, blurb: s.blurb || '' }));
+  const art = {};
+  data.forEach(s => {
+    art[s.key] = { egg: s.egg_image_url, hatchling: s.hatchling_image_url, fledged: s.fledged_image_url, ascendant: s.ascendant_image_url, sovereign: s.sovereign_image_url };
+  });
+  SPECIES_ART = art;
+}
+
 function imgFor(species, stage, size){
   size = size || 130;
-  return `<img src="familiar_${species}_${stage}.png" alt="" style="max-width:${size}px;max-height:${size}px;width:auto;height:auto;object-fit:contain;display:block;margin:0 auto;">`;
+  const override = SPECIES_ART[species] && SPECIES_ART[species][stage];
+  if(override){
+    return `<img src="${esc(override)}" alt="" style="max-width:${size}px;max-height:${size}px;width:auto;height:auto;object-fit:contain;display:block;margin:0 auto;">`;
+  }
+  if(BUNDLED_SPECIES_IDS.has(species)){
+    return `<img src="familiar_${species}_${stage}.png" alt="" style="max-width:${size}px;max-height:${size}px;width:auto;height:auto;object-fit:contain;display:block;margin:0 auto;">`;
+  }
+  return `<div style="width:${size}px;height:${size}px;max-width:${size}px;display:flex;align-items:center;justify-content:center;margin:0 auto;border:1px dashed var(--line);border-radius:6px;color:var(--parchment-dim);font-size:11px;text-align:center;padding:4px;">No art set</div>`;
 }
 
 /* Evolution glow at Ascendant+ — per the GDD's art-budget note, affinity
@@ -609,6 +648,7 @@ async function afterLogin(){
   document.body.classList.remove('login-screen');
   document.getElementById('app').innerHTML = '<div class="card"><p class="hint" style="margin:0;text-align:center;">Finding your way through the Gate…</p></div>';
   await loadCustomDeitiesIntoCatalog().catch(e => console.error('custom deities fold-in failed', e));
+  await loadSpeciesCatalog().catch(e => console.error('species catalog load failed', e));
   await loadGuardian();
   if(guardian) await loadMarks();
   loadMoonPhase().catch(e => console.error('moon phase load failed', e));
@@ -1568,6 +1608,12 @@ function shopFmtUsd(cents){ return '$' + (cents / 100).toFixed(2); }
 // just splice it into a template without an extra null check.
 function shopThumb(url){
   return url ? `<img src="${esc(url)}" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:4px;border:1px solid var(--line);flex-shrink:0;">` : '';
+}
+// Circle/Personal Altar grid tiles are small and the label text sits
+// directly on them, so an image goes on as a background (with a dark
+// overlay for legibility) rather than an inline thumbnail like shopThumb().
+function altarPlotStyle(url){
+  return url ? ` style="background-image:linear-gradient(rgba(16,14,22,0.45),rgba(16,14,22,0.72)),url('${esc(url)}');background-size:cover;background-position:center;"` : '';
 }
 function shopIsFree(deityId){ const s = shopDeitySettings[deityId]; return s ? s.is_free : false; }
 function shopDeityForSale(deityId){ const s = shopDeitySettings[deityId]; return s ? s.for_sale : true; }
@@ -3615,6 +3661,7 @@ function renderCircleAltar(){
     let cls = 'altar-plot ' + plot.content_type;
     let label = '';
     let clickable = false;
+    let plotStyle = '';
     if(plot.content_type === 'empty'){
       label = isOwn ? '+' : '';
       clickable = isOwn;
@@ -3625,18 +3672,20 @@ function renderCircleAltar(){
       if(remaining <= 0) cls += ' ready';
       label = `${seed ? esc(seed.name) : 'Seed'}<br>${formatRemaining(remaining)}`;
       clickable = isOwn && remaining <= 0;
+      plotStyle = altarPlotStyle(seed && seed.image_url);
     }else if(plot.content_type === 'decoration'){
       const dec = decoByKey[plot.content_key];
       label = `${dec ? esc(dec.name) : 'Decoration'}${isOwn ? `<button class="secondary pickup-btn" onclick="event.stopPropagation();doRemoveDecoration(${i})">Pick up</button>` : ''}`;
+      plotStyle = altarPlotStyle(dec && dec.image_url);
     }
-    return `<div class="${cls}" ${clickable ? `onclick="onAltarPlotClick(${i})"` : ''}>${label}</div>`;
+    return `<div class="${cls}"${plotStyle} ${clickable ? `onclick="onAltarPlotClick(${i})"` : ''}>${label}</div>`;
   }).join('');
 
   let pickerBlock = '';
   if(isOwn && altarPickerPlot !== null){
     const plantRows = (altarData.seedCatalog || []).map(s => `
       <div class="altar-catalog-row">
-        <div><div class="aname">${esc(s.name)}</div><div class="adesc">${s.cost_devotion} Devotion · grows in ${formatRemaining(s.grow_hours * 3600 * 1000)} · yields ${s.yield_devotion_min}-${s.yield_devotion_max} Devotion</div></div>
+        <div style="display:flex;align-items:center;gap:8px;">${shopThumb(s.image_url)}<div><div class="aname">${esc(s.name)}</div><div class="adesc">${s.cost_devotion} Devotion · grows in ${formatRemaining(s.grow_hours * 3600 * 1000)} · yields ${s.yield_devotion_min}-${s.yield_devotion_max} Devotion</div></div></div>
         <button class="secondary" ${c.devotion_balance < s.cost_devotion ? 'disabled' : ''} onclick="doPlantSeed('${esc(s.key)}')">Plant</button>
       </div>
     `).join('') || '<p class="hint">No seeds in the catalog.</p>';
@@ -3645,7 +3694,7 @@ function renderCircleAltar(){
     const decorateRows = ownedNotPlaced.map(u => {
       const dec = decoByKey[u.decoration_key] || {};
       return `<div class="altar-catalog-row">
-        <div><div class="aname">${esc(dec.name || u.decoration_key)}</div><div class="adesc">${esc(dec.description || '')}</div></div>
+        <div style="display:flex;align-items:center;gap:8px;">${shopThumb(dec.image_url)}<div><div class="aname">${esc(dec.name || u.decoration_key)}</div><div class="adesc">${esc(dec.description || '')}</div></div></div>
         <button class="secondary" onclick="doPlaceDecoration('${esc(u.decoration_key)}')">Place</button>
       </div>`;
     }).join('') || `<p class="hint">Nothing in your Circle's inventory yet — buy, find, or unlock a decoration below.</p>`;
@@ -3671,7 +3720,7 @@ function renderCircleAltar(){
       else if(d.source === 'find') action = '<span class="hint" style="margin:0;">Found by harvesting</span>';
       else action = `<button class="secondary" onclick="doClaimUnlock('${esc(d.key)}')">Claim</button>`;
       return `<div class="altar-catalog-row">
-        <div><div class="aname">${esc(d.name)}</div><div class="adesc">${esc(d.description)}</div></div>
+        <div style="display:flex;align-items:center;gap:8px;">${shopThumb(d.image_url)}<div><div class="aname">${esc(d.name)}</div><div class="adesc">${esc(d.description)}</div></div></div>
         <div>${action}</div>
       </div>`;
     }).join('');
@@ -3852,6 +3901,7 @@ function renderPersonalAltar(){
     let cls = 'altar-plot ' + plot.content_type;
     let label = '';
     let clickable = false;
+    let plotStyle = '';
     if(plot.content_type === 'empty'){
       label = '+';
       clickable = true;
@@ -3862,18 +3912,20 @@ function renderPersonalAltar(){
       if(remaining <= 0) cls += ' ready';
       label = `${seed ? esc(seed.name) : 'Seed'}<br>${formatRemaining(remaining)}`;
       clickable = remaining <= 0;
+      plotStyle = altarPlotStyle(seed && seed.image_url);
     }else if(plot.content_type === 'decoration'){
       const dec = decoByKey[plot.content_key];
       label = `${dec ? esc(dec.name) : 'Decoration'}<button class="secondary pickup-btn" onclick="event.stopPropagation();doPalRemoveDecoration(${i})">Pick up</button>`;
+      plotStyle = altarPlotStyle(dec && dec.image_url);
     }
-    return `<div class="${cls}" ${clickable ? `onclick="onPalPlotClick(${i})"` : ''}>${label}</div>`;
+    return `<div class="${cls}"${plotStyle} ${clickable ? `onclick="onPalPlotClick(${i})"` : ''}>${label}</div>`;
   }).join('');
 
   let pickerBlock = '';
   if(palPickerPlot !== null){
     const plantRows = (palData.seedCatalog || []).map(s => `
       <div class="altar-catalog-row">
-        <div><div class="aname">${esc(s.name)}</div><div class="adesc">${s.cost_essence} Essence · grows in ${formatRemaining(s.grow_hours * 3600 * 1000)} · yields ${s.yield_essence_min}-${s.yield_essence_max} Essence</div></div>
+        <div style="display:flex;align-items:center;gap:8px;">${shopThumb(s.image_url)}<div><div class="aname">${esc(s.name)}</div><div class="adesc">${s.cost_essence} Essence · grows in ${formatRemaining(s.grow_hours * 3600 * 1000)} · yields ${s.yield_essence_min}-${s.yield_essence_max} Essence</div></div></div>
         <button class="secondary" ${palData.guardian.essence < s.cost_essence ? 'disabled' : ''} onclick="doPalPlantSeed('${esc(s.key)}')">Plant</button>
       </div>
     `).join('') || '<p class="hint">No seeds in the catalog.</p>';
@@ -3882,7 +3934,7 @@ function renderPersonalAltar(){
     const decorateRows = ownedNotPlaced.map(u => {
       const dec = decoByKey[u.decoration_key] || {};
       return `<div class="altar-catalog-row">
-        <div><div class="aname">${esc(dec.name || u.decoration_key)}</div><div class="adesc">${esc(dec.description || '')}</div></div>
+        <div style="display:flex;align-items:center;gap:8px;">${shopThumb(dec.image_url)}<div><div class="aname">${esc(dec.name || u.decoration_key)}</div><div class="adesc">${esc(dec.description || '')}</div></div></div>
         <button class="secondary" onclick="doPalPlaceDecoration('${esc(u.decoration_key)}')">Place</button>
       </div>`;
     }).join('') || `<p class="hint">Nothing in your inventory yet — buy, find, or unlock a decoration below.</p>`;
@@ -3906,7 +3958,7 @@ function renderPersonalAltar(){
     else if(d.source === 'find') action = '<span class="hint" style="margin:0;">Found by harvesting</span>';
     else action = `<button class="secondary" onclick="doPalClaimUnlock('${esc(d.key)}')">Claim</button>`;
     return `<div class="altar-catalog-row">
-      <div><div class="aname">${esc(d.name)}</div><div class="adesc">${esc(d.description)}</div></div>
+      <div style="display:flex;align-items:center;gap:8px;">${shopThumb(d.image_url)}<div><div class="aname">${esc(d.name)}</div><div class="adesc">${esc(d.description)}</div></div></div>
       <div>${action}</div>
     </div>`;
   }).join('');
