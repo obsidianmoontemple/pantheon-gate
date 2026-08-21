@@ -1711,7 +1711,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-guide">
       <div class="card">
         <h2>Narrator</h2>
-        <p class="hint">The in-fiction voice that walks a brand-new player through their first steps — auto-opens once, the first time a Mage and a hatched Guardian both exist, and stays reopenable after that from a "Ask Ganymede" hotspot on the Map Hub.</p>
+        <p class="hint">The in-fiction voice that walks a brand-new player through their first steps — auto-opens once, the first time a Mage and a hatched Guardian both exist, and stays reopenable after that from a "Ask Ganymede" hotspot on the Map Hub. After the walkthrough has been seen once, reopening him instead opens free-form Q&A chat (below).</p>
         <div class="form-row">
           <div class="field"><label>Narrator name</label><input type="text" id="narratorName" placeholder="Ganymede" style="max-width:220px;"></div>
           <div class="field"><label>Portrait URL (optional — falls back to a placeholder)</label><input type="text" id="narratorPortraitUrl" placeholder="https://…" style="max-width:400px;"></div>
@@ -1719,6 +1719,23 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="save-bar">
           <button id="saveNarratorSettingsBtn">Save narrator</button>
           <div class="status" id="narratorSettingsStatus"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Ask Ganymede (chat)</h2>
+        <p class="hint">Free-form Q&A, unlocked once a player has seen the walkthrough. He answers using his own general knowledge plus whatever you write below, grounded in that player's own live Guardian/Mage state so he can speak to their actual progress — "why is this happening" and "what should I do next" — not just recite mechanics. Limit questions per player per day to control cost/misuse; 0 means unlimited.</p>
+        <div class="form-row">
+          <div class="field"><label>Larger "pop-in" portrait URL (optional — falls back to the portrait above)</label><input type="text" id="narratorLargePortraitUrl" placeholder="https://…" style="max-width:400px;"></div>
+          <div class="field"><label>Questions per player per day</label><input type="number" id="narratorDailyQuestionLimit" min="0" step="1" style="max-width:120px;"></div>
+        </div>
+        <div class="field">
+          <label>Game knowledge / voice override — what he should know and how he should coach players</label>
+          <textarea id="narratorChatSystemPrompt" rows="6" placeholder="e.g. Explain that Bond grows from spending time together on the Guardian tab, not just checking in. If asked what to do next and their Guardian is still an egg, point them to hatching it first..."></textarea>
+        </div>
+        <div class="save-bar">
+          <button id="saveNarratorSettingsBtn2">Save chat settings</button>
+          <div class="status" id="narratorChatSettingsStatus"></div>
         </div>
       </div>
 
@@ -2509,6 +2526,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveMageGearBtn').addEventListener('click', saveMageGear);
   document.getElementById('addMageGearBtn').addEventListener('click', addMageGear);
   document.getElementById('saveNarratorSettingsBtn').addEventListener('click', saveNarratorSettings);
+  document.getElementById('saveNarratorSettingsBtn2').addEventListener('click', saveNarratorChatSettings);
   document.getElementById('saveGuideStepsBtn').addEventListener('click', saveGuideSteps);
   document.getElementById('addGuideStepBtn').addEventListener('click', addGuideStep);
 
@@ -5139,11 +5157,15 @@ async function addMageGear(){
    upsert-by-step_key on save, plain insert to add a new step. */
 
 async function loadNarratorSettingsAdmin(){
-  const { data, error } = await supabaseClient.from('narrator_settings').select('name, portrait_url').eq('id', 1).maybeSingle();
+  const { data, error } = await supabaseClient.from('narrator_settings')
+    .select('name, portrait_url, large_portrait_url, daily_question_limit, chat_system_prompt').eq('id', 1).maybeSingle();
   if(error){ console.error('narrator_settings load failed', error); return; }
   if(data){
     document.getElementById('narratorName').value = data.name || '';
     document.getElementById('narratorPortraitUrl').value = data.portrait_url || '';
+    document.getElementById('narratorLargePortraitUrl').value = data.large_portrait_url || '';
+    document.getElementById('narratorDailyQuestionLimit').value = data.daily_question_limit ?? 3;
+    document.getElementById('narratorChatSystemPrompt').value = data.chat_system_prompt || '';
   }
 }
 
@@ -5155,6 +5177,27 @@ async function saveNarratorSettings(){
   status.className = 'status'; status.textContent = 'Saving…';
   const { error } = await supabaseClient.from('narrator_settings').update({
     name, portrait_url: portraitUrl, updated_at: new Date().toISOString()
+  }).eq('id', 1);
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+}
+
+// Separate save action for the "Ask Ganymede" chat card — its own status
+// line, and doesn't touch name/portrait_url so the two cards can be
+// saved independently without clobbering each other.
+async function saveNarratorChatSettings(){
+  const status = document.getElementById('narratorChatSettingsStatus');
+  const largePortraitUrl = document.getElementById('narratorLargePortraitUrl').value.trim() || null;
+  const dailyLimitRaw = document.getElementById('narratorDailyQuestionLimit').value;
+  const dailyLimit = dailyLimitRaw === '' ? 3 : parseInt(dailyLimitRaw, 10);
+  if(!Number.isFinite(dailyLimit) || dailyLimit < 0){ status.className = 'status err'; status.textContent = 'Questions per day must be 0 or higher.'; return; }
+  const chatSystemPrompt = document.getElementById('narratorChatSystemPrompt').value.trim();
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('narrator_settings').update({
+    large_portrait_url: largePortraitUrl,
+    daily_question_limit: dailyLimit,
+    chat_system_prompt: chatSystemPrompt,
+    updated_at: new Date().toISOString()
   }).eq('id', 1);
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
