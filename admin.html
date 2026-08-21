@@ -159,6 +159,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="altars" onclick="showTab('altars')">Altars</button>
       <button class="tab-btn" data-tab="gauntlet" onclick="showTab('gauntlet')">Gauntlet</button>
       <button class="tab-btn" data-tab="species" onclick="showTab('species')">Guardian Species</button>
+      <button class="tab-btn" data-tab="magearts" onclick="showTab('magearts')">Mage Arts</button>
+      <button class="tab-btn" data-tab="magegear" onclick="showTab('magegear')">Mage Gear</button>
       <button class="tab-btn" data-tab="moves" onclick="showTab('moves')">Moves</button>
       <button class="tab-btn" data-tab="blessings" onclick="showTab('blessings')">Deity Blessings</button>
       <button class="tab-btn" data-tab="guardianitems" onclick="showTab('guardianitems')">Guardian Items</button>
@@ -744,6 +746,94 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Sovereign URL</label><input type="text" id="newSpeciesSovereignUrl" placeholder="https://…" style="max-width:170px;"></div>
         </div>
         <div class="status" id="newSpeciesStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== MAGE ARTS (creation picker) ============================== -->
+    <div class="tab-content" id="tab-magearts">
+      <div class="card">
+        <h2>Mage Arts — creation picker</h2>
+        <p class="hint">The premade Art list a player picks from when creating their Mage (0052). Each Art carries an affinity — mainly flavor/portrait, with one real mechanical thread: it grants a flat +10% to that Mage's duel score (see the mage edge function). Sort order controls left-to-right position on the Mage creation screen.</p>
+        <div class="scroll-table" style="max-height:420px;">
+          <table>
+            <thead><tr><th>Key</th><th>Label</th><th>Blurb</th><th>Affinity</th><th>Sort</th><th>Image URL</th><th>Active</th></tr></thead>
+            <tbody id="mageArtsRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveMageArtsBtn">Save changes</button>
+          <div class="status" id="mageArtsStatus"></div>
+        </div>
+        <h3>Add a new Art</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newMageArtKey" placeholder="e.g. runecarving" style="max-width:150px;"></div>
+          <div class="field"><label>Label</label><input type="text" id="newMageArtLabel" placeholder="e.g. Runecarving" style="max-width:160px;"></div>
+          <div class="field"><label>Affinity</label>
+            <select id="newMageArtAffinity" style="max-width:140px;"></select>
+          </div>
+          <div class="field"><label>Sort order</label><input type="number" id="newMageArtSort" value="0" style="max-width:90px;"></div>
+          <button id="addMageArtBtn">Add Art</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Blurb (shown on the Mage creation screen)</label>
+          <input type="text" id="newMageArtBlurb" style="max-width:none;">
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Image URL (optional — falls back to an affinity-tinted placeholder)</label>
+          <input type="text" id="newMageArtImageUrl" placeholder="https://…" style="max-width:400px;">
+        </div>
+        <div class="status" id="newMageArtStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== MAGE GEAR (crafting catalog) ============================== -->
+    <div class="tab-content" id="tab-magegear">
+      <div class="card">
+        <h2>Mage gear catalog</h2>
+        <p class="hint">What a Mage can craft from Manage → Catalog, spending the SAME God Shard balance the guardian earns (Mages don't have their own Shard balance) — an extension of Shard Crafting, not a new economy. Each piece fills exactly one slot (weapon/armor/accessory) and grants a flat bonus to exactly one stat while equipped.</p>
+        <div class="scroll-table" style="max-height:420px;">
+          <table>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Slot</th><th>Stat key</th><th>Stat amount</th><th>Shard cost</th><th>Image URL</th><th>Active</th></tr></thead>
+            <tbody id="mageGearRows"><tr><td colspan="9">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveMageGearBtn">Save changes</button>
+          <div class="status" id="mageGearStatus"></div>
+        </div>
+        <h3>Add a new piece</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newMageGearKey" style="max-width:150px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newMageGearName" style="max-width:160px;"></div>
+          <div class="field"><label>Slot</label>
+            <select id="newMageGearSlot" style="max-width:120px;">
+              <option value="weapon">weapon</option>
+              <option value="armor">armor</option>
+              <option value="accessory">accessory</option>
+            </select>
+          </div>
+          <div class="field"><label>Stat key</label>
+            <select id="newMageGearStatKey" style="max-width:140px;">
+              <option value="vitality">vitality</option>
+              <option value="might">might</option>
+              <option value="ward">ward</option>
+              <option value="swiftness">swiftness</option>
+              <option value="cunning">cunning</option>
+            </select>
+          </div>
+          <div class="field"><label>Stat amount</label><input type="number" min="1" id="newMageGearStatAmount" style="max-width:110px;"></div>
+          <div class="field"><label>Shard cost</label><input type="number" min="1" id="newMageGearCost" style="max-width:110px;"></div>
+          <button id="addMageGearBtn">Add piece</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (shown to players)</label>
+          <input type="text" id="newMageGearDescription" style="max-width:none;">
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Image URL (optional)</label>
+          <input type="text" id="newMageGearImageUrl" placeholder="https://…" style="max-width:400px;">
+        </div>
+        <div class="status" id="newMageGearStatus"></div>
       </div>
     </div>
 
@@ -1933,6 +2023,8 @@ async function handleSession(session){
   loadGauntletOpponents();
   loadAffinityMoves();
   loadSpeciesCatalog();
+  loadMageArts();
+  loadMageGear();
   loadSpeciesMoves();
   loadDeityMoves();
   loadDeityBlessings();
@@ -1996,6 +2088,8 @@ const PAGE_KEYS = [
   { key: 'chainedGods', label: 'Chained Gods (Redeem)' },
   { key: 'worldBoss', label: 'World Boss' },
   { key: 'guardianPage', label: 'Guardian Page' },
+  { key: 'mage', label: 'Mage Creation' },
+  { key: 'mageHome', label: 'Mage Home' },
   { key: 'personalAltar', label: 'Your Altar (solo)' },
   { key: 'backpack', label: 'Backpack' },
   { key: 'shop', label: 'Shop' },
@@ -2073,7 +2167,8 @@ const DEFAULT_MAP_AREAS_ADMIN = [
   { id: 'chainedGods',   label: 'Chained Gods',                        left: 70,   top: 56.6, width: 15.3, height: 23.4 },
   { id: 'guardianPage',  label: 'Guardian Page',                       left: 0,    top: 71.6, width: 21,   height: 23.4 },
   { id: 'personalAltar', label: 'Your Altar',                          left: 21.5, top: 68,   width: 10,   height: 16 },
-  { id: 'backpack',      label: 'Backpack',                            left: 84.9, top: 71.6, width: 15.1, height: 23.4 }
+  { id: 'backpack',      label: 'Backpack',                            left: 84.9, top: 71.6, width: 15.1, height: 23.4 },
+  { id: 'mage',          label: 'Your Mage',                           left: 32,   top: 68,   width: 10,   height: 16 }
 ];
 const DEFAULT_MAP_BG = "https://static.wixstatic.com/media/d6c75e_11a7f28595a041d49639dce6f72788d7~mv2.jpg";
 
@@ -2113,6 +2208,14 @@ const DEFAULT_CHECKIN_AREAS_ADMIN = [
   { id: 'backToMap', label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8  },
 ];
 
+// Mage Home (0054) — Train/Duel/Manage/Back, the Mage's own hub screen.
+const DEFAULT_MAGE_HOME_AREAS_ADMIN = [
+  { id: 'train',     label: 'Train',           left: 12, top: 58, width: 20, height: 12 },
+  { id: 'duel',      label: 'Duel',            left: 40, top: 58, width: 20, height: 12 },
+  { id: 'gear',      label: 'Manage',          left: 68, top: 58, width: 20, height: 12 },
+  { id: 'backToMap', label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8  },
+];
+
 // SCREEN_REGISTRY (0052) — every screen the hotspot editor below can edit.
 // Adding a new screen to this generalized editor is just a new entry here
 // (id/label list + which site_backgrounds page_key supplies its canvas
@@ -2127,6 +2230,7 @@ const SCREEN_REGISTRY = {
   worldBoss:    { label: 'World Boss',       bgKey: 'worldBoss',   bgFallback: '', defaultAreas: DEFAULT_WORLDBOSS_AREAS_ADMIN },
   chainedGods:  { label: 'Chained Gods (Redeem)', bgKey: 'chainedGods', bgFallback: '', defaultAreas: DEFAULT_REDEEM_AREAS_ADMIN },
   checkin:      { label: 'Daily Check-in',   bgKey: 'checkin',     bgFallback: '', defaultAreas: DEFAULT_CHECKIN_AREAS_ADMIN },
+  mageHome:     { label: 'Mage Home',        bgKey: 'mageHome',    bgFallback: '', defaultAreas: DEFAULT_MAGE_HOME_AREAS_ADMIN },
 };
 let currentHotspotScreen = 'map';
 
@@ -2361,6 +2465,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('saveSpeciesCatalogBtn').addEventListener('click', saveSpeciesCatalog);
   document.getElementById('addSpeciesBtn').addEventListener('click', addSpeciesCatalogEntry);
+  document.getElementById('saveMageArtsBtn').addEventListener('click', saveMageArts);
+  document.getElementById('addMageArtBtn').addEventListener('click', addMageArt);
+  document.getElementById('saveMageGearBtn').addEventListener('click', saveMageGear);
+  document.getElementById('addMageGearBtn').addEventListener('click', addMageGear);
 
   document.getElementById('saveSeasonSettingsBtn').addEventListener('click', saveSeasonSettings);
   document.getElementById('saveSeasonPoolBtn').addEventListener('click', saveSeasonPool);
@@ -4834,6 +4942,153 @@ async function addSpeciesCatalogEntry(){
   status.className = 'status ok'; status.textContent = label + ' added — give it art on every stage above before players can see it clearly.';
   ['newSpeciesKey','newSpeciesLabel','newSpeciesSort','newSpeciesBlurb','newSpeciesEggUrl','newSpeciesHatchlingUrl','newSpeciesFledgedUrl','newSpeciesAscendantUrl','newSpeciesSovereignUrl'].forEach(fid => { document.getElementById(fid).value = fid === 'newSpeciesSort' ? '0' : ''; });
   loadSpeciesCatalog();
+}
+
+/* =========================================================================
+   MAGE ARTS (0054) — the Mage-creation picker. Same bulk-save-plus-add-new
+   pattern as species_catalog just above, minus the five life-stage
+   columns (an Art has one portrait, not a life cycle).
+   ===================================================================== */
+
+async function loadMageArts(){
+  const { data, error } = await supabaseClient.from('mage_arts').select('*').order('sort_order', { ascending: true });
+  const rows = document.getElementById('mageArtsRows');
+  const affSel = document.getElementById('newMageArtAffinity');
+  if(affSel && !affSel.options.length) affSel.innerHTML = AFFINITIES.map(a => `<option value="${a}">${a}</option>`).join('');
+  if(error){ rows.innerHTML = '<tr><td colspan="7">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  rows.innerHTML = (data || []).map(a => `<tr data-key="${esc(a.key)}">
+    <td class="dim">${esc(a.key)}</td>
+    <td><input type="text" id="maLabel_${esc(a.key)}" value="${esc(a.label)}" style="max-width:140px;"></td>
+    <td><input type="text" id="maBlurb_${esc(a.key)}" value="${esc(a.blurb || '')}" style="max-width:260px;"></td>
+    <td><select id="maAffinity_${esc(a.key)}">${AFFINITIES.map(af => `<option value="${af}" ${af === a.affinity ? 'selected' : ''}>${af}</option>`).join('')}</select></td>
+    <td><input type="number" id="maSort_${esc(a.key)}" value="${a.sort_order}" style="max-width:70px;"></td>
+    <td><input type="text" id="maImageUrl_${esc(a.key)}" value="${esc(a.image_url || '')}" style="max-width:200px;" placeholder="https://…"></td>
+    <td><input type="checkbox" id="maActive_${esc(a.key)}" ${a.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="7">No Mage Arts yet — run migration 0052.</td></tr>';
+}
+
+async function saveMageArts(){
+  const status = document.getElementById('mageArtsStatus');
+  const trs = document.querySelectorAll('#mageArtsRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    return {
+      key,
+      label: document.getElementById('maLabel_' + key).value.trim(),
+      blurb: document.getElementById('maBlurb_' + key).value.trim(),
+      affinity: document.getElementById('maAffinity_' + key).value,
+      sort_order: parseInt(document.getElementById('maSort_' + key).value, 10) || 0,
+      image_url: document.getElementById('maImageUrl_' + key).value.trim() || null,
+      active: document.getElementById('maActive_' + key).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('mage_arts').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Players see the new Arts next time they load the page.';
+  if(!error) loadMageArts();
+}
+
+async function addMageArt(){
+  const status = document.getElementById('newMageArtStatus');
+  const key = document.getElementById('newMageArtKey').value.trim().toLowerCase();
+  const label = document.getElementById('newMageArtLabel').value.trim();
+  const blurb = document.getElementById('newMageArtBlurb').value.trim();
+  const affinity = document.getElementById('newMageArtAffinity').value;
+  const sortOrder = parseInt(document.getElementById('newMageArtSort').value, 10) || 0;
+  const imageUrl = document.getElementById('newMageArtImageUrl').value.trim() || null;
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!label){ status.className = 'status err'; status.textContent = 'Label is required.'; return; }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('mage_arts').insert({ key, label, blurb, affinity, sort_order: sortOrder, image_url: imageUrl, active: true });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+  status.className = 'status ok'; status.textContent = label + ' added.';
+  ['newMageArtKey','newMageArtLabel','newMageArtSort','newMageArtBlurb','newMageArtImageUrl'].forEach(fid => { document.getElementById(fid).value = fid === 'newMageArtSort' ? '0' : ''; });
+  loadMageArts();
+}
+
+/* =========================================================================
+   MAGE GEAR (0054) — the Mage's crafting catalog. Same bulk-save-plus-
+   add-new pattern, tailored to a fixed slot/stat_key/stat_amount/
+   shard_cost shape (no item-type branching like guardian_item_catalog —
+   every piece here does exactly one thing).
+   ===================================================================== */
+
+async function loadMageGear(){
+  const { data, error } = await supabaseClient.from('mage_gear_catalog').select('*').order('sort_order', { ascending: true });
+  const rows = document.getElementById('mageGearRows');
+  if(error){ rows.innerHTML = '<tr><td colspan="9">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  rows.innerHTML = (data || []).map(g => `<tr data-key="${esc(g.key)}">
+    <td class="dim">${esc(g.key)}</td>
+    <td><input type="text" id="mgName_${esc(g.key)}" value="${esc(g.name)}" style="max-width:140px;"></td>
+    <td><input type="text" id="mgDesc_${esc(g.key)}" value="${esc(g.description || '')}" style="max-width:220px;"></td>
+    <td><select id="mgSlot_${esc(g.key)}">
+      <option value="weapon" ${g.slot === 'weapon' ? 'selected' : ''}>weapon</option>
+      <option value="armor" ${g.slot === 'armor' ? 'selected' : ''}>armor</option>
+      <option value="accessory" ${g.slot === 'accessory' ? 'selected' : ''}>accessory</option>
+    </select></td>
+    <td><select id="mgStatKey_${esc(g.key)}">
+      ${['vitality','might','ward','swiftness','cunning'].map(k => `<option value="${k}" ${k === g.stat_key ? 'selected' : ''}>${k}</option>`).join('')}
+    </select></td>
+    <td><input type="number" min="1" id="mgStatAmount_${esc(g.key)}" value="${g.stat_amount}" style="max-width:80px;"></td>
+    <td><input type="number" min="1" id="mgCost_${esc(g.key)}" value="${g.shard_cost}" style="max-width:80px;"></td>
+    <td><input type="text" id="mgImageUrl_${esc(g.key)}" value="${esc(g.image_url || '')}" style="max-width:170px;" placeholder="https://…"></td>
+    <td><input type="checkbox" id="mgActive_${esc(g.key)}" ${g.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="9">No Mage gear yet — run migration 0052.</td></tr>';
+}
+
+async function saveMageGear(){
+  const status = document.getElementById('mageGearStatus');
+  const trs = document.querySelectorAll('#mageGearRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    return {
+      key,
+      name: document.getElementById('mgName_' + key).value.trim(),
+      description: document.getElementById('mgDesc_' + key).value.trim(),
+      slot: document.getElementById('mgSlot_' + key).value,
+      stat_key: document.getElementById('mgStatKey_' + key).value,
+      stat_amount: parseInt(document.getElementById('mgStatAmount_' + key).value, 10) || 1,
+      shard_cost: parseInt(document.getElementById('mgCost_' + key).value, 10) || 1,
+      image_url: document.getElementById('mgImageUrl_' + key).value.trim() || null,
+      active: document.getElementById('mgActive_' + key).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('mage_gear_catalog').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadMageGear();
+}
+
+async function addMageGear(){
+  const status = document.getElementById('newMageGearStatus');
+  const key = document.getElementById('newMageGearKey').value.trim().toLowerCase();
+  const name = document.getElementById('newMageGearName').value.trim();
+  const description = document.getElementById('newMageGearDescription').value.trim();
+  const slot = document.getElementById('newMageGearSlot').value;
+  const statKey = document.getElementById('newMageGearStatKey').value;
+  const statAmount = parseInt(document.getElementById('newMageGearStatAmount').value, 10);
+  const shardCost = parseInt(document.getElementById('newMageGearCost').value, 10);
+  const imageUrl = document.getElementById('newMageGearImageUrl').value.trim() || null;
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  if(!statAmount || statAmount < 1){ status.className = 'status err'; status.textContent = 'Stat amount must be at least 1.'; return; }
+  if(!shardCost || shardCost < 1){ status.className = 'status err'; status.textContent = 'Shard cost must be at least 1.'; return; }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('mage_gear_catalog').insert({
+    key, name, description, slot, stat_key: statKey, stat_amount: statAmount, shard_cost: shardCost, image_url: imageUrl, active: true
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+  status.className = 'status ok'; status.textContent = name + ' added.';
+  ['newMageGearKey','newMageGearName','newMageGearStatAmount','newMageGearCost','newMageGearDescription','newMageGearImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
+  loadMageGear();
 }
 
 async function loadSpeciesMoves(){
