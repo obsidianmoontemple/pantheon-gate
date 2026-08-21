@@ -3584,8 +3584,11 @@ function portraitHTML(d){
 }
 
 function renderTabs(){
+  // Not-for-sale pantheons are fully hidden from the tab bar, not just
+  // stripped of their deities — the pantheon's name shouldn't leak here
+  // either.
   document.getElementById('pantheonTabs').innerHTML =
-    Object.keys(PANTHEONS).map(key => {
+    Object.keys(PANTHEONS).filter(key => pantheonForSale(key)).map(key => {
       const p = PANTHEONS[key];
       const empty = !p.deities.length;
       const cls = 'ptab' + (empty ? ' locked' : '') + (key === currentPantheon ? ' active' : '');
