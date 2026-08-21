@@ -688,6 +688,7 @@ async function afterLogin(){
   await loadCustomDeitiesIntoCatalog().catch(e => console.error('custom deities fold-in failed', e));
   await loadSpeciesCatalog().catch(e => console.error('species catalog load failed', e));
   loadSeasonInfo().catch(e => console.error('season pool load failed', e));
+  await loadMapHotspots().catch(e => console.error('map hotspots load failed', e));
   await loadGuardian();
   if(guardian) await loadMarks();
   loadMoonPhase().catch(e => console.error('moon phase load failed', e));
@@ -972,7 +973,7 @@ const STAGE_LABEL = { egg: 'Egg', hatchling: 'Hatchling', fledged: 'Fledged', as
 // existing features (Your Altar, Redeem a Token) aren't pictured on the
 // art at all, so they stay as plain secondary buttons just below the map
 // rather than guessing a spot for them; see renderMapHub().
-const MAP_AREAS = [
+const DEFAULT_MAP_AREAS = [
   // top bar
   { id: 'profile',      label: 'Profile',      left: 22.7, top: 2,    width: 12.1, height: 6,    action: openProfile },
   { id: 'checkin',      label: 'Check-in',     left: 35.5, top: 2,    width: 14.2, height: 6,    action: openCheckin },
@@ -1003,6 +1004,28 @@ const MAP_AREAS = [
   { id: 'personalAltar', label: 'Your Altar',   left: 21.5, top: 68,   width: 10,   height: 16,   action: openPersonalAltar },
   { id: 'backpack',     label: 'Backpack',      left: 84.9, top: 71.6, width: 15.1, height: 23.4, action: openBackpack },
 ];
+// Mutable copy — loadMapHotspots() (see near loadSpeciesCatalog) overrides
+// individual entries' left/top/width/height from the admin-editable
+// map_hotspots table (screen_key 'map'), drawn with admin.html's drag/
+// resize editor. id/label/action always come from DEFAULT_MAP_AREAS above
+// since a click handler can't be stored in a database row — only
+// position moves.
+let MAP_AREAS = DEFAULT_MAP_AREAS.slice();
+
+async function loadMapHotspots(){
+  const { data, error } = await supabaseClient
+    .from('map_hotspots')
+    .select('hotspot_key, left_pct, top_pct, width_pct, height_pct')
+    .eq('screen_key', 'map');
+  if(error){ console.error('map_hotspots load failed', error); return; }
+  if(!data || !data.length) return; // keep the DEFAULT_MAP_AREAS fallback
+  const overrides = {};
+  data.forEach(r => { overrides[r.hotspot_key] = r; });
+  MAP_AREAS = DEFAULT_MAP_AREAS.map(a => {
+    const o = overrides[a.id];
+    return o ? { ...a, left: o.left_pct, top: o.top_pct, width: o.width_pct, height: o.height_pct } : a;
+  });
+}
 
 function mapHubMarkup(){
   const nodes = MAP_AREAS.map((a, i) => `
