@@ -97,6 +97,34 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 .pick-list li{padding:6px 0;border-bottom:1px solid var(--line);}
 .pick-list button{background:transparent;border:1px solid var(--line);color:var(--parchment);padding:6px 12px;font-size:12px;width:100%;text-align:left;}
 .pick-list button:hover{border-color:var(--gold);color:var(--gold-bright);}
+
+/* ---- Map Hotspots editor ---- */
+.hotspot-canvas{
+  position:relative;overflow:hidden;
+  width:min(100%, calc(72vh * 1408 / 768));
+  aspect-ratio:1408/768;
+  background:#0a0810 center/cover no-repeat;
+  border:1px solid var(--line);border-radius:4px;
+  touch-action:none;margin:0 auto;
+}
+.hotspot-box{
+  position:absolute;box-sizing:border-box;
+  border:2px dashed var(--gold-bright);
+  background:rgba(230,199,119,var(--hotspot-alpha,0.35));
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:0.02em;color:#fff;
+  text-shadow:0 1px 3px rgba(0,0,0,0.9);
+  cursor:move;user-select:none;padding:2px;overflow:hidden;
+}
+.hotspot-box.active{border-color:#fff;border-style:solid;z-index:5;}
+.hotspot-resize{
+  position:absolute;right:-7px;bottom:-7px;width:15px;height:15px;
+  background:var(--gold-bright);border:1px solid var(--ink);border-radius:2px;cursor:nwse-resize;
+}
+.hotspot-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:14px 0;}
+.hotspot-controls .field{margin-bottom:0;}
+.hotspot-controls input[type=range]{max-width:180px;width:180px;}
+.hotspot-readout{font-family:'SF Mono',Consolas,monospace;font-size:11px;color:var(--parchment-dim);margin-top:12px;line-height:1.7;max-height:160px;overflow-y:auto;border:1px solid var(--line);border-radius:3px;padding:10px 12px;}
 </style>
 </head>
 <body>
@@ -140,6 +168,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="campaign" onclick="showTab('campaign')">Campaign</button>
       <button class="tab-btn" data-tab="deities" onclick="showTab('deities')">Deity Personalities</button>
       <button class="tab-btn" data-tab="pricing" onclick="showTab('pricing')">Pricing &amp; Store</button>
+      <button class="tab-btn" data-tab="maphotspots" onclick="showTab('maphotspots')">Map Hotspots</button>
       <button class="tab-btn" data-tab="pantheons" onclick="showTab('pantheons')">Pantheons &amp; Gods</button>
       <button class="tab-btn" data-tab="chainedgods" onclick="showTab('chainedgods')">Chained Gods</button>
       <button class="tab-btn" data-tab="access" onclick="showTab('access')">Access &amp; Broadcasts</button>
@@ -1342,6 +1371,31 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
     </div>
 
+    <!-- ============================== MAP HOTSPOTS ============================== -->
+    <div class="tab-content" id="tab-maphotspots">
+      <div class="card">
+        <h2>Map Hub hotspots</h2>
+        <p class="hint">Drag a box to move it, drag the corner handle to resize it. The canvas below is the exact same 1408:768 frame the live Map Hub renders (using whatever background you've set on Pricing &amp; Store's Site backgrounds card), so what you see here is what players see — no guessing. Boxes are invisible in the actual game; the fill below is just so you can see and grab them while editing.</p>
+
+        <div class="hotspot-controls">
+          <div class="field">
+            <label>Box visibility</label>
+            <input type="range" id="hotspotAlpha" min="5" max="90" value="35">
+          </div>
+          <button class="secondary" id="resetHotspotsBtn" type="button">Reset all to defaults</button>
+        </div>
+
+        <div class="hotspot-canvas" id="hotspotCanvas"></div>
+
+        <div class="save-bar">
+          <button id="saveHotspotsBtn">Save positions</button>
+          <div class="status" id="hotspotStatus"></div>
+        </div>
+
+        <div class="hotspot-readout" id="hotspotReadout"></div>
+      </div>
+    </div>
+
     <!-- ============================== PANTHEONS & GODS ============================== -->
     <div class="tab-content" id="tab-pantheons">
       <div class="card">
@@ -1793,6 +1847,7 @@ async function handleSession(session){
   adminArea.style.display = 'block';
   loadPricing();
   loadSiteSettings();
+  loadMapHotspots();
   loadSubscriptionTiers();
   await loadCurrencyDefinitions();
   await loadGiftableRewards();
@@ -1930,6 +1985,163 @@ async function saveSiteSettings(){
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Players will see the new backgrounds next time they load each page.';
 }
 
+/* ---------------- Map Hotspots editor ----------------
+   Drag-and-resize positioning tool for the Map Hub's 17 clickable
+   regions, from direct feedback: "I am making all this new art... is
+   there anyway for me to drag stuff where it belongs after getting the
+   art set?" The canvas below is the exact same 1408:768 box index.html's
+   .map-hub renders (background-size:cover, center), so a position saved
+   here matches on-screen 1:1 for players.
+
+   id/label/width/height defaults mirror index.html's DEFAULT_MAP_AREAS —
+   only position data (left/top/width/height) is stored in map_hotspots;
+   the click action stays a function reference in index.html and can't
+   live in a database row. screen_key is always 'map' today; the schema
+   supports other screen_key values whenever a second positioned screen
+   exists to extend this to (see the migration's header comment). */
+
+const DEFAULT_MAP_AREAS_ADMIN = [
+  { id: 'profile',       label: 'Profile',                            left: 22.7, top: 2,    width: 12.1, height: 6 },
+  { id: 'checkin',       label: 'Check-in',                           left: 35.5, top: 2,    width: 14.2, height: 6 },
+  { id: 'mail',          label: 'Mail',                                left: 50.8, top: 2,    width: 13.5, height: 6 },
+  { id: 'promo',         label: 'Promo',                               left: 65,   top: 2,    width: 13.5, height: 6 },
+  { id: 'shrine',        label: 'Temple of the Gods',                  left: 25.9, top: 11.1, width: 14.9, height: 27.3 },
+  { id: 'circleDragon',  label: 'Circle Battles Against the Dragons',  left: 8.5,  top: 11.7, width: 19.5, height: 34.5 },
+  { id: 'circle',        label: 'The Circle',                          left: 39.4, top: 29.3, width: 12.4, height: 26 },
+  { id: 'gauntlet',      label: 'The Gauntlet',                        left: 56.1, top: 16.3, width: 13.1, height: 29.9 },
+  { id: 'arena',         label: 'The Arena',                           left: 13.5, top: 44.9, width: 14.6, height: 24.7 },
+  { id: 'craft',         label: 'Crafting',                            left: 32.7, top: 55.3, width: 10.7, height: 22.1 },
+  { id: 'oracle',        label: 'The Oracle',                          left: 50.1, top: 54,   width: 12.4, height: 23.8 },
+  { id: 'expeditions',   label: 'Expeditions',                         left: 72.1, top: 35.2, width: 14.9, height: 20.2 },
+  { id: 'campaign',      label: 'The Divine Realms (Campaign)',        left: 41,   top: 9,    width: 15,   height: 6 },
+  { id: 'chainedGods',   label: 'Chained Gods',                        left: 70,   top: 56.6, width: 15.3, height: 23.4 },
+  { id: 'guardianPage',  label: 'Guardian Page',                       left: 0,    top: 71.6, width: 21,   height: 23.4 },
+  { id: 'personalAltar', label: 'Your Altar',                          left: 21.5, top: 68,   width: 10,   height: 16 },
+  { id: 'backpack',      label: 'Backpack',                            left: 84.9, top: 71.6, width: 15.1, height: 23.4 }
+];
+const DEFAULT_MAP_BG = "https://static.wixstatic.com/media/d6c75e_11a7f28595a041d49639dce6f72788d7~mv2.jpg";
+
+let hotspotState = [];   // mutable working copy the editor drags/resizes
+let hotspotDrag = null;  // {mode:'move'|'resize', id, startX, startY, startLeft, startTop, startWidth, startHeight, canvasW, canvasH}
+
+async function loadMapHotspots(){
+  const [{ data: overrideRows, error: overrideErr }, { data: bgRow }] = await Promise.all([
+    supabaseClient.from('map_hotspots').select('hotspot_key, left_pct, top_pct, width_pct, height_pct').eq('screen_key', 'map'),
+    supabaseClient.from('site_backgrounds').select('background_url').eq('page_key', 'map').maybeSingle()
+  ]);
+  if(overrideErr) console.error('map_hotspots load failed', overrideErr);
+
+  const overrides = {};
+  (overrideRows || []).forEach(r => { overrides[r.hotspot_key] = r; });
+  hotspotState = DEFAULT_MAP_AREAS_ADMIN.map(a => {
+    const o = overrides[a.id];
+    return o
+      ? { ...a, left: o.left_pct, top: o.top_pct, width: o.width_pct, height: o.height_pct }
+      : { ...a };
+  });
+
+  const canvas = document.getElementById('hotspotCanvas');
+  canvas.style.backgroundImage = `url('${(bgRow && bgRow.background_url) || DEFAULT_MAP_BG}')`;
+
+  renderHotspotCanvas();
+}
+
+function renderHotspotCanvas(){
+  const canvas = document.getElementById('hotspotCanvas');
+  canvas.innerHTML = hotspotState.map(h => `
+    <div class="hotspot-box" data-id="${h.id}" style="left:${h.left}%;top:${h.top}%;width:${h.width}%;height:${h.height}%;">
+      ${h.label}
+      <div class="hotspot-resize" data-id="${h.id}"></div>
+    </div>
+  `).join('');
+  updateHotspotReadout();
+}
+
+function updateHotspotReadout(){
+  const el = document.getElementById('hotspotReadout');
+  if(!el) return;
+  el.innerHTML = hotspotState.map(h =>
+    `${h.id}: left ${h.left.toFixed(1)}%, top ${h.top.toFixed(1)}%, width ${h.width.toFixed(1)}%, height ${h.height.toFixed(1)}%`
+  ).join('<br>');
+}
+
+function hotspotPointerDown(e){
+  const resizeTarget = e.target.closest('.hotspot-resize');
+  const boxTarget = e.target.closest('.hotspot-box');
+  if(!resizeTarget && !boxTarget) return;
+  const id = (resizeTarget || boxTarget).getAttribute('data-id');
+  const state = hotspotState.find(h => h.id === id);
+  if(!state) return;
+  const canvas = document.getElementById('hotspotCanvas');
+  const rect = canvas.getBoundingClientRect();
+
+  document.querySelectorAll('.hotspot-box').forEach(b => b.classList.remove('active'));
+  const boxEl = canvas.querySelector(`.hotspot-box[data-id="${CSS.escape(id)}"]`);
+  if(boxEl) boxEl.classList.add('active');
+
+  if(resizeTarget){
+    e.stopPropagation();
+    hotspotDrag = { mode: 'resize', id, startX: e.clientX, startY: e.clientY, startWidth: state.width, startHeight: state.height, canvasW: rect.width, canvasH: rect.height };
+  }else{
+    hotspotDrag = { mode: 'move', id, startX: e.clientX, startY: e.clientY, startLeft: state.left, startTop: state.top, canvasW: rect.width, canvasH: rect.height };
+  }
+  e.preventDefault();
+}
+
+function hotspotPointerMove(e){
+  if(!hotspotDrag) return;
+  const state = hotspotState.find(h => h.id === hotspotDrag.id);
+  if(!state) return;
+  const dxPct = ((e.clientX - hotspotDrag.startX) / hotspotDrag.canvasW) * 100;
+  const dyPct = ((e.clientY - hotspotDrag.startY) / hotspotDrag.canvasH) * 100;
+
+  if(hotspotDrag.mode === 'move'){
+    state.left = Math.max(0, Math.min(100 - state.width, hotspotDrag.startLeft + dxPct));
+    state.top = Math.max(0, Math.min(100 - state.height, hotspotDrag.startTop + dyPct));
+  }else{
+    state.width = Math.max(2, Math.min(100 - state.left, hotspotDrag.startWidth + dxPct));
+    state.height = Math.max(2, Math.min(100 - state.top, hotspotDrag.startHeight + dyPct));
+  }
+
+  const canvas = document.getElementById('hotspotCanvas');
+  const boxEl = canvas.querySelector(`.hotspot-box[data-id="${CSS.escape(state.id)}"]`);
+  if(boxEl){
+    boxEl.style.left = state.left + '%';
+    boxEl.style.top = state.top + '%';
+    boxEl.style.width = state.width + '%';
+    boxEl.style.height = state.height + '%';
+  }
+  updateHotspotReadout();
+}
+
+function hotspotPointerUp(){
+  hotspotDrag = null;
+}
+
+function resetHotspotsToDefaults(){
+  if(!confirm('Reset every hotspot to its original position? This only changes the editor here — click Save positions afterward to make it permanent.')) return;
+  hotspotState = DEFAULT_MAP_AREAS_ADMIN.map(a => ({ ...a }));
+  renderHotspotCanvas();
+}
+
+async function saveMapHotspots(){
+  const status = document.getElementById('hotspotStatus');
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const rows = hotspotState.map(h => ({
+    screen_key: 'map',
+    hotspot_key: h.id,
+    left_pct: h.left,
+    top_pct: h.top,
+    width_pct: h.width,
+    height_pct: h.height,
+    updated_at: new Date().toISOString()
+  }));
+  const { error } = await supabaseClient.from('map_hotspots').upsert(rows, { onConflict: 'screen_key,hotspot_key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Players will see the new positions next time they load the map.';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('savePricingBtn').addEventListener('click', async () => {
     const status = document.getElementById('pricingStatus');
@@ -2029,6 +2241,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveSeasonSettingsBtn').addEventListener('click', saveSeasonSettings);
   document.getElementById('saveSeasonPoolBtn').addEventListener('click', saveSeasonPool);
   document.getElementById('seasonPoolSearch').addEventListener('input', filterSeasonPoolRows);
+
+  document.getElementById('hotspotCanvas').addEventListener('pointerdown', hotspotPointerDown);
+  document.addEventListener('pointermove', hotspotPointerMove);
+  document.addEventListener('pointerup', hotspotPointerUp);
+  document.getElementById('hotspotAlpha').addEventListener('input', (e) => {
+    document.getElementById('hotspotCanvas').style.setProperty('--hotspot-alpha', (e.target.value / 100).toFixed(2));
+  });
+  document.getElementById('resetHotspotsBtn').addEventListener('click', resetHotspotsToDefaults);
+  document.getElementById('saveHotspotsBtn').addEventListener('click', saveMapHotspots);
 
   document.getElementById('saveGauntletBtn').addEventListener('click', saveGauntletOpponents);
   document.getElementById('addGauntletBtn').addEventListener('click', addGauntletOpponent);
