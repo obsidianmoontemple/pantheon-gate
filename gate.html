@@ -322,6 +322,24 @@ function lockState(d){
   return deityForSale(d) === false ? 'hidden' : 'teaser';
 }
 
+// site_backgrounds (0045) — this page gets its own page_key ('chat')
+// alongside index.html's screens, so the whole site's art can be set
+// from one admin panel. Applied straight to <body> (not a template
+// string, since this page isn't built from innerHTML like index.html's
+// views) with the same dark-gradient overlay used everywhere else, for
+// text legibility over a busy photo.
+async function loadChatBackground(){
+  const { data, error } = await supabaseClient.from('site_backgrounds').select('background_url').eq('page_key', 'chat').maybeSingle();
+  if(error){ console.error('site_backgrounds load failed', error); return; }
+  const url = data && data.background_url;
+  if(!url) return;
+  document.body.style.backgroundImage =
+    'linear-gradient(180deg, rgba(23,19,31,0.55), rgba(16,14,22,0.82)), url(\'' + url.replace(/'/g, '%27') + '\')';
+  document.body.style.backgroundSize = 'cover';
+  document.body.style.backgroundPosition = 'center';
+  document.body.style.backgroundAttachment = 'fixed';
+}
+
 async function initAuth(){
   if(SUPABASE_URL.indexOf('PASTE_YOUR') === 0){
     document.getElementById('authBar').innerHTML =
@@ -329,6 +347,7 @@ async function initAuth(){
     return;
   }
   supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  loadChatBackground().catch(e => console.error('chat background load failed', e));
   await refreshCatalogSettings();
   await mergeCustomPantheons();
   await mergeCustomDeities();
