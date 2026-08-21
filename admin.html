@@ -155,6 +155,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="checkins" onclick="showTab('checkins')">Check-ins &amp; Events</button>
       <button class="tab-btn" data-tab="progression" onclick="showTab('progression')">Guardian Progression</button>
       <button class="tab-btn" data-tab="dragons" onclick="showTab('dragons')">Big Baddies</button>
+      <button class="tab-btn" data-tab="worldboss" onclick="showTab('worldboss')">World Boss</button>
       <button class="tab-btn" data-tab="altars" onclick="showTab('altars')">Altars</button>
       <button class="tab-btn" data-tab="gauntlet" onclick="showTab('gauntlet')">Gauntlet</button>
       <button class="tab-btn" data-tab="species" onclick="showTab('species')">Guardian Species</button>
@@ -482,6 +483,54 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <button id="addDragonBtn">Add dragon</button>
         </div>
         <div class="status" id="newDragonStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== WORLD BOSS ============================== -->
+    <div class="tab-content" id="tab-worldboss">
+      <div class="card">
+        <h2>Current World Boss</h2>
+        <p class="hint">Shared HP pool — every player, from every Circle, chips away at the same fight. There's no auto-respawn: end the current boss (or let it get defeated) and spawn a new one whenever you want an event to happen. Rewards below are pools, split among every attacker by their share of total damage the instant HP hits 0.</p>
+        <div id="worldBossCurrent" class="hotspot-readout" style="max-height:none;">Loading…</div>
+        <div class="save-bar">
+          <button id="endWorldBossBtn" class="danger">End current boss</button>
+          <div class="status" id="worldBossEndStatus"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Spawn a new World Boss</h2>
+        <div class="form-row">
+          <div class="field"><label>Name</label><input type="text" id="newBossName" placeholder="e.g. The Unmade King" style="max-width:220px;"></div>
+          <div class="field"><label>Affinity (optional)</label><select id="newBossAffinity" style="max-width:150px;"><option value="">— none —</option></select></div>
+          <div class="field"><label>Ward</label><input type="number" min="0" id="newBossWard" value="0" style="max-width:100px;"></div>
+          <div class="field"><label>HP pool</label><input type="number" min="1" id="newBossHp" style="max-width:130px;"></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Reward Essence pool</label><input type="number" min="0" id="newBossRewardEssence" value="0" style="max-width:150px;"></div>
+          <div class="field"><label>Reward God Tokens pool</label><input type="number" min="0" id="newBossRewardTokens" value="0" style="max-width:170px;"></div>
+          <div class="field"><label>Image URL (optional)</label><input type="text" id="newBossImageUrl" placeholder="https://…" style="max-width:280px;"></div>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Flavor text (optional, shown to players)</label>
+          <textarea id="newBossFlavor" rows="2"></textarea>
+        </div>
+        <div class="save-bar">
+          <button id="spawnWorldBossBtn">Spawn boss</button>
+          <div class="status" id="spawnWorldBossStatus"></div>
+        </div>
+        <p class="hint" style="margin-top:14px;">Spawning automatically marks any other still-"active" boss as ended first, so there's only ever one live at a time.</p>
+      </div>
+
+      <div class="card">
+        <h2>Damage leaderboard</h2>
+        <p class="hint">Top contributors on the current (or most recently resolved) boss.</p>
+        <div class="scroll-table" style="max-height:340px;">
+          <table>
+            <thead><tr><th>#</th><th>Guardian</th><th>Circle</th><th>Total damage</th></tr></thead>
+            <tbody id="worldBossLeaderboardRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -1872,6 +1921,7 @@ async function handleSession(session){
   loadPromoEvents();
   loadGuardianProgression();
   loadDragonCatalog();
+  loadWorldBoss();
   loadAltarSeedCatalog();
   loadAltarDecorationCatalog();
   loadPersonalAltarSeedCatalog();
@@ -1940,6 +1990,7 @@ const PAGE_KEYS = [
   { key: 'expeditions', label: 'Expeditions' },
   { key: 'campaign', label: 'The Divine Realms (Campaign)' },
   { key: 'chainedGods', label: 'Chained Gods (Redeem)' },
+  { key: 'worldBoss', label: 'World Boss' },
   { key: 'guardianPage', label: 'Guardian Page' },
   { key: 'personalAltar', label: 'Your Altar (solo)' },
   { key: 'backpack', label: 'Backpack' },
@@ -2014,6 +2065,7 @@ const DEFAULT_MAP_AREAS_ADMIN = [
   { id: 'oracle',        label: 'The Oracle',                          left: 50.1, top: 54,   width: 12.4, height: 23.8 },
   { id: 'expeditions',   label: 'Expeditions',                         left: 72.1, top: 35.2, width: 14.9, height: 20.2 },
   { id: 'campaign',      label: 'The Divine Realms (Campaign)',        left: 41,   top: 9,    width: 15,   height: 6 },
+  { id: 'worldBoss',     label: 'World Boss',                          left: 81,   top: 1.5,  width: 16,   height: 8.5 },
   { id: 'chainedGods',   label: 'Chained Gods',                        left: 70,   top: 56.6, width: 15.3, height: 23.4 },
   { id: 'guardianPage',  label: 'Guardian Page',                       left: 0,    top: 71.6, width: 21,   height: 23.4 },
   { id: 'personalAltar', label: 'Your Altar',                          left: 21.5, top: 68,   width: 10,   height: 16 },
@@ -2221,6 +2273,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('saveDragonsBtn').addEventListener('click', saveDragonCatalog);
   document.getElementById('addDragonBtn').addEventListener('click', addDragon);
+
+  document.getElementById('spawnWorldBossBtn').addEventListener('click', spawnWorldBoss);
+  document.getElementById('endWorldBossBtn').addEventListener('click', endWorldBoss);
 
   document.getElementById('saveAltarSeedsBtn').addEventListener('click', saveAltarSeedCatalog);
   document.getElementById('addAltarSeedBtn').addEventListener('click', addAltarSeed);
@@ -4068,6 +4123,123 @@ async function addDragon(){
   status.textContent = name + ' added — tune its power, ward, window and rewards in the table above.';
   ['newDragonKey','newDragonName','newDragonTier','newDragonHp','newDragonImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadDragonCatalog();
+}
+
+/* =====================================================================
+   WORLD BOSS — one shared HP pool for the whole game, spawned on demand.
+   Direct feedback: "add a world boss... shared hp and all circles fight
+   it together... admin-triggered events." Reuses the same combat math
+   as the Circle dragon fight (see world-boss/index.ts) but scoped
+   globally instead of per-Circle — no ladder, no moon-phase gating, just
+   whatever's currently the most recently spawned row.
+   ===================================================================== */
+
+function worldBossStatusLabel(status){
+  if(status === 'active') return 'Active';
+  if(status === 'defeated') return 'Defeated';
+  return 'Ended';
+}
+
+async function loadWorldBoss(){
+  const affSel = document.getElementById('newBossAffinity');
+  if(affSel && affSel.options.length <= 1) AFFINITIES.forEach(a => affSel.insertAdjacentHTML('beforeend', `<option value="${a}">${a}</option>`));
+
+  const current = document.getElementById('worldBossCurrent');
+  const { data: boss, error } = await supabaseClient
+    .from('world_bosses').select('*').order('spawned_at', { ascending: false }).limit(1).maybeSingle();
+
+  if(error){ current.textContent = 'Failed to load: ' + error.message; return; }
+  if(!boss){
+    current.textContent = 'No World Boss has ever been spawned.';
+    document.getElementById('worldBossLeaderboardRows').innerHTML = '<tr><td colspan="4">Nothing to show yet.</td></tr>';
+    return;
+  }
+
+  const pct = boss.hp_total > 0 ? Math.round((boss.hp_remaining / boss.hp_total) * 100) : 0;
+  current.innerHTML = [
+    `${esc(boss.name)} — ${worldBossStatusLabel(boss.status)}`,
+    `HP: ${boss.hp_remaining.toLocaleString()} / ${boss.hp_total.toLocaleString()} (${pct}%)`,
+    `Affinity: ${boss.affinity || '—'}   Ward: ${boss.ward}`,
+    `Reward pools: ${boss.reward_essence_pool.toLocaleString()} Essence · ${boss.reward_god_tokens_pool.toLocaleString()} God Tokens`,
+    `Spawned: ${new Date(boss.spawned_at).toLocaleString()}${boss.resolved_at ? ('   Resolved: ' + new Date(boss.resolved_at).toLocaleString()) : ''}`,
+  ].join('<br>');
+
+  const endBtn = document.getElementById('endWorldBossBtn');
+  endBtn.disabled = boss.status !== 'active';
+
+  const { data: hits, error: hitsError } = await supabaseClient
+    .from('world_boss_hits')
+    .select('user_id, damage, guardians(name), circles(name)')
+    .eq('boss_id', boss.id);
+  const rows = document.getElementById('worldBossLeaderboardRows');
+  if(hitsError){ rows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(hitsError.message) + '</td></tr>'; return; }
+
+  const byUser = {};
+  (hits || []).forEach(h => {
+    const gName = (h.guardians && h.guardians.name) || 'A guardian';
+    const cName = (h.circles && h.circles.name) || '—';
+    if(!byUser[h.user_id]) byUser[h.user_id] = { gName, cName, total: 0 };
+    byUser[h.user_id].total += h.damage;
+  });
+  const ranked = Object.values(byUser).sort((a, b) => b.total - a.total).slice(0, 10);
+  rows.innerHTML = ranked.length
+    ? ranked.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.gName)}</td><td class="dim">${esc(r.cName)}</td><td>${r.total.toLocaleString()}</td></tr>`).join('')
+    : '<tr><td colspan="4">No attacks logged yet.</td></tr>';
+}
+
+async function spawnWorldBoss(){
+  const status = document.getElementById('spawnWorldBossStatus');
+  const name = document.getElementById('newBossName').value.trim();
+  const affinity = document.getElementById('newBossAffinity').value || null;
+  const ward = parseInt(document.getElementById('newBossWard').value, 10);
+  const hp = parseInt(document.getElementById('newBossHp').value, 10);
+  const rewardEssence = parseInt(document.getElementById('newBossRewardEssence').value, 10);
+  const rewardTokens = parseInt(document.getElementById('newBossRewardTokens').value, 10);
+  const imageUrl = document.getElementById('newBossImageUrl').value.trim();
+  const flavor = document.getElementById('newBossFlavor').value.trim();
+
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  if(isNaN(hp) || hp < 1){ status.className = 'status err'; status.textContent = 'Enter an HP pool greater than 0.'; return; }
+  if(isNaN(ward) || ward < 0){ status.className = 'status err'; status.textContent = 'Ward must be 0 or higher.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Spawning…';
+
+  await supabaseClient.from('world_bosses').update({ status: 'ended', resolved_at: new Date().toISOString() }).eq('status', 'active');
+
+  const { error } = await supabaseClient.from('world_bosses').insert({
+    name, affinity, ward,
+    hp_total: hp, hp_remaining: hp,
+    reward_essence_pool: isNaN(rewardEssence) ? 0 : rewardEssence,
+    reward_god_tokens_pool: isNaN(rewardTokens) ? 0 : rewardTokens,
+    image_url: imageUrl || null,
+    flavor_text: flavor || null,
+    status: 'active',
+  });
+
+  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+
+  status.className = 'status ok';
+  status.textContent = name + ' is live — players can attack it from the map now.';
+  ['newBossName','newBossWard','newBossHp','newBossRewardEssence','newBossRewardTokens','newBossImageUrl','newBossFlavor'].forEach(fid => {
+    const el = document.getElementById(fid);
+    if(fid === 'newBossWard') el.value = '0';
+    else if(fid === 'newBossRewardEssence' || fid === 'newBossRewardTokens') el.value = '0';
+    else el.value = '';
+  });
+  document.getElementById('newBossAffinity').value = '';
+  loadWorldBoss();
+}
+
+async function endWorldBoss(){
+  const status = document.getElementById('worldBossEndStatus');
+  status.className = 'status';
+  status.textContent = 'Ending…';
+  const { error } = await supabaseClient.from('world_bosses')
+    .update({ status: 'ended', resolved_at: new Date().toISOString() }).eq('status', 'active');
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Ended.';
+  loadWorldBoss();
 }
 
 /* =====================================================================
