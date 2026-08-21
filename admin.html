@@ -3543,8 +3543,23 @@ async function loadLeaderboards(){
       .select('id, email, display_name, purchases(amount_cents)')
   ]);
 
-  lbCircles = (circlesRes.data || []).map(c => ({ ...c, member_count: (c.circle_members || []).length }));
-  renderCircleLeaderboard('rank_score');
+  // Direct feedback: "for some reason it says no circle formed yet in the
+  // leaderboard and that is incorrect." Root cause: this was the one query
+  // in loadLeaderboards() with no .error check (every other one below —
+  // PvP ladder, guardians, spenders — already shows "Failed to load: …"
+  // on a real error). A genuine query failure here (RLS, a bad embed, a
+  // dropped connection, anything) fell straight through to
+  // `circlesRes.data || []`, which silently became an empty array and
+  // rendered identically to "there truly are no Circles yet" — no way to
+  // tell the two apart. Now it surfaces the real error instead of lying
+  // about there being nothing to show.
+  if(circlesRes.error){
+    lbCircles = [];
+    document.getElementById('circleLbRows').innerHTML = '<tr><td colspan="7">Failed to load: ' + esc(circlesRes.error.message) + '</td></tr>';
+  } else {
+    lbCircles = (circlesRes.data || []).map(c => ({ ...c, member_count: (c.circle_members || []).length }));
+    renderCircleLeaderboard('rank_score');
+  }
 
   const pvpRows = document.getElementById('pvpLbRows');
   if(pvpRes.error){
