@@ -174,6 +174,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="maphotspots" onclick="showTab('maphotspots')">Map Hotspots</button>
       <button class="tab-btn" data-tab="pantheons" onclick="showTab('pantheons')">Pantheons &amp; Gods</button>
       <button class="tab-btn" data-tab="chainedgods" onclick="showTab('chainedgods')">Chained Gods</button>
+      <button class="tab-btn" data-tab="guide" onclick="showTab('guide')">Narrator/Guide</button>
       <button class="tab-btn" data-tab="access" onclick="showTab('access')">Access &amp; Broadcasts</button>
       <button class="tab-btn" data-tab="customers" onclick="showTab('customers')">Customers</button>
     </div>
@@ -1706,6 +1707,49 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
     </div>
 
+    <!-- ============================== NARRATOR / GUIDE (0055) ============================== -->
+    <div class="tab-content" id="tab-guide">
+      <div class="card">
+        <h2>Narrator</h2>
+        <p class="hint">The in-fiction voice that walks a brand-new player through their first steps — auto-opens once, the first time a Mage and a hatched Guardian both exist, and stays reopenable after that from a "Ask Ganymede" hotspot on the Map Hub.</p>
+        <div class="form-row">
+          <div class="field"><label>Narrator name</label><input type="text" id="narratorName" placeholder="Ganymede" style="max-width:220px;"></div>
+          <div class="field"><label>Portrait URL (optional — falls back to a placeholder)</label><input type="text" id="narratorPortraitUrl" placeholder="https://…" style="max-width:400px;"></div>
+        </div>
+        <div class="save-bar">
+          <button id="saveNarratorSettingsBtn">Save narrator</button>
+          <div class="status" id="narratorSettingsStatus"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Guide steps</h2>
+        <p class="hint">The walkthrough script, shown one card at a time in this order. Sort order controls sequence — the seeded rows leave gaps of 10 so you can slot a new step in between two existing ones without renumbering everything. Only active rows show to players.</p>
+        <div class="scroll-table" style="max-height:460px;">
+          <table>
+            <thead><tr><th>Key</th><th>Title</th><th>Body</th><th>Sort</th><th>Active</th></tr></thead>
+            <tbody id="guideStepsRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveGuideStepsBtn">Save changes</button>
+          <div class="status" id="guideStepsStatus"></div>
+        </div>
+        <h3>Add a new step</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newGuideStepKey" placeholder="e.g. crafting_intro" style="max-width:170px;"></div>
+          <div class="field"><label>Title</label><input type="text" id="newGuideStepTitle" style="max-width:220px;"></div>
+          <div class="field"><label>Sort order</label><input type="number" id="newGuideStepSort" value="50" style="max-width:90px;"></div>
+          <button id="addGuideStepBtn">Add step</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Body (Ganymede's words, shown on this card)</label>
+          <textarea id="newGuideStepBody" rows="3" style="max-width:none;width:100%;"></textarea>
+        </div>
+        <div class="status" id="newGuideStepStatus"></div>
+      </div>
+    </div>
+
     <!-- ============================== ACCESS & BROADCASTS ============================== -->
     <div class="tab-content" id="tab-access">
       <div class="card">
@@ -2025,6 +2069,8 @@ async function handleSession(session){
   loadSpeciesCatalog();
   loadMageArts();
   loadMageGear();
+  loadNarratorSettingsAdmin();
+  loadGuideStepsAdmin();
   loadSpeciesMoves();
   loadDeityMoves();
   loadDeityBlessings();
@@ -2090,6 +2136,7 @@ const PAGE_KEYS = [
   { key: 'guardianPage', label: 'Guardian Page' },
   { key: 'mage', label: 'Mage Creation' },
   { key: 'mageHome', label: 'Mage Home' },
+  { key: 'guide', label: 'Narrator/Guide (Ganymede)' },
   { key: 'personalAltar', label: 'Your Altar (solo)' },
   { key: 'backpack', label: 'Backpack' },
   { key: 'shop', label: 'Shop' },
@@ -2168,7 +2215,8 @@ const DEFAULT_MAP_AREAS_ADMIN = [
   { id: 'guardianPage',  label: 'Guardian Page',                       left: 0,    top: 71.6, width: 21,   height: 23.4 },
   { id: 'personalAltar', label: 'Your Altar',                          left: 21.5, top: 68,   width: 10,   height: 16 },
   { id: 'backpack',      label: 'Backpack',                            left: 84.9, top: 71.6, width: 15.1, height: 23.4 },
-  { id: 'mage',          label: 'Your Mage',                           left: 32,   top: 68,   width: 10,   height: 16 }
+  { id: 'mage',          label: 'Your Mage',                           left: 32,   top: 68,   width: 10,   height: 16 },
+  { id: 'guide',         label: 'Ask Ganymede',                        left: 44,   top: 68,   width: 10,   height: 16 }
 ];
 const DEFAULT_MAP_BG = "https://static.wixstatic.com/media/d6c75e_11a7f28595a041d49639dce6f72788d7~mv2.jpg";
 
@@ -2469,6 +2517,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addMageArtBtn').addEventListener('click', addMageArt);
   document.getElementById('saveMageGearBtn').addEventListener('click', saveMageGear);
   document.getElementById('addMageGearBtn').addEventListener('click', addMageGear);
+  document.getElementById('saveNarratorSettingsBtn').addEventListener('click', saveNarratorSettings);
+  document.getElementById('saveGuideStepsBtn').addEventListener('click', saveGuideSteps);
+  document.getElementById('addGuideStepBtn').addEventListener('click', addGuideStep);
 
   document.getElementById('saveSeasonSettingsBtn').addEventListener('click', saveSeasonSettings);
   document.getElementById('saveSeasonPoolBtn').addEventListener('click', saveSeasonPool);
@@ -5089,6 +5140,86 @@ async function addMageGear(){
   status.className = 'status ok'; status.textContent = name + ' added.';
   ['newMageGearKey','newMageGearName','newMageGearStatAmount','newMageGearCost','newMageGearDescription','newMageGearImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadMageGear();
+}
+
+/* ---------------- Narrator / Guide (0055) ----------------
+   narrator_settings is a singleton form, same shape as season settings
+   above. guide_steps is a bulk-editable table, same shape as Mage Arts —
+   upsert-by-step_key on save, plain insert to add a new step. */
+
+async function loadNarratorSettingsAdmin(){
+  const { data, error } = await supabaseClient.from('narrator_settings').select('name, portrait_url').eq('id', 1).maybeSingle();
+  if(error){ console.error('narrator_settings load failed', error); return; }
+  if(data){
+    document.getElementById('narratorName').value = data.name || '';
+    document.getElementById('narratorPortraitUrl').value = data.portrait_url || '';
+  }
+}
+
+async function saveNarratorSettings(){
+  const status = document.getElementById('narratorSettingsStatus');
+  const name = document.getElementById('narratorName').value.trim();
+  const portraitUrl = document.getElementById('narratorPortraitUrl').value.trim() || null;
+  if(!name){ status.className = 'status err'; status.textContent = 'Narrator name is required.'; return; }
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('narrator_settings').update({
+    name, portrait_url: portraitUrl, updated_at: new Date().toISOString()
+  }).eq('id', 1);
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+}
+
+async function loadGuideStepsAdmin(){
+  const { data, error } = await supabaseClient.from('guide_steps').select('*').order('sort_order', { ascending: true });
+  const rows = document.getElementById('guideStepsRows');
+  if(error){ rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  rows.innerHTML = (data || []).map(s => `<tr data-key="${esc(s.step_key)}">
+    <td class="dim">${esc(s.step_key)}</td>
+    <td><input type="text" id="gsTitle_${esc(s.step_key)}" value="${esc(s.title)}" style="max-width:180px;"></td>
+    <td><textarea id="gsBody_${esc(s.step_key)}" rows="2" style="max-width:360px;width:100%;">${esc(s.body)}</textarea></td>
+    <td><input type="number" id="gsSort_${esc(s.step_key)}" value="${s.sort_order}" style="max-width:70px;"></td>
+    <td><input type="checkbox" id="gsActive_${esc(s.step_key)}" ${s.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="5">No guide steps yet — run migration 0053.</td></tr>';
+}
+
+async function saveGuideSteps(){
+  const status = document.getElementById('guideStepsStatus');
+  const trs = document.querySelectorAll('#guideStepsRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    return {
+      step_key: key,
+      title: document.getElementById('gsTitle_' + key).value.trim(),
+      body: document.getElementById('gsBody_' + key).value.trim(),
+      sort_order: parseInt(document.getElementById('gsSort_' + key).value, 10) || 0,
+      active: document.getElementById('gsActive_' + key).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('guide_steps').upsert(rows, { onConflict: 'step_key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Players see the updated steps next time the guide opens.';
+  if(!error) loadGuideStepsAdmin();
+}
+
+async function addGuideStep(){
+  const status = document.getElementById('newGuideStepStatus');
+  const key = document.getElementById('newGuideStepKey').value.trim().toLowerCase();
+  const title = document.getElementById('newGuideStepTitle').value.trim();
+  const body = document.getElementById('newGuideStepBody').value.trim();
+  const sortOrder = parseInt(document.getElementById('newGuideStepSort').value, 10) || 0;
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!title){ status.className = 'status err'; status.textContent = 'Title is required.'; return; }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('guide_steps').insert({ step_key: key, title, body, sort_order: sortOrder, active: true });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+  status.className = 'status ok'; status.textContent = title + ' added.';
+  ['newGuideStepKey','newGuideStepTitle','newGuideStepBody'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newGuideStepSort').value = '50';
+  loadGuideStepsAdmin();
 }
 
 async function loadSpeciesMoves(){
