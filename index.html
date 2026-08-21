@@ -319,6 +319,17 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .roster-row .ractions button{padding:6px 10px;font-size:10px;}
 .request-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:3px;margin-bottom:6px;}
 .request-row .ractions button{padding:6px 10px;font-size:10px;}
+
+/* Territory Map (0051) — every Circle as a tile, colored by whoever
+   CURRENTLY controls its altar (not always its own founder), so a
+   takeover actually reads visually instead of living only in a stat. */
+.territory-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin:16px 0;}
+.territory-tile{border:1px solid var(--line);border-radius:5px;padding:14px 10px;text-align:center;background:rgba(0,0,0,0.22);}
+.territory-tile.captured{border-color:var(--ember);box-shadow:0 0 0 1px rgba(161,70,42,0.35);}
+.territory-tile.mine{border-color:var(--gold-bright);box-shadow:0 0 0 1px rgba(230,199,119,0.35);}
+.territory-tile .tname{font-family:'Cinzel',serif;font-size:12.5px;color:var(--parchment);margin-top:8px;}
+.territory-tile .tcontrol{font-size:10.5px;color:var(--parchment-dim);font-style:italic;margin-top:3px;}
+.territory-tile button{margin-top:10px;padding:6px 10px;font-size:10px;}
 .shape-pick-row{display:flex;gap:14px;justify-content:center;margin-bottom:22px;flex-wrap:wrap;}
 .shape-pick{cursor:pointer;text-align:center;padding:10px;border:1px solid var(--line);border-radius:4px;width:80px;transition:border-color .15s;}
 .shape-pick:hover{border-color:var(--gold);}
@@ -3154,6 +3165,7 @@ function renderCircle(){
   if(circleView.step === 'altar') return renderCircleAltar();
   if(circleView.step === 'dragon') return renderCircleDragon();
   if(circleView.step === 'invasions') return renderCircleInvasions();
+  if(circleView.step === 'territory') return renderTerritoryMap();
 }
 
 function renderCircleLocked(){
@@ -3405,8 +3417,23 @@ function renderCircleHome(){
 
   const patron = myCircle.patron;
   const patronLine = patron
-    ? `<p class="hint">Patron: <strong style="color:var(--gold-bright);">${esc(deityDisplayName(patron.pantheonId, patron.deityId))}</strong> — ${patron.count} member${patron.count === 1 ? '' : 's'} carry a full mark. (Flavor only for now — no bonus attached yet.)</p>`
+    ? `<p class="hint">Patron: <strong style="color:var(--gold-bright);">${esc(deityDisplayName(patron.pantheonId, patron.deityId))}</strong> — ${patron.count} member${patron.count === 1 ? '' : 's'} carry a full mark.</p>`
     : '';
+
+  // Territory conquest (0051) — surfaces capture state so a takeover is
+  // actually visible, not just a silent DB flag: your own altar under
+  // someone else's control (patron blessing stripped this harvest), and
+  // any OTHER circles' altars you currently control (patron blessing
+  // redirected to you).
+  const controlledBy = myCircle.altarControlledBy;
+  const controlledCircles = myCircle.controlledCircles || [];
+  let territoryLine = '';
+  if(controlledBy){
+    territoryLine += `<p class="hint" style="color:var(--ember);">Your altar's patron blessing is currently captured by ${esc(controlledBy.name)} — win a defense to take it back.</p>`;
+  }
+  if(controlledCircles.length){
+    territoryLine += `<p class="hint" style="color:var(--gold-bright);">You control the captured altar${controlledCircles.length === 1 ? '' : 's'} of ${controlledCircles.map(c => esc(c.name)).join(', ')} — their patron blessing pays out to you too.</p>`;
+  }
 
   const shopRows = circleShopItems.map(item => `
     <div class="roster-row">
@@ -3427,6 +3454,7 @@ function renderCircleHome(){
       <p class="ccount" style="text-align:center;">${roster.length}/${c.member_cap} members · Circle rank ${c.rank_score}</p>
       <div class="role-badge ${myRole}" style="margin-top:6px;">Your rank: ${roleLabel(myRole)}</div>
       ${patronLine}
+      ${territoryLine}
     </div>
 
     <div class="card"${circleHomeBg}>
@@ -3461,6 +3489,7 @@ function renderCircleHome(){
         <button class="secondary" onclick="openCircleMessages()">Messages</button>
         <button class="secondary" onclick="openCircleDragon()">Dragon's Lair</button>
         <button class="secondary" onclick="openCircleInvasions()">Invasions</button>
+        <button class="secondary" onclick="openTerritoryMap()">Territory Map</button>
         ${isLeader ? '<button class="secondary" onclick="openEditBanner()">Redesign banner</button>' : ''}
         <button class="secondary" onclick="doLeaveCircle()">Leave Circle</button>
         ${isLeader ? '<button class="secondary" onclick="doDisbandCircle()">Disband Circle</button>' : ''}
@@ -4464,14 +4493,88 @@ function renderCircleInvasions(){
   app.innerHTML = `
     <div class="card"${bgAttr('circleInvasions')}>
       <h2 style="text-align:center;">Invasions</h2>
-      <p class="hint" style="text-align:center;">Officers declare from another Circle's listing while browsing. Once a fight is underway, any member on either side can commit.</p>
+      <p class="hint" style="text-align:center;">Officers declare from another Circle's listing while browsing, or from the Territory Map. Once a fight is underway, any member on either side can commit.</p>
       <div class="status" id="invasionActionStatus"></div>
+      <div style="text-align:center;margin-top:10px;"><button class="secondary" onclick="openTerritoryMap()">View Territory Map</button></div>
     </div>
     ${pendingBlocks}
     <div class="card"${bgAttr('circleInvasions')}>
       <h2>History</h2>
       ${historyRows}
       <button class="secondary" style="margin-top:14px;" onclick="backFromInvasions()">Back to your Circle</button>
+    </div>
+  `;
+}
+
+/* ---------------- Territory Map (0051) ----------------
+   Risk-style overview: every Circle as a tile, colored/flagged by
+   whichever Circle CURRENTLY controls its altar — the whole point per
+   your note: "a actual territory map with colored highlights showing who
+   is in charge where... marked by their circles flag." Scouting is just
+   reading this (and the existing Browse Circles list); battling and
+   defending are the invasion commit window already built above. */
+
+let territoryMap = null; // {territories:[...]} | null (not yet loaded)
+
+async function openTerritoryMap(){
+  circleView = { step: 'territory' };
+  territoryMap = null;
+  render();
+  const data = await circleFetch('territory-map');
+  territoryMap = data.ok ? data : { territories: [] };
+  if(circleView && circleView.step === 'territory') render();
+}
+
+function backFromTerritoryMap(){
+  circleView = { step: 'home' };
+  render();
+}
+
+function renderTerritoryMap(){
+  const app = document.getElementById('app');
+  if(!territoryMap){
+    app.innerHTML = `<div class="card"><p class="status">Charting the realms…</p></div>`;
+    return;
+  }
+
+  const myCircleId = myCircle && myCircle.circle ? myCircle.circle.id : null;
+  const myRole = myCircle ? myCircle.myRole : null;
+  const isOfficer = myRole === 'high_priest' || myRole === 'high_priestess' || myRole === 'magus';
+
+  const tiles = (territoryMap.territories || []).map(t => {
+    const isMine = t.id === myCircleId;
+    const isCaptured = Boolean(t.controller);
+    // The flag shown is whoever CURRENTLY controls the altar — the
+    // capturing Circle's colors when captured, the founder's own
+    // otherwise. That's the whole "colored highlights showing who's in
+    // charge where" ask.
+    const flagShape = isCaptured ? t.controller.banner_shape : t.banner_shape;
+    const flagPrimary = isCaptured ? t.controller.banner_primary : t.banner_primary;
+    const flagSecondary = isCaptured ? t.controller.banner_secondary : t.banner_secondary;
+    const controlLine = isCaptured
+      ? `Controlled by ${esc(t.controller.name)}`
+      : (isMine ? 'Yours' : 'Self-controlled');
+    const canInvade = isOfficer && myCircleId && !isMine && t.id !== myCircleId;
+    return `
+      <div class="territory-tile ${isCaptured ? 'captured' : ''} ${isMine ? 'mine' : ''}">
+        ${bannerSVG(flagShape, flagPrimary, flagSecondary, 46)}
+        <div class="tname">${esc(t.name)}</div>
+        <div class="tcontrol">${controlLine}</div>
+        <div class="tcontrol">Rank ${t.rank_score}</div>
+        ${canInvade ? `<button class="secondary" onclick="doDeclareInvasion('${esc(t.id)}')">Invade — ${INVASION_COST_DEVOTION} Devotion</button>` : ''}
+      </div>
+    `;
+  }).join('') || '<p class="hint">No Circles founded yet.</p>';
+
+  app.innerHTML = `
+    <div class="card"${bgAttr('circleInvasions', 'text-align:center;')}>
+      <h2>Territory Map</h2>
+      <p class="hint">Every Circle's altar, and whoever currently holds it. A captured altar's flag flies for the Circle that took it — win a defense of your own to take it back.</p>
+    </div>
+    <div class="card"${bgAttr('circleInvasions')}>
+      <div class="territory-grid">${tiles}</div>
+      <div class="status" id="territoryActionStatus"></div>
+      <button class="secondary" style="margin-top:14px;" onclick="backFromTerritoryMap()">Back to your Circle</button>
     </div>
   `;
 }
