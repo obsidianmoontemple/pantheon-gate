@@ -236,6 +236,42 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
   border-color:var(--gold-bright,#e6c777)!important;
 }
 
+/* Small pulsing "glowing node" marker — direct feedback: "I can not seem
+   to edit my map the way I want to... simply insert some glowing nodes
+   in there that fit the theme" for the three plaques that have no
+   illustrated spot to line up against (Your Altar, Ask Ganymede, World
+   Boss). Purely decorative and centered inside whichever .map-hotspot
+   it's nested in (opt-in via that area's `glow: true`, see
+   hotspotButtonsMarkup()) — the button underneath is still the full
+   invisible click target, this just gives the eye something to find.
+   pointer-events:none so it never steals the click from the button. */
+.map-hotspot-node{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:15px;height:15px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle, var(--gold-bright) 0%, var(--gold) 45%, transparent 76%);
+  box-shadow:0 0 8px 3px rgba(230,199,119,0.55), 0 0 20px 9px rgba(230,199,119,0.22);
+  animation:mapNodePulse 2.6s ease-in-out infinite;
+}
+.map-hotspot-node::after{
+  content:'';position:absolute;inset:-11px;border-radius:50%;
+  border:1px solid rgba(230,199,119,0.4);
+  animation:mapNodeRing 2.6s ease-in-out infinite;
+}
+@keyframes mapNodePulse{0%,100%{opacity:0.7;transform:translate(-50%,-50%) scale(0.88);}50%{opacity:1;transform:translate(-50%,-50%) scale(1.18);}}
+@keyframes mapNodeRing{0%{opacity:0.55;transform:scale(0.6);}75%,100%{opacity:0;transform:scale(1.7);}}
+/* "did you label the nodes?" — "yes please". A small caption under the
+   glow so the node reads as a named location, not just a sparkle. Dark
+   text-shadow (not a solid background chip) keeps it legible over any
+   part of the map art without boxing it in. pointer-events:none, same
+   reason as .map-hotspot-node. */
+.map-hotspot-node-label{
+  position:absolute;left:50%;top:calc(50% + 15px);transform:translateX(-50%);
+  white-space:nowrap;pointer-events:none;
+  font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.04em;
+  color:var(--gold-bright,#e6c777);
+  text-shadow:0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.75);
+}
+
 /* Generic "hub" screen shell — originated with Guardian Home, direct
    feedback: "I would actually like the art I provide to lay over the
    entirety of the page covering everything except the buttons." Same
@@ -1415,7 +1451,7 @@ const DEFAULT_MAP_AREAS = [
   // — a starting guess, not a measurement; there's no illustrated plaque
   // there yet to line up against, so drag it into the exact spot in
   // admin.html's Map Hotspots editor once the art shows what's there.
-  { id: 'worldBoss',     label: 'World Boss',                         left: 81,   top: 1.5,  width: 16,   height: 8.5,  action: openWorldBoss },
+  { id: 'worldBoss',     label: 'World Boss',                         left: 81,   top: 1.5,  width: 16,   height: 8.5,  action: openWorldBoss, glow: true },
   // Chained Gods = redeeming God Tokens (per your note: "that is where you
   // redeem god tokens") — the existing Redeem a Token screen, not a
   // placeholder. Doing so is what makes a god show up at the Temple.
@@ -1424,7 +1460,7 @@ const DEFAULT_MAP_AREAS = [
   { id: 'guardianPage', label: 'Guardian Page', left: 0,    top: 71.6, width: 21,   height: 23.4, action: openGuardianHome },
   // Not pictured on the art, so tucked into the open water next to the
   // Guardian Page icon rather than a below-map button.
-  { id: 'personalAltar', label: 'Your Altar',   left: 21.5, top: 68,   width: 10,   height: 16,   action: openPersonalAltar },
+  { id: 'personalAltar', label: 'Your Altar',   left: 21.5, top: 68,   width: 10,   height: 16,   action: openPersonalAltar, glow: true },
   { id: 'backpack',     label: 'Backpack',      left: 84.9, top: 71.6, width: 15.1, height: 23.4, action: openBackpack },
   // The Narrator/Guide (0055) — reopenable anytime, independent of
   // has_seen_guide (that flag only gates the one automatic showing).
@@ -1433,7 +1469,7 @@ const DEFAULT_MAP_AREAS = [
   // hotspot — direct feedback: "I need the mage and familiar both under
   // the same guardian tab not separate." Both now live together on the
   // Guardian Page screen, opened the same way as always.)
-  { id: 'guide',         label: 'Ask Ganymede', left: 32,   top: 68,   width: 10,   height: 16,   action: openGuide },
+  { id: 'guide',         label: 'Ask Ganymede', left: 32,   top: 68,   width: 10,   height: 16,   action: openGuide, glow: true },
 ];
 // Mutable copy — loadMapHotspots() (see near loadSpeciesCatalog) overrides
 // individual entries' left/top/width/height from the admin-editable
@@ -1510,7 +1546,7 @@ async function loadMapHotspots(){
 function hotspotButtonsMarkup(areas, arrayName, pageKey){
   const fallback = pageKey ? !siteBackgrounds[pageKey] : false;
   return areas.map((a, i) => `
-    <button class="map-hotspot${fallback ? ' map-hotspot-fallback' : ''}" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;" title="${esc(a.label)}" aria-label="${esc(a.label)}" onclick="${arrayName}[${i}].action()">${fallback ? esc(a.label) : ''}</button>
+    <button class="map-hotspot${fallback ? ' map-hotspot-fallback' : ''}" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;" title="${esc(a.label)}" aria-label="${esc(a.label)}" onclick="${arrayName}[${i}].action()">${fallback ? esc(a.label) : (a.glow ? `<span class="map-hotspot-node" aria-hidden="true"></span><span class="map-hotspot-node-label" aria-hidden="true">${esc(a.label)}</span>` : '')}</button>
   `).join('');
 }
 
