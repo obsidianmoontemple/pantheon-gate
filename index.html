@@ -383,6 +383,15 @@ async function loadCustomDeitiesIntoCatalog(){
 let supabaseClient = null;
 let session = null;
 let guardian = null;
+// site_settings (0044) — admin-editable background URLs for the two
+// screens that used to have their picture hardcoded into the CSS
+// (everything else got an admin URL field in 0043; these were missed).
+let siteSettings = { mapBackgroundUrl: null, loginBackgroundUrl: null };
+async function loadSiteSettings(){
+  const { data, error } = await supabaseClient.from('site_settings').select('map_background_url, login_background_url').eq('id', 1).maybeSingle();
+  if(error){ console.error('site_settings load failed', error); return; }
+  if(data){ siteSettings.mapBackgroundUrl = data.map_background_url; siteSettings.loginBackgroundUrl = data.login_background_url; }
+}
 let pickedSpecies = null;
 let nameDraft = '';
 let marks = [];          // [{deity_id, pantheon_id, mark_type}]
@@ -484,6 +493,7 @@ let profileMessageStatus = null; // null | {includedPerMonth, usedThisMonth, bon
 let profileReleaseConfirm = false; // true while the "release your familiar" confirm step is showing
 let hallOfAncestors = null; // null (not yet loaded) | array of retired_guardians rows for this player
 let hallOfAncestorsOpen = false;
+let profilePasswordOpen = false; // true while the set/change-password form is showing on Profile
 
 /* ---------------- shop (opened from Profile) ----------------
    Real-money purchasing — pantheons, individual gods, the flat
@@ -525,14 +535,17 @@ async function boot(){
     return;
   }
   supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  loadSiteSettings().catch(e => console.error('site settings load failed', e));
 
   const { data: { session: existing } } = await supabaseClient.auth.getSession();
   session = existing;
-  if(session){
-    await afterLogin();
-  } else {
-    renderLoginScreen();
-  }
+  // Always land on the login screen first, even with a valid persisted
+  // session — a returning player gets a one-click "Continue" there rather
+  // than the app silently skipping past it. (This is also where a
+  // password-reset link's recovery session lands, so there's always
+  // somewhere visible to notice you're signed in before anything else
+  // happens.)
+  renderLoginScreen();
 
   // Covers both redirect-back paths (Google OAuth and the magic-link
   // email) landing on a page load that already found no session above —
@@ -549,10 +562,18 @@ async function boot(){
       expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
       profileView = null; shrineView = null; mailView = null; backpackView = null;
       checkinView = null; promoView = null; campaignView = null; guardianHomeView = null;
-      shopView = null;
+      shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
+      profilePasswordOpen = false;
       renderLoginScreen();
     }
   });
+}
+
+// A returning player with a still-valid session clicks through from the
+// login screen's "Continue" rather than the page silently doing it for
+// them — see boot()'s comment on why that screen always shows first now.
+async function continueSession(){
+  await afterLogin();
 }
 
 async function afterLogin(){
@@ -584,16 +605,40 @@ async function afterLogin(){
 function renderLoginScreen(){
   document.body.classList.add('login-screen');
   const app = document.getElementById('app');
+  const bg = siteSettings.loginBackgroundUrl ? ` style="background-image:url('${esc(siteSettings.loginBackgroundUrl)}');"` : '';
+
+  // A still-valid session gets a one-click way through instead of the
+  // full sign-in form — see boot()'s comment on why this screen always
+  // shows first now.
+  if(session){
+    app.innerHTML = `
+      <div class="login-screen-wrap"${bg}>
+        <div class="login-card">
+          <h1>The Long Silence</h1>
+          <p class="hint">Welcome back, ${esc(session.user.email || 'traveler')}.</p>
+          <button onclick="continueSession()">Continue</button>
+          <button class="secondary" style="margin-top:12px;" onclick="signOutOfGate()">Sign in as someone else</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
   app.innerHTML = `
-    <div class="login-screen-wrap">
+    <div class="login-screen-wrap"${bg}>
       <div class="login-card">
         <h1>The Long Silence</h1>
         <p class="hint">Somewhere past the Gate, an egg is waiting for a keeper. Sign in to claim it.</p>
         <button onclick="loginWithGoogle()">Sign in with Google</button>
         <div class="login-divider">or</div>
         <input type="email" id="loginEmail" placeholder="you@example.com">
-        <button class="secondary" onclick="loginWithMagicLink()">Email me a sign-in link</button>
+        <input type="password" id="loginPassword" placeholder="Password (leave blank to use a sign-in link instead)">
+        <button class="secondary" onclick="loginWithPassword()">Sign in with password</button>
+        <button class="secondary" style="margin-top:10px;" onclick="loginWithMagicLink()">Email me a sign-in link</button>
+        <div class="login-divider">new here?</div>
+        <button class="secondary" onclick="loginWithSignup()">Create an account with a password</button>
         <div class="status" id="loginStatus"></div>
+        <p class="hint" style="margin-top:14px;margin-bottom:0;"><a href="#" onclick="forgotPassword();return false;" style="color:inherit;text-decoration:underline;">Forgot your password?</a></p>
       </div>
     </div>
   `;
@@ -618,6 +663,58 @@ async function loginWithMagicLink(){
   });
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? error.message : 'Check your email for a sign-in link.';
+}
+
+async function loginWithPassword(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const status = document.getElementById('loginStatus');
+  if(!email || !password){ status.className = 'status err'; status.textContent = 'Enter both email and password.'; return; }
+  status.className = 'status';
+  status.textContent = 'Signing in…';
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if(error){ status.className = 'status err'; status.textContent = error.message; return; }
+  session = data.session;
+  await afterLogin();
+}
+
+// Email/password sign-up — a second account-creation path alongside
+// Google and the magic link, for anyone who'd rather set a password up
+// front. Requires the Email provider's password sign-in to be turned on
+// in the Supabase Dashboard (Authentication → Providers → Email).
+async function loginWithSignup(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const status = document.getElementById('loginStatus');
+  if(!email || !password){ status.className = 'status err'; status.textContent = 'Enter both an email and a password first.'; return; }
+  if(password.length < 6){ status.className = 'status err'; status.textContent = 'Password needs to be at least 6 characters.'; return; }
+  status.className = 'status';
+  status.textContent = 'Creating your account…';
+  const { data, error } = await supabaseClient.auth.signUp({
+    email, password,
+    options: { emailRedirectTo: window.location.origin + window.location.pathname }
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.message; return; }
+  if(data.session){
+    session = data.session;
+    await afterLogin();
+  } else {
+    status.className = 'status ok';
+    status.textContent = 'Account created — check your email to confirm it, then sign in with your password.';
+  }
+}
+
+async function forgotPassword(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const status = document.getElementById('loginStatus');
+  if(!email){ status.className = 'status err'; status.textContent = 'Enter your email above first.'; return; }
+  status.className = 'status';
+  status.textContent = 'Sending a reset link…';
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? error.message : 'Check your email for a password reset link — it signs you in, then set a new password from your Profile.';
 }
 
 async function loadGuardian(){
@@ -803,7 +900,8 @@ function mapHubMarkup(){
   const nodes = MAP_AREAS.map((a, i) => `
     <button class="map-hotspot" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;" title="${esc(a.label)}" aria-label="${esc(a.label)}" onclick="MAP_AREAS[${i}].action()"></button>
   `).join('');
-  return `<div class="map-hub" id="mapHub">${nodes}</div>`;
+  const bgOverride = siteSettings.mapBackgroundUrl ? ` style="background-image:url('${esc(siteSettings.mapBackgroundUrl)}');"` : '';
+  return `<div class="map-hub" id="mapHub"${bgOverride}>${nodes}</div>`;
 }
 
 // The landing screen once a guardian exists (render()'s fallback) — every
@@ -951,6 +1049,7 @@ function backFromProfile(){
   profileView = null;
   profileReleaseConfirm = false;
   hallOfAncestorsOpen = false;
+  profilePasswordOpen = false;
   render();
 }
 
@@ -997,11 +1096,23 @@ function renderProfile(){
   const hallBlock = hallOfAncestorsOpen
     ? `<div class="pantheon-group" style="margin-top:10px;text-align:left;">
         <h3>Hall of Ancestors</h3>
+        <p class="hint" style="margin-top:-4px;">Bring one back as your active familiar any time — your current one is archived here in its place, so you can switch back and forth as you like.</p>
         ${hallOfAncestors === null ? '<p class="hint">Loading…</p>' : (hallOfAncestors.length
-          ? hallOfAncestors.map(g => `<div class="deity-row"><span class="name">${esc(g.name)} <span style="opacity:0.6;">(${esc(g.species)}, ${esc(STAGE_LABEL[g.stage] || g.stage || 'egg')})</span></span><span style="opacity:0.6;font-size:12px;">${g.full_marks_count} full mark${g.full_marks_count === 1 ? '' : 's'} · retired ${new Date(g.retired_at).toLocaleDateString()}</span></div>`).join('')
+          ? hallOfAncestors.map(g => `<div class="deity-row"><span class="name">${esc(g.name)} <span style="opacity:0.6;">(${esc(g.species)}, ${esc(STAGE_LABEL[g.stage] || g.stage || 'egg')})</span></span><div style="display:flex;align-items:center;gap:8px;"><span style="opacity:0.6;font-size:12px;">${g.full_marks_count} full mark${g.full_marks_count === 1 ? '' : 's'} · retired ${new Date(g.retired_at).toLocaleDateString()}</span><button class="secondary" style="padding:4px 10px;font-size:11px;" onclick="doRestoreGuardian('${g.id}')">Bring back</button></div></div>`).join('')
           : '<p class="hint">No familiars retired yet.</p>')}
       </div>`
     : `<button class="secondary" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto;" onclick="openHallOfAncestors()">Hall of Ancestors</button>`;
+  const passwordBlock = profilePasswordOpen
+    ? `<div class="pantheon-group" style="margin-top:10px;text-align:left;">
+        <h3>Set / change password</h3>
+        <p class="hint" style="margin-top:-4px;">Works no matter how you originally signed in — this just adds (or replaces) a password so you can sign in with one next time.</p>
+        <input type="password" id="newPassword" placeholder="New password (min 6 characters)">
+        <input type="password" id="newPasswordConfirm" placeholder="Confirm new password">
+        <button onclick="savePassword()">Save password</button>
+        <button class="secondary" onclick="closePasswordForm()">Cancel</button>
+        <div class="status" id="passwordStatus"></div>
+      </div>`
+    : `<button class="secondary" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto;" onclick="openPasswordForm()">Set / change password</button>`;
   app.innerHTML = `
     <div class="card" style="text-align:center;">
       <h2>${esc(guardian.name)}'s Profile</h2>
@@ -1037,6 +1148,7 @@ function renderProfile(){
       <button class="secondary" style="margin-top:14px;display:block;margin-left:auto;margin-right:auto;" onclick="backFromProfile()">Back to the map</button>
       <button class="secondary" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto;" onclick="signOutOfGate()">Sign out</button>
       ${hallBlock}
+      ${passwordBlock}
       ${releaseBlock}
     </div>
   `;
@@ -1080,13 +1192,55 @@ function openHallOfAncestors(){
   hallOfAncestorsOpen = true;
   render();
   if(hallOfAncestors === null){
-    supabaseClient.from('retired_guardians').select('name, species, stage, full_marks_count, retired_at')
+    supabaseClient.from('retired_guardians').select('id, name, species, stage, full_marks_count, retired_at')
       .order('retired_at', { ascending: false }).then(({ data, error }) => {
         if(error){ console.error('retired_guardians load failed', error); hallOfAncestors = []; }
         else hallOfAncestors = data || [];
         if(profileView) render();
       });
   }
+}
+
+// Brings a retired familiar back as the active one — restore_guardian()
+// auto-archives whatever's currently active first, so this is safe to
+// call as often as wanted; it's a swap, not a one-time undo.
+async function doRestoreGuardian(retiredId){
+  if(!confirm('Bring this familiar back as your active one? Your current familiar will be archived to the Hall of Ancestors in its place.')) return;
+  const { data, error } = await supabaseClient.rpc('restore_guardian', { p_retired_id: retiredId });
+  if(error){ alert(error.message || 'Could not restore that familiar.'); return; }
+  // Full reset — same list as confirmReleaseGuardian(), since this also
+  // swaps out the active guardian and everything derived from it.
+  guardian = null; marks = [];
+  petitionView = null; combatView = null; craftView = null; redeemView = null;
+  expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
+  profileView = null; shrineView = null; mailView = null; backpackView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null;
+  shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
+  profilePasswordOpen = false;
+  await afterLogin();
+  celebrate();
+}
+
+function openPasswordForm(){
+  profilePasswordOpen = true;
+  render();
+}
+function closePasswordForm(){
+  profilePasswordOpen = false;
+  render();
+}
+async function savePassword(){
+  const pw = document.getElementById('newPassword').value;
+  const confirmPw = document.getElementById('newPasswordConfirm').value;
+  const status = document.getElementById('passwordStatus');
+  if(!pw || pw.length < 6){ status.className = 'status err'; status.textContent = 'Password needs to be at least 6 characters.'; return; }
+  if(pw !== confirmPw){ status.className = 'status err'; status.textContent = "Passwords don't match."; return; }
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.auth.updateUser({ password: pw });
+  if(error){ status.className = 'status err'; status.textContent = error.message; return; }
+  status.className = 'status ok';
+  status.textContent = 'Password saved — you can sign in with it next time.';
 }
 
 /* ---------------- shrine (Map hub's "Temple of the Gods" hotspot) ----------------
