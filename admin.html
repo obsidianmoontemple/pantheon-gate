@@ -141,6 +141,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="deities" onclick="showTab('deities')">Deity Personalities</button>
       <button class="tab-btn" data-tab="pricing" onclick="showTab('pricing')">Pricing &amp; Store</button>
       <button class="tab-btn" data-tab="pantheons" onclick="showTab('pantheons')">Pantheons &amp; Gods</button>
+      <button class="tab-btn" data-tab="chainedgods" onclick="showTab('chainedgods')">Chained Gods</button>
       <button class="tab-btn" data-tab="access" onclick="showTab('access')">Access &amp; Broadcasts</button>
       <button class="tab-btn" data-tab="customers" onclick="showTab('customers')">Customers</button>
     </div>
@@ -1466,6 +1467,48 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
     </div>
 
+    <!-- ============================== CHAINED GODS (seasonal pool) ============================== -->
+    <div class="tab-content" id="tab-chainedgods">
+      <div class="card">
+        <h2>Current season</h2>
+        <p class="hint">God Tokens are redeemed for a random deity drawn from whichever gods are checked "In season" below — the player doesn't choose. The Key of Night lets a player choose, but only from that same in-season list. Season name is just a display label shown to players; the checkboxes in the table below are what actually control the pool.</p>
+        <div class="form-row">
+          <div class="field">
+            <label>Season name (shown to players)</label>
+            <input type="text" id="seasonName" placeholder="e.g. Harvest Rites" style="max-width:260px;">
+          </div>
+          <div class="field">
+            <label>God Token cost (Tokens per random unlock)</label>
+            <input type="number" min="1" id="godTokenCost" style="max-width:140px;">
+          </div>
+          <div class="field">
+            <label>Key of Night cost (Keys per chosen unlock)</label>
+            <input type="number" min="1" id="keyOfNightCost" style="max-width:140px;">
+          </div>
+        </div>
+        <div class="save-bar">
+          <button id="saveSeasonSettingsBtn">Save season settings</button>
+          <div class="status" id="seasonSettingsStatus"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Seasonal deity pool</h2>
+        <p class="hint">Check "In season" for every god you want available this season. An empty pool means God Token redemption will refuse with an error until you've checked at least one — the Key of Night picker will simply show nothing to choose from.</p>
+        <input class="search-box" type="text" id="seasonPoolSearch" placeholder="Search by name…">
+        <div class="scroll-table" style="max-height:460px;">
+          <table>
+            <thead><tr><th>God</th><th>Pantheon</th><th>In season</th></tr></thead>
+            <tbody id="seasonPoolRows"><tr><td colspan="3">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveSeasonPoolBtn">Save pool changes</button>
+          <div class="status" id="seasonPoolStatus"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ============================== ACCESS & BROADCASTS ============================== -->
     <div class="tab-content" id="tab-access">
       <div class="card">
@@ -1762,6 +1805,8 @@ async function handleSession(session){
   await loadCustomDeitiesIntoCatalog();
   loadDeitySettings();
   loadCustomGodsList();
+  loadSeasonSettings();
+  loadSeasonPool();
   loadEntitlements();
   loadBroadcasts();
   loadRevenue();
@@ -1980,6 +2025,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('saveSpeciesCatalogBtn').addEventListener('click', saveSpeciesCatalog);
   document.getElementById('addSpeciesBtn').addEventListener('click', addSpeciesCatalogEntry);
+
+  document.getElementById('saveSeasonSettingsBtn').addEventListener('click', saveSeasonSettings);
+  document.getElementById('saveSeasonPoolBtn').addEventListener('click', saveSeasonPool);
+  document.getElementById('seasonPoolSearch').addEventListener('input', filterSeasonPoolRows);
 
   document.getElementById('saveGauntletBtn').addEventListener('click', saveGauntletOpponents);
   document.getElementById('addGauntletBtn').addEventListener('click', addGauntletOpponent);
@@ -2247,6 +2296,92 @@ async function saveDeitySettings(){
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Changes apply immediately, no redeploy needed.';
   if(!error) loadDeitySettings();
+}
+
+/* ---------------- Chained Gods — seasonal deity pool ----------------
+   God Tokens now grant a random deity from whichever rows are checked
+   "in_season" here; the Key of Night lets the player pick, restricted to
+   the same set. Same uniqueFlatDeities()/search-box pattern as the Gods
+   table above, just with one checkbox column instead of pricing fields. */
+
+async function loadSeasonSettings(){
+  const { data, error } = await supabaseClient
+    .from('season_settings')
+    .select('season_name')
+    .eq('id', 1)
+    .maybeSingle();
+  if(!error && data) document.getElementById('seasonName').value = data.season_name || '';
+
+  const { data: pricing, error: pricingError } = await supabaseClient
+    .from('pricing_settings')
+    .select('god_token_unlock_cost, key_of_night_unlock_cost')
+    .eq('id', 1)
+    .maybeSingle();
+  if(!pricingError && pricing){
+    document.getElementById('godTokenCost').value = pricing.god_token_unlock_cost;
+    document.getElementById('keyOfNightCost').value = pricing.key_of_night_unlock_cost;
+  }
+}
+
+async function saveSeasonSettings(){
+  const status = document.getElementById('seasonSettingsStatus');
+  const seasonName = document.getElementById('seasonName').value.trim();
+  const godTokenCost = parseInt(document.getElementById('godTokenCost').value, 10);
+  const keyOfNightCost = parseInt(document.getElementById('keyOfNightCost').value, 10);
+
+  if(isNaN(godTokenCost) || godTokenCost < 1 || isNaN(keyOfNightCost) || keyOfNightCost < 1){
+    status.className = 'status err';
+    status.textContent = 'Both costs must be at least 1.';
+    return;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const [seasonResult, pricingResult] = await Promise.all([
+    supabaseClient.from('season_settings').update({ season_name: seasonName, updated_at: new Date().toISOString() }).eq('id', 1),
+    supabaseClient.from('pricing_settings').update({ god_token_unlock_cost: godTokenCost, key_of_night_unlock_cost: keyOfNightCost, updated_at: new Date().toISOString() }).eq('id', 1)
+  ]);
+  const error = seasonResult.error || pricingResult.error;
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+}
+
+async function loadSeasonPool(){
+  const { data, error } = await supabaseClient.from('deity_season_pool').select('deity_id, in_season');
+  const inSeason = {};
+  (data || []).forEach(r => { inSeason[r.deity_id] = r.in_season; });
+  if(error) console.error('deity_season_pool load failed', error);
+
+  const rows = document.getElementById('seasonPoolRows');
+  rows.innerHTML = uniqueFlatDeities().map(d => `<tr data-name="${esc(d.name.toLowerCase())}">
+    <td>${esc(d.name)}</td>
+    <td class="dim">${esc(d.pantheonLabels.join(' / '))}</td>
+    <td><input type="checkbox" id="season_${d.id}" ${inSeason[d.id] ? 'checked' : ''}></td>
+  </tr>`).join('');
+}
+
+function filterSeasonPoolRows(){
+  const q = document.getElementById('seasonPoolSearch').value.trim().toLowerCase();
+  document.querySelectorAll('#seasonPoolRows tr').forEach(tr => {
+    const name = tr.getAttribute('data-name') || '';
+    tr.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+}
+
+async function saveSeasonPool(){
+  const status = document.getElementById('seasonPoolStatus');
+  const rows = uniqueFlatDeities().map(d => ({
+    deity_id: d.id,
+    pantheon_id: d.pantheonId,
+    in_season: document.getElementById('season_' + d.id).checked,
+    updated_at: new Date().toISOString()
+  }));
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('deity_season_pool').upsert(rows, { onConflict: 'deity_id' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : `Saved. ${rows.filter(r => r.in_season).length} god(s) in season.`;
+  if(!error) loadSeasonPool();
 }
 
 /* ---------------- EZ deity adder ---------------- */
