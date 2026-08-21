@@ -346,7 +346,14 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .battle-side{flex:1;min-width:0;display:flex;flex-direction:column;align-items:stretch;}
 .battle-sprite{display:flex;align-items:flex-end;justify-content:center;height:100px;margin-bottom:6px;}
 .battle-vs{flex:none;font-family:'Cinzel',serif;font-size:14px;color:var(--parchment-dim);padding:0 2px;align-self:flex-start;margin-top:40px;}
-@media (max-width:520px){.battle-arena{gap:6px;} .battle-sprite{height:70px;}}
+/* Direct feedback: "when we start a fight we will need to have both
+   mage and familiar shown on the board... making it look more natural."
+   The Mage stands beside the Familiar on our side of the arena — purely
+   presentational, the Mage has no HP bar/actions here since Guardian
+   combat itself is unchanged; only the Familiar actually fights. */
+.battle-sprite-duo{gap:6px;}
+.battle-sprite-mage{opacity:0.92;filter:drop-shadow(0 0 10px rgba(200,162,74,0.15));}
+@media (max-width:520px){.battle-arena{gap:6px;} .battle-sprite{height:70px;} .battle-sprite-mage{display:none;}}
 .hp-wrap{position:relative;}
 .hp-wrap.flash-hit{animation:hitFlash 0.45s ease;}
 .hp-wrap.control-hit .hp-bar-track{box-shadow:0 0 0 1px var(--moon);}
@@ -3565,7 +3572,10 @@ function renderBattleScreen(){
       <h2 style="text-align:center;">${esc(guardian.name)} vs. ${esc(v.opponentName)}</h2>
       <div class="battle-arena">
         <div class="battle-side">
-          <div class="battle-sprite">${imgFor(guardian.species, guardian.stage, 110)}</div>
+          <div class="battle-sprite battle-sprite-duo">
+            ${mage ? `<div class="battle-sprite-mage">${opponentImgFor(MAGE_ART_IMAGES[mage.art_key], mageArtFor(mage.art_key) ? mageArtFor(mage.art_key).affinity : null, 84)}</div>` : ''}
+            ${imgFor(guardian.species, guardian.stage, 110)}
+          </div>
           <div class="hp-wrap" id="gHpWrap">
             <div class="hp-row"><span class="hp-name">${esc(guardian.name)}</span><span class="hp-name" id="gHpText">${v.guardianHp} / ${v.guardianMaxHp}</span></div>
             <div class="hp-bar-track"><div class="hp-bar-fill" id="gHpFill" style="width:${gPct}%;"></div></div>
