@@ -532,11 +532,29 @@ function mageArtFor(key){ return MAGE_ARTS.find(a => a.key === key) || null; }
 async function loadMage(){
   const { data, error } = await supabaseClient
     .from('mages')
-    .select('id, name, art_key, level, xp, upgrade_points, vitality, might, ward, swiftness, cunning, last_trained_at, last_duel_at, equipped_weapon_id, equipped_armor_id, equipped_accessory_id')
+    .select('id, name, art_key, level, xp, upgrade_points, vitality, might, ward, swiftness, cunning, last_trained_at, last_duel_at, equipped_weapon_id, equipped_armor_id, equipped_accessory_id, has_seen_guide')
     .eq('owner_user_id', session.user.id)
     .maybeSingle();
   if(error){ console.error('mage load failed', error); return; }
   mage = data;
+}
+
+// The Narrator/Guide (0055) — both loaded once at boot so they're ready
+// the instant render()'s fallback needs to auto-trigger the intro.
+async function loadNarratorSettings(){
+  const { data, error } = await supabaseClient.from('narrator_settings').select('name, portrait_url').eq('id', 1).maybeSingle();
+  if(error){ console.error('narrator_settings load failed', error); return; }
+  if(data) narratorSettings = { name: data.name || 'Ganymede', portraitUrl: data.portrait_url };
+}
+
+async function loadGuideSteps(){
+  const { data, error } = await supabaseClient
+    .from('guide_steps')
+    .select('step_key, title, body, sort_order')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+  if(error){ console.error('guide_steps load failed', error); return; }
+  GUIDE_STEPS = (data || []).map(s => ({ key: s.step_key, title: s.title, body: s.body }));
 }
 
 /* Chained Gods — the seasonal deity pool. God Tokens draw a random deity
@@ -687,6 +705,16 @@ let pickedMageArt = null;
 let mageNameDraft = '';
 let mageActionStatus = '';    // scratch status text for Train/Duel/gear actions
 let mageGearOwned = [];       // this mage's mage_gear_items, reloaded each time the gear screen opens
+
+// The Narrator/Guide (0055) — an in-fiction walkthrough for new players.
+// Loaded once at boot (afterLogin(), alongside the other custom-catalog
+// loads) so it's ready the instant render()'s fallback needs to
+// auto-trigger it. See render() for the one-time-automatic logic and
+// openGuide()/renderGuide() below for the screen itself.
+let guideView = null;         // null | {step:'home'} — the intro/reopen screen
+let guideStepIndex = 0;
+let GUIDE_STEPS = [];         // [{key,title,body}], from guide_steps
+let narratorSettings = { name: 'Ganymede', portraitUrl: null };
 let marks = [];          // [{deity_id, pantheon_id, mark_type}]
 let currentPhase = null; // {cycle_id, phase, phase_index} — flavor + gating text only, edge function re-checks server-side
 let petitionView = null; // null | {step:'pick'} | {step:'challenge', ...} | {step:'verdict', ...}
@@ -862,7 +890,7 @@ async function boot(){
       petitionView = null; combatView = null; craftView = null; redeemView = null;
       expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
       profileView = null; shrineView = null; mailView = null; backpackView = null;
-      checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; worldBossView = null; mageView = null;
+      checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; worldBossView = null; mageView = null; guideView = null;
       shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
       profilePasswordOpen = false;
       renderLoginScreen();
@@ -883,6 +911,8 @@ async function afterLogin(){
   await loadCustomDeitiesIntoCatalog().catch(e => console.error('custom deities fold-in failed', e));
   await loadSpeciesCatalog().catch(e => console.error('species catalog load failed', e));
   await loadMageArtsCatalog().catch(e => console.error('mage arts catalog load failed', e));
+  await loadNarratorSettings().catch(e => console.error('narrator settings load failed', e));
+  await loadGuideSteps().catch(e => console.error('guide steps load failed', e));
   loadSeasonInfo().catch(e => console.error('season pool load failed', e));
   await loadMapHotspots().catch(e => console.error('map hotspots load failed', e));
   await loadGuardian();
@@ -1085,6 +1115,7 @@ function render(){
   if(guardian && shopView){ renderShop(); return; }
   if(guardian && guardianHomeView){ renderGuardianHome(); return; }
   if(guardian && mageView){ renderMage(); return; }
+  if(guardian && guideView){ renderGuide(); return; }
   // Mage creation (0052) comes first now — direct feedback: "the mage
   // becomes who you play as and then you will get your egg shortly
   // after the game starts." No mage row yet takes priority over
@@ -1092,9 +1123,22 @@ function render(){
   // (every pre-existing player falls into this exactly once, the next
   // time they sign in after this update ships).
   if(!mage){ renderMageCreation(); return; }
+  if(!guardian){ renderHatchFlow(); return; }
+  // The Narrator/Guide (0055) auto-triggers exactly once, right here —
+  // the first moment both a Mage and a hatched Guardian exist, which is
+  // also the first moment the Map Hub would otherwise show. Marked seen
+  // the instant it opens (not on completion), so leaving early doesn't
+  // re-trigger it on the next login.
+  if(!mage.has_seen_guide && !guideView){
+    guideView = { step: 'home' };
+    guideStepIndex = 0;
+    markGuideSeen();
+    renderGuide();
+    return;
+  }
   // Default landing screen once a guardian exists: the map hub itself,
   // not the guardian stats page — see the Guardian Home note above.
-  guardian ? renderMapHub() : renderHatchFlow();
+  renderMapHub();
 }
 
 /* ---------------- hatching ---------------- */
@@ -1288,6 +1332,11 @@ const DEFAULT_MAP_AREAS = [
   // guess next to Your Altar, drag it into place once there's something
   // to line up against.
   { id: 'mage',          label: 'Your Mage',    left: 32,   top: 68,   width: 10,   height: 16,   action: openMageHome },
+  // The Narrator/Guide (0055) — reopenable anytime, independent of
+  // has_seen_guide (that flag only gates the one automatic showing).
+  // Another starting guess, tucked next to Your Mage; drag into place
+  // once there's something on the art to line up against.
+  { id: 'guide',         label: 'Ask Ganymede', left: 44,   top: 68,   width: 10,   height: 16,   action: openGuide },
 ];
 // Mutable copy — loadMapHotspots() (see near loadSpeciesCatalog) overrides
 // individual entries' left/top/width/height from the admin-editable
@@ -1732,6 +1781,76 @@ function renderMageGear(){
   `;
 }
 
+/* ---------------- the Narrator/Guide (0055) ----------------
+   An in-fiction walkthrough — Ganymede, the gods' former cupbearer, now
+   the one voice that still carries across the Gate during the Long
+   Silence. Auto-opens once (see render()'s fallback chain above); a
+   "Guide" hotspot on the Map Hub reopens it anytime after, independent
+   of the has_seen_guide flag. Content itself (GUIDE_STEPS/narratorSettings)
+   is entirely admin-editable — see admin.html's Guide tab — this file
+   only knows how to page through whatever's loaded. */
+
+async function markGuideSeen(){
+  if(!mage || mage.has_seen_guide) return;
+  mage.has_seen_guide = true; // optimistic — avoids a re-trigger flash if the network call is still in flight
+  try{
+    await fetch(FUNCTIONS_URL + '/mage', {
+      method: 'POST', headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'mark-guide-seen' })
+    });
+  }catch(e){ console.error('mark-guide-seen failed', e); }
+}
+
+function openGuide(){
+  guideView = { step: 'home' };
+  guideStepIndex = 0;
+  render();
+}
+
+function backFromGuide(){
+  guideView = null;
+  returnToMapHub();
+}
+
+function guideNext(){
+  if(guideStepIndex < GUIDE_STEPS.length - 1){ guideStepIndex++; render(); }
+  else backFromGuide();
+}
+
+function guidePrev(){
+  if(guideStepIndex > 0){ guideStepIndex--; render(); }
+}
+
+function renderGuide(){
+  const app = document.getElementById('app');
+  if(!GUIDE_STEPS.length){
+    app.innerHTML = `
+      <div class="card verdict-card"${bgAttr('guide')}>
+        <h2>${esc(narratorSettings.name)}</h2>
+        <p class="challenge-text">Nothing's been written for me to say yet — check back later.</p>
+        <button onclick="backFromGuide()">Back to the map</button>
+      </div>
+    `;
+    return;
+  }
+  const step = GUIDE_STEPS[guideStepIndex];
+  const isLast = guideStepIndex >= GUIDE_STEPS.length - 1;
+  app.innerHTML = `
+    <div class="card verdict-card"${bgAttr('guide')}>
+      <div class="art">${opponentImgFor(narratorSettings.portraitUrl, null, 110)}</div>
+      <div class="essence-label" style="display:block;margin-bottom:6px;">${esc(narratorSettings.name)}</div>
+      <h2>${esc(step.title)}</h2>
+      <p class="challenge-text">${esc(step.body)}</p>
+      <p class="hint">${guideStepIndex + 1} / ${GUIDE_STEPS.length}</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        ${guideStepIndex > 0 ? `<button class="secondary" onclick="guidePrev()">Back</button>` : ''}
+        <button onclick="guideNext()">${isLast ? 'Into the Realms' : 'Next'}</button>
+      </div>
+      ${!isLast ? `<button class="secondary" style="margin-top:14px;" onclick="backFromGuide()">Skip</button>` : ''}
+    </div>
+  `;
+}
+
 function todayStr(){
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -1940,7 +2059,7 @@ async function confirmReleaseGuardian(){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; worldBossView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; worldBossView = null; mageView = null; guideView = null;
   shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
   render();
 }
@@ -1971,7 +2090,7 @@ async function doRestoreGuardian(retiredId){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; worldBossView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; worldBossView = null; mageView = null; guideView = null;
   shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
   profilePasswordOpen = false;
   await afterLogin();
@@ -2206,9 +2325,52 @@ function renderBackpack(){
    the home page's Bond row, since Bond-tending is a separate, more
    frequent action now (see doTendBond() near renderGuardianHome()). */
 
-function openCheckin(){
+// Direct feedback: "the check in calendar should be visible so they know
+// what they are playing for." daily_checkin_rewards (0023) has always
+// existed and driven tend_guardian()'s payouts, but nothing ever showed
+// it to the player before now — checked in blind. Lazy-loaded here
+// (public select-all RLS, same as every other catalog) rather than at
+// boot, since only this one screen needs it.
+let checkinRewards = []; // daily_checkin_rewards, active rows only
+
+async function loadCheckinRewards(){
+  const { data, error } = await supabaseClient
+    .from('daily_checkin_rewards')
+    .select('streak_day, currency_key, amount, label')
+    .eq('active', true)
+    .order('streak_day', { ascending: true });
+  if(error){ console.error('daily_checkin_rewards load failed', error); return; }
+  checkinRewards = data || [];
+}
+
+function checkinCalendarMarkup(){
+  const streak = guardian.checkin_streak || 0;
+  const baseline = checkinRewards.find(r => r.streak_day === 0);
+  const milestones = checkinRewards.filter(r => r.streak_day > 0);
+  const nextMilestone = milestones.find(m => m.streak_day > streak);
+
+  const baseRow = baseline ? `<div class="roster-row">
+    <div><div class="rname">Every check-in</div><div class="cblurb">${esc(baseline.label || 'Daily tending')}</div></div>
+    <div class="cblurb">+${baseline.amount} ${esc(CHECKIN_CURRENCY_LABELS[baseline.currency_key] || baseline.currency_key)}</div>
+  </div>` : '';
+
+  const milestoneRows = milestones.map(m => {
+    const reached = streak >= m.streak_day;
+    const isNext = !reached && m === nextMilestone;
+    return `<div class="roster-row" style="${reached ? 'opacity:0.55;' : ''}${isNext ? 'border-color:var(--gold-bright);' : ''}">
+      <div><div class="rname">Day ${m.streak_day}${m.label ? ' — ' + esc(m.label) : ''}</div>${isNext ? '<div class="cblurb">Next milestone</div>' : ''}</div>
+      <div class="cblurb">${reached ? '<span class="hint" style="margin:0;">Reached</span>' : `+${m.amount} ${esc(CHECKIN_CURRENCY_LABELS[m.currency_key] || m.currency_key)}`}</div>
+    </div>`;
+  }).join('');
+
+  return (baseRow + milestoneRows) || '<p class="hint">Nothing set up on the calendar yet.</p>';
+}
+
+async function openCheckin(){
   checkinView = { step: 'home' };
   render();
+  await loadCheckinRewards();
+  if(checkinView) render();
 }
 
 function backFromCheckin(){
@@ -2226,10 +2388,11 @@ function renderCheckin(){
         ${hotspotButtonsMarkup(CHECKIN_AREAS, 'CHECKIN_AREAS')}
         <div class="hub-overlay">
           <h2>Daily Check-in</h2>
-          <p class="hint">Once a day, check in for a streak bonus and whatever today's calendar has waiting.</p>
           ${guardian.checkin_streak > 0 ? `<p class="hint" style="margin:-4px 0 10px;">${guardian.checkin_streak} day streak</p>` : ''}
-          <p class="hint" style="margin:6px 0 0;">${tendedToday ? 'Checked in today — come back tomorrow.' : 'Tap to check in.'}</p>
+          <p class="hint" style="margin:6px 0 10px;">${tendedToday ? 'Checked in today — come back tomorrow.' : 'Tap to check in.'}</p>
           <div class="status" id="checkinStatus"></div>
+          <h3 style="margin-top:14px;text-align:left;">The Calendar</h3>
+          ${checkinCalendarMarkup()}
         </div>
       </div>
     </div>
@@ -2835,7 +2998,7 @@ function returnToMapHub(){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; worldBossView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; worldBossView = null; mageView = null; guideView = null;
   shopView = null;
   render();
 }
