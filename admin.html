@@ -503,10 +503,12 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>Spawn a new World Boss</h2>
+        <p class="hint">The boss now retaliates on every swing (direct feedback: "it needs to retaliate") — Power is its counter-attack strength; a swing that would meet or exceed an attacker's vitality repels that attack entirely (0 damage that swing, cooldown still applies).</p>
         <div class="form-row">
           <div class="field"><label>Name</label><input type="text" id="newBossName" placeholder="e.g. The Unmade King" style="max-width:220px;"></div>
           <div class="field"><label>Affinity (optional)</label><select id="newBossAffinity" style="max-width:150px;"><option value="">— none —</option></select></div>
-          <div class="field"><label>Ward</label><input type="number" min="0" id="newBossWard" value="0" style="max-width:100px;"></div>
+          <div class="field"><label>Ward (its defense)</label><input type="number" min="0" id="newBossWard" value="0" style="max-width:100px;"></div>
+          <div class="field"><label>Power (its retaliation)</label><input type="number" min="0" id="newBossPower" value="60" style="max-width:110px;"></div>
           <div class="field"><label>HP pool</label><input type="number" min="1" id="newBossHp" style="max-width:130px;"></div>
         </div>
         <div class="form-row">
@@ -4402,7 +4404,7 @@ async function loadWorldBoss(){
   current.innerHTML = [
     `${esc(boss.name)} — ${worldBossStatusLabel(boss.status)}`,
     `HP: ${boss.hp_remaining.toLocaleString()} / ${boss.hp_total.toLocaleString()} (${pct}%)`,
-    `Affinity: ${boss.affinity || '—'}   Ward: ${boss.ward}`,
+    `Affinity: ${boss.affinity || '—'}   Ward: ${boss.ward}   Power: ${boss.power}`,
     `Reward pools: ${boss.reward_essence_pool.toLocaleString()} Essence · ${boss.reward_god_tokens_pool.toLocaleString()} God Tokens`,
     `Spawned: ${new Date(boss.spawned_at).toLocaleString()}${boss.resolved_at ? ('   Resolved: ' + new Date(boss.resolved_at).toLocaleString()) : ''}`,
   ].join('<br>');
@@ -4435,6 +4437,7 @@ async function spawnWorldBoss(){
   const name = document.getElementById('newBossName').value.trim();
   const affinity = document.getElementById('newBossAffinity').value || null;
   const ward = parseInt(document.getElementById('newBossWard').value, 10);
+  const power = parseInt(document.getElementById('newBossPower').value, 10);
   const hp = parseInt(document.getElementById('newBossHp').value, 10);
   const rewardEssence = parseInt(document.getElementById('newBossRewardEssence').value, 10);
   const rewardTokens = parseInt(document.getElementById('newBossRewardTokens').value, 10);
@@ -4444,6 +4447,7 @@ async function spawnWorldBoss(){
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
   if(isNaN(hp) || hp < 1){ status.className = 'status err'; status.textContent = 'Enter an HP pool greater than 0.'; return; }
   if(isNaN(ward) || ward < 0){ status.className = 'status err'; status.textContent = 'Ward must be 0 or higher.'; return; }
+  if(isNaN(power) || power < 0){ status.className = 'status err'; status.textContent = 'Power must be 0 or higher.'; return; }
 
   status.className = 'status';
   status.textContent = 'Spawning…';
@@ -4451,7 +4455,7 @@ async function spawnWorldBoss(){
   await supabaseClient.from('world_bosses').update({ status: 'ended', resolved_at: new Date().toISOString() }).eq('status', 'active');
 
   const { error } = await supabaseClient.from('world_bosses').insert({
-    name, affinity, ward,
+    name, affinity, ward, power,
     hp_total: hp, hp_remaining: hp,
     reward_essence_pool: isNaN(rewardEssence) ? 0 : rewardEssence,
     reward_god_tokens_pool: isNaN(rewardTokens) ? 0 : rewardTokens,
