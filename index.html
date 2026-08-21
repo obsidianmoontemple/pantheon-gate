@@ -492,6 +492,53 @@ async function loadSpeciesCatalog(){
   SPECIES_ART = art;
 }
 
+// mage_arts (0052) — the Mage-creation Art picker, same fallback-first
+// pattern as SPECIES/species_catalog above: starts as a hardcoded default
+// so Mage creation still works before the load finishes (or if it
+// fails), then loadMageArtsCatalog() (called alongside the other
+// custom-catalog loads in afterLogin()) replaces it with whatever's
+// active in the database. Portraits use opponentImgFor() (single
+// image_url + an affinity-tinted placeholder) rather than imgFor(), since
+// an Art has one portrait, not five life-stage images.
+const DEFAULT_MAGE_ARTS = [
+  { key: 'pyromancy',      label: 'Pyromancy',         blurb: 'Fire given a will of its own — quick to anger, quicker to burn out a fight.', affinity: 'fire' },
+  { key: 'tidecalling',    label: 'Tidecalling',       blurb: 'The patient pull of deep water — wears an enemy down rather than breaking them.', affinity: 'sea' },
+  { key: 'stormcraft',     label: 'Stormcraft',        blurb: 'Lightning caught between two hands — fast, loud, impossible to predict.', affinity: 'storm' },
+  { key: 'stonewarding',   label: 'Stonewarding',      blurb: 'Old, slow, immovable magic — built to protect first and strike second.', affinity: 'earth' },
+  { key: 'necromancy',     label: 'Necromancy',        blurb: 'A working knowledge of endings — draws strength from what a fight costs.', affinity: 'death' },
+  { key: 'shadowweaving',  label: 'Shadowweaving',     blurb: 'Magic that answers to secrecy — misdirection over brute force.', affinity: 'shadow' },
+  { key: 'warchanting',    label: 'War-Chanting',      blurb: 'A voice trained for the front line — every word lands like a blow.', affinity: 'war' },
+  { key: 'solarinvocation',label: 'Solar Invocation',  blurb: 'Borrowed light, freely given back — the most direct of all the Arts.', affinity: 'light' },
+];
+let MAGE_ARTS = DEFAULT_MAGE_ARTS.slice();
+let MAGE_ART_IMAGES = {}; // art key -> image_url|undefined
+
+async function loadMageArtsCatalog(){
+  const { data, error } = await supabaseClient
+    .from('mage_arts')
+    .select('key, label, blurb, affinity, image_url, sort_order, active')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+  if(error){ console.error('mage_arts load failed', error); return; }
+  if(!data || !data.length) return; // keep the DEFAULT_MAGE_ARTS fallback rather than showing an empty picker
+  MAGE_ARTS = data.map(a => ({ key: a.key, label: a.label, blurb: a.blurb || '', affinity: a.affinity }));
+  const images = {};
+  data.forEach(a => { images[a.key] = a.image_url; });
+  MAGE_ART_IMAGES = images;
+}
+
+function mageArtFor(key){ return MAGE_ARTS.find(a => a.key === key) || null; }
+
+async function loadMage(){
+  const { data, error } = await supabaseClient
+    .from('mages')
+    .select('id, name, art_key, level, xp, upgrade_points, vitality, might, ward, swiftness, cunning, last_trained_at, last_duel_at, equipped_weapon_id, equipped_armor_id, equipped_accessory_id')
+    .eq('owner_user_id', session.user.id)
+    .maybeSingle();
+  if(error){ console.error('mage load failed', error); return; }
+  mage = data;
+}
+
 /* Chained Gods — the seasonal deity pool. God Tokens draw a random deity
    from here (server-side, see doRedeemGodToken); the Key of Night picker
    in renderRedeem() only lists deities present here. Both tables have a
@@ -628,6 +675,18 @@ function applyBodyBackdrop(pageKey){
 }
 let pickedSpecies = null;
 let nameDraft = '';
+
+// Mages (0054) — the human player character, created before the egg per
+// direct feedback: "the mage becomes who you play as and then you will
+// get your egg shortly after the game starts." Separate identity/
+// progression from guardian entirely — see render()'s dispatch chain and
+// afterLogin() for where this loads.
+let mage = null;              // full mages row, or null until created
+let mageView = null;          // null | {step:'home'} | {step:'gear'} — creation itself isn't tracked here, see render()'s "!mage" fallback check instead
+let pickedMageArt = null;
+let mageNameDraft = '';
+let mageActionStatus = '';    // scratch status text for Train/Duel/gear actions
+let mageGearOwned = [];       // this mage's mage_gear_items, reloaded each time the gear screen opens
 let marks = [];          // [{deity_id, pantheon_id, mark_type}]
 let currentPhase = null; // {cycle_id, phase, phase_index} — flavor + gating text only, edge function re-checks server-side
 let petitionView = null; // null | {step:'pick'} | {step:'challenge', ...} | {step:'verdict', ...}
@@ -799,10 +858,11 @@ async function boot(){
     } else if(!newSession && session){
       session = null;
       guardian = null;
+      mage = null;
       petitionView = null; combatView = null; craftView = null; redeemView = null;
       expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
       profileView = null; shrineView = null; mailView = null; backpackView = null;
-      checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; worldBossView = null;
+      checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; worldBossView = null; mageView = null;
       shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
       profilePasswordOpen = false;
       renderLoginScreen();
@@ -822,9 +882,11 @@ async function afterLogin(){
   document.getElementById('app').innerHTML = '<div class="card"><p class="hint" style="margin:0;text-align:center;">Finding your way through the Gate…</p></div>';
   await loadCustomDeitiesIntoCatalog().catch(e => console.error('custom deities fold-in failed', e));
   await loadSpeciesCatalog().catch(e => console.error('species catalog load failed', e));
+  await loadMageArtsCatalog().catch(e => console.error('mage arts catalog load failed', e));
   loadSeasonInfo().catch(e => console.error('season pool load failed', e));
   await loadMapHotspots().catch(e => console.error('map hotspots load failed', e));
   await loadGuardian();
+  await loadMage();
   if(guardian) await loadMarks();
   loadMoonPhase().catch(e => console.error('moon phase load failed', e));
   // For-sale flags need to be known site-wide, not just inside the Shop —
@@ -1022,6 +1084,14 @@ function render(){
   if(guardian && campaignView){ renderCampaign(); return; }
   if(guardian && shopView){ renderShop(); return; }
   if(guardian && guardianHomeView){ renderGuardianHome(); return; }
+  if(guardian && mageView){ renderMage(); return; }
+  // Mage creation (0052) comes first now — direct feedback: "the mage
+  // becomes who you play as and then you will get your egg shortly
+  // after the game starts." No mage row yet takes priority over
+  // everything else here, including a guardian that already exists
+  // (every pre-existing player falls into this exactly once, the next
+  // time they sign in after this update ships).
+  if(!mage){ renderMageCreation(); return; }
   // Default landing screen once a guardian exists: the map hub itself,
   // not the guardian stats page — see the Guardian Home note above.
   guardian ? renderMapHub() : renderHatchFlow();
@@ -1098,6 +1168,75 @@ async function hatchGuardian(){
   celebrate({ count: 20, distance: 60, duration: 1000, color: '#ffd76a', size: 24, sprite: 'particle-fx/fx_starburst.png' });
 }
 
+/* ---------------- mage creation (0054) ----------------
+   Mirrors the hatch flow above almost exactly — name + a premade picker,
+   permanent once claimed — but for the Mage, and it comes first now. See
+   render()'s dispatch chain: no mage row takes priority over everything
+   else, including an already-hatched guardian. */
+
+function renderMageCreation(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="card"${bgAttr('mage')}>
+      <h2 style="text-align:center;">Who are you?</h2>
+      <p class="hint" style="text-align:center;">Before the egg, before the Gate — you. Pick the Art that calls to you; it colors how you fight, not how well. The name you give yourself next is the one part of this you can never take back.</p>
+
+      <div class="choice-row" id="mageArtRow">
+        ${MAGE_ARTS.map(a => `
+          <div class="choice ${pickedMageArt === a.key ? 'selected' : ''}" onclick="pickMageArt('${a.key}')">
+            <div class="art">${opponentImgFor(MAGE_ART_IMAGES[a.key], a.affinity, 92)}</div>
+            <div class="label">${esc(a.label)}</div>
+            <div class="blurb">${esc(a.blurb)}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <input type="text" id="mageName" maxlength="24" placeholder="Name yourself — this is permanent" value="${esc(mageNameDraft)}" oninput="onMageNameInput()">
+      <button id="mageCreateBtn" ${(pickedMageArt && mageNameDraft.trim().length >= 2) ? '' : 'disabled'} onclick="createMage()">Begin</button>
+      <div class="status" id="mageCreateStatus"></div>
+    </div>
+  `;
+}
+
+function pickMageArt(key){ pickedMageArt = key; renderMageCreation(); }
+
+function onMageNameInput(){
+  const el = document.getElementById('mageName');
+  mageNameDraft = el ? el.value : '';
+  const btn = document.getElementById('mageCreateBtn');
+  if(btn) btn.disabled = !(pickedMageArt && mageNameDraft.trim().length >= 2 && mageNameDraft.trim().length <= 24);
+}
+
+async function createMage(){
+  const status = document.getElementById('mageCreateStatus');
+  const name = mageNameDraft.trim();
+  if(!pickedMageArt || name.length < 2){
+    status.className = 'status err';
+    status.textContent = 'Pick an Art and give yourself a name first.';
+    return;
+  }
+  status.className = 'status';
+  status.textContent = 'Stepping through the Gate…';
+
+  const { data, error } = await supabaseClient
+    .from('mages')
+    .insert({ owner_user_id: session.user.id, name, art_key: pickedMageArt })
+    .select('id, name, art_key, level, xp, upgrade_points, vitality, might, ward, swiftness, cunning, last_trained_at, last_duel_at, equipped_weapon_id, equipped_armor_id, equipped_accessory_id')
+    .single();
+
+  if(error){
+    status.className = 'status err';
+    status.textContent = error.code === '23505'
+      ? 'You already have a Mage — refresh the page.'
+      : ('Failed: ' + error.message);
+    return;
+  }
+
+  mage = data;
+  render();
+  celebrate({ count: 20, distance: 60, duration: 1000, color: '#e6c777', size: 22, sprite: 'particle-fx/fx_starburst.png' });
+}
+
 /* ---------------- guardian home ---------------- */
 
 const STAGE_LABEL = { egg: 'Egg', hatchling: 'Hatchling', fledged: 'Fledged', ascendant: 'Ascendant', sovereign: 'Sovereign' };
@@ -1145,6 +1284,10 @@ const DEFAULT_MAP_AREAS = [
   // Guardian Page icon rather than a below-map button.
   { id: 'personalAltar', label: 'Your Altar',   left: 21.5, top: 68,   width: 10,   height: 16,   action: openPersonalAltar },
   { id: 'backpack',     label: 'Backpack',      left: 84.9, top: 71.6, width: 15.1, height: 23.4, action: openBackpack },
+  // Mages (0054) — also not pictured on the art yet; another starting
+  // guess next to Your Altar, drag it into place once there's something
+  // to line up against.
+  { id: 'mage',          label: 'Your Mage',    left: 32,   top: 68,   width: 10,   height: 16,   action: openMageHome },
 ];
 // Mutable copy — loadMapHotspots() (see near loadSpeciesCatalog) overrides
 // individual entries' left/top/width/height from the admin-editable
@@ -1183,6 +1326,14 @@ const DEFAULT_CHECKIN_AREAS = [
 ];
 let CHECKIN_AREAS = DEFAULT_CHECKIN_AREAS.slice();
 
+const DEFAULT_MAGE_HOME_AREAS = [
+  { id: 'train',     label: 'Train',           left: 12, top: 58, width: 20, height: 12, action: doTrainMage },
+  { id: 'duel',      label: 'Duel',            left: 40, top: 58, width: 20, height: 12, action: doDuelMage },
+  { id: 'gear',      label: 'Manage',          left: 68, top: 58, width: 20, height: 12, action: openMageGear },
+  { id: 'backToMap', label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8,  action: backFromMage },
+];
+let MAGE_HOME_AREAS = DEFAULT_MAGE_HOME_AREAS.slice();
+
 // Generic loader shared by every screen registered in admin.html's Screen
 // Hotspots editor — id/label/action come from that screen's own DEFAULT_*
 // array (a click handler can't live in a database row), only
@@ -1208,6 +1359,7 @@ async function loadMapHotspots(){
   WORLDBOSS_AREAS = await loadHotspotOverrides('worldBoss', DEFAULT_WORLDBOSS_AREAS);
   REDEEM_AREAS = await loadHotspotOverrides('chainedGods', DEFAULT_REDEEM_AREAS);
   CHECKIN_AREAS = await loadHotspotOverrides('checkin', DEFAULT_CHECKIN_AREAS);
+  MAGE_HOME_AREAS = await loadHotspotOverrides('mageHome', DEFAULT_MAGE_HOME_AREAS);
 }
 
 // Shared by both full-bleed screens (map hub, Guardian Home) — a set of
@@ -1308,6 +1460,274 @@ function renderGuardianHome(){
             : (marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.')}</p>
         </div>
       </div>
+    </div>
+  `;
+}
+
+/* ---------------- mage home (0054, Map hub's "Your Mage" hotspot) ----------------
+   The Mage's own progression screen — separate XP/level track, its own
+   stats/equipment, and two activities (Train/Duel) that never touch
+   Guardian combat. Built directly on the hub-active/hub-screen/hub-box/
+   hub-overlay full-bleed pattern from this same batch of work, so it's
+   already drag/resize-editable from admin.html's Screen Hotspots tab
+   under screen key 'mageHome'. "Manage" opens a normal card screen
+   (renderMageGear, below) for spending upgrade points and equipping/
+   crafting gear — those lists grow, so unlike Train/Duel they don't fit
+   the hide-everything-but-buttons pattern; see the note on list-heavy
+   screens in the CSS above. */
+
+let mageGearCatalog = []; // mage_gear_catalog, public catalog — loaded once and cached, like craftCatalog
+
+function mageXpToNextLevel(level){ return 40 + (level - 1) * 20; } // must match the `mage` edge function's curve
+
+// Gear bonuses are computed here, not stored on the mages row — same
+// "compute effective, don't mutate base" idea as the edge function's own
+// effectiveStats(), so equip/unequip always reflects instantly and
+// correctly without a second round trip.
+function mageEffectiveStats(){
+  const base = { vitality: mage.vitality, might: mage.might, ward: mage.ward, swiftness: mage.swiftness, cunning: mage.cunning };
+  [mage.equipped_weapon_id, mage.equipped_armor_id, mage.equipped_accessory_id].filter(Boolean).forEach(id => {
+    const owned = mageGearOwned.find(g => g.id === id);
+    const cat = owned ? mageGearCatalog.find(c => c.key === owned.gear_key) : null;
+    if(cat) base[cat.stat_key] += cat.stat_amount;
+  });
+  return base;
+}
+
+async function loadMageGearCatalog(){
+  const { data, error } = await supabaseClient
+    .from('mage_gear_catalog')
+    .select('key, name, description, slot, stat_key, stat_amount, shard_cost, image_url, active, sort_order')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+  if(error){ console.error('mage_gear_catalog load failed', error); return; }
+  mageGearCatalog = data || [];
+}
+
+async function loadMageGearOwned(){
+  const { data, error } = await supabaseClient.from('mage_gear_items').select('id, gear_key, acquired_at').eq('mage_id', mage.id);
+  if(error){ console.error('mage_gear_items load failed', error); return; }
+  mageGearOwned = data || [];
+}
+
+async function openMageHome(){
+  mageView = { step: 'home' };
+  mageActionStatus = '';
+  render();
+  await Promise.all([loadMageGearCatalog(), loadMageGearOwned()]);
+  if(mageView) render();
+}
+
+function backFromMage(){
+  mageView = null;
+  returnToMapHub();
+}
+
+async function openMageGear(){
+  mageView = { step: 'gear' };
+  render();
+  await Promise.all([loadMageGearCatalog(), loadMageGearOwned()]);
+  if(mageView && mageView.step === 'gear') render();
+}
+
+function backFromMageGear(){
+  mageView = { step: 'home' };
+  render();
+}
+
+function setMageActionStatus(text, ok){
+  const el = document.getElementById('mageActionStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
+async function mageFetch(action, extra){
+  const resp = await fetch(FUNCTIONS_URL + '/mage', {
+    method: 'POST',
+    headers: await petitionHeaders(),
+    body: JSON.stringify({ action, ...(extra || {}) })
+  });
+  return await resp.json();
+}
+
+function mageErrorMsg(data, fallback){
+  let msg = data.error || fallback;
+  if(data.secondsLeft) msg += ' (' + formatRemaining(data.secondsLeft * 1000) + ')';
+  return msg;
+}
+
+async function doTrainMage(){
+  setMageActionStatus('Working through the fundamentals…');
+  const data = await mageFetch('train');
+  if(!data.ok){ setMageActionStatus(mageErrorMsg(data, 'Could not train right now.'), false); return; }
+  await loadMage();
+  render();
+  let msg = `+${data.xpGained} XP, +${data.shardsGained} God Shards.`;
+  if(data.levelsGained > 0) msg += ` Leveled up to ${data.level}!`;
+  setMageActionStatus(msg, true);
+  if(data.levelsGained > 0) celebrate({ count: 14, distance: 44, duration: 850, color: '#e6c777', size: 18, sprite: 'particle-fx/fx_burst.png' });
+}
+
+async function doDuelMage(){
+  setMageActionStatus('Stepping into the ring…');
+  const data = await mageFetch('duel');
+  if(!data.ok){ setMageActionStatus(mageErrorMsg(data, 'Could not duel right now.'), false); return; }
+  await loadMage();
+  render();
+  if(!data.won){ setMageActionStatus(`Defeated (${data.mageScore} vs ${data.npcScore}) — no penalty, try again once you're recovered.`, false); return; }
+  let msg = `Victory! (${data.mageScore} vs ${data.npcScore}) +${data.xpGained} XP, +${data.shardsGained} God Shards.`;
+  if(data.levelsGained > 0) msg += ` Leveled up to ${data.level}!`;
+  setMageActionStatus(msg, true);
+  celebrate({ count: 18, distance: 50, duration: 900, color: '#e6c777', size: 20, sprite: 'particle-fx/fx_starburst.png' });
+}
+
+async function doSpendMagePoint(statKey){
+  const data = await mageFetch('spend-point', { statKey });
+  if(!data.ok){ setMageActionStatus(data.error || 'Could not spend that point.', false); return; }
+  await loadMage();
+  render();
+  setMageActionStatus(`+1 ${statKey}.`, true);
+}
+
+async function doCraftMageGear(gearKey){
+  setMageActionStatus('Working the Shards…');
+  const data = await mageFetch('craft-gear', { gearKey });
+  if(!data.ok){ setMageActionStatus(data.error || 'Could not craft that.', false); return; }
+  await Promise.all([loadGuardian(), loadMageGearOwned()]);
+  render();
+  setMageActionStatus('Crafted.', true);
+}
+
+async function doEquipMageGear(gearItemId){
+  const data = await mageFetch('equip', { gearItemId });
+  if(!data.ok){ setMageActionStatus(data.error || 'Could not equip that.', false); return; }
+  await loadMage();
+  render();
+  setMageActionStatus('Equipped.', true);
+}
+
+async function doUnequipMageGear(slot){
+  const data = await mageFetch('unequip', { slot });
+  if(!data.ok){ setMageActionStatus(data.error || 'Could not unequip that.', false); return; }
+  await loadMage();
+  render();
+  setMageActionStatus('Unequipped.', true);
+}
+
+function renderMage(){
+  if(mageView.step === 'gear') return renderMageGear();
+  return renderMageHome();
+}
+
+function renderMageHome(){
+  document.body.classList.add('hub-active');
+  const app = document.getElementById('app');
+  const art = mageArtFor(mage.art_key);
+  const stats = mageEffectiveStats();
+  const xpNeeded = mageXpToNextLevel(mage.level);
+  const xpPct = Math.max(0, Math.min(100, Math.round((mage.xp / xpNeeded) * 100)));
+  const equippedNames = ['weapon', 'armor', 'accessory'].map(slot => {
+    const itemId = mage['equipped_' + slot + '_id'];
+    if(!itemId) return null;
+    const owned = mageGearOwned.find(g => g.id === itemId);
+    const cat = owned ? mageGearCatalog.find(c => c.key === owned.gear_key) : null;
+    return cat ? cat.name : null;
+  }).filter(Boolean);
+
+  app.innerHTML = `
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('mageHome')}>
+        ${hotspotButtonsMarkup(MAGE_HOME_AREAS, 'MAGE_HOME_AREAS')}
+        <div class="hub-overlay">
+          <div class="art">${opponentImgFor(MAGE_ART_IMAGES[mage.art_key], art ? art.affinity : null, 90)}</div>
+          <h2 style="margin:4px 0;">${esc(mage.name)}</h2>
+          <div class="species-line">${art ? esc(art.label) : esc(mage.art_key)}${art && art.affinity ? ' · ' + esc(art.affinity) + '-touched' : ''}</div>
+
+          <div class="essence-row">
+            <span class="essence-label">Level ${mage.level}</span>
+            <span class="essence-value">${mage.xp} / ${xpNeeded} XP</span>
+          </div>
+          <div class="hp-bar-track"><div class="hp-bar-fill" style="width:${xpPct}%;"></div></div>
+          ${mage.upgrade_points > 0 ? `<p class="hint">${mage.upgrade_points} upgrade point${mage.upgrade_points === 1 ? '' : 's'} to spend — see Manage.</p>` : ''}
+
+          <div class="stat-grid">
+            <div class="stat-tile"><div class="num">${stats.vitality}</div><div class="label">Vitality</div></div>
+            <div class="stat-tile"><div class="num">${stats.might}</div><div class="label">Might</div></div>
+            <div class="stat-tile"><div class="num">${stats.ward}</div><div class="label">Ward</div></div>
+            <div class="stat-tile"><div class="num">${stats.swiftness}</div><div class="label">Swiftness</div></div>
+            <div class="stat-tile"><div class="num">${stats.cunning}</div><div class="label">Cunning</div></div>
+          </div>
+
+          <p class="marks-note">${equippedNames.length ? 'Wearing: ' + equippedNames.map(n => esc(n)).join(', ') : 'Nothing equipped yet.'}</p>
+          <div class="status" id="mageActionStatus"></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderMageGear(){
+  const app = document.getElementById('app');
+  const stats = mageEffectiveStats();
+
+  const spendRow = mage.upgrade_points > 0 ? `
+    <div class="card"${bgAttr('mageHome')}>
+      <h2>Spend Upgrade Points</h2>
+      <p class="hint">${mage.upgrade_points} point${mage.upgrade_points === 1 ? '' : 's'} available.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+        ${['vitality', 'might', 'ward', 'swiftness', 'cunning'].map(k => `<button class="secondary" onclick="doSpendMagePoint('${k}')">+1 ${k.charAt(0).toUpperCase() + k.slice(1)} (${stats[k]})</button>`).join('')}
+      </div>
+    </div>
+  ` : '';
+
+  const slotRows = ['weapon', 'armor', 'accessory'].map(slot => {
+    const itemId = mage['equipped_' + slot + '_id'];
+    const owned = itemId ? mageGearOwned.find(g => g.id === itemId) : null;
+    const cat = owned ? mageGearCatalog.find(c => c.key === owned.gear_key) : null;
+    return `<div class="roster-row">
+      <div><div class="rname">${slot.charAt(0).toUpperCase() + slot.slice(1)}</div><div class="cblurb">${cat ? esc(cat.name) + ' (+' + cat.stat_amount + ' ' + cat.stat_key + ')' : 'Empty'}</div></div>
+      ${cat ? `<div class="ractions"><button class="secondary" onclick="doUnequipMageGear('${slot}')">Unequip</button></div>` : ''}
+    </div>`;
+  }).join('');
+
+  const equippedIds = new Set([mage.equipped_weapon_id, mage.equipped_armor_id, mage.equipped_accessory_id].filter(Boolean));
+  const unequippedOwned = mageGearOwned.filter(g => !equippedIds.has(g.id));
+  const inventoryRows = unequippedOwned.map(g => {
+    const cat = mageGearCatalog.find(c => c.key === g.gear_key);
+    return `<div class="roster-row">
+      <div><div class="rname">${cat ? esc(cat.name) : esc(g.gear_key)}</div><div class="cblurb">${cat ? '+' + cat.stat_amount + ' ' + cat.stat_key : ''}</div></div>
+      <div class="ractions"><button class="secondary" onclick="doEquipMageGear('${g.id}')">Equip</button></div>
+    </div>`;
+  }).join('') || '<p class="hint">Nothing in reserve — craft something below.</p>';
+
+  const catalogRows = mageGearCatalog.map(item => {
+    const affordable = guardian && guardian.god_shards >= item.shard_cost;
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(item.name)}</div><div class="cblurb">${esc(item.description || '')} — ${esc(item.slot)}, +${item.stat_amount} ${esc(item.stat_key)} — ${item.shard_cost} Shards</div></div>
+      <div class="ractions"><button class="secondary" ${affordable ? '' : 'disabled'} onclick="doCraftMageGear('${esc(item.key)}')">Craft</button></div>
+    </div>`;
+  }).join('') || '<p class="hint">No gear catalog set up yet.</p>';
+
+  app.innerHTML = `
+    <div class="card"${bgAttr('mageHome', 'text-align:center;')}>
+      <h2>${esc(mage.name)}'s Gear</h2>
+      <div class="essence-row"><span class="essence-label">God Shards</span><span class="essence-value">${(guardian && guardian.god_shards) || 0}</span></div>
+      <div class="status" id="mageActionStatus"></div>
+    </div>
+    ${spendRow}
+    <div class="card"${bgAttr('mageHome')}>
+      <h2>Equipped</h2>
+      ${slotRows}
+    </div>
+    <div class="card"${bgAttr('mageHome')}>
+      <h2>In Reserve</h2>
+      ${inventoryRows}
+    </div>
+    <div class="card"${bgAttr('mageHome')}>
+      <h2>Catalog</h2>
+      ${catalogRows}
+      <button class="secondary" style="margin-top:14px;" onclick="backFromMageGear()">Back</button>
     </div>
   `;
 }
