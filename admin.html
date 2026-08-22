@@ -2419,6 +2419,23 @@ const DEFAULT_CHECKIN_AREAS_ADMIN = [
   { id: 'backToMap', label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8  },
 ];
 
+// Petition Hall and the Key of Night picker (0068) — added once their
+// scrolling deity lists were replaced with a single dropdown, which
+// removed the earlier objection to putting them on this full-bleed
+// pattern (see the SCREEN_REGISTRY comment below: "there's no way to
+// hide a scrolling list under art"). 'deityPicker' is the dropdown
+// itself — drag/resize it here exactly like any other box; the frontend
+// renders a real <select>+button in that box instead of an invisible
+// click target, see index.html's hotspotDropdownMarkup().
+const DEFAULT_PETITION_AREAS_ADMIN = [
+  { id: 'deityPicker', label: 'Choose who to petition', left: 30, top: 48, width: 40, height: 18 },
+  { id: 'backToMap',   label: 'Back to the Map',         left: 3,  top: 88, width: 18, height: 8  },
+];
+const DEFAULT_KEYOFNIGHT_AREAS_ADMIN = [
+  { id: 'deityPicker', label: 'Choose a god',    left: 30, top: 48, width: 40, height: 18 },
+  { id: 'backToMap',   label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8  },
+];
+
 // SCREEN_REGISTRY (0052) — every screen the hotspot editor below can edit.
 // Adding a new screen to this generalized editor is just a new entry here
 // (id/label list + which site_backgrounds page_key supplies its canvas
@@ -2442,6 +2459,11 @@ const SCREEN_REGISTRY = {
   worldBoss:    { label: 'World Boss',       bgKey: 'worldBoss',   bgFallback: '', defaultAreas: DEFAULT_WORLDBOSS_AREAS_ADMIN },
   chainedGods:  { label: 'Chained Gods (Redeem)', bgKey: 'chainedGods', bgFallback: '', defaultAreas: DEFAULT_REDEEM_AREAS_ADMIN },
   checkin:      { label: 'Daily Check-in',   bgKey: 'checkin',     bgFallback: '', defaultAreas: DEFAULT_CHECKIN_AREAS_ADMIN },
+  // bgKey reuses 'chainedGods' art (same scene) but its own screen_key
+  // for hotspot positions, since it's a distinct overlay state (a
+  // dropdown + back, not the hub's three buttons).
+  oracle:       { label: 'Petition Hall',    bgKey: 'oracle',      bgFallback: '', defaultAreas: DEFAULT_PETITION_AREAS_ADMIN },
+  keyOfNight:   { label: 'Chained Gods — Key of Night picker', bgKey: 'chainedGods', bgFallback: '', defaultAreas: DEFAULT_KEYOFNIGHT_AREAS_ADMIN },
 };
 let currentHotspotScreen = 'map';
 
