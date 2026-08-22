@@ -395,6 +395,26 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
 .hub-overlay .art{margin:0 auto 10px;filter:drop-shadow(0 0 22px rgba(200,162,74,0.22));}
 .hub-overlay .roster-row{text-align:left;}
 .hub-overlay .tap-action{cursor:pointer;}
+
+/* Same position/scroll-safety as .hub-overlay, but with the box itself
+   stripped out — no background, blur, border, or padding. Direct
+   feedback on World Boss: "I want the overlay gone... as I manage the
+   url image and have different pictures for all seasonal backgrounds as
+   well as ones with the beasts on them." Unlike Chained Gods/Check-in
+   (whose overlay content was fully redundant with new art and got
+   deleted outright), World Boss's HP bar and leaderboard are LIVE data
+   the art can't show, so the content stays — just unboxed, floating
+   straight on the art. text-shadow keeps it legible now that there's no
+   dark panel behind it dimming the art. */
+.hub-loose-panel{
+  position:fixed;left:50%;bottom:3vh;transform:translateX(-50%);z-index:6;
+  text-align:center;max-width:92vw;
+  max-height:80vh;overflow-y:auto;
+  text-shadow:0 1px 4px rgba(0,0,0,0.85);
+}
+.hub-loose-panel .stat-grid{margin:10px 0 2px;}
+.hub-loose-panel .roster-row{text-align:left;}
+.hub-loose-panel .tap-action{cursor:pointer;}
 /* Always-visible escape hatch (0068) — every hub-box screen's ONLY way
    back to the map used to be an invisible map-hotspot box positioned
    wherever the admin's Screen Hotspots editor last saved it. If that
@@ -2409,22 +2429,22 @@ async function tendGuardian(){
   // unrelated now to Bond, which grows through the separate, repeatable
   // doTendBond() below. Kept as its own function/RPC name since the SQL
   // side never changed, only which screen calls it.
-  const status = document.getElementById('checkinStatus');
-  if(status){ status.className = 'status'; status.textContent = 'Checking in…'; }
+  const status = document.getElementById('checkinHubStatus');
+  if(status){ status.className = 'hub-loose-status'; status.textContent = 'Checking in…'; }
   const { data, error } = await supabaseClient.rpc('tend_guardian', { p_guardian_id: guardian.id });
   if(error){
-    if(status){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; }
+    if(status){ status.className = 'hub-loose-status err'; status.textContent = 'Failed: ' + error.message; }
     return;
   }
   if(!data || !data.tended){
-    if(status){ status.className = 'status'; status.textContent = 'Already checked in today — come back tomorrow.'; }
+    if(status){ status.className = 'hub-loose-status'; status.textContent = 'Already checked in today — come back tomorrow.'; }
     return;
   }
   await loadGuardian(); // refetches every currency field fresh rather than guessing which ones the reward touched
   render();
-  const s2 = document.getElementById('checkinStatus');
+  const s2 = document.getElementById('checkinHubStatus');
   if(s2){
-    s2.className = 'status ok';
+    s2.className = 'hub-loose-status ok';
     const gainParts = (data.rewards || []).filter(r => r.amount > 0).map(r => `+${r.amount} ${CHECKIN_CURRENCY_LABELS[r.currency] || r.currency}`);
     const milestoneLabels = (data.rewards || []).filter(r => r.label && r.label !== 'Daily tending').map(r => r.label);
     let msg = `Checked in. ${gainParts.join(', ') || 'Streak continues.'} — ${data.streak} day streak.`;
@@ -2943,21 +2963,25 @@ function backFromCheckin(){
   render();
 }
 
+// No .hub-overlay panel here anymore (0068) — direct feedback: "gonna
+// have to do the same thing to the daily checkin" (same request as
+// Chained Gods: "get rid of the damn overlay"). The art plus the two
+// existing hotspot buttons (Check In / Back to the Map, both in
+// CHECKIN_AREAS) are the whole screen now. .hub-loose-back/
+// .hub-loose-status (see the CSS comment above .hub-loose-back) replace
+// the overlay's back button and status line with plain floating text,
+// no panel behind either. checkinStatus renamed to checkinHubStatus so
+// its className writes (status/status ok/status err) don't clobber the
+// hub-loose-status positioning class.
 function renderCheckin(){
   document.body.classList.add('hub-active');
   const app = document.getElementById('app');
-  const tendedToday = guardian.last_tended_at === todayStr();
   app.innerHTML = `
     <div class="hub-screen">
       <div class="hub-box"${bgAttrPlain('checkin')}>
         ${hotspotButtonsMarkup(CHECKIN_AREAS, 'CHECKIN_AREAS', 'checkin')}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromCheckin()">‹ Back to Map</button>
-          <h2>Daily Check-in</h2>
-          ${guardian.checkin_streak > 0 ? `<p class="hint" style="margin:-4px 0 10px;">${guardian.checkin_streak} day streak</p>` : ''}
-          <p class="hint${tendedToday ? '' : ' tap-action'}" style="margin:6px 0 10px;"${tendedToday ? '' : ' onclick="tendGuardian()"'}>${tendedToday ? 'Checked in today — come back tomorrow.' : 'Tap to check in.'}</p>
-          <div class="status" id="checkinStatus"></div>
-        </div>
+        <button type="button" class="hub-loose-back" onclick="backFromCheckin()">‹ Back to Map</button>
+        <div id="checkinHubStatus" class="hub-loose-status"></div>
       </div>
     </div>
   `;
@@ -3112,7 +3136,7 @@ function renderWorldBoss(){
       <div class="hub-screen">
         <div class="hub-box"${bgAttrPlain('worldBoss')}>
           ${hotspotButtonsMarkup(WORLDBOSS_AREAS, 'WORLDBOSS_AREAS', 'worldBoss')}
-          <div class="hub-overlay">
+          <div class="hub-loose-panel">
             <button type="button" class="hub-back" onclick="backFromWorldBoss()">‹ Back to Map</button>
             <h2>World Boss</h2>
             <p class="hint">Nothing is stirring right now — check back later.</p>
@@ -3138,7 +3162,7 @@ function renderWorldBoss(){
     <div class="hub-screen">
       <div class="hub-box"${bgAttrPlainOrUrl('worldBoss', boss.imageUrl)}>
         ${hotspotButtonsMarkup(WORLDBOSS_AREAS, 'WORLDBOSS_AREAS', 'worldBoss')}
-        <div class="hub-overlay">
+        <div class="hub-loose-panel">
           <button type="button" class="hub-back" onclick="backFromWorldBoss()">‹ Back to Map</button>
           <h2>${esc(boss.name)}</h2>
           ${boss.flavorText ? `<p class="hint">${esc(boss.flavorText)}</p>` : ''}
