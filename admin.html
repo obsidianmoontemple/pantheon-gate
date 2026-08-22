@@ -162,6 +162,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="magearts" onclick="showTab('magearts')">Mage Arts</button>
       <button class="tab-btn" data-tab="magegear" onclick="showTab('magegear')">Mage Gear</button>
       <button class="tab-btn" data-tab="moves" onclick="showTab('moves')">Moves</button>
+      <button class="tab-btn" data-tab="wheel" onclick="showTab('wheel')">Element Wheel</button>
       <button class="tab-btn" data-tab="blessings" onclick="showTab('blessings')">Deity Blessings</button>
       <button class="tab-btn" data-tab="guardianitems" onclick="showTab('guardianitems')">Guardian Items</button>
       <button class="tab-btn" data-tab="giftablerewards" onclick="showTab('giftablerewards')">Giftable Rewards</button>
@@ -842,27 +843,54 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
     <div class="tab-content" id="tab-moves">
       <div class="card">
-        <h2>Affinity moves (baseline)</h2>
-        <p class="hint">The Power + Control move every deity uses in the Gauntlet and any future combat unless it has its own signature move set below. Also what Gauntlet opponents use. Power moves have no swiftness shave; Control moves hit softer but shave the defender's Swiftness for the rest of the fight.</p>
-        <div class="scroll-table" style="max-height:420px;">
+        <h2>Move Catalog</h2>
+        <p class="hint">13-point update item 13: every individual move in the game, defined once here — edit a move's stats and it updates everywhere it's assigned below (an affinity baseline, a species's signature move, or a deity's signature override), no more hunting down the same move in three tables. Kind picks the slot a move can fill: Power (no swiftness shave) or Control (hits softer, shaves the defender's Swiftness for the rest of the fight) need an Affinity (used by the Element Wheel); Basic is the universal fallback strike and has none. A move can also carry a real triggered effect on top of its damage: <code>lifesteal_pct</code> (heal this % of the hit's damage), <code>stun_pct</code> (this % chance to skip the target's next action), <code>crit_bonus_pct</code> (+this many points of crit chance on this hit), <code>burn_flat</code> (ongoing damage/round for the rest of the fight), <code>poison_pct</code> (a second, independent DoT — this % of the target's max Vitality/round), <code>weaken_pct</code> (cuts the target's own Might by this % for the rest of the fight), <code>vulnerability_pct</code> (the target takes this % more damage from everything for the rest of the fight), or <code>shield_flat</code> (self-buff — absorbs your own next this-much total damage taken). Role is just a label for where a move is meant to be used — nothing reads it, so any move (including a brand new "custom" one) can be assigned anywhere a dropdown below lets you pick one.</p>
+        <input class="search-box" type="text" id="moveCatalogSearch" placeholder="Search by name or key…">
+        <div class="scroll-table" style="max-height:480px;">
           <table>
-            <thead><tr><th>Affinity</th><th>Kind</th><th>Name</th><th>Power</th><th>Swiftness shave</th></tr></thead>
-            <tbody id="affinityMoveRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Name</th><th>Role</th><th>Affinity</th><th>Kind</th><th>Power</th><th>Swiftness shave</th><th>Effect key</th><th>Effect amt</th><th>Active</th></tr></thead>
+            <tbody id="moveCatalogRows"><tr><td colspan="10">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
-          <button id="saveAffinityMovesBtn">Save changes</button>
-          <div class="status" id="affinityMoveStatus"></div>
+          <button id="saveMoveCatalogBtn">Save changes</button>
+          <div class="status" id="moveCatalogStatus"></div>
         </div>
+        <h3>Add a new move</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newMoveKey" placeholder="e.g. frostbite_control" style="max-width:170px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newMoveName" placeholder="e.g. Frostbite" style="max-width:160px;"></div>
+          <div class="field"><label>Role</label>
+            <select id="newMoveRole" style="max-width:110px;">
+              <option value="custom">custom</option><option value="baseline">baseline</option><option value="species">species</option><option value="deity">deity</option>
+            </select>
+          </div>
+          <div class="field"><label>Kind</label>
+            <select id="newMoveKind" style="max-width:100px;">
+              <option value="power">power</option><option value="control">control</option><option value="basic">basic</option>
+            </select>
+          </div>
+          <div class="field"><label>Affinity</label>
+            <select id="newMoveAffinity" style="max-width:120px;"></select>
+          </div>
+          <div class="field"><label>Power</label><input type="number" step="0.01" min="0.01" id="newMovePower" placeholder="1.30" style="max-width:90px;"></div>
+          <div class="field"><label>Swiftness shave</label><input type="number" min="1" id="newMoveShave" style="max-width:90px;"></div>
+          <div class="field"><label>Effect key</label>
+            <select id="newMoveEffectKey" style="max-width:220px;"></select>
+          </div>
+          <div class="field"><label>Effect amount</label><input type="number" step="0.01" id="newMoveEffectAmt" style="max-width:90px;"></div>
+          <button id="addMoveCatalogBtn">Add move</button>
+        </div>
+        <div class="status" id="newMoveStatus"></div>
       </div>
 
       <div class="card">
         <h2>Species moves (signature Power + Control, unconditional)</h2>
-        <p class="hint">Every familiar species's own Power + Control move, available from the moment it hatches — on top of (not instead of) the affinity/deity move system above. affinity here is thematic flavor for the elemental wheel, not a hard binding.</p>
+        <p class="hint">Every familiar species's own Power + Control move, available from the moment it hatches — on top of (not instead of) the affinity/deity move system below. Pick any move from the Move Catalog above (including a brand new custom one) to assign it, or leave a slot as "no move" to skip it entirely — unlike Deity moves, there's no baseline fallback here.</p>
         <div class="scroll-table" style="max-height:340px;">
           <table>
-            <thead><tr><th>Species</th><th>Kind</th><th>Name</th><th>Affinity</th><th>Power</th><th>Swiftness shave</th><th>Active</th></tr></thead>
-            <tbody id="speciesMoveRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+            <thead><tr><th>Species</th><th>Kind</th><th>Move</th><th>Active</th></tr></thead>
+            <tbody id="speciesMoveRows"><tr><td colspan="4">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -873,12 +901,12 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>Deity signature moves (optional overrides)</h2>
-        <p class="hint">Give a specific deity its own Power and/or Control move instead of sharing the affinity baseline above. Leave a name blank to fall back to the baseline for that slot — nothing needs filling in for every deity, only the ones you want to stand out. A move can also carry a real triggered effect on top of its damage, picked from the dropdown: <code>lifesteal_pct</code> (heal this % of the hit's damage), <code>stun_pct</code> (this % chance to skip the target's next action), <code>crit_bonus_pct</code> (+this many points of crit chance on this hit), or <code>burn_flat</code> (this much ongoing damage/round added to the target for the rest of the fight).</p>
+        <p class="hint">Give a specific deity its own Power and/or Control move instead of sharing the affinity baseline. Pick any move from the Move Catalog above (including one you just added), or set it to "none" to fall back to the baseline for that slot — nothing needs filling in for every deity, only the ones you want to stand out. A picked move's effect (if it has one) travels with it automatically now — set it once on the move in the catalog above, not per-deity here.</p>
         <input class="search-box" type="text" id="deityMoveSearch" placeholder="Search by name…">
         <div class="scroll-table">
           <table>
-            <thead><tr><th>God</th><th>Pantheon</th><th>Power name</th><th>Power</th><th>Power effect key</th><th>Power effect amt</th><th>Control name</th><th>Control</th><th>Control shave</th><th>Control effect key</th><th>Control effect amt</th></tr></thead>
-            <tbody id="deityMoveRows"><tr><td colspan="11">Loading…</td></tr></tbody>
+            <thead><tr><th>God</th><th>Pantheon</th><th>Power move</th><th>Active</th><th>Control move</th><th>Active</th></tr></thead>
+            <tbody id="deityMoveRows"><tr><td colspan="6">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -888,11 +916,30 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
     </div>
 
+    <!-- ============================== ELEMENT WHEEL ============================== -->
+    <div class="tab-content" id="tab-wheel">
+      <div class="card">
+        <h2>Element Wheel</h2>
+        <p class="hint">13-point update item 10: the affinity matchup table every fight in the game reads from — Gauntlet, Campaign, Circle Dragon, World Boss, and PvP duels all pull the same live table now, instead of each having their own hardcoded copy. Rows are the attacker's affinity, columns are the defender's — each cell is that matchup's damage multiplier (1.5 = strong, 0.66 = weak, 1.0 = neutral is the shipped default, but any cell can be any positive number). Changes apply to every fight in the game the moment you save, no redeploy needed.</p>
+        <div class="scroll-table" style="max-height:520px;">
+          <table id="wheelTable">
+            <thead><tr id="wheelHeaderRow"><th>Attacker ↓ / Defender →</th></tr></thead>
+            <tbody id="wheelRows"><tr><td colspan="9">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveWheelBtn">Save changes</button>
+          <button class="secondary" id="resetWheelBtn">Reset grid to shipped default</button>
+          <div class="status" id="wheelStatus"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ============================== DEITY BLESSINGS ============================== -->
     <div class="tab-content" id="tab-blessings">
       <div class="card">
         <h2>Deity Blessings (placeholders — approve with Active)</h2>
-        <p class="hint">Two independent bonuses, either or both: a Stat key/amount is a one-time permanent bump applied the moment a guardian's mark with this deity is newly earned or upgraded to FULL (never reapplied on repeat petitions). An Effect key/amount is a passive ability active for the guardian's <em>entire</em> fight whenever that deity's full mark is actually fielded in the loadout — <code>crit_bonus_pct</code> (+points of crit chance, all fight), <code>lifesteal_pct</code> (heal this % of all damage dealt, all fight), <code>ward_bonus_pct</code> (this % more effective Ward against incoming hits, all fight), or <code>essence_bonus_pct</code> (this % bonus Essence on a Gauntlet win). Every row ships inactive on purpose — fill in what you want and check Active when you're ready to go live.</p>
+        <p class="hint">Two independent bonuses, either or both: a Stat key/amount is a one-time permanent bump applied the moment a guardian's mark with this deity is newly earned or upgraded to FULL (never reapplied on repeat petitions). An Effect key/amount is a passive ability active for the guardian's <em>entire</em> fight whenever that deity's full mark is actually fielded in the loadout — <code>crit_bonus_pct</code> (+points of crit chance, all fight), <code>lifesteal_pct</code> (heal this % of all damage dealt, all fight), <code>ward_bonus_pct</code> (this % more effective Ward against incoming hits, all fight), <code>essence_bonus_pct</code> (this % bonus Essence on a Gauntlet win), <code>dodge_pct</code> (this % chance to fully negate an incoming hit, all fight, capped 75%), or <code>damage_reduction_pct</code> (this % less damage taken from every hit, all fight, capped 75%). Every row ships inactive on purpose — fill in what you want and check Active when you're ready to go live.</p>
         <input class="search-box" type="text" id="blessingSearch" placeholder="Search by name…">
         <div class="scroll-table">
           <table>
@@ -2092,7 +2139,8 @@ async function handleSession(session){
   loadPersonalAltarSeedCatalog();
   loadPersonalAltarDecorationCatalog();
   loadGauntletOpponents();
-  loadAffinityMoves();
+  await loadMoveCatalog();
+  loadAffinityWheel();
   loadSpeciesCatalog();
   loadMageArts();
   loadMageGear();
@@ -2562,7 +2610,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveGauntletBtn').addEventListener('click', saveGauntletOpponents);
   document.getElementById('addGauntletBtn').addEventListener('click', addGauntletOpponent);
 
-  document.getElementById('saveAffinityMovesBtn').addEventListener('click', saveAffinityMoves);
+  document.getElementById('saveMoveCatalogBtn').addEventListener('click', saveMoveCatalog);
+  document.getElementById('addMoveCatalogBtn').addEventListener('click', addMoveCatalogEntry);
+  document.getElementById('moveCatalogSearch').addEventListener('input', filterMoveCatalogRows);
+  document.getElementById('saveWheelBtn').addEventListener('click', saveAffinityWheel);
+  document.getElementById('resetWheelBtn').addEventListener('click', resetAffinityWheelToDefault);
   document.getElementById('saveSpeciesMovesBtn').addEventListener('click', saveSpeciesMoves);
   document.getElementById('saveDeityMovesBtn').addEventListener('click', saveDeityMoves);
   document.getElementById('deityMoveSearch').addEventListener('input', filterDeityMoveRows);
@@ -4909,45 +4961,206 @@ async function addGauntletOpponent(){
 }
 
 /* =====================================================================
-   MOVES — affinity baseline + per-deity signature overrides
+   MOVES — unified moves_catalog (migration 0063, item 13): every move's
+   stats live in ONE table now. Species and Deity signature moves below
+   are just move_key pointers into this catalog, resolved through the
+   same movesCatalog map combat/index.ts's buildLoadoutMoves() uses —
+   edit a move here and it updates everywhere it's assigned, no redeploy.
    ===================================================================== */
 
-async function loadAffinityMoves(){
-  const { data, error } = await supabaseClient.from('affinity_moves').select('*').order('key', { ascending: true });
-  const rows = document.getElementById('affinityMoveRows');
-  if(error){
-    rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>';
-    return;
-  }
-  rows.innerHTML = (data || []).map(m => `<tr data-key="${esc(m.key)}">
-    <td class="dim">${esc(m.affinity || '—')}</td>
-    <td class="dim">${esc(m.kind)}</td>
-    <td><input type="text" id="amName_${esc(m.key)}" value="${esc(m.name)}" style="max-width:200px;"></td>
-    <td><input type="number" step="0.01" min="0.01" id="amPower_${esc(m.key)}" value="${m.power}" style="max-width:90px;"></td>
-    <td>${m.kind === 'control' ? `<input type="number" min="1" id="amShave_${esc(m.key)}" value="${m.swiftness_shave ?? ''}" style="max-width:90px;">` : '<span class="dim">—</span>'}</td>
-  </tr>`).join('') || '<tr><td colspan="5">No moves found.</td></tr>';
+let moveCatalogCache = [];
+
+function moveOptionsHtml(kind, currentKey, emptyLabel){
+  const options = moveCatalogCache.filter(m => m.kind === kind);
+  return `<option value="">${esc(emptyLabel)}</option>` +
+    options.map(m => `<option value="${esc(m.key)}" ${m.key === currentKey ? 'selected' : ''}>${esc(m.name)} (${esc(m.key)})</option>`).join('');
 }
 
-async function saveAffinityMoves(){
-  const status = document.getElementById('affinityMoveStatus');
-  const trs = document.querySelectorAll('#affinityMoveRows tr[data-key]');
+async function loadMoveCatalog(){
+  const affSel = document.getElementById('newMoveAffinity');
+  if(affSel && !affSel.options.length) affSel.innerHTML = AFFINITIES.map(a => `<option value="${a}">${a}</option>`).join('');
+  const effSel = document.getElementById('newMoveEffectKey');
+  if(effSel && !effSel.options.length) effSel.innerHTML = effectKeyOptionsHtml(MOVE_EFFECT_OPTIONS, '');
+
+  const { data, error } = await supabaseClient.from('moves_catalog').select('*').order('role', { ascending: true }).order('sort_order', { ascending: true });
+  moveCatalogCache = data || [];
+  const rows = document.getElementById('moveCatalogRows');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="10">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = moveCatalogCache.map(m => `<tr data-key="${esc(m.key)}" data-name="${esc((m.name || '').toLowerCase())}">
+    <td class="dim">${esc(m.key)}</td>
+    <td><input type="text" id="mcName_${esc(m.key)}" value="${esc(m.name)}" style="max-width:170px;"></td>
+    <td class="dim">${esc(m.role)}</td>
+    <td>
+      <select id="mcAffinity_${esc(m.key)}" style="max-width:110px;">
+        <option value="">—</option>
+        ${AFFINITIES.map(a => `<option value="${a}" ${a === m.affinity ? 'selected' : ''}>${a}</option>`).join('')}
+      </select>
+    </td>
+    <td>
+      <select id="mcKind_${esc(m.key)}" style="max-width:90px;">
+        ${['power', 'control', 'basic'].map(k => `<option value="${k}" ${k === m.kind ? 'selected' : ''}>${k}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="number" step="0.01" min="0.01" id="mcPower_${esc(m.key)}" value="${m.power}" style="max-width:90px;"></td>
+    <td><input type="number" min="1" id="mcShave_${esc(m.key)}" value="${m.swiftness_shave ?? ''}" style="max-width:90px;"></td>
+    <td><select id="mcEffectKey_${esc(m.key)}" style="max-width:200px;">${effectKeyOptionsHtml(MOVE_EFFECT_OPTIONS, m.effect_key)}</select></td>
+    <td><input type="number" step="0.01" id="mcEffectAmt_${esc(m.key)}" value="${m.effect_amount ?? ''}" style="max-width:90px;"></td>
+    <td><input type="checkbox" id="mcActive_${esc(m.key)}" ${m.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="10">No moves found.</td></tr>';
+
+  // The Species/Deity move pointer dropdowns below list catalog moves by
+  // name — re-render them too so a rename/save here is reflected there
+  // without needing a full page reload.
+  renderSpeciesMoveRows();
+  renderDeityMoveRows();
+}
+
+function filterMoveCatalogRows(){
+  const q = document.getElementById('moveCatalogSearch').value.trim().toLowerCase();
+  document.querySelectorAll('#moveCatalogRows tr[data-key]').forEach(tr => {
+    const name = tr.getAttribute('data-name') || '';
+    const key = (tr.getAttribute('data-key') || '').toLowerCase();
+    tr.style.display = (!q || name.includes(q) || key.includes(q)) ? '' : 'none';
+  });
+}
+
+async function saveMoveCatalog(){
+  const status = document.getElementById('moveCatalogStatus');
+  const trs = document.querySelectorAll('#moveCatalogRows tr[data-key]');
   const rows = Array.from(trs).map(tr => {
     const key = tr.getAttribute('data-key');
-    const shaveEl = document.getElementById('amShave_' + key);
+    const shaveVal = document.getElementById('mcShave_' + key).value;
+    const effectAmtVal = document.getElementById('mcEffectAmt_' + key).value;
     return {
       key,
-      name: document.getElementById('amName_' + key).value.trim(),
-      power: parseFloat(document.getElementById('amPower_' + key).value),
-      swiftness_shave: shaveEl ? (shaveEl.value === '' ? null : parseInt(shaveEl.value, 10)) : null,
+      name: document.getElementById('mcName_' + key).value.trim(),
+      affinity: document.getElementById('mcAffinity_' + key).value || null,
+      kind: document.getElementById('mcKind_' + key).value,
+      power: parseFloat(document.getElementById('mcPower_' + key).value),
+      swiftness_shave: shaveVal === '' ? null : parseInt(shaveVal, 10),
+      effect_key: document.getElementById('mcEffectKey_' + key).value || null,
+      effect_amount: effectAmtVal === '' ? null : parseFloat(effectAmtVal),
+      active: document.getElementById('mcActive_' + key).checked,
       updated_at: new Date().toISOString()
     };
   });
   status.className = 'status';
   status.textContent = 'Saving…';
-  const { error } = await supabaseClient.from('affinity_moves').upsert(rows, { onConflict: 'key' });
+  const { error } = await supabaseClient.from('moves_catalog').upsert(rows, { onConflict: 'key' });
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies to the next fight, no redeploy needed.';
-  if(!error) loadAffinityMoves();
+  if(!error) loadMoveCatalog();
+}
+
+async function addMoveCatalogEntry(){
+  const status = document.getElementById('newMoveStatus');
+  const key = document.getElementById('newMoveKey').value.trim();
+  const name = document.getElementById('newMoveName').value.trim();
+  const role = document.getElementById('newMoveRole').value;
+  const kind = document.getElementById('newMoveKind').value;
+  const affinity = document.getElementById('newMoveAffinity').value || null;
+  const power = parseFloat(document.getElementById('newMovePower').value);
+  const shaveVal = document.getElementById('newMoveShave').value;
+  const effectKey = document.getElementById('newMoveEffectKey').value || null;
+  const effectAmtVal = document.getElementById('newMoveEffectAmt').value;
+
+  if(!key || /\s/.test(key)){ status.className = 'status err'; status.textContent = 'Key is required and cannot contain spaces.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  if(!power || power <= 0){ status.className = 'status err'; status.textContent = 'Power must be a positive number.'; return; }
+  if(kind !== 'basic' && !affinity){ status.className = 'status err'; status.textContent = 'Power/Control moves need an Affinity (used by the Element Wheel).'; return; }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('moves_catalog').insert({
+    key, name, role, kind, affinity: kind === 'basic' ? null : affinity, power,
+    swiftness_shave: shaveVal === '' ? null : parseInt(shaveVal, 10),
+    effect_key: effectKey, effect_amount: effectAmtVal === '' ? null : parseFloat(effectAmtVal),
+    active: true
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+  status.className = 'status ok'; status.textContent = name + ' added — assign it in Species or Deity moves below whenever you\'re ready.';
+  ['newMoveKey', 'newMoveName', 'newMovePower', 'newMoveShave', 'newMoveEffectAmt'].forEach(fid => { document.getElementById(fid).value = ''; });
+  loadMoveCatalog();
+}
+
+/* =====================================================================
+   ELEMENT WHEEL — 13-point update item 10. affinity_matchups (migration
+   0061) is a full 8x8 matrix, one multiplier per attacker/defender pair,
+   read live by every fight in the game (combat, circle, world-boss, pvp
+   edge functions) instead of each hardcoding its own copy. Rendered as a
+   grid — rows = attacker, columns = defender — rather than 64 flat rows,
+   since that's the mental model an "element wheel" actually has.
+   ===================================================================== */
+
+// Shipped defaults (byte-for-byte what 0061 seeds and what every edge
+// function used to hardcode) — only used by "Reset grid to shipped
+// default" below, never touches the database until Save is clicked.
+const WHEEL_DEFAULT_STRONG = {
+  fire: ['earth', 'shadow'], sea: ['fire', 'earth'], storm: ['sea', 'light'], earth: ['storm', 'death'],
+  death: ['war', 'light'], shadow: ['light', 'war'], war: ['shadow', 'fire'], light: ['shadow', 'death'],
+};
+const WHEEL_DEFAULT_WEAK = {
+  fire: ['sea', 'storm'], sea: ['storm', 'death'], storm: ['earth', 'war'], earth: ['fire', 'sea'],
+  death: ['earth', 'shadow'], shadow: ['fire', 'death'], war: ['storm', 'death'], light: ['storm', 'sea'],
+};
+function wheelDefaultMultiplier(attacker, defender){
+  if(WHEEL_DEFAULT_STRONG[attacker]?.includes(defender)) return 1.5;
+  if(WHEEL_DEFAULT_WEAK[attacker]?.includes(defender)) return 0.66;
+  return 1.0;
+}
+
+async function loadAffinityWheel(){
+  const { data, error } = await supabaseClient.from('affinity_matchups').select('attacker_affinity, defender_affinity, multiplier');
+  const headerRow = document.getElementById('wheelHeaderRow');
+  const rows = document.getElementById('wheelRows');
+  headerRow.innerHTML = '<th>Attacker ↓ / Defender →</th>' + AFFINITIES.map(d => `<th>${esc(d)}</th>`).join('');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="9">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  const byPair = {};
+  (data || []).forEach(r => { byPair[r.attacker_affinity + ':' + r.defender_affinity] = r.multiplier; });
+  rows.innerHTML = AFFINITIES.map(a => `<tr data-attacker="${esc(a)}">
+    <td class="dim">${esc(a)}</td>
+    ${AFFINITIES.map(d => {
+      const val = byPair[a + ':' + d] ?? 1.0;
+      return `<td><input type="number" step="0.01" min="0.01" id="wheel_${esc(a)}_${esc(d)}" value="${val}" style="max-width:70px;"></td>`;
+    }).join('')}
+  </tr>`).join('') || '<tr><td colspan="9">No matchup rows found — run migration 0061.</td></tr>';
+}
+
+async function saveAffinityWheel(){
+  const status = document.getElementById('wheelStatus');
+  const rows = [];
+  AFFINITIES.forEach(a => {
+    AFFINITIES.forEach(d => {
+      const el = document.getElementById('wheel_' + a + '_' + d);
+      if(!el) return;
+      const multiplier = parseFloat(el.value);
+      if(!Number.isFinite(multiplier) || multiplier <= 0) return; // skip invalid, don't clobber with garbage
+      rows.push({ attacker_affinity: a, defender_affinity: d, multiplier, updated_at: new Date().toISOString() });
+    });
+  });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('affinity_matchups').upsert(rows, { onConflict: 'attacker_affinity,defender_affinity' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Every fight in the game reads this live — no redeploy needed.';
+  if(!error) loadAffinityWheel();
+}
+
+function resetAffinityWheelToDefault(){
+  AFFINITIES.forEach(a => {
+    AFFINITIES.forEach(d => {
+      const el = document.getElementById('wheel_' + a + '_' + d);
+      if(el) el.value = wheelDefaultMultiplier(a, d);
+    });
+  });
+  const status = document.getElementById('wheelStatus');
+  status.className = 'status';
+  status.textContent = 'Grid reset to shipped default — click Save changes to apply.';
 }
 
 /* =====================================================================
@@ -5284,26 +5497,32 @@ async function addGuideStep(){
   loadGuideStepsAdmin();
 }
 
+let speciesMovePointerCache = {}; // species -> { power: row|null, control: row|null }
+
 async function loadSpeciesMoves(){
   const { data, error } = await supabaseClient.from('species_moves').select('*').order('species', { ascending: true }).order('kind', { ascending: true });
+  speciesMovePointerCache = {};
+  (data || []).forEach(r => {
+    if(!speciesMovePointerCache[r.species]) speciesMovePointerCache[r.species] = {};
+    speciesMovePointerCache[r.species][r.kind] = r;
+  });
+  if(error) console.error('species_moves load failed', error);
+  renderSpeciesMoveRows();
+}
+
+function renderSpeciesMoveRows(){
   const rows = document.getElementById('speciesMoveRows');
-  if(error){
-    rows.innerHTML = '<tr><td colspan="7">Failed to load: ' + esc(error.message) + '</td></tr>';
-    return;
-  }
-  rows.innerHTML = (data || []).map(m => `<tr data-species="${esc(m.species)}" data-kind="${esc(m.kind)}">
-    <td class="dim">${esc(m.species)}</td>
-    <td class="dim">${esc(m.kind)}</td>
-    <td><input type="text" id="smName_${esc(m.species)}_${esc(m.kind)}" value="${esc(m.name)}" style="max-width:180px;"></td>
-    <td>
-      <select id="smAff_${esc(m.species)}_${esc(m.kind)}">
-        ${AFFINITIES.map(a => `<option value="${a}" ${a === m.affinity ? 'selected' : ''}>${a}</option>`).join('')}
-      </select>
-    </td>
-    <td><input type="number" step="0.01" min="0.01" id="smPower_${esc(m.species)}_${esc(m.kind)}" value="${m.power}" style="max-width:90px;"></td>
-    <td>${m.kind === 'control' ? `<input type="number" min="1" id="smShave_${esc(m.species)}_${esc(m.kind)}" value="${m.swiftness_shave ?? ''}" style="max-width:90px;">` : '<span class="dim">—</span>'}</td>
-    <td><input type="checkbox" id="smActive_${esc(m.species)}_${esc(m.kind)}" ${m.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="7">No species moves found — run the migration that seeds them.</td></tr>';
+  if(!rows) return;
+  rows.innerHTML = SPECIES_LIST.flatMap(species => ['power', 'control'].map(kind => {
+    const existing = (speciesMovePointerCache[species] || {})[kind] || {};
+    const id = species + '_' + kind;
+    return `<tr data-species="${esc(species)}" data-kind="${esc(kind)}">
+      <td class="dim">${esc(species)}</td>
+      <td class="dim">${esc(kind)}</td>
+      <td><select id="smMove_${id}" style="max-width:280px;">${moveOptionsHtml(kind, existing.move_key || '', '— no ' + kind + ' move —')}</select></td>
+      <td><input type="checkbox" id="smActive_${id}" ${existing.active === false ? '' : 'checked'}></td>
+    </tr>`;
+  })).join('') || '<tr><td colspan="4">No species found.</td></tr>';
 }
 
 async function saveSpeciesMoves(){
@@ -5313,14 +5532,21 @@ async function saveSpeciesMoves(){
     const species = tr.getAttribute('data-species');
     const kind = tr.getAttribute('data-kind');
     const id = species + '_' + kind;
-    const shaveEl = document.getElementById('smShave_' + id);
+    const moveKey = document.getElementById('smMove_' + id).value || null;
+    // species_moves' own name/affinity/power/swiftness_shave columns are
+    // unused dead weight since combat/index.ts reads only move_key now
+    // (0063) — mirrored from the picked catalog move anyway so the raw
+    // table stays self-descriptive, and to satisfy this table's own
+    // not-null/power>0 constraints when a slot is left as "no move".
+    const catalogMove = moveCatalogCache.find(m => m.key === moveKey);
     return {
       species,
       kind,
-      name: document.getElementById('smName_' + id).value.trim(),
-      affinity: document.getElementById('smAff_' + id).value,
-      power: parseFloat(document.getElementById('smPower_' + id).value),
-      swiftness_shave: shaveEl ? (shaveEl.value === '' ? null : parseInt(shaveEl.value, 10)) : null,
+      move_key: moveKey,
+      name: catalogMove ? catalogMove.name : (species + ' ' + kind),
+      affinity: catalogMove ? catalogMove.affinity : null,
+      power: catalogMove ? catalogMove.power : 1,
+      swiftness_shave: catalogMove ? catalogMove.swiftness_shave : null,
       active: document.getElementById('smActive_' + id).checked,
       updated_at: new Date().toISOString()
     };
@@ -5343,24 +5569,23 @@ async function loadDeityMoves(){
     deityMoveOverrides[r.deity_id][r.kind] = r;
   });
   if(error) console.error('deity_moves load failed', error);
+  renderDeityMoveRows();
+}
 
+function renderDeityMoveRows(){
   const rows = document.getElementById('deityMoveRows');
+  if(!rows) return;
   rows.innerHTML = FLAT_DEITIES.map(d => {
     const o = deityMoveOverrides[d.id] || {};
-    const power = o.power || { name: '', power: '', effect_key: '', effect_amount: '' };
-    const control = o.control || { name: '', power: '', swiftness_shave: '', effect_key: '', effect_amount: '' };
+    const power = o.power || {};
+    const control = o.control || {};
     return `<tr data-name="${esc(d.name.toLowerCase())}">
       <td>${esc(d.name)}</td>
       <td class="dim">${esc(d.pantheonLabel)}</td>
-      <td><input type="text" id="dmPowerName_${d.id}" value="${esc(power.name || '')}" placeholder="baseline" style="max-width:150px;"></td>
-      <td><input type="number" step="0.01" min="0.01" id="dmPowerVal_${d.id}" value="${power.power ?? ''}" style="max-width:80px;"></td>
-      <td><select id="dmPowerEffectKey_${d.id}" style="max-width:220px;">${effectKeyOptionsHtml(MOVE_EFFECT_OPTIONS, power.effect_key)}</select></td>
-      <td><input type="number" step="0.01" id="dmPowerEffectAmt_${d.id}" value="${power.effect_amount ?? ''}" style="max-width:90px;"></td>
-      <td><input type="text" id="dmControlName_${d.id}" value="${esc(control.name || '')}" placeholder="baseline" style="max-width:150px;"></td>
-      <td><input type="number" step="0.01" min="0.01" id="dmControlVal_${d.id}" value="${control.power ?? ''}" style="max-width:80px;"></td>
-      <td><input type="number" min="1" id="dmControlShave_${d.id}" value="${control.swiftness_shave ?? ''}" style="max-width:80px;"></td>
-      <td><select id="dmControlEffectKey_${d.id}" style="max-width:220px;">${effectKeyOptionsHtml(MOVE_EFFECT_OPTIONS, control.effect_key)}</select></td>
-      <td><input type="number" step="0.01" id="dmControlEffectAmt_${d.id}" value="${control.effect_amount ?? ''}" style="max-width:90px;"></td>
+      <td><select id="dmPowerMove_${d.id}" style="max-width:280px;">${moveOptionsHtml('power', power.move_key || '', '— none (use affinity baseline) —')}</select></td>
+      <td><input type="checkbox" id="dmPowerActive_${d.id}" ${power.active === false ? '' : 'checked'}></td>
+      <td><select id="dmControlMove_${d.id}" style="max-width:280px;">${moveOptionsHtml('control', control.move_key || '', '— none (use affinity baseline) —')}</select></td>
+      <td><input type="checkbox" id="dmControlActive_${d.id}" ${control.active === false ? '' : 'checked'}></td>
     </tr>`;
   }).join('');
 }
@@ -5377,37 +5602,41 @@ async function saveDeityMoves(){
   const status = document.getElementById('deityMoveStatus');
   const rows = [];
   for(const d of FLAT_DEITIES){
-    const powerName = document.getElementById('dmPowerName_' + d.id).value.trim();
-    const powerVal = document.getElementById('dmPowerVal_' + d.id).value;
-    const powerEffectKey = document.getElementById('dmPowerEffectKey_' + d.id).value.trim();
-    const powerEffectAmt = document.getElementById('dmPowerEffectAmt_' + d.id).value;
-    const controlName = document.getElementById('dmControlName_' + d.id).value.trim();
-    const controlVal = document.getElementById('dmControlVal_' + d.id).value;
-    const controlShave = document.getElementById('dmControlShave_' + d.id).value;
-    const controlEffectKey = document.getElementById('dmControlEffectKey_' + d.id).value.trim();
-    const controlEffectAmt = document.getElementById('dmControlEffectAmt_' + d.id).value;
+    const powerMoveKey = document.getElementById('dmPowerMove_' + d.id).value || null;
+    const powerActive = document.getElementById('dmPowerActive_' + d.id).checked;
+    const controlMoveKey = document.getElementById('dmControlMove_' + d.id).value || null;
+    const controlActive = document.getElementById('dmControlActive_' + d.id).checked;
     const had = deityMoveOverrides[d.id] || {};
+    const powerCatalog = moveCatalogCache.find(m => m.key === powerMoveKey);
+    const controlCatalog = moveCatalogCache.find(m => m.key === controlMoveKey);
 
-    // Only write a row if there's something to say (a name set) or a row
-    // already exists there (so clearing a name actually clears it via
-    // upsert rather than leaving stale text behind).
-    if(powerName || had.power){
+    // Only write a row if a move is picked or a row already exists there
+    // (so setting the dropdown back to "none" actually clears it via
+    // upsert rather than leaving a stale pointer behind). name/power/
+    // swiftness_shave are mirrored from the picked catalog move purely so
+    // the raw table stays self-descriptive — combat/index.ts reads only
+    // move_key now. effect_key/effect_amount are cleared here on purpose:
+    // the move's own effect (set once in the catalog above) now travels
+    // with whichever move — baseline or override — actually gets used.
+    if(powerMoveKey || had.power){
       rows.push({
         deity_id: d.id, pantheon_id: d.pantheonId, kind: 'power',
-        name: powerName, power: powerVal === '' ? null : parseFloat(powerVal),
-        swiftness_shave: null, active: true, updated_at: new Date().toISOString(),
-        effect_key: powerEffectKey || null,
-        effect_amount: powerEffectAmt === '' ? null : parseFloat(powerEffectAmt)
+        move_key: powerMoveKey,
+        name: powerCatalog ? powerCatalog.name : '',
+        power: powerCatalog ? powerCatalog.power : null,
+        swiftness_shave: null, active: powerActive, updated_at: new Date().toISOString(),
+        effect_key: null, effect_amount: null
       });
     }
-    if(controlName || had.control){
+    if(controlMoveKey || had.control){
       rows.push({
         deity_id: d.id, pantheon_id: d.pantheonId, kind: 'control',
-        name: controlName, power: controlVal === '' ? null : parseFloat(controlVal),
-        swiftness_shave: controlShave === '' ? null : parseInt(controlShave, 10),
-        active: true, updated_at: new Date().toISOString(),
-        effect_key: controlEffectKey || null,
-        effect_amount: controlEffectAmt === '' ? null : parseFloat(controlEffectAmt)
+        move_key: controlMoveKey,
+        name: controlCatalog ? controlCatalog.name : '',
+        power: controlCatalog ? controlCatalog.power : null,
+        swiftness_shave: controlCatalog ? controlCatalog.swiftness_shave : null,
+        active: controlActive, updated_at: new Date().toISOString(),
+        effect_key: null, effect_amount: null
       });
     }
   }
@@ -5417,7 +5646,7 @@ async function saveDeityMoves(){
   if(!rows.length) return;
   const { error } = await supabaseClient.from('deity_moves').upsert(rows, { onConflict: 'deity_id,kind' });
   status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. A blank name/power falls back to the affinity baseline. Applies to the next fight, no redeploy needed.';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. A move set to "none" falls back to the affinity baseline. Applies to the next fight, no redeploy needed.';
   if(!error) loadDeityMoves();
 }
 
@@ -5523,19 +5752,27 @@ function effectKeyOptionsHtml(options, current){
 
 // Wired by combat/index.ts as a passive, whole-fight aura — deity_blessings'
 // effect key, and guardian_item_catalog's enchantment effect key (same
-// vocabulary, same code path).
+// vocabulary, same code path). dodge_pct and damage_reduction_pct added
+// for 13-point update item 5, "a full status effect and boon list."
 const AURA_EFFECT_OPTIONS = [
   { value: 'crit_bonus_pct', label: 'crit_bonus_pct - plus N crit chance, all fight' },
   { value: 'lifesteal_pct', label: 'lifesteal_pct - heal N% of damage dealt, all fight' },
   { value: 'ward_bonus_pct', label: 'ward_bonus_pct - N% more effective Ward, all fight' },
   { value: 'essence_bonus_pct', label: 'essence_bonus_pct - N% bonus Essence on a Gauntlet win' },
+  { value: 'dodge_pct', label: 'dodge_pct - N% chance to fully negate an incoming hit, all fight (capped 75%)' },
+  { value: 'damage_reduction_pct', label: 'damage_reduction_pct - N% less damage taken from every hit, all fight (capped 75%)' },
 ];
 // Wired by combat/index.ts, triggered only on the round that move is cast.
+// poison_pct/weaken_pct/vulnerability_pct/shield_flat added for item 5.
 const MOVE_EFFECT_OPTIONS = [
   { value: 'lifesteal_pct', label: 'lifesteal_pct - heal N% of this hit damage' },
   { value: 'stun_pct', label: 'stun_pct - N% chance to stun the target' },
   { value: 'crit_bonus_pct', label: 'crit_bonus_pct - plus N crit chance, this hit' },
   { value: 'burn_flat', label: 'burn_flat - plus N burn dmg/round, rest of fight' },
+  { value: 'poison_pct', label: 'poison_pct - poison for N% of target\'s max Vitality/round, rest of fight (separate pool from burn)' },
+  { value: 'weaken_pct', label: 'weaken_pct - target\'s own Might cut by N% for the rest of the fight (stacks, capped 80%)' },
+  { value: 'vulnerability_pct', label: 'vulnerability_pct - target takes N% more damage from everything, rest of fight' },
+  { value: 'shield_flat', label: 'shield_flat - self-buff: absorbs your next N total damage taken' },
 ];
 // Wired by circle/index.ts — any of the 8 affinity rows can use any of these.
 const CIRCLE_PATRON_EFFECT_OPTIONS = [
