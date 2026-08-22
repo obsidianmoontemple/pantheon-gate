@@ -142,6 +142,18 @@ input[type=text],input[type=email]{
   font-family:'EB Garamond',serif;font-size:16px;border-radius:3px;width:100%;max-width:320px;margin:0 auto 16px;display:block;
 }
 input:focus{outline:none;border-color:var(--gold);}
+/* Dropdown pickers (0068) — replaces the long scrolling per-pantheon lists
+   Petition Hall and Chained Gods' Key of Night picker used to render as
+   (one row per deity, grouped under a pantheon heading). Direct feedback:
+   "the lists of deities in the chained gods and petitions and such... they
+   need to be a dropdown that i can move into place" — a single compact
+   select collapses the whole list into one element sized to fit a spot in
+   the custom art, instead of a variable-height list that forces scrolling. */
+select.picker-select{
+  background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:12px 14px;
+  font-family:'EB Garamond',serif;font-size:16px;border-radius:3px;width:100%;max-width:320px;margin:0 auto 16px;display:block;
+}
+select.picker-select:focus{outline:none;border-color:var(--gold);}
 button{background:var(--gold);color:var(--ink);border:none;padding:12px 26px;font-family:'Cinzel',serif;
   font-size:12px;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;cursor:pointer;display:block;margin:0 auto;}
 button:hover:not(:disabled){background:var(--gold-bright);}
@@ -381,17 +393,11 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
 .deity-row .name{font-family:'Cinzel',serif;font-size:13.5px;color:var(--parchment);}
 .mark-badge{font-size:10px;letter-spacing:0.06em;text-transform:uppercase;font-family:'Cinzel',serif;padding:3px 9px;border-radius:20px;border:1px solid var(--line);color:var(--parchment-dim);}
 
-/* Compact button grid — direct feedback: "removing the scrolling
-   selection from the chained gods as it has buttons." The Key of Night
-   picker's season pool is a small, admin-curated handful of deities (not
-   the full multi-hundred-deity catalog), so a wrapped row of pill
-   buttons fits without the page needing to scroll the way a stacked
-   .deity-row list did — same click target, far less vertical space. */
-.chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
-.chip-btn{background:rgba(0,0,0,0.25);border:1px solid var(--line);color:var(--parchment);
-  font-family:'Cinzel',serif;font-size:12.5px;letter-spacing:0.03em;
-  padding:9px 16px;border-radius:20px;cursor:pointer;transition:border-color .15s,color .15s,background .15s;margin:0;}
-.chip-btn:hover{border-color:var(--gold-bright);color:var(--gold-bright);background:rgba(200,162,74,0.1);}
+/* .chip-row/.chip-btn (a wrapped grid of pill buttons) briefly replaced
+   the Key of Night picker's stacked .deity-row list to kill a scrolling
+   complaint, then was itself superseded by a single select.picker-select
+   dropdown (0068, see above) at the player's request — removed here as
+   dead code since nothing renders them anymore. */
 .mark-badge.full{color:var(--ink);background:var(--gold-bright);border-color:var(--gold-bright);}
 .mark-badge.partial{color:var(--gold-bright);border-color:var(--gold);}
 
@@ -3533,17 +3539,22 @@ function renderPetitionPicker(){
   // Not-for-sale deities/pantheons stay fully hidden here too — a secret
   // deity marked for_sale=false shouldn't be free XP-earning content just
   // because it's reachable through Petition Hall instead of the Shop.
-  const groups = Object.keys(CATALOG).filter(pid => shopPantheonForSale(pid)).map(pid => {
-    const rows = CATALOG[pid].deities.filter(([id]) => shopDeityForSale(id)).map(([id, name]) => {
+  // Rewritten from a per-pantheon deity-row list to a single dropdown
+  // (0068) — see the select.picker-select comment above.
+  const optgroups = Object.keys(CATALOG).filter(pid => shopPantheonForSale(pid)).map(pid => {
+    const opts = CATALOG[pid].deities.filter(([id]) => shopDeityForSale(id)).map(([id, name]) => {
       const m = markFor(pid, id);
-      const badge = m ? `<span class="mark-badge ${m.mark_type}">${m.mark_type}</span>` : '';
-      return `<div class="deity-row" onclick="beginPetition('${esc(pid)}','${esc(id)}')">
-        <span class="name">${esc(name)}</span>${badge}
-      </div>`;
+      const suffix = m ? ` — ${m.mark_type} mark` : '';
+      return `<option value="${esc(pid)}::${esc(id)}">${esc(name)}${esc(suffix)}</option>`;
     }).join('');
-    if(!rows) return '';
-    return `<div class="pantheon-group"><h3>${esc(CATALOG[pid].label)}</h3>${rows}</div>`;
+    if(!opts) return '';
+    return `<optgroup label="${esc(CATALOG[pid].label)}">${opts}</optgroup>`;
   }).join('');
+
+  const pickerBlock = optgroups
+    ? `<select class="picker-select" id="petitionDeitySelect">${optgroups}</select>
+       <button onclick="beginPetitionFromSelect()">Petition this god</button>`
+    : '<p class="hint" style="text-align:center;">No gods are open for petition right now — check back soon.</p>';
 
   app.innerHTML = `
     <div class="card"${bgAttr('oracle')}>
@@ -3551,10 +3562,17 @@ function renderPetitionPicker(){
       <p class="hint" style="text-align:center;">Every honest answer earns something. A god you've already earned a partial mark from can still be petitioned again for the full mark.</p>
       ${phaseLine}
       <div id="pickerStatus" class="status"></div>
-      ${groups}
+      ${pickerBlock}
       <button class="secondary" style="margin-top:10px;" onclick="backToGuardianHome()">Back to the map</button>
     </div>
   `;
+}
+
+function beginPetitionFromSelect(){
+  const sel = document.getElementById('petitionDeitySelect');
+  if(!sel || !sel.value) return;
+  const [pantheonId, deityId] = sel.value.split('::');
+  beginPetition(pantheonId, deityId);
 }
 
 async function beginPetition(pantheonId, deityId){
@@ -6443,12 +6461,20 @@ function renderKeyOfNightPicker(){
   // Not-for-sale deities/pantheons stay off the table too — a Key
   // shouldn't be a back door around the same for_sale flag the Shop and
   // Petition Hall both respect, on top of the season-pool restriction.
+  // Rewritten from a chip-row grid to a single dropdown (0068) — same
+  // "turn the deity lists into a dropdown" feedback as Petition Hall,
+  // see the select.picker-select comment above.
   const poolIds = new Set(seasonPool.map(d => d.deity_id));
-  const groups = Object.keys(CATALOG).filter(pid => shopPantheonForSale(pid)).map(pid => {
-    const chips = CATALOG[pid].deities.filter(([id]) => poolIds.has(id) && shopDeityForSale(id)).map(([id, name]) => `<button class="chip-btn" onclick="doRedeemKeyOfNight('${esc(pid)}','${esc(id)}','${esc(name)}')">${esc(name)}</button>`).join('');
-    if(!chips) return '';
-    return `<div class="pantheon-group"><h3>${esc(CATALOG[pid].label)}</h3><div class="chip-row">${chips}</div></div>`;
+  const optgroups = Object.keys(CATALOG).filter(pid => shopPantheonForSale(pid)).map(pid => {
+    const opts = CATALOG[pid].deities.filter(([id]) => poolIds.has(id) && shopDeityForSale(id)).map(([id, name]) => `<option value="${esc(pid)}::${esc(id)}">${esc(name)}</option>`).join('');
+    if(!opts) return '';
+    return `<optgroup label="${esc(CATALOG[pid].label)}">${opts}</optgroup>`;
   }).join('');
+
+  const pickerBlock = optgroups
+    ? `<select class="picker-select" id="keyOfNightSelect">${optgroups}</select>
+       <button onclick="doRedeemKeyOfNightFromSelect()">Redeem</button>`
+    : '<p class="hint" style="text-align:center;">Nothing is in season right now — check back soon.</p>';
 
   app.innerHTML = `
     <div class="card"${bgAttr('chainedGods')}>
@@ -6456,10 +6482,17 @@ function renderKeyOfNightPicker(){
       <p class="hint" style="text-align:center;">Only this season's gods are open to a direct choice.</p>
       <div class="essence-row"><span class="essence-label">Key of Night</span><span class="essence-value">${guardian.key_of_night || 0}</span></div>
       <div id="redeemStatus" class="status"></div>
-      ${groups || '<p class="hint" style="text-align:center;">Nothing is in season right now — check back soon.</p>'}
+      ${pickerBlock}
       <button class="secondary" style="margin-top:10px;" onclick="backToRedeemHub()">Back</button>
     </div>
   `;
+}
+
+function doRedeemKeyOfNightFromSelect(){
+  const sel = document.getElementById('keyOfNightSelect');
+  if(!sel || !sel.value) return;
+  const [pantheonId, deityId] = sel.value.split('::');
+  doRedeemKeyOfNight(pantheonId, deityId, deityNameFromCatalog(pantheonId, deityId));
 }
 
 /* ---------------- raw PvP (Phase 5c) ---------------- */
