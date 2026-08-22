@@ -1244,6 +1244,38 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         </div>
         <div class="status" id="newArenaItemStatus"></div>
       </div>
+
+      <div class="card">
+        <h2>PvP Payouts</h2>
+        <p class="hint">13-point update item 6: "admin selected payouts." Every row here is a currency reward pvp/index.ts grants automatically when a duel resolves — add, edit, or remove as many as you want, in whatever amount. <strong>Win</strong> always pays the winner. <strong>Win (upset bonus)</strong> pays the winner ON TOP of a Win reward, but only when they were ranked worse and won anyway (a real ladder swap). <strong>Loss</strong> pays the loser — ships empty (losers get nothing by default), add a row here for a consolation prize. Favor rows are still boosted by a winner's active favor_boost_pct (Arena Shop) on top of whatever amount you set here.</p>
+        <div class="scroll-table" style="max-height:340px;">
+          <table>
+            <thead><tr><th>Situation</th><th>Currency</th><th>Amount</th><th>Sort order</th><th>Active</th></tr></thead>
+            <tbody id="pvpPayoutRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="savePvpPayoutsBtn">Save changes</button>
+          <div class="status" id="pvpPayoutStatus"></div>
+        </div>
+        <h3>Add a new payout</h3>
+        <div class="form-row">
+          <div class="field"><label>Situation</label>
+            <select id="newPvpPayoutSituation" style="max-width:160px;">
+              <option value="win">Win</option>
+              <option value="win_upset">Win (upset bonus)</option>
+              <option value="loss">Loss</option>
+            </select>
+          </div>
+          <div class="field"><label>Currency</label>
+            <select id="newPvpPayoutCurrency" style="max-width:150px;"></select>
+          </div>
+          <div class="field"><label>Amount</label><input type="number" min="1" id="newPvpPayoutAmount" style="max-width:100px;"></div>
+          <div class="field"><label>Sort order</label><input type="number" id="newPvpPayoutSort" value="0" style="max-width:90px;"></div>
+          <button id="addPvpPayoutBtn">Add payout</button>
+        </div>
+        <div class="status" id="newPvpPayoutStatus"></div>
+      </div>
     </div>
 
     <!-- ============================== CAMPAIGN ============================== -->
@@ -2153,6 +2185,7 @@ async function handleSession(session){
   loadGuardianItemCatalog();
   loadExpeditionArtifacts();
   loadArenaShopCatalog();
+  loadPvpPayoutRules();
   loadLeaderboards();
 
   await loadCampaignChapters();
@@ -2647,6 +2680,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('saveArenaItemsBtn').addEventListener('click', saveArenaShopCatalog);
   document.getElementById('addArenaItemBtn').addEventListener('click', addArenaShopItem);
+  document.getElementById('savePvpPayoutsBtn').addEventListener('click', savePvpPayoutRules);
+  document.getElementById('addPvpPayoutBtn').addEventListener('click', addPvpPayoutRule);
   document.getElementById('newArenaItemEffect').innerHTML = effectKeyOptionsHtml(ARENA_EFFECT_OPTIONS, '');
 
   document.getElementById('saveCampaignLevelsBtn').addEventListener('click', saveCampaignLevels);
@@ -6609,6 +6644,78 @@ async function addArenaShopItem(){
   ['newArenaItemKey','newArenaItemName','newArenaItemCost','newArenaItemEffectHours','newArenaItemEffectAmount','newArenaItemDescription','newArenaItemImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   document.getElementById('newArenaItemEffect').value = '';
   loadArenaShopCatalog();
+}
+
+/* =====================================================================
+   PVP PAYOUTS (0064) — 13-point update item 6, "admin selected payouts."
+   Replaces the old hardcoded FAVOR_PER_WIN/FAVOR_UPSET_BONUS constants —
+   a flat list of (situation, currency, amount) rows pvp/index.ts reads
+   fresh every duel. Same bulk-save-plus-add-new pattern as every other
+   catalog tab, with a fixed situation vocabulary (win/win_upset/loss)
+   instead of a free key.
+   ===================================================================== */
+
+const PVP_PAYOUT_SITUATION_LABELS = { win: 'Win', win_upset: 'Win (upset bonus)', loss: 'Loss' };
+
+async function loadPvpPayoutRules(){
+  const curSel = document.getElementById('newPvpPayoutCurrency');
+  if(curSel){
+    const personalCurrencies = Object.values(currencyDefs).filter(c => c.scope === 'personal');
+    curSel.innerHTML = personalCurrencies.map(c => `<option value="${esc(c.key)}">${esc(c.name)}</option>`).join('');
+  }
+
+  const { data, error } = await supabaseClient.from('pvp_payout_rules').select('*').order('situation', { ascending: true }).order('sort_order', { ascending: true });
+  const rows = document.getElementById('pvpPayoutRows');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = (data || []).map(p => `<tr data-id="${esc(p.id)}">
+    <td class="dim">${esc(PVP_PAYOUT_SITUATION_LABELS[p.situation] || p.situation)}</td>
+    <td class="dim">${esc(currencyDefs[p.currency_key]?.name || p.currency_key)}</td>
+    <td><input type="number" min="1" id="ppAmt_${esc(p.id)}" value="${p.amount}" style="max-width:100px;"></td>
+    <td><input type="number" id="ppSort_${esc(p.id)}" value="${p.sort_order}" style="max-width:80px;"></td>
+    <td><input type="checkbox" id="ppActive_${esc(p.id)}" ${p.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="5">No payout rules yet — add one below.</td></tr>';
+}
+
+async function savePvpPayoutRules(){
+  const status = document.getElementById('pvpPayoutStatus');
+  const trs = document.querySelectorAll('#pvpPayoutRows tr[data-id]');
+  const rows = Array.from(trs).map(tr => {
+    const id = tr.getAttribute('data-id');
+    return {
+      id,
+      amount: parseInt(document.getElementById('ppAmt_' + id).value, 10),
+      sort_order: parseInt(document.getElementById('ppSort_' + id).value, 10) || 0,
+      active: document.getElementById('ppActive_' + id).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('pvp_payout_rules').upsert(rows, { onConflict: 'id' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies to the next duel that resolves, no redeploy needed.';
+  if(!error) loadPvpPayoutRules();
+}
+
+async function addPvpPayoutRule(){
+  const status = document.getElementById('newPvpPayoutStatus');
+  const situation = document.getElementById('newPvpPayoutSituation').value;
+  const currencyKey = document.getElementById('newPvpPayoutCurrency').value;
+  const amount = parseInt(document.getElementById('newPvpPayoutAmount').value, 10);
+  const sortOrder = parseInt(document.getElementById('newPvpPayoutSort').value, 10) || 0;
+
+  if(!currencyKey){ status.className = 'status err'; status.textContent = 'Pick a currency.'; return; }
+  if(isNaN(amount) || amount < 1){ status.className = 'status err'; status.textContent = 'Enter an amount greater than 0.'; return; }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('pvp_payout_rules').insert({ situation, currency_key: currencyKey, amount, sort_order: sortOrder, active: true });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? `${PVP_PAYOUT_SITUATION_LABELS[situation]} already has a ${currencyDefs[currencyKey]?.name || currencyKey} payout — edit its amount above instead.` : ('Failed: ' + error.message); return; }
+  status.className = 'status ok'; status.textContent = 'Payout added.';
+  document.getElementById('newPvpPayoutAmount').value = '';
+  loadPvpPayoutRules();
 }
 
 /* =====================================================================
