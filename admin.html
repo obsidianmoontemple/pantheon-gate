@@ -688,13 +688,13 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-gauntlet">
       <div class="card">
         <h2>Gauntlet opponents</h2>
-        <p class="hint">The fixed solo trial ladder ("Enter the Gauntlet"), unlocked one tier at a time as a guardian clears the current frontier. A freshly hatched guardian starts at 10 in every stat with no combat moves beyond Basic Strike — if the Gauntlet is beating up new guardians, the fix is almost always to bring tier 0's stats down closer to that, not further above it. Tier must stay a unique, contiguous 0, 1, 2, 3… sequence for the unlock logic to make sense — leave gaps and later tiers may become unreachable or skip unlocking.</p>
+        <p class="hint">The fixed solo trial ladder ("Enter the Gauntlet"), unlocked one tier at a time as a guardian clears the current frontier. A freshly hatched guardian starts at 10 in every stat with no combat moves beyond Basic Strike — if the Gauntlet is beating up new guardians, the fix is almost always to bring tier 0's stats down closer to that, not further above it. Tier must stay a unique, contiguous 0, 1, 2, 3… sequence for the unlock logic to make sense — leave gaps and later tiers may become unreachable or skip unlocking. 13-point update item 1: Required level is a SECOND, independent gate on top of the tier ladder (same required_level pattern as Campaign chapters) — a guardian needs BOTH the tier cleared below it AND their own Guardian Level (campaign_level) at or above this number to enter. Players now see the full ladder up front, including locked tiers — this Required level is what's shown to explain why a tier is still locked.</p>
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr>
-              <th>Key</th><th>Name</th><th>Tier</th><th>Affinity</th><th>Vitality</th><th>Might</th><th>Ward</th><th>Swiftness</th><th>Cunning</th><th>Image URL</th><th>Active</th>
+              <th>Key</th><th>Name</th><th>Tier</th><th>Required level</th><th>Affinity</th><th>Vitality</th><th>Might</th><th>Ward</th><th>Swiftness</th><th>Cunning</th><th>Image URL</th><th>Active</th>
             </tr></thead>
-            <tbody id="gauntletRows"><tr><td colspan="11">Loading…</td></tr></tbody>
+            <tbody id="gauntletRows"><tr><td colspan="12">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -706,6 +706,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newGauntletKey" style="max-width:140px;"></div>
           <div class="field"><label>Name</label><input type="text" id="newGauntletName" style="max-width:160px;"></div>
           <div class="field"><label>Tier (unique)</label><input type="number" min="0" id="newGauntletTier" style="max-width:100px;"></div>
+          <div class="field"><label>Required level</label><input type="number" min="1" id="newGauntletLevel" value="1" style="max-width:100px;"></div>
           <div class="field"><label>Affinity</label><select id="newGauntletAffinity" style="max-width:140px;"></select></div>
           <div class="field"><label>Vitality</label><input type="number" min="1" id="newGauntletVitality" style="max-width:100px;"></div>
           <div class="field"><label>Image URL (optional)</label><input type="text" id="newGauntletImageUrl" placeholder="https://…" style="max-width:220px;"></div>
@@ -4917,13 +4918,14 @@ async function loadGauntletOpponents(){
   if(affSel && !affSel.options.length) affSel.innerHTML = AFFINITIES.map(a => `<option value="${a}">${a}</option>`).join('');
 
   if(error){
-    rows.innerHTML = '<tr><td colspan="11">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="12">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = (data || []).map(o => `<tr data-key="${esc(o.key)}">
     <td class="dim">${esc(o.key)}</td>
     <td><input type="text" id="gauName_${esc(o.key)}" value="${esc(o.name)}"></td>
     <td><input type="number" min="0" id="gauTier_${esc(o.key)}" value="${o.tier}" style="max-width:70px;"></td>
+    <td><input type="number" min="1" id="gauLevel_${esc(o.key)}" value="${o.required_level ?? 1}" style="max-width:80px;"></td>
     <td>
       <select id="gauAff_${esc(o.key)}">
         ${AFFINITIES.map(a => `<option value="${a}" ${a === o.affinity ? 'selected' : ''}>${a}</option>`).join('')}
@@ -4936,7 +4938,7 @@ async function loadGauntletOpponents(){
     <td><input type="number" min="0" id="gauCunning_${esc(o.key)}" value="${o.cunning}" style="max-width:80px;"></td>
     <td><input type="text" id="gauImg_${esc(o.key)}" value="${esc(o.image_url || '')}" style="max-width:180px;"></td>
     <td><input type="checkbox" id="gauActive_${esc(o.key)}" ${o.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="11">No opponents yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="12">No opponents yet.</td></tr>';
 }
 
 async function saveGauntletOpponents(){
@@ -4948,6 +4950,7 @@ async function saveGauntletOpponents(){
       key,
       name: document.getElementById('gauName_' + key).value.trim(),
       tier: parseInt(document.getElementById('gauTier_' + key).value, 10),
+      required_level: parseInt(document.getElementById('gauLevel_' + key).value, 10) || 1,
       affinity: document.getElementById('gauAff_' + key).value,
       vitality: parseInt(document.getElementById('gauVitality_' + key).value, 10),
       might: parseInt(document.getElementById('gauMight_' + key).value, 10),
@@ -4971,6 +4974,7 @@ async function addGauntletOpponent(){
   const key = document.getElementById('newGauntletKey').value.trim().toLowerCase();
   const name = document.getElementById('newGauntletName').value.trim();
   const tier = parseInt(document.getElementById('newGauntletTier').value, 10);
+  const requiredLevel = parseInt(document.getElementById('newGauntletLevel').value, 10) || 1;
   const affinity = document.getElementById('newGauntletAffinity').value;
   const vitality = parseInt(document.getElementById('newGauntletVitality').value, 10);
   const imageUrl = document.getElementById('newGauntletImageUrl').value.trim();
@@ -4978,12 +4982,13 @@ async function addGauntletOpponent(){
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
   if(isNaN(tier) || tier < 0){ status.className = 'status err'; status.textContent = 'Enter a tier of 0 or higher (must be unique).'; return; }
+  if(requiredLevel < 1){ status.className = 'status err'; status.textContent = 'Required level must be 1 or higher.'; return; }
   if(isNaN(vitality) || vitality < 1){ status.className = 'status err'; status.textContent = 'Enter a vitality greater than 0.'; return; }
 
   status.className = 'status';
   status.textContent = 'Adding…';
   const { error } = await supabaseClient.from('gauntlet_opponents').insert({
-    key, name, tier, affinity, vitality,
+    key, name, tier, required_level: requiredLevel, affinity, vitality,
     might: 10, ward: 10, swiftness: 10, cunning: 10,
     image_url: imageUrl || null
   });
@@ -4992,6 +4997,7 @@ async function addGauntletOpponent(){
   status.className = 'status ok';
   status.textContent = name + ' added — tune might/ward/swiftness/cunning in the table above (seeded at 10 each).';
   ['newGauntletKey','newGauntletName','newGauntletTier','newGauntletVitality','newGauntletImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newGauntletLevel').value = '1';
   loadGauntletOpponents();
 }
 
