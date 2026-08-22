@@ -1263,7 +1263,7 @@ async function forgotPassword(){
 async function loadGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at')
     .eq('owner_user_id', session.user.id)
     .maybeSingle();
   if(error){ console.error('guardian load failed', error); return; }
@@ -1404,7 +1404,7 @@ async function hatchGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
     .insert({ owner_user_id: session.user.id, species: pickedSpecies, name })
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at')
     .single();
 
   if(error){
@@ -3672,7 +3672,7 @@ let PROVING_TIERS = [];
 
 async function loadGauntletOpponents(){
   if(PROVING_TIERS.length) return;
-  const { data, error } = await supabaseClient.from('gauntlet_opponents').select('key, name, affinity, tier, image_url').eq('active', true).order('tier', { ascending: true });
+  const { data, error } = await supabaseClient.from('gauntlet_opponents').select('key, name, affinity, tier, required_level, image_url').eq('active', true).order('tier', { ascending: true });
   if(error){ console.error('gauntlet opponents load failed', error); return; }
   PROVING_TIERS = data || [];
 }
@@ -3709,12 +3709,24 @@ function renderCombat(){
 
 function renderProvingPicker(){
   const app = document.getElementById('app');
-  // Locked tiers are fully hidden, not just greyed out — clear the one
-  // that's open to reveal the next.
-  const rows = PROVING_TIERS.length ? PROVING_TIERS.filter(t => t.tier <= guardian.proving_rank).map(t => {
-    return `<div class="tier-row" onclick="selectOpponent('${esc(t.key)}')">
-      <span style="display:flex;align-items:center;gap:8px;">${shopThumb(t.image_url)}<span class="tname">${esc(t.name)}</span></span>
-      <span class="taff">${esc(t.affinity)}-touched</span>
+  // 13-point update item 1: "show full gauntlet so we know what's
+  // coming, adding lvl requirements" — the full ladder renders now,
+  // locked tiers greyed out (.tier-row.locked) instead of hidden
+  // entirely, each explaining exactly why it's still closed. A tier can
+  // be locked for either (or both) of two independent reasons: the
+  // sequential tier-ladder gate (clear the frontier first) and the newer
+  // Guardian Level floor (campaign_level) — see combat/index.ts's
+  // "start" action for the matching server-side enforcement.
+  const rows = PROVING_TIERS.length ? PROVING_TIERS.map(t => {
+    const requiredLevel = t.required_level ?? 1;
+    const tierLocked = t.tier > guardian.proving_rank;
+    const levelLocked = (guardian.campaign_level ?? 1) < requiredLevel;
+    const locked = tierLocked || levelLocked;
+    const reason = tierLocked ? 'Locked — clear the trial before it first' : `Requires Guardian Level ${requiredLevel}`;
+    const clickAttr = locked ? '' : ` onclick="selectOpponent('${esc(t.key)}')"`;
+    return `<div class="tier-row${locked ? ' locked' : ''}"${clickAttr}>
+      <span style="display:flex;align-items:center;gap:8px;">${shopThumb(t.image_url)}<span class="tname">Tier ${t.tier} — ${esc(t.name)}</span></span>
+      <span class="taff">${locked ? esc(reason) : esc(t.affinity) + '-touched'}</span>
     </div>`;
   }).join('') : '<p class="hint">Loading the trial grounds…</p>';
 
