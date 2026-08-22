@@ -707,6 +707,22 @@ async function loadMage(){
     .maybeSingle();
   if(error){ console.error('mage load failed', error); return; }
   mage = data;
+  // Bug fix: renderGuardianMageTab()'s stat tiles and "Wearing: ..." line
+  // both read mageGearCatalog/mageGearOwned, but those were only ever
+  // populated by openMageGear() — so equipped gear silently didn't show
+  // (stats looked base-only, "Nothing equipped yet" even when it wasn't)
+  // on the Mage Home tab until the player happened to open Manage Gear
+  // first in that session. Load them here too so equip/unequip always
+  // shows correctly the moment you land on the Mage tab, not just inside
+  // the Gear screen. Catalog is fetched once and cached (mirrors
+  // craftCatalog's convention); owned gear is small and cheap enough to
+  // just refresh every time loadMage() runs.
+  if(mage){
+    await Promise.all([
+      mageGearCatalog.length ? Promise.resolve() : loadMageGearCatalog(),
+      loadMageGearOwned()
+    ]);
+  }
 }
 
 // The Narrator/Guide (0055) — both loaded once at boot so they're ready
