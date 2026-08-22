@@ -382,6 +382,21 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
 .hub-overlay .art{margin:0 auto 10px;filter:drop-shadow(0 0 22px rgba(200,162,74,0.22));}
 .hub-overlay .roster-row{text-align:left;}
 .hub-overlay .tap-action{cursor:pointer;}
+/* Always-visible escape hatch (0068) — every hub-box screen's ONLY way
+   back to the map used to be an invisible map-hotspot box positioned
+   wherever the admin's Screen Hotspots editor last saved it. If that
+   position is ever off (too small, dragged somewhere odd, zeroed out),
+   a player has no visible way out at all. Direct feedback: "I can't even
+   back out of the chained gods area at this point." This is a real,
+   always-clickable text link inside the overlay itself — it works no
+   matter what state the hotspot editor is in, and sits alongside (not
+   instead of) the existing invisible "Back to the Map" hotspot. */
+.hub-back{
+  display:block;background:none;border:none;padding:0;margin:0 0 10px;
+  font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--parchment-dim);cursor:pointer;text-align:center;
+}
+.hub-back:hover{color:var(--gold-bright);background:none;}
 
 .phase-note{text-align:center;color:var(--parchment-dim);font-size:12.5px;font-style:italic;margin-bottom:18px;}
 .phase-note strong{color:var(--gold-bright);font-style:normal;}
@@ -2885,6 +2900,7 @@ function renderCheckin(){
       <div class="hub-box"${bgAttrPlain('checkin')}>
         ${hotspotButtonsMarkup(CHECKIN_AREAS, 'CHECKIN_AREAS', 'checkin')}
         <div class="hub-overlay">
+          <button type="button" class="hub-back" onclick="backFromCheckin()">‹ Back to Map</button>
           <h2>Daily Check-in</h2>
           ${guardian.checkin_streak > 0 ? `<p class="hint" style="margin:-4px 0 10px;">${guardian.checkin_streak} day streak</p>` : ''}
           <p class="hint${tendedToday ? '' : ' tap-action'}" style="margin:6px 0 10px;"${tendedToday ? '' : ' onclick="tendGuardian()"'}>${tendedToday ? 'Checked in today — come back tomorrow.' : 'Tap to check in.'}</p>
@@ -3047,6 +3063,7 @@ function renderWorldBoss(){
         <div class="hub-box"${bgAttrPlain('worldBoss')}>
           ${hotspotButtonsMarkup(WORLDBOSS_AREAS, 'WORLDBOSS_AREAS', 'worldBoss')}
           <div class="hub-overlay">
+            <button type="button" class="hub-back" onclick="backFromWorldBoss()">‹ Back to Map</button>
             <h2>World Boss</h2>
             <p class="hint">Nothing is stirring right now — check back later.</p>
             <div class="status" id="worldBossActionStatus"></div>
@@ -3072,6 +3089,7 @@ function renderWorldBoss(){
       <div class="hub-box"${bgAttrPlainOrUrl('worldBoss', boss.imageUrl)}>
         ${hotspotButtonsMarkup(WORLDBOSS_AREAS, 'WORLDBOSS_AREAS', 'worldBoss')}
         <div class="hub-overlay">
+          <button type="button" class="hub-back" onclick="backFromWorldBoss()">‹ Back to Map</button>
           <h2>${esc(boss.name)}</h2>
           ${boss.flavorText ? `<p class="hint">${esc(boss.flavorText)}</p>` : ''}
           <div class="hp-row"><span class="hp-name">HP</span><span class="hp-name">${boss.hpRemaining.toLocaleString()} / ${boss.hpTotal.toLocaleString()}</span></div>
@@ -6443,6 +6461,7 @@ function renderRedeem(){
       <div class="hub-box"${bgAttrPlain('chainedGods')}>
         ${hotspotButtonsMarkup(REDEEM_AREAS, 'REDEEM_AREAS', 'chainedGods')}
         <div class="hub-overlay">
+          <button type="button" class="hub-back" onclick="backFromRedeem()">‹ Back to Map</button>
           <h2 style="text-align:center;">Chained Gods</h2>
           ${seasonLine}
           <p class="hint" style="text-align:center;">A God Token calls whichever of this season's gods answers — you don't choose. A Key of Night lets you choose, but only from that same pool.</p>
