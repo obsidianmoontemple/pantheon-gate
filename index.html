@@ -2900,52 +2900,18 @@ function renderBackpack(){
    the home page's Bond row, since Bond-tending is a separate, more
    frequent action now (see doTendBond() near renderGuardianHome()). */
 
-// Direct feedback: "the check in calendar should be visible so they know
-// what they are playing for." daily_checkin_rewards (0023) has always
-// existed and driven tend_guardian()'s payouts, but nothing ever showed
-// it to the player before now — checked in blind. Lazy-loaded here
-// (public select-all RLS, same as every other catalog) rather than at
-// boot, since only this one screen needs it.
-let checkinRewards = []; // daily_checkin_rewards, active rows only
-
-async function loadCheckinRewards(){
-  const { data, error } = await supabaseClient
-    .from('daily_checkin_rewards')
-    .select('streak_day, currency_key, amount, label')
-    .eq('active', true)
-    .order('streak_day', { ascending: true });
-  if(error){ console.error('daily_checkin_rewards load failed', error); return; }
-  checkinRewards = data || [];
-}
-
-function checkinCalendarMarkup(){
-  const streak = guardian.checkin_streak || 0;
-  const baseline = checkinRewards.find(r => r.streak_day === 0);
-  const milestones = checkinRewards.filter(r => r.streak_day > 0);
-  const nextMilestone = milestones.find(m => m.streak_day > streak);
-
-  const baseRow = baseline ? `<div class="roster-row">
-    <div><div class="rname">Every check-in</div><div class="cblurb">${esc(baseline.label || 'Daily tending')}</div></div>
-    <div class="cblurb">+${baseline.amount} ${esc(CHECKIN_CURRENCY_LABELS[baseline.currency_key] || baseline.currency_key)}</div>
-  </div>` : '';
-
-  const milestoneRows = milestones.map(m => {
-    const reached = streak >= m.streak_day;
-    const isNext = !reached && m === nextMilestone;
-    return `<div class="roster-row" style="${reached ? 'opacity:0.55;' : ''}${isNext ? 'border-color:var(--gold-bright);' : ''}">
-      <div><div class="rname">Day ${m.streak_day}${m.label ? ' — ' + esc(m.label) : ''}</div>${isNext ? '<div class="cblurb">Next milestone</div>' : ''}</div>
-      <div class="cblurb">${reached ? '<span class="hint" style="margin:0;">Reached</span>' : `+${m.amount} ${esc(CHECKIN_CURRENCY_LABELS[m.currency_key] || m.currency_key)}`}</div>
-    </div>`;
-  }).join('');
-
-  return (baseRow + milestoneRows) || '<p class="hint">Nothing set up on the calendar yet.</p>';
-}
-
+// The in-app rendered calendar list (daily_checkin_rewards, streak
+// milestones) that used to live here was itself built from earlier
+// direct feedback: "the check in calendar should be visible so they
+// know what they are playing for." Removed (0068) per a later reversal
+// once real calendar art existed for the background instead: "I have an
+// actual calendar designed for the background and do not need the
+// giant scroll screen." The hub-overlay's max-height:80vh scroll was a
+// real problem with a growing rewards list behind it; dropping the list
+// entirely (not just shrinking it) is what the art now makes redundant.
 async function openCheckin(){
   checkinView = { step: 'home' };
   render();
-  await loadCheckinRewards();
-  if(checkinView) render();
 }
 
 function backFromCheckin(){
@@ -2967,8 +2933,6 @@ function renderCheckin(){
           ${guardian.checkin_streak > 0 ? `<p class="hint" style="margin:-4px 0 10px;">${guardian.checkin_streak} day streak</p>` : ''}
           <p class="hint${tendedToday ? '' : ' tap-action'}" style="margin:6px 0 10px;"${tendedToday ? '' : ' onclick="tendGuardian()"'}>${tendedToday ? 'Checked in today — come back tomorrow.' : 'Tap to check in.'}</p>
           <div class="status" id="checkinStatus"></div>
-          <h3 style="margin-top:14px;text-align:left;">The Calendar</h3>
-          ${checkinCalendarMarkup()}
         </div>
       </div>
     </div>
@@ -6542,31 +6506,16 @@ function deityNameFromCatalog(pantheonId, deityId){
   return match ? match[1] : deityId;
 }
 
-// Direct feedback: "we need odds on the pool and it should be 100%
-// random everyone just drew the same god." The draw itself
-// (redeem/index.ts) already IS a uniform Math.random() pick — every
-// pool god this player doesn't already hold is an equally likely
-// outcome. If multiple players are landing on the same god, the far
-// more likely explanation is the season pool only has one (or very
-// few) gods actually checked "in season" in admin.html's Chained Gods
-// tab right now — this list makes that immediately visible instead of
-// a mystery, since it mirrors the server's own candidate set exactly
-// (same isDeityUnlocked-style exclusion of gods this player already
-// holds).
-function godTokenOddsMarkup(){
-  if(!seasonPool.length) return '<p class="hint" style="text-align:center;">Nothing is in season right now — check back soon.</p>';
-  const unowned = seasonPool.filter(d => !isDeityUnlocked(d.pantheon_id, d.deity_id));
-  if(!unowned.length) return '<p class="hint" style="text-align:center;">You already hold every god in this season\'s pool.</p>';
-  const pct = (100 / unowned.length).toFixed(unowned.length > 20 ? 1 : 0);
-  const rows = unowned.map(d => `
-    <div class="roster-row"><div class="rname">${esc(deityNameFromCatalog(d.pantheon_id, d.deity_id))}</div><span class="cblurb">1 in ${unowned.length} (${pct}%)</span></div>
-  `).join('');
-  return `
-    <h3 style="margin-top:14px;text-align:left;">God Token odds (${unowned.length} god${unowned.length === 1 ? '' : 's'} eligible)</h3>
-    ${rows}
-  `;
-}
-
+// The God Token odds list that used to render here (one row per eligible
+// god + its percentage) was itself built from earlier direct feedback:
+// "we need odds on the pool." Removed (0068) per a later reversal: "there
+// does not even need to be a screen containing gods names in the chained
+// gods as it runs seasonally and i change the background to reflect the
+// gods in the pool" — the background art itself now communicates what's
+// in season, so the text list (and the scroll it forced in a large pool)
+// is redundant. The draw itself is still a uniform Math.random() pick
+// across the pool either way, unaffected by this — nothing about the
+// odds changed, only whether they're spelled out on screen.
 function renderRedeem(){
   if(redeemView.step === 'keyPicker'){ renderKeyOfNightPicker(); return; }
 
@@ -6585,7 +6534,6 @@ function renderRedeem(){
           <div id="redeemStatus" class="status"></div>
           <div class="essence-row"><span class="essence-label">God Tokens</span><span class="essence-value">${guardian.god_tokens || 0}</span></div>
           <div class="essence-row" style="margin-top:4px;"><span class="essence-label">Key of Night</span><span class="essence-value">${guardian.key_of_night || 0}</span></div>
-          ${godTokenOddsMarkup()}
         </div>
       </div>
     </div>
