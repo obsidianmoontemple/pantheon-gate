@@ -2140,16 +2140,17 @@ function renderMageGear(){
       <div><div class="rname">${cat ? esc(cat.name) : esc(g.gear_key)}</div><div class="cblurb">${cat ? '+' + cat.stat_amount + ' ' + cat.stat_key : ''}</div></div>
       <div class="ractions"><button class="secondary" onclick="doEquipMageGear('${g.id}')">Equip</button></div>
     </div>`;
-  }).join('') || '<p class="hint">Nothing in reserve — craft something below.</p>';
+  }).join('') || '<p class="hint">Nothing in reserve — craft some in Shard Crafting.</p>';
 
-  const catalogRows = mageGearCatalog.map(item => {
-    const affordable = guardian && guardian.god_shards >= item.shard_cost;
-    return `<div class="roster-row">
-      <div><div class="rname">${esc(item.name)}</div><div class="cblurb">${esc(item.description || '')} — ${esc(item.slot)}, +${item.stat_amount} ${esc(item.stat_key)} — ${item.shard_cost} Shards</div></div>
-      <div class="ractions"><button class="secondary" ${affordable ? '' : 'disabled'} onclick="doCraftMageGear('${esc(item.key)}')">Craft</button></div>
-    </div>`;
-  }).join('') || '<p class="hint">No gear catalog set up yet.</p>';
-
+  // The catalog/Craft-button section used to live here as its own copy —
+  // 0068 folds it into the single Shard Crafting screen instead (which
+  // now shows both Guardian items and Mage gear, same God Shards
+  // currency both already spent), so there's one place to spend Shards
+  // instead of two disconnected ones. Direct feedback: "crafting revamp
+  // to include the mage" — the mage gear crafting backend already
+  // existed (craft-gear on mage/index.ts), what was actually missing was
+  // this: it wasn't reachable from the same screen as everything else
+  // craftable. See renderCraft().
   app.innerHTML = `
     <div class="card"${bgAttr('mageHome', 'text-align:center;')}>
       <h2>${esc(mage.name)}'s Gear</h2>
@@ -2164,11 +2165,10 @@ function renderMageGear(){
     <div class="card"${bgAttr('mageHome')}>
       <h2>In Reserve</h2>
       ${inventoryRows}
+      <button class="secondary" style="margin-top:14px;" onclick="openCraft()">Shard Crafting</button>
     </div>
     <div class="card"${bgAttr('mageHome')}>
-      <h2>Catalog</h2>
-      ${catalogRows}
-      <button class="secondary" style="margin-top:14px;" onclick="backFromMageGear()">Back</button>
+      <button class="secondary" onclick="backFromMageGear()">Back</button>
     </div>
   `;
 }
@@ -6279,8 +6279,26 @@ async function loadCraftInventory(){
 async function openCraft(){
   craftView = { step: 'home' };
   render();
-  await Promise.all([loadCraftCatalog(), loadCraftInventory()]);
+  // Mage gear crafting (0068) folded in alongside the Guardian's own
+  // catalog — see renderCraft(). Only loaded when a Mage actually
+  // exists yet (mageGearCatalog/mageGearOwned, both cached the same
+  // "load once" way craftCatalog already is).
+  const loaders = [loadCraftCatalog(), loadCraftInventory()];
+  if(mage){
+    if(!mageGearCatalog.length) loaders.push(loadMageGearCatalog());
+    loaders.push(loadMageGearOwned());
+  }
+  await Promise.all(loaders);
   if(craftView) render();
+}
+
+async function doCraftMageGearFromCraft(gearKey){
+  setCraftStatus('Working the Shards…');
+  const data = await mageFetch('craft-gear', { gearKey });
+  if(!data.ok){ setCraftStatus(data.error || 'Could not craft that.', false); return; }
+  await Promise.all([loadGuardian(), loadMageGearOwned()]);
+  render();
+  setCraftStatus('Crafted — equip it from the Mage tab.', true);
 }
 
 function backFromCraft(){
@@ -6377,11 +6395,34 @@ function renderCraft(){
     </div>`;
   }).join('') || '<p class="hint">Nothing crafted yet.</p>';
 
+  // Mage Gear folded in here (0068) — direct feedback: "crafting revamp
+  // to include the mage." The backend for this already existed
+  // (mage/index.ts's craft-gear action, same God Shards currency as
+  // everything else on this screen) — it just lived on its own separate
+  // screen inside the Mage tab instead of alongside every other craftable
+  // thing. Only shown once a Mage exists; doCraftMageGearFromCraft() is
+  // the same call renderMageGear() used to make directly, just updating
+  // this screen's own status line instead of the Mage tab's.
+  const mageGearSection = mage ? (() => {
+    const mageCatalogRows = mageGearCatalog.map(item => {
+      const affordable = (guardian.god_shards || 0) >= item.shard_cost;
+      return `<div class="roster-row">
+        <div><div class="rname">${esc(item.name)}</div><div class="cblurb">${esc(item.description || '')} — ${esc(item.slot)}, +${item.stat_amount} ${esc(item.stat_key)} — ${item.shard_cost} Shards</div></div>
+        <div class="ractions"><button class="secondary" ${affordable ? '' : 'disabled'} onclick="doCraftMageGearFromCraft('${esc(item.key)}')">Craft</button></div>
+      </div>`;
+    }).join('') || '<p class="hint">No gear catalog set up yet.</p>';
+    return `<div class="card"${bgAttr('craft')}>
+      <h2>${esc(mage.name)}'s Gear</h2>
+      ${mageCatalogRows}
+      <p class="hint" style="margin-top:10px;">Equip what you craft from the Mage tab on the Guardian Page.</p>
+    </div>`;
+  })() : '';
+
   const craftBg = bgAttr('craft');
   app.innerHTML = `
     <div class="card"${bgAttr('craft', 'text-align:center;')}>
       <h2>Shard Crafting</h2>
-      <p class="hint">Turn God Shards into a permanent stat boost, a cosmetic, or a consumable — or bank a bonus petition credit that bypasses the one-per-moon-phase gate.</p>
+      <p class="hint">Turn God Shards into a permanent stat boost, a cosmetic, or a consumable — or bank a bonus petition credit that bypasses the one-per-moon-phase gate. The same Shards also buy Mage gear below.</p>
       <div class="essence-row"><span class="essence-label">God Shards</span><span class="essence-value">${guardian.god_shards || 0}</span></div>
       <div class="status" id="craftStatus"></div>
     </div>
@@ -6389,6 +6430,7 @@ function renderCraft(){
       <h2>Catalog</h2>
       ${catalogRows}
     </div>
+    ${mageGearSection}
     <div class="card"${craftBg}>
       <h2>Bonus Petition Credit</h2>
       <p class="hint">Costs a set number of Shards, decided by the gods — if you can't afford it, the attempt will tell you the price.</p>
