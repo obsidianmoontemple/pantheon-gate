@@ -1120,6 +1120,13 @@ async function afterLogin(){
   // Petition Hall and Redeem both filter on them (see renderPetitionPicker/
   // renderRedeem) and can be reached without ever opening the Shop first.
   loadShopCatalog().then(() => { if(petitionView || redeemView) render(); }).catch(e => console.error('shop catalog preload failed', e));
+  // Item 7 (preset banner gallery) — read once, cached client-side and
+  // joined locally by key wherever a circle's banner_preset_key needs
+  // resolving to actual art, same "load the whole small public catalog
+  // once, look up by key" pattern as MAGE_ART_IMAGES above. Fire-and-
+  // forget like the shop catalog line just above: nothing needs it until
+  // a Circle screen actually renders a banner.
+  loadBannerPresetCatalog().then(() => { if(circleView) render(); }).catch(e => console.error('banner preset catalog load failed', e));
   // Notification blips on the Map Hub's Check-in/Mail/Promo icons (see
   // hotspotBadgeFor()) need mail/promo state loaded before the player ever
   // opens either screen, not just once they do — loaded here in the
@@ -4302,6 +4309,38 @@ function bannerSVG(shape, primary, secondary, size){
   return `<svg class="circle-banner" width="${size}" height="${Math.round(size*1.1)}" viewBox="0 0 100 120">${grad}${shapeEl}</svg>`;
 }
 
+// Item 7 (preset banner gallery): 16 hand-painted ready-made banners a
+// Circle can wear instead of the procedural bannerSVG() above. key ->
+// { name, image_url, active } — loaded once at login (see afterLogin()),
+// looked up locally by whatever banner_preset_key a circle row carries.
+let bannerPresetCatalog = {};
+let bannerPresetList = []; // active-only, sort_order ascending — for gallery pickers
+async function loadBannerPresetCatalog(){
+  const { data, error } = await supabaseClient.from('circle_banner_presets').select('key, name, image_url, sort_order, active').order('sort_order', { ascending: true });
+  if(error){ console.error('circle_banner_presets load failed', error); return; }
+  const byKey = {};
+  (data || []).forEach(p => { byKey[p.key] = p; });
+  bannerPresetCatalog = byKey;
+  bannerPresetList = (data || []).filter(p => p.active);
+}
+
+// Renders whatever a Circle's banner ACTUALLY is right now: the preset
+// art if banner_preset_key names one still in the catalog, otherwise the
+// procedural bannerSVG() exactly as before (covers both "never had a
+// preset" and "its preset got retired since"). Every real render site
+// (browse list, circle home, circle altar, territory map) goes through
+// this now — bannerSVG() itself stays reserved for the shape-picker in
+// renderCircleForm(), which is always drawing the procedural option by
+// definition.
+function renderCircleBanner(shape, primary, secondary, presetKey, size){
+  size = size || 120;
+  const preset = presetKey ? bannerPresetCatalog[presetKey] : null;
+  if(preset){
+    return `<img class="circle-banner" src="${esc(preset.image_url)}" alt="${esc(preset.name)}" style="width:${size}px;height:${Math.round(size*1.1)}px;object-fit:contain;display:block;margin:0 auto;">`;
+  }
+  return bannerSVG(shape, primary, secondary, size);
+}
+
 async function openCircle(){
   if(session.user.is_anonymous){
     circleView = { step: 'locked' };
@@ -4415,7 +4454,7 @@ function renderCircleBrowse(){
   const rows = browseCircles.length
     ? browseCircles.map(c => `
       <div class="circle-list-row">
-        ${bannerSVG(c.banner_shape, c.banner_primary, c.banner_secondary, 54)}
+        ${renderCircleBanner(c.banner_shape, c.banner_primary, c.banner_secondary, c.banner_preset_key, 54)}
         <div class="cinfo">
           <div class="cname">${esc(c.name)}</div>
           <div class="cblurb">${esc(c.blurb || 'No blurb yet.')}</div>
@@ -4460,7 +4499,7 @@ async function requestJoinCircle(circleId){
 }
 
 function openCreateCircle(){
-  circleDraft = { name: '', blurb: '', memberCap: 25, leaderTitle: 'high_priest', bannerShape: 'shield', bannerAffinity: 'light', bannerSecondary: CIRCLE_ACCENTS[1] };
+  circleDraft = { name: '', blurb: '', memberCap: 25, leaderTitle: 'high_priest', bannerShape: 'shield', bannerAffinity: 'light', bannerSecondary: CIRCLE_ACCENTS[1], bannerPresetKey: null };
   circleView = { step: 'create' };
   render();
 }
@@ -4468,7 +4507,8 @@ function openCreateCircle(){
 function openEditBanner(){
   const c = myCircle.circle;
   circleDraft = Object.assign({}, circleDraft, {
-    bannerShape: c.banner_shape, bannerAffinity: c.banner_affinity, bannerSecondary: c.banner_secondary, blurb: c.blurb || ''
+    bannerShape: c.banner_shape, bannerAffinity: c.banner_affinity, bannerSecondary: c.banner_secondary, blurb: c.blurb || '',
+    bannerPresetKey: c.banner_preset_key || null
   });
   circleView = { step: 'editBanner' };
   render();
@@ -4478,6 +4518,10 @@ function pickLeaderTitle(v){ circleDraft.leaderTitle = v; render(); }
 function pickBannerShape(v){ circleDraft.bannerShape = v; render(); }
 function pickBannerAffinity(v){ circleDraft.bannerAffinity = v; render(); }
 function pickBannerSecondary(v){ circleDraft.bannerSecondary = v; render(); }
+// Item 7 — null clears back to the procedural shape+color banner built
+// from the fields above (never destroyed by picking a preset, just
+// shadowed by it — see renderCircleBanner()).
+function pickBannerPreset(key){ circleDraft.bannerPresetKey = key || null; render(); }
 function pickMemberCap(v){ circleDraft.memberCap = v; render(); }
 function onCircleNameInput(){ const el = document.getElementById('circleNameInput'); if(el) circleDraft.name = el.value; }
 function onCircleBlurbInput(){ const el = document.getElementById('circleBlurbInput'); if(el) circleDraft.blurb = el.value; }
@@ -4485,7 +4529,7 @@ function onCircleBlurbInput(){ const el = document.getElementById('circleBlurbIn
 function renderCircleForm(){
   const editing = circleView.step === 'editBanner';
   const app = document.getElementById('app');
-  const preview = bannerSVG(circleDraft.bannerShape, AFFINITY_COLORS[circleDraft.bannerAffinity], circleDraft.bannerSecondary, 120);
+  const preview = renderCircleBanner(circleDraft.bannerShape, AFFINITY_COLORS[circleDraft.bannerAffinity], circleDraft.bannerSecondary, circleDraft.bannerPresetKey, 120);
 
   const shapeRow = ['shield','pennant','roundel'].map(s => `
     <div class="shape-pick ${circleDraft.bannerShape === s ? 'selected' : ''}" onclick="pickBannerShape('${s}')">
@@ -4506,6 +4550,25 @@ function renderCircleForm(){
   `).join('');
 
   const capRow = [20,25,30].map(n => `<div class="cap-pick ${circleDraft.memberCap === n ? 'selected' : ''}" onclick="pickMemberCap(${n})">${n}</div>`).join('');
+
+  // Item 7 — preset gallery. A "None" tile falls back to the procedural
+  // shape+color banner built below; each preset tile shows the actual
+  // art at picker scale. bannerPresetList is loaded once at login and
+  // may still be empty on a very fast first paint — the section just
+  // renders with only the None tile until it fills in.
+  const presetNoneTile = `
+    <div class="shape-pick ${!circleDraft.bannerPresetKey ? 'selected' : ''}" onclick="pickBannerPreset(null)">
+      ${bannerSVG(circleDraft.bannerShape, AFFINITY_COLORS[circleDraft.bannerAffinity], circleDraft.bannerSecondary, 46)}
+      <div class="label" style="font-size:11px;margin-top:4px;">None (procedural)</div>
+    </div>
+  `;
+  const presetTiles = bannerPresetList.map(p => `
+    <div class="shape-pick ${circleDraft.bannerPresetKey === p.key ? 'selected' : ''}" onclick="pickBannerPreset('${esc(p.key)}')">
+      <img src="${esc(p.image_url)}" alt="${esc(p.name)}" style="width:46px;height:51px;object-fit:contain;display:block;margin:0 auto;">
+      <div class="label" style="font-size:11px;margin-top:4px;">${esc(p.name)}</div>
+    </div>
+  `).join('');
+  const presetRow = presetNoneTile + presetTiles;
 
   const leaderRow = [['high_priest','High Priest'],['high_priestess','High Priestess']].map(([v,l]) => `
     <div class="choice ${circleDraft.leaderTitle === v ? 'selected' : ''}" onclick="pickLeaderTitle('${v}')" style="width:150px;">
@@ -4529,6 +4592,9 @@ function renderCircleForm(){
         <p class="section-label">Member cap</p>
         <div class="cap-pick-row">${capRow}</div>
       `}
+      <p class="section-label">Banner art</p>
+      <div class="shape-pick-row">${presetRow}</div>
+      <p class="hint" style="margin-top:0;">${circleDraft.bannerPresetKey ? 'A preset is selected — it overrides the procedural options below entirely. Pick "None (procedural)" above to go back to a shape+color banner.' : 'None selected — the shape, affinity, and accent color below build your banner.'}</p>
       <p class="section-label">Banner shape</p>
       <div class="shape-pick-row">${shapeRow}</div>
       <p class="section-label">Sigil affinity</p>
@@ -4552,7 +4618,8 @@ async function submitFoundCircle(){
     name, blurb: (circleDraft.blurb || '').trim(), memberCap: circleDraft.memberCap,
     leaderTitle: circleDraft.leaderTitle, bannerShape: circleDraft.bannerShape,
     bannerAffinity: circleDraft.bannerAffinity,
-    bannerPrimary: AFFINITY_COLORS[circleDraft.bannerAffinity], bannerSecondary: circleDraft.bannerSecondary
+    bannerPrimary: AFFINITY_COLORS[circleDraft.bannerAffinity], bannerSecondary: circleDraft.bannerSecondary,
+    bannerPresetKey: circleDraft.bannerPresetKey || null
   });
   if(!data.ok){ status.className = 'status err'; status.textContent = data.error || 'Could not found the Circle.'; return; }
   await loadGuardian();
@@ -4566,6 +4633,7 @@ async function submitUpdateBanner(){
   const data = await circleFetch('update-banner', {
     bannerShape: circleDraft.bannerShape, bannerAffinity: circleDraft.bannerAffinity,
     bannerPrimary: AFFINITY_COLORS[circleDraft.bannerAffinity], bannerSecondary: circleDraft.bannerSecondary,
+    bannerPresetKey: circleDraft.bannerPresetKey || null,
     blurb: (circleDraft.blurb || '').trim()
   });
   if(!data.ok){ status.className = 'status err'; status.textContent = data.error || 'Could not save.'; return; }
@@ -4670,7 +4738,7 @@ function renderCircleHome(){
   const circleHomeBg = bgAttr('circle');
   app.innerHTML = `
     <div class="card"${bgAttr('circle', 'text-align:center;')}>
-      ${bannerSVG(c.banner_shape, c.banner_primary, c.banner_secondary, 140)}
+      ${renderCircleBanner(c.banner_shape, c.banner_primary, c.banner_secondary, c.banner_preset_key, 140)}
       <h2>${esc(c.name)}</h2>
       <p class="hint">${esc(c.blurb || 'No blurb yet.')}</p>
       <p class="ccount" style="text-align:center;">${roster.length}/${c.member_cap} members · Circle rank ${c.rank_score}</p>
@@ -5250,7 +5318,7 @@ function renderCircleAltar(){
   const circleAltarBg = bgAttr('circleAltar');
   app.innerHTML = `
     <div class="card"${bgAttr('circleAltar', 'text-align:center;')}>
-      ${bannerSVG(c.banner_shape, c.banner_primary, c.banner_secondary, 120)}
+      ${renderCircleBanner(c.banner_shape, c.banner_primary, c.banner_secondary, c.banner_preset_key, 120)}
       <h2>${esc(c.name)}'s Altar</h2>
       <p class="ccount">${altarData.memberCount} members · Devotion: ${c.devotion_balance}</p>
     </div>
@@ -5779,13 +5847,14 @@ function renderTerritoryMap(){
     const flagShape = isCaptured ? t.controller.banner_shape : t.banner_shape;
     const flagPrimary = isCaptured ? t.controller.banner_primary : t.banner_primary;
     const flagSecondary = isCaptured ? t.controller.banner_secondary : t.banner_secondary;
+    const flagPresetKey = isCaptured ? t.controller.banner_preset_key : t.banner_preset_key;
     const controlLine = isCaptured
       ? `Controlled by ${esc(t.controller.name)}`
       : (isMine ? 'Yours' : 'Self-controlled');
     const canInvade = isOfficer && myCircleId && !isMine && t.id !== myCircleId;
     return `
       <div class="territory-tile ${isCaptured ? 'captured' : ''} ${isMine ? 'mine' : ''}">
-        ${bannerSVG(flagShape, flagPrimary, flagSecondary, 46)}
+        ${renderCircleBanner(flagShape, flagPrimary, flagSecondary, flagPresetKey, 46)}
         <div class="tname">${esc(t.name)}</div>
         <div class="tcontrol">${controlLine}</div>
         <div class="tcontrol">Rank ${t.rank_score}</div>
