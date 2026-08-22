@@ -248,6 +248,19 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
   border-color:var(--gold-bright,#e6c777)!important;
 }
 
+/* A positioned dropdown "hotspot" (0068) — same left/top/width/height
+   percentage box as a plain .map-hotspot button, draggable in
+   admin.html's Screen Hotspots editor exactly the same way, but holds a
+   real <select>+button instead of an invisible click target. See
+   hotspotDropdownMarkup(). Direct feedback: "I want those scroll screens
+   gone, turned into dropdowns that I can move to wherever I want from
+   the hotspot manager I already have." */
+.map-hotspot-dropdown{
+  position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+}
+.map-hotspot-dropdown select.picker-select{margin:0;width:100%;max-width:100%;}
+.map-hotspot-dropdown button{margin:0;width:100%;max-width:100%;white-space:nowrap;}
+
 /* Small pulsing "glowing node" marker — direct feedback: "I can not seem
    to edit my map the way I want to... simply insert some glowing nodes
    in there that fit the theme" for the three plaques that have no
@@ -1641,6 +1654,36 @@ const DEFAULT_CHECKIN_AREAS = [
 ];
 let CHECKIN_AREAS = DEFAULT_CHECKIN_AREAS.slice();
 
+// Petition Hall and the Key of Night picker (0068) — the two screens
+// direct feedback singled out by name: "the lists of deities in the
+// chained gods and petitions... I want those scroll screens gone, turned
+// into dropdowns that I can move to wherever I want from the hotspot
+// manager I already have." Converting these to the same full-bleed
+// hub-box + admin-positionable-hotspot pattern as World Boss/Chained
+// Gods/Check-in was explicitly ruled out earlier (see admin.html's
+// SCREEN_REGISTRY comment: "there's no way to hide a scrolling list
+// under art") — but that objection no longer applies now that the list
+// itself is gone, replaced by a single dropdown. One entry per screen
+// carries kind:'dropdown' instead of an action — see
+// hotspotDropdownMarkup() below, the sibling to hotspotButtonsMarkup()
+// that renders that entry as a real positioned <select>+button instead
+// of an invisible click target.
+const DEFAULT_PETITION_AREAS = [
+  { id: 'deityPicker', label: 'Choose who to petition', left: 30, top: 48, width: 40, height: 18, kind: 'dropdown' },
+  { id: 'backToMap',   label: 'Back to the Map',         left: 3,  top: 88, width: 18, height: 8,  action: backToGuardianHome },
+];
+let PETITION_AREAS = DEFAULT_PETITION_AREAS.slice();
+
+// Reuses the 'chainedGods' background (same scene as the main Chained
+// Gods hub) but its own screen_key for hotspot positions, since this is
+// a distinct overlay state with its own single dropdown+back layout
+// rather than the hub's three-button layout.
+const DEFAULT_KEYOFNIGHT_AREAS = [
+  { id: 'deityPicker', label: 'Choose a god',    left: 30, top: 48, width: 40, height: 18, kind: 'dropdown' },
+  { id: 'backToMap',   label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8,  action: backToRedeemHub },
+];
+let KEYOFNIGHT_AREAS = DEFAULT_KEYOFNIGHT_AREAS.slice();
+
 // Generic loader shared by every screen registered in admin.html's Screen
 // Hotspots editor — id/label/action come from that screen's own DEFAULT_*
 // array (a click handler can't live in a database row), only
@@ -1665,6 +1708,8 @@ async function loadMapHotspots(){
   WORLDBOSS_AREAS = await loadHotspotOverrides('worldBoss', DEFAULT_WORLDBOSS_AREAS);
   REDEEM_AREAS = await loadHotspotOverrides('chainedGods', DEFAULT_REDEEM_AREAS);
   CHECKIN_AREAS = await loadHotspotOverrides('checkin', DEFAULT_CHECKIN_AREAS);
+  PETITION_AREAS = await loadHotspotOverrides('oracle', DEFAULT_PETITION_AREAS);
+  KEYOFNIGHT_AREAS = await loadHotspotOverrides('keyOfNight', DEFAULT_KEYOFNIGHT_AREAS);
 }
 
 // Shared by every full-bleed screen (map hub, World Boss, Chained Gods,
@@ -1714,9 +1759,26 @@ function hotspotBadgeFor(id){
 
 function hotspotButtonsMarkup(areas, arrayName, pageKey){
   const fallback = pageKey ? !siteBackgrounds[pageKey] : false;
-  return areas.map((a, i) => `
+  return areas.map((a, i) => {
+    if(a.kind === 'dropdown') return ''; // rendered by hotspotDropdownMarkup() instead, see below
+    return `
     <button class="map-hotspot${fallback ? ' map-hotspot-fallback' : ''}" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;" title="${esc(a.label)}" aria-label="${esc(a.label)}" onclick="${arrayName}[${i}].action()">${fallback ? esc(a.label) : (a.glow ? `<span class="map-hotspot-node" aria-hidden="true"></span><span class="map-hotspot-node-label" aria-hidden="true">${esc(a.label)}</span>` : '')}${hotspotBadgeFor(a.id) ? '<span class="map-hotspot-badge" aria-hidden="true"></span>' : ''}</button>
-  `).join('');
+  `;
+  }).join('');
+}
+
+// The dropdown-flavored sibling of hotspotButtonsMarkup() (0068) — finds
+// the one area entry in `areas` marked kind:'dropdown' and renders it as
+// a real positioned <select>+button instead of an invisible click
+// target, using the exact same left/top/width/height percentage box
+// admin.html's Screen Hotspots editor drags around. innerHtml is the
+// caller's fully-built <select id="...">...optgroups...</select> markup
+// (built fresh each render from live CATALOG/season-pool/mark data, the
+// same way the old scrolling lists were) plus its confirm button.
+function hotspotDropdownMarkup(areas, innerHtml){
+  const a = areas.find(x => x.kind === 'dropdown');
+  if(!a) return '';
+  return `<div class="map-hotspot-dropdown" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;">${innerHtml}</div>`;
 }
 
 function mapHubMarkup(){
@@ -3551,6 +3613,7 @@ function renderPetition(){
 
 function renderPetitionPicker(){
   const app = document.getElementById('app');
+  document.body.classList.add('hub-active');
   const phaseLine = currentPhase
     ? `<p class="phase-note">Tonight's phase: <strong>${esc(currentPhase.phase)}</strong> — one petition per phase, whichever god you choose.</p>`
     : '';
@@ -3558,7 +3621,11 @@ function renderPetitionPicker(){
   // deity marked for_sale=false shouldn't be free XP-earning content just
   // because it's reachable through Petition Hall instead of the Shop.
   // Rewritten from a per-pantheon deity-row list to a single dropdown
-  // (0068) — see the select.picker-select comment above.
+  // (0068) — see the select.picker-select comment above — then again
+  // (same 0068) from a plain centered dropdown into a hub-box screen
+  // with the dropdown positioned as its own admin-draggable hotspot, so
+  // it can be moved to sit against custom art the same way every other
+  // hub screen's buttons already can.
   const optgroups = Object.keys(CATALOG).filter(pid => shopPantheonForSale(pid)).map(pid => {
     const opts = CATALOG[pid].deities.filter(([id]) => shopDeityForSale(id)).map(([id, name]) => {
       const m = markFor(pid, id);
@@ -3569,19 +3636,27 @@ function renderPetitionPicker(){
     return `<optgroup label="${esc(CATALOG[pid].label)}">${opts}</optgroup>`;
   }).join('');
 
-  const pickerBlock = optgroups
-    ? `<select class="picker-select" id="petitionDeitySelect">${optgroups}</select>
-       <button onclick="beginPetitionFromSelect()">Petition this god</button>`
-    : '<p class="hint" style="text-align:center;">No gods are open for petition right now — check back soon.</p>';
+  const pickerMarkup = optgroups
+    ? hotspotDropdownMarkup(PETITION_AREAS, `
+        <select class="picker-select" id="petitionDeitySelect">${optgroups}</select>
+        <button type="button" onclick="beginPetitionFromSelect()">Petition this god</button>
+      `)
+    : '';
 
   app.innerHTML = `
-    <div class="card"${bgAttr('oracle')}>
-      <h2 style="text-align:center;">Choose who to petition</h2>
-      <p class="hint" style="text-align:center;">Every honest answer earns something. A god you've already earned a partial mark from can still be petitioned again for the full mark.</p>
-      ${phaseLine}
-      <div id="pickerStatus" class="status"></div>
-      ${pickerBlock}
-      <button class="secondary" style="margin-top:10px;" onclick="backToGuardianHome()">Back to the map</button>
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('oracle')}>
+        ${hotspotButtonsMarkup(PETITION_AREAS, 'PETITION_AREAS', 'oracle')}
+        ${pickerMarkup}
+        <div class="hub-overlay">
+          <button type="button" class="hub-back" onclick="backToGuardianHome()">‹ Back to Map</button>
+          <h2 style="text-align:center;">Choose who to petition</h2>
+          <p class="hint" style="text-align:center;">Every honest answer earns something. A god you've already earned a partial mark from can still be petitioned again for the full mark.</p>
+          ${phaseLine}
+          <div id="pickerStatus" class="status"></div>
+          ${optgroups ? '' : '<p class="hint" style="text-align:center;">No gods are open for petition right now — check back soon.</p>'}
+        </div>
+      </div>
     </div>
   `;
 }
@@ -6477,12 +6552,16 @@ function renderRedeem(){
 
 function renderKeyOfNightPicker(){
   const app = document.getElementById('app');
+  document.body.classList.add('hub-active');
   // Not-for-sale deities/pantheons stay off the table too — a Key
   // shouldn't be a back door around the same for_sale flag the Shop and
   // Petition Hall both respect, on top of the season-pool restriction.
   // Rewritten from a chip-row grid to a single dropdown (0068) — same
   // "turn the deity lists into a dropdown" feedback as Petition Hall,
-  // see the select.picker-select comment above.
+  // see the select.picker-select comment above — then again (same 0068)
+  // into a hub-box screen with the dropdown positioned as its own
+  // admin-draggable hotspot (KEYOFNIGHT_AREAS, separate screen_key from
+  // the main Chained Gods hub's REDEEM_AREAS, same background art).
   const poolIds = new Set(seasonPool.map(d => d.deity_id));
   const optgroups = Object.keys(CATALOG).filter(pid => shopPantheonForSale(pid)).map(pid => {
     const opts = CATALOG[pid].deities.filter(([id]) => poolIds.has(id) && shopDeityForSale(id)).map(([id, name]) => `<option value="${esc(pid)}::${esc(id)}">${esc(name)}</option>`).join('');
@@ -6490,19 +6569,27 @@ function renderKeyOfNightPicker(){
     return `<optgroup label="${esc(CATALOG[pid].label)}">${opts}</optgroup>`;
   }).join('');
 
-  const pickerBlock = optgroups
-    ? `<select class="picker-select" id="keyOfNightSelect">${optgroups}</select>
-       <button onclick="doRedeemKeyOfNightFromSelect()">Redeem</button>`
-    : '<p class="hint" style="text-align:center;">Nothing is in season right now — check back soon.</p>';
+  const pickerMarkup = optgroups
+    ? hotspotDropdownMarkup(KEYOFNIGHT_AREAS, `
+        <select class="picker-select" id="keyOfNightSelect">${optgroups}</select>
+        <button type="button" onclick="doRedeemKeyOfNightFromSelect()">Redeem</button>
+      `)
+    : '';
 
   app.innerHTML = `
-    <div class="card"${bgAttr('chainedGods')}>
-      <h2 style="text-align:center;">Choose with a Key of Night</h2>
-      <p class="hint" style="text-align:center;">Only this season's gods are open to a direct choice.</p>
-      <div class="essence-row"><span class="essence-label">Key of Night</span><span class="essence-value">${guardian.key_of_night || 0}</span></div>
-      <div id="redeemStatus" class="status"></div>
-      ${pickerBlock}
-      <button class="secondary" style="margin-top:10px;" onclick="backToRedeemHub()">Back</button>
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('chainedGods')}>
+        ${hotspotButtonsMarkup(KEYOFNIGHT_AREAS, 'KEYOFNIGHT_AREAS', 'chainedGods')}
+        ${pickerMarkup}
+        <div class="hub-overlay">
+          <button type="button" class="hub-back" onclick="backToRedeemHub()">‹ Back to Map</button>
+          <h2 style="text-align:center;">Choose with a Key of Night</h2>
+          <p class="hint" style="text-align:center;">Only this season's gods are open to a direct choice.</p>
+          <div class="essence-row"><span class="essence-label">Key of Night</span><span class="essence-value">${guardian.key_of_night || 0}</span></div>
+          <div id="redeemStatus" class="status"></div>
+          ${optgroups ? '' : '<p class="hint" style="text-align:center;">Nothing is in season right now — check back soon.</p>'}
+        </div>
+      </div>
     </div>
   `;
 }
