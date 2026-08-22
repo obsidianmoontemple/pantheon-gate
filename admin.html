@@ -468,6 +468,14 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="form-row">
           <div class="field"><label>Expeditions per guardian per day</label><input type="number" min="1" id="progExpeditionsPerDay" style="max-width:170px;"></div>
         </div>
+        <h3>Training (item 4)</h3>
+        <p class="hint">The Guardian's own standalone training action (new `training` edge function) — a Mage-Train-shaped loop it never had before: free, cooldown-gated, a small Essence trickle, and XP fed into the same unified Guardian Level every other guardian activity already feeds.</p>
+        <div class="form-row">
+          <div class="field"><label>Cooldown (minutes)</label><input type="number" min="1" id="progTrainCooldown" style="max-width:140px;"></div>
+          <div class="field"><label>XP per session</label><input type="number" min="0" id="progTrainXp" style="max-width:130px;"></div>
+          <div class="field"><label>Essence min</label><input type="number" min="0" id="progTrainEssenceMin" style="max-width:110px;"></div>
+          <div class="field"><label>Essence max</label><input type="number" min="0" id="progTrainEssenceMax" style="max-width:110px;"></div>
+        </div>
         <h3>Petition trial rewards</h3>
         <p class="hint">On top of the stat/XP/blessing split a petition verdict already applies, optionally hand out a reward package — a FULL verdict can give something a PARTIAL one deliberately doesn't. Leave either blank for no extra reward.</p>
         <div class="form-row">
@@ -477,6 +485,35 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="save-bar">
           <button id="saveProgressionBtn">Save changes</button>
           <div class="status" id="progressionStatus"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Mage Progression (item 4)</h2>
+        <p class="hint">Every one of these numbers used to be a hardcoded constant in the `mage` edge function — changing any of them meant a code edit + redeploy. Now they're admin-editable, same as the Guardian settings above. The XP curve is xpToNextLevel(level) = Base + (level-1) &times; Scale — changing it takes effect immediately for every future level-up (a Mage's already-earned levels are untouched).</p>
+        <h3>Train (non-combat)</h3>
+        <div class="form-row">
+          <div class="field"><label>Cooldown (minutes)</label><input type="number" min="1" id="mpTrainCooldown" style="max-width:140px;"></div>
+          <div class="field"><label>XP</label><input type="number" min="0" id="mpTrainXp" style="max-width:110px;"></div>
+          <div class="field"><label>Shards min</label><input type="number" min="0" id="mpTrainShardsMin" style="max-width:110px;"></div>
+          <div class="field"><label>Shards max</label><input type="number" min="0" id="mpTrainShardsMax" style="max-width:110px;"></div>
+        </div>
+        <h3>Duel (combat)</h3>
+        <div class="form-row">
+          <div class="field"><label>Cooldown (minutes)</label><input type="number" min="1" id="mpDuelCooldown" style="max-width:140px;"></div>
+          <div class="field"><label>XP</label><input type="number" min="0" id="mpDuelXp" style="max-width:110px;"></div>
+          <div class="field"><label>Shards min</label><input type="number" min="0" id="mpDuelShardsMin" style="max-width:110px;"></div>
+          <div class="field"><label>Shards max</label><input type="number" min="0" id="mpDuelShardsMax" style="max-width:110px;"></div>
+        </div>
+        <h3>Level curve &amp; upgrade points</h3>
+        <div class="form-row">
+          <div class="field"><label>XP curve base</label><input type="number" min="1" id="mpXpCurveBase" style="max-width:130px;"></div>
+          <div class="field"><label>XP curve scale (per level)</label><input type="number" min="0" id="mpXpCurveScale" style="max-width:170px;"></div>
+          <div class="field"><label>Upgrade points per level</label><input type="number" min="0" id="mpUpgradePointsPerLevel" style="max-width:170px;"></div>
+        </div>
+        <div class="save-bar">
+          <button id="saveMageProgressionBtn">Save changes</button>
+          <div class="status" id="mageProgressionStatus"></div>
         </div>
       </div>
     </div>
@@ -2189,6 +2226,7 @@ async function handleSession(session){
   loadCheckinCalendar();
   loadPromoEvents();
   loadGuardianProgression();
+  loadMageProgression();
   loadDragonCatalog();
   loadWorldBoss();
   loadAltarSeedCatalog();
@@ -2196,7 +2234,7 @@ async function handleSession(session){
   loadPersonalAltarSeedCatalog();
   loadPersonalAltarDecorationCatalog();
   loadGauntletOpponents();
-  await loadBannerPresets();
+  loadBannerPresets();
   await loadMoveCatalog();
   loadAffinityWheel();
   loadSpeciesCatalog();
@@ -2616,6 +2654,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateNewPromoScopeVisibility();
 
   document.getElementById('saveProgressionBtn').addEventListener('click', saveGuardianProgression);
+  document.getElementById('saveMageProgressionBtn').addEventListener('click', saveMageProgression);
 
   document.getElementById('saveDragonsBtn').addEventListener('click', saveDragonCatalog);
   document.getElementById('addDragonBtn').addEventListener('click', addDragon);
@@ -4362,6 +4401,10 @@ async function loadGuardianProgression(){
   document.getElementById('progPartialGain').value = data.partial_mark_stat_gain;
   document.getElementById('progAffinityMarks').value = data.dominant_affinity_marks;
   document.getElementById('progExpeditionsPerDay').value = data.expeditions_per_day;
+  document.getElementById('progTrainCooldown').value = data.training_cooldown_minutes;
+  document.getElementById('progTrainXp').value = data.training_xp;
+  document.getElementById('progTrainEssenceMin').value = data.training_essence_min;
+  document.getElementById('progTrainEssenceMax').value = data.training_essence_max;
 
   populatePetitionRewardKeySelects(data.petition_full_reward_key, data.petition_partial_reward_key);
 }
@@ -4389,8 +4432,10 @@ async function saveGuardianProgression(){
   const hatchling = v('progHatchling'), fledged = v('progFledged'), ascendant = v('progAscendant'), sovereign = v('progSovereign');
   const fullGain = v('progFullGain'), partialGain = v('progPartialGain'), affinityMarks = v('progAffinityMarks');
   const expeditionsPerDay = v('progExpeditionsPerDay');
+  const trainCooldown = v('progTrainCooldown'), trainXp = v('progTrainXp');
+  const trainEssenceMin = v('progTrainEssenceMin'), trainEssenceMax = v('progTrainEssenceMax');
 
-  if([hatchling, fledged, ascendant, sovereign, fullGain, partialGain, affinityMarks].some(n => isNaN(n) || n < 0)){
+  if([hatchling, fledged, ascendant, sovereign, fullGain, partialGain, affinityMarks, trainXp, trainEssenceMin, trainEssenceMax].some(n => isNaN(n) || n < 0)){
     status.className = 'status err';
     status.textContent = 'Every field must be a non-negative number.';
     return;
@@ -4398,6 +4443,16 @@ async function saveGuardianProgression(){
   if(isNaN(expeditionsPerDay) || expeditionsPerDay < 1){
     status.className = 'status err';
     status.textContent = 'Expeditions per day must be at least 1.';
+    return;
+  }
+  if(isNaN(trainCooldown) || trainCooldown < 1){
+    status.className = 'status err';
+    status.textContent = 'Training cooldown must be at least 1 minute.';
+    return;
+  }
+  if(trainEssenceMax < trainEssenceMin){
+    status.className = 'status err';
+    status.textContent = 'Training Essence max must be at or above the min.';
     return;
   }
   if(!(hatchling <= fledged && fledged <= ascendant && ascendant <= sovereign)){
@@ -4415,11 +4470,82 @@ async function saveGuardianProgression(){
     hatchling_marks: hatchling, fledged_marks: fledged, ascendant_marks: ascendant, sovereign_marks: sovereign,
     full_mark_stat_gain: fullGain, partial_mark_stat_gain: partialGain, dominant_affinity_marks: affinityMarks,
     expeditions_per_day: expeditionsPerDay,
+    training_cooldown_minutes: trainCooldown, training_xp: trainXp,
+    training_essence_min: trainEssenceMin, training_essence_max: trainEssenceMax,
     petition_full_reward_key: fullRewardKey, petition_partial_reward_key: partialRewardKey,
     updated_at: new Date().toISOString()
   }).eq('id', 1);
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies to the next petition resolved, no redeploy needed.';
+}
+
+/* =====================================================================
+   MAGE PROGRESSION — item 4: was 100% hardcoded constants in the `mage`
+   edge function (cooldowns, XP, Shard ranges, the level curve itself).
+   Single-row settings table, same shape/id-1 convention as
+   guardian_progression_settings above.
+   ===================================================================== */
+
+async function loadMageProgression(){
+  const { data, error } = await supabaseClient.from('mage_progression_settings').select('*').eq('id', 1).maybeSingle();
+  const status = document.getElementById('mageProgressionStatus');
+  if(!status) return; // this tab's markup isn't on the page (e.g. mid-deploy) — nothing to fill in
+  if(error || !data){
+    status.textContent = 'Could not load: ' + (error?.message || 'no row found');
+    return;
+  }
+  document.getElementById('mpTrainCooldown').value = data.train_cooldown_minutes;
+  document.getElementById('mpTrainXp').value = data.train_xp;
+  document.getElementById('mpTrainShardsMin').value = data.train_shards_min;
+  document.getElementById('mpTrainShardsMax').value = data.train_shards_max;
+  document.getElementById('mpDuelCooldown').value = data.duel_cooldown_minutes;
+  document.getElementById('mpDuelXp').value = data.duel_xp;
+  document.getElementById('mpDuelShardsMin').value = data.duel_shards_min;
+  document.getElementById('mpDuelShardsMax').value = data.duel_shards_max;
+  document.getElementById('mpXpCurveBase').value = data.xp_curve_base;
+  document.getElementById('mpXpCurveScale').value = data.xp_curve_scale;
+  document.getElementById('mpUpgradePointsPerLevel').value = data.upgrade_points_per_level;
+}
+
+async function saveMageProgression(){
+  const status = document.getElementById('mageProgressionStatus');
+  const v = id => parseInt(document.getElementById(id).value, 10);
+  const trainCooldown = v('mpTrainCooldown'), trainXp = v('mpTrainXp'), trainShardsMin = v('mpTrainShardsMin'), trainShardsMax = v('mpTrainShardsMax');
+  const duelCooldown = v('mpDuelCooldown'), duelXp = v('mpDuelXp'), duelShardsMin = v('mpDuelShardsMin'), duelShardsMax = v('mpDuelShardsMax');
+  const xpCurveBase = v('mpXpCurveBase'), xpCurveScale = v('mpXpCurveScale'), upgradePointsPerLevel = v('mpUpgradePointsPerLevel');
+
+  const allValues = [trainCooldown, trainXp, trainShardsMin, trainShardsMax, duelCooldown, duelXp, duelShardsMin, duelShardsMax, xpCurveBase, xpCurveScale, upgradePointsPerLevel];
+  if(allValues.some(n => isNaN(n) || n < 0)){
+    status.className = 'status err';
+    status.textContent = 'Every field must be a non-negative number.';
+    return;
+  }
+  if(trainCooldown < 1 || duelCooldown < 1){
+    status.className = 'status err';
+    status.textContent = 'Cooldowns must be at least 1 minute.';
+    return;
+  }
+  if(xpCurveBase < 1){
+    status.className = 'status err';
+    status.textContent = 'XP curve base must be at least 1.';
+    return;
+  }
+  if(trainShardsMax < trainShardsMin || duelShardsMax < duelShardsMin){
+    status.className = 'status err';
+    status.textContent = 'Each Shards max must be at or above its min.';
+    return;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('mage_progression_settings').update({
+    train_cooldown_minutes: trainCooldown, train_xp: trainXp, train_shards_min: trainShardsMin, train_shards_max: trainShardsMax,
+    duel_cooldown_minutes: duelCooldown, duel_xp: duelXp, duel_shards_min: duelShardsMin, duel_shards_max: duelShardsMax,
+    xp_curve_base: xpCurveBase, xp_curve_scale: xpCurveScale, upgrade_points_per_level: upgradePointsPerLevel,
+    updated_at: new Date().toISOString()
+  }).eq('id', 1);
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies to the next train/duel — a Mage\'s already-earned levels/XP are untouched.';
 }
 
 /* =====================================================================
@@ -5049,6 +5175,7 @@ let bannerPresetCache = [];
 async function loadBannerPresets(){
   const { data, error } = await supabaseClient.from('circle_banner_presets').select('*').order('sort_order', { ascending: true });
   const rows = document.getElementById('bannerPresetRows');
+  if(!rows) return; // this tab's markup isn't on the page (e.g. mid-deploy) — nothing to fill in
   if(error){
     rows.innerHTML = '<tr><td colspan="6">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
