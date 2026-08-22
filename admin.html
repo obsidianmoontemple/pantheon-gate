@@ -756,7 +756,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-magearts">
       <div class="card">
         <h2>Mage Arts — creation picker</h2>
-        <p class="hint">The premade Art list a player picks from when creating their Mage (0052). Each Art carries an affinity — mainly flavor/portrait, with one real mechanical thread: it grants a flat +10% to that Mage's duel score (see the mage edge function). Sort order controls left-to-right position on the Mage creation screen.</p>
+        <p class="hint">The premade Art list a player picks from when creating their Mage (0052). Every Art grants the same flat +10% duel-score baseline, plus a further +15% lean toward one specific stat drawn from its own flavor (fire/war -&gt; might, storm/shadow -&gt; swiftness, death/light -&gt; cunning, sea/earth -&gt; vitality — hardcoded in the mage edge function's ART_STAT_LEAN, not editable from here). Sort order controls left-to-right position on the Mage creation screen.</p>
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr><th>Key</th><th>Label</th><th>Blurb</th><th>Affinity</th><th>Sort</th><th>Image URL</th><th>Active</th></tr></thead>
@@ -793,7 +793,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-magegear">
       <div class="card">
         <h2>Mage gear catalog</h2>
-        <p class="hint">What a Mage can craft from Manage → Catalog, spending the SAME God Shard balance the guardian earns (Mages don't have their own Shard balance) — an extension of Shard Crafting, not a new economy. Each piece fills exactly one slot (weapon/armor/accessory) and grants a flat bonus to exactly one stat while equipped.</p>
+        <p class="hint">What a Mage can craft from Manage → Catalog, spending the SAME God Shard balance the guardian earns (Mages don't have their own Shard balance) — an extension of Shard Crafting, not a new economy. Each piece fills exactly one slot (weapon/armor/accessory) and grants a flat bonus to exactly one stat while equipped. Equipped gear also now feeds a passive support bonus (up to +20% Guardian might) in Gauntlet, Campaign, Circle Dragon, World Boss, and PvP fights — a well-leveled, fully-geared Mage genuinely helps outside the Duel screen too, not just inside it.</p>
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Slot</th><th>Stat key</th><th>Stat amount</th><th>Shard cost</th><th>Image URL</th><th>Active</th></tr></thead>
