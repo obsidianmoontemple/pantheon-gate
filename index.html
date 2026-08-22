@@ -322,6 +322,21 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
   position:relative;overflow:hidden;
   width:min(100vw, calc(100vh * 1408 / 768));
   aspect-ratio:1408/768;
+  /* Bug fix: this box was never given a background-size at all, so
+     bgAttrPlain()'s inline `background-image` rendered at the image's
+     native pixel size (default background-size:auto) instead of
+     scaling to fill the box — on any screen where the box grew past
+     that native size, most of it just showed the plain --ink color
+     with the art stuck in a corner, and every hotspot percentage
+     (measured against the FULL box) ended up sitting over blank space
+     instead of the art underneath it. Since the box's aspect-ratio is
+     already locked to the art's own 1408:768 ratio (see above), `cover`
+     here can never crop anything — it just scales the image to exactly
+     fill the box at any viewport size, matching .map-hub's own
+     long-standing `center/cover no-repeat` (that one's baked into the
+     class's `background` shorthand instead of coming from
+     bgAttrPlain(), which is why it never had this bug). */
+  background-size:cover;background-position:center;background-repeat:no-repeat;
 }
 /* position:fixed (not absolute) is deliberate: on a tall/narrow phone
    screen, .hub-box gets letterboxed down to a short strip to keep the
@@ -365,6 +380,18 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
 .deity-row:hover{border-color:var(--gold);}
 .deity-row .name{font-family:'Cinzel',serif;font-size:13.5px;color:var(--parchment);}
 .mark-badge{font-size:10px;letter-spacing:0.06em;text-transform:uppercase;font-family:'Cinzel',serif;padding:3px 9px;border-radius:20px;border:1px solid var(--line);color:var(--parchment-dim);}
+
+/* Compact button grid — direct feedback: "removing the scrolling
+   selection from the chained gods as it has buttons." The Key of Night
+   picker's season pool is a small, admin-curated handful of deities (not
+   the full multi-hundred-deity catalog), so a wrapped row of pill
+   buttons fits without the page needing to scroll the way a stacked
+   .deity-row list did — same click target, far less vertical space. */
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.chip-btn{background:rgba(0,0,0,0.25);border:1px solid var(--line);color:var(--parchment);
+  font-family:'Cinzel',serif;font-size:12.5px;letter-spacing:0.03em;
+  padding:9px 16px;border-radius:20px;cursor:pointer;transition:border-color .15s,color .15s,background .15s;margin:0;}
+.chip-btn:hover{border-color:var(--gold-bright);color:var(--gold-bright);background:rgba(200,162,74,0.1);}
 .mark-badge.full{color:var(--ink);background:var(--gold-bright);border-color:var(--gold-bright);}
 .mark-badge.partial{color:var(--gold-bright);border-color:var(--gold);}
 
@@ -707,7 +734,7 @@ function mageArtFor(key){ return MAGE_ARTS.find(a => a.key === key) || null; }
 async function loadMage(){
   const { data, error } = await supabaseClient
     .from('mages')
-    .select('id, name, art_key, level, xp, upgrade_points, vitality, might, ward, swiftness, cunning, last_trained_at, last_duel_at, equipped_weapon_id, equipped_armor_id, equipped_accessory_id, has_seen_guide')
+    .select('id, name, art_key, level, xp, xp_to_next, upgrade_points, vitality, might, ward, swiftness, cunning, last_trained_at, last_duel_at, equipped_weapon_id, equipped_armor_id, equipped_accessory_id, has_seen_guide')
     .eq('owner_user_id', session.user.id)
     .maybeSingle();
   if(error){ console.error('mage load failed', error); return; }
@@ -860,6 +887,20 @@ function bgAttr(pageKey, extraStyle){
 function bgAttrPlain(pageKey){
   applyBodyBackdrop(pageKey);
   const url = siteBackgrounds[pageKey];
+  return url ? ` style="background-image:url('${esc(url)}');"` : '';
+}
+// Same as bgAttrPlain(), but for a hub-box whose art should be a SPECIFIC
+// live subject's own portrait (the currently-spawned World Boss, say)
+// rather than the screen's generic admin-set backdrop, whenever one is
+// available — falls back to the plain per-screen background otherwise
+// (no boss active, no image_url set on it, etc). Direct feedback: "I do
+// not like thumbnail imaging" — a boss/opponent's own art is more
+// impactful as the actual full-bleed background than as a small inset
+// portrait floating inside the text overlay, so screens with a specific
+// live subject use this instead of stacking both.
+function bgAttrPlainOrUrl(pageKey, overrideUrl){
+  applyBodyBackdrop(pageKey);
+  const url = overrideUrl || siteBackgrounds[pageKey];
   return url ? ` style="background-image:url('${esc(url)}');"` : '';
 }
 // Direct feedback: "I would actually like the art I provide to lay over
@@ -1270,7 +1311,7 @@ async function forgotPassword(){
 async function loadGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at')
     .eq('owner_user_id', session.user.id)
     .maybeSingle();
   if(error){ console.error('guardian load failed', error); return; }
@@ -1411,7 +1452,7 @@ async function hatchGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
     .insert({ owner_user_id: session.user.id, species: pickedSpecies, name })
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at')
     .single();
 
   if(error){
@@ -1480,7 +1521,7 @@ async function createMage(){
   const { data, error } = await supabaseClient
     .from('mages')
     .insert({ owner_user_id: session.user.id, name, art_key: pickedMageArt })
-    .select('id, name, art_key, level, xp, upgrade_points, vitality, might, ward, swiftness, cunning, last_trained_at, last_duel_at, equipped_weapon_id, equipped_armor_id, equipped_accessory_id')
+    .select('id, name, art_key, level, xp, xp_to_next, upgrade_points, vitality, might, ward, swiftness, cunning, last_trained_at, last_duel_at, equipped_weapon_id, equipped_armor_id, equipped_accessory_id')
     .single();
 
   if(error){
@@ -1782,6 +1823,13 @@ function renderGuardianFamiliarTab(){
       <p class="marks-note">${guardian.stage === 'egg'
         ? 'Still an egg. It hatches the moment a god marks it for the first time.'
         : (marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.')}</p>
+
+      ${guardian.stage !== 'egg' ? `
+        <div class="status" id="guardianTrainStatus"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">
+          <button onclick="doTrainGuardian()">Train</button>
+        </div>
+      ` : ''}
     </div>
 
     <button class="secondary" style="display:block;margin:18px auto 0;" onclick="returnToMapHub()">Back to the Map</button>
@@ -1792,7 +1840,12 @@ function renderGuardianMageTab(){
   const app = document.getElementById('app');
   const mageArt = mageArtFor(mage.art_key);
   const mageStats = mageEffectiveStats();
-  const xpNeeded = mageXpToNextLevel(mage.level);
+  // Item 4: xpNeeded is read straight off the row (mage.xp_to_next),
+  // kept in sync server-side by the `mage` edge function on every
+  // level-relevant write — no client-side curve formula to duplicate/
+  // keep in sync by hand any more, since that curve is now admin-
+  // editable (mage_progression_settings).
+  const xpNeeded = mage.xp_to_next || 40;
   const xpPct = Math.max(0, Math.min(100, Math.round((mage.xp / xpNeeded) * 100)));
   const equippedNames = ['weapon', 'armor', 'accessory'].map(slot => {
     const itemId = mage['equipped_' + slot + '_id'];
@@ -1848,8 +1901,6 @@ function renderGuardianMageTab(){
    from the combined Guardian Page above via "Manage Gear". */
 
 let mageGearCatalog = []; // mage_gear_catalog, public catalog — loaded once and cached, like craftCatalog
-
-function mageXpToNextLevel(level){ return 40 + (level - 1) * 20; } // must match the `mage` edge function's curve
 
 // Gear bonuses are computed here, not stored on the mages row — same
 // "compute effective, don't mutate base" idea as the edge function's own
@@ -2297,6 +2348,47 @@ async function doTendBond(){
   render();
   const s2 = document.getElementById('bondStatus');
   if(s2){ s2.className = 'status ok'; s2.textContent = 'Bond deepens.'; }
+}
+
+// Item 4 ("training expansion, both mage and familiar") — the Guardian's
+// own standalone training action, same shape as the Mage's doTrainMage()/
+// mageFetch()/setMageActionStatus() trio just above: free, cooldown-
+// gated (server-enforced, no client-side pre-check — same "server is the
+// source of truth, the button just tries and reports back" convention
+// the Mage's Train/Duel buttons already use), a small Essence trickle,
+// and XP fed into the unified Guardian Level via the new `training` edge
+// function.
+function setGuardianTrainStatus(text, ok){
+  const el = document.getElementById('guardianTrainStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
+async function trainingFetch(action, extra){
+  const resp = await fetch(FUNCTIONS_URL + '/training', {
+    method: 'POST',
+    headers: await petitionHeaders(),
+    body: JSON.stringify({ action, ...(extra || {}) })
+  });
+  return await resp.json();
+}
+
+async function doTrainGuardian(){
+  setGuardianTrainStatus('Working through the fundamentals…');
+  const data = await trainingFetch('train');
+  if(!data.ok){
+    let msg = data.error || 'Could not train right now.';
+    if(data.secondsLeft) msg += ' (' + formatRemaining(data.secondsLeft * 1000) + ')';
+    setGuardianTrainStatus(msg, false);
+    return;
+  }
+  await loadGuardian();
+  render();
+  let msg = `+${data.xpGained} XP, +${data.essenceGained} Essence.`;
+  if(data.levelsGained > 0) msg += ` Leveled up to ${data.level}!`;
+  setGuardianTrainStatus(msg, true);
+  if(data.levelsGained > 0) celebrate({ count: 14, distance: 44, duration: 850, color: '#e6c777', size: 18, sprite: 'particle-fx/fx_burst.png' });
 }
 
 /* ---------------- profile (Map hub's "Profile" hotspot) ---------------- */
@@ -2971,11 +3063,10 @@ function renderWorldBoss(){
 
   app.innerHTML = `
     <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('worldBoss')}>
+      <div class="hub-box"${bgAttrPlainOrUrl('worldBoss', boss.imageUrl)}>
         ${hotspotButtonsMarkup(WORLDBOSS_AREAS, 'WORLDBOSS_AREAS', 'worldBoss')}
         <div class="hub-overlay">
           <h2>${esc(boss.name)}</h2>
-          <div class="art">${opponentImgFor(boss.imageUrl, boss.affinity, 130)}</div>
           ${boss.flavorText ? `<p class="hint">${esc(boss.flavorText)}</p>` : ''}
           <div class="hp-row"><span class="hp-name">HP</span><span class="hp-name">${boss.hpRemaining.toLocaleString()} / ${boss.hpTotal.toLocaleString()}</span></div>
           <div class="hp-bar-track"><div class="hp-bar-fill opponent" style="width:${pct}%;"></div></div>
@@ -6354,11 +6445,9 @@ function renderKeyOfNightPicker(){
   // Petition Hall both respect, on top of the season-pool restriction.
   const poolIds = new Set(seasonPool.map(d => d.deity_id));
   const groups = Object.keys(CATALOG).filter(pid => shopPantheonForSale(pid)).map(pid => {
-    const rows = CATALOG[pid].deities.filter(([id]) => poolIds.has(id) && shopDeityForSale(id)).map(([id, name]) => `<div class="deity-row" onclick="doRedeemKeyOfNight('${esc(pid)}','${esc(id)}','${esc(name)}')">
-      <span class="name">${esc(name)}</span>
-    </div>`).join('');
-    if(!rows) return '';
-    return `<div class="pantheon-group"><h3>${esc(CATALOG[pid].label)}</h3>${rows}</div>`;
+    const chips = CATALOG[pid].deities.filter(([id]) => poolIds.has(id) && shopDeityForSale(id)).map(([id, name]) => `<button class="chip-btn" onclick="doRedeemKeyOfNight('${esc(pid)}','${esc(id)}','${esc(name)}')">${esc(name)}</button>`).join('');
+    if(!chips) return '';
+    return `<div class="pantheon-group"><h3>${esc(CATALOG[pid].label)}</h3><div class="chip-row">${chips}</div></div>`;
   }).join('');
 
   app.innerHTML = `
