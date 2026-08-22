@@ -276,7 +276,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-circlebonuses">
       <div class="card">
         <h2>Circle Patron Bonuses (placeholders — approve with Active)</h2>
-        <p class="hint">A Circle's patron is whichever deity its members hold the most FULL marks from; that deity's affinity picks the row below. Every row ships inactive on purpose — write in a name/description/effect and check Active when you're ready for it to go live. Only effect key <code>devotion_yield_pct</code> is actually wired right now (a % bonus added to Altar Devotion harvests) — any other effect key is honestly recorded but has no game logic behind it yet.</p>
+        <p class="hint">A Circle's patron is whichever deity its members hold the most FULL marks from; that deity's affinity picks the row below. Every row ships inactive on purpose — write in a name/description, pick an effect, and check Active when you're ready for it to go live. All four effect keys in the dropdown are fully wired in circle/index.ts — any of the 8 affinity rows can use any of them.</p>
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr><th>Affinity</th><th>Name</th><th>Description</th><th>Effect key</th><th>Effect amount</th><th>Active</th></tr></thead>
@@ -873,7 +873,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>Deity signature moves (optional overrides)</h2>
-        <p class="hint">Give a specific deity its own Power and/or Control move instead of sharing the affinity baseline above. Leave a name blank to fall back to the baseline for that slot — nothing needs filling in for every deity, only the ones you want to stand out. A move can also carry a real triggered effect on top of its damage: <code>lifesteal_pct</code> (heal this % of the hit's damage), <code>stun_pct</code> (this % chance to skip the target's next action), <code>crit_bonus_pct</code> (+this many points of crit chance on this hit), or <code>burn_flat</code> (this much ongoing damage/round added to the target for the rest of the fight). Any other effect key is recorded but does nothing in combat yet.</p>
+        <p class="hint">Give a specific deity its own Power and/or Control move instead of sharing the affinity baseline above. Leave a name blank to fall back to the baseline for that slot — nothing needs filling in for every deity, only the ones you want to stand out. A move can also carry a real triggered effect on top of its damage, picked from the dropdown: <code>lifesteal_pct</code> (heal this % of the hit's damage), <code>stun_pct</code> (this % chance to skip the target's next action), <code>crit_bonus_pct</code> (+this many points of crit chance on this hit), or <code>burn_flat</code> (this much ongoing damage/round added to the target for the rest of the fight).</p>
         <input class="search-box" type="text" id="deityMoveSearch" placeholder="Search by name…">
         <div class="scroll-table">
           <table>
@@ -892,7 +892,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-blessings">
       <div class="card">
         <h2>Deity Blessings (placeholders — approve with Active)</h2>
-        <p class="hint">Two independent bonuses, either or both: a Stat key/amount is a one-time permanent bump applied the moment a guardian's mark with this deity is newly earned or upgraded to FULL (never reapplied on repeat petitions). An Effect key/amount is a passive ability active for the guardian's <em>entire</em> fight whenever that deity's full mark is actually fielded in the loadout — <code>crit_bonus_pct</code> (+points of crit chance, all fight), <code>lifesteal_pct</code> (heal this % of all damage dealt, all fight), <code>ward_bonus_pct</code> (this % more effective Ward against incoming hits, all fight), or <code>essence_bonus_pct</code> (this % bonus Essence on a Gauntlet win). Any other effect key is recorded but inert. Every row ships inactive on purpose — fill in what you want and check Active when you're ready to go live.</p>
+        <p class="hint">Two independent bonuses, either or both: a Stat key/amount is a one-time permanent bump applied the moment a guardian's mark with this deity is newly earned or upgraded to FULL (never reapplied on repeat petitions). An Effect key/amount is a passive ability active for the guardian's <em>entire</em> fight whenever that deity's full mark is actually fielded in the loadout — <code>crit_bonus_pct</code> (+points of crit chance, all fight), <code>lifesteal_pct</code> (heal this % of all damage dealt, all fight), <code>ward_bonus_pct</code> (this % more effective Ward against incoming hits, all fight), or <code>essence_bonus_pct</code> (this % bonus Essence on a Gauntlet win). Every row ships inactive on purpose — fill in what you want and check Active when you're ready to go live.</p>
         <input class="search-box" type="text" id="blessingSearch" placeholder="Search by name…">
         <div class="scroll-table">
           <table>
@@ -911,13 +911,13 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-guardianitems">
       <div class="card">
         <h2>Guardian item catalog</h2>
-        <p class="hint">What God Shards can be crafted into. A stat boost applies immediately at craft time. A cosmetic is owned forever — ownership is the effect. A consumable sits in inventory until a player uses it; its effect key is recorded honestly but needs matching game logic elsewhere before it does anything. An enchantment is owned forever like a cosmetic, but grants a real passive combat ability for as long as it's owned: <code>crit_bonus_pct</code>, <code>lifesteal_pct</code>, <code>ward_bonus_pct</code>, or <code>essence_bonus_pct</code> (same wired vocabulary and all-fight behavior as Deity Blessings' Effect key) — any other effect key is recorded but inert.</p>
+        <p class="hint">What God Shards can be crafted into. A stat boost applies immediately at craft time. A cosmetic is owned forever — ownership is the effect. A consumable sits in inventory until a player uses it, then grants Consumable amount of the picked effect's currency immediately. An enchantment is owned forever like a cosmetic, but grants a real passive combat ability for as long as it's owned (same wired vocabulary and all-fight behavior as Deity Blessings' Effect key).</p>
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr>
-              <th>Key</th><th>Name</th><th>Description</th><th>Type</th><th>Stat key</th><th>Stat amount</th><th>Consumable effect</th><th>Enchant effect key</th><th>Enchant effect amt</th><th>Shard cost</th><th>Image URL</th><th>Active</th>
+              <th>Key</th><th>Name</th><th>Description</th><th>Type</th><th>Stat key</th><th>Stat amount</th><th>Consumable effect</th><th>Consumable amount</th><th>Enchant effect key</th><th>Enchant effect amt</th><th>Shard cost</th><th>Image URL</th><th>Active</th>
             </tr></thead>
-            <tbody id="guardianItemRows"><tr><td colspan="12">Loading…</td></tr></tbody>
+            <tbody id="guardianItemRows"><tr><td colspan="13">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -950,8 +950,13 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             </select>
           </div>
           <div class="field" id="newGuardianItemStatAmountField"><label>Stat amount</label><input type="number" min="1" id="newGuardianItemStatAmount" style="max-width:110px;"></div>
-          <div class="field" id="newGuardianItemEffectField" style="display:none;"><label>Consumable effect key</label><input type="text" id="newGuardianItemEffect" placeholder="e.g. essence_surge" style="max-width:180px;"></div>
-          <div class="field" id="newGuardianItemEnchantKeyField" style="display:none;"><label>Enchant effect key</label><input type="text" id="newGuardianItemEnchantKey" placeholder="e.g. crit_bonus_pct" style="max-width:180px;"></div>
+          <div class="field" id="newGuardianItemEffectField" style="display:none;"><label>Consumable effect key</label>
+            <select id="newGuardianItemEffect" style="max-width:220px;"></select>
+          </div>
+          <div class="field" id="newGuardianItemAmountField" style="display:none;"><label>Consumable amount</label><input type="number" step="0.01" min="0.01" id="newGuardianItemAmount" style="max-width:110px;"></div>
+          <div class="field" id="newGuardianItemEnchantKeyField" style="display:none;"><label>Enchant effect key</label>
+            <select id="newGuardianItemEnchantKey" style="max-width:220px;"></select>
+          </div>
           <div class="field" id="newGuardianItemEnchantAmountField" style="display:none;"><label>Enchant effect amount</label><input type="number" step="0.01" id="newGuardianItemEnchantAmount" style="max-width:130px;"></div>
           <div class="field"><label>Image URL (optional)</label><input type="text" id="newGuardianItemImageUrl" placeholder="https://…" style="max-width:280px;"></div>
         </div>
@@ -1152,13 +1157,13 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-arenastore">
       <div class="card">
         <h2>Arena Store catalog</h2>
-        <p class="hint">What Favor buys. Cosmetics are owned instantly. Utility items apply immediately on purchase — no separate "use" step. Only the effect key challenge_shield is actually wired to real game logic (it sets a PvP shield); any other effect key is honestly recorded as owned but non-functional until code catches up.</p>
+        <p class="hint">What Favor buys. Cosmetics are owned instantly. Utility items apply immediately on purchase — no separate "use" step. All three effect keys in the dropdown are fully wired in pvp/index.ts.</p>
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr>
-              <th>Key</th><th>Name</th><th>Description</th><th>Category</th><th>Effect key</th><th>Effect hours</th><th>Cost (Favor)</th><th>Image URL</th><th>Active</th>
+              <th>Key</th><th>Name</th><th>Description</th><th>Category</th><th>Effect key</th><th>Effect hours</th><th>Effect amount</th><th>Cost (Favor)</th><th>Image URL</th><th>Active</th>
             </tr></thead>
-            <tbody id="arenaItemRows"><tr><td colspan="9">Loading…</td></tr></tbody>
+            <tbody id="arenaItemRows"><tr><td colspan="10">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -1179,8 +1184,11 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <button id="addArenaItemBtn">Add item</button>
         </div>
         <div class="form-row" id="newArenaItemEffectRow">
-          <div class="field"><label>Effect key</label><input type="text" id="newArenaItemEffect" placeholder="e.g. challenge_shield" style="max-width:180px;"></div>
+          <div class="field"><label>Effect key</label>
+            <select id="newArenaItemEffect" style="max-width:280px;"></select>
+          </div>
           <div class="field"><label>Effect hours</label><input type="number" min="1" id="newArenaItemEffectHours" style="max-width:110px;"></div>
+          <div class="field"><label>Effect amount (favor_boost_pct only)</label><input type="number" step="0.01" min="0.01" id="newArenaItemEffectAmount" style="max-width:130px;"></div>
           <div class="field"><label>Image URL (optional)</label><input type="text" id="newArenaItemImageUrl" placeholder="https://…" style="max-width:280px;"></div>
         </div>
         <div class="field" style="max-width:none;">
@@ -2587,6 +2595,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('saveArenaItemsBtn').addEventListener('click', saveArenaShopCatalog);
   document.getElementById('addArenaItemBtn').addEventListener('click', addArenaShopItem);
+  document.getElementById('newArenaItemEffect').innerHTML = effectKeyOptionsHtml(ARENA_EFFECT_OPTIONS, '');
 
   document.getElementById('saveCampaignLevelsBtn').addEventListener('click', saveCampaignLevels);
   document.getElementById('addCampaignLevelBtn').addEventListener('click', addCampaignLevel);
@@ -5345,12 +5354,12 @@ async function loadDeityMoves(){
       <td class="dim">${esc(d.pantheonLabel)}</td>
       <td><input type="text" id="dmPowerName_${d.id}" value="${esc(power.name || '')}" placeholder="baseline" style="max-width:150px;"></td>
       <td><input type="number" step="0.01" min="0.01" id="dmPowerVal_${d.id}" value="${power.power ?? ''}" style="max-width:80px;"></td>
-      <td><input type="text" id="dmPowerEffectKey_${d.id}" value="${esc(power.effect_key || '')}" placeholder="e.g. stun_pct" style="max-width:130px;"></td>
+      <td><select id="dmPowerEffectKey_${d.id}" style="max-width:220px;">${effectKeyOptionsHtml(MOVE_EFFECT_OPTIONS, power.effect_key)}</select></td>
       <td><input type="number" step="0.01" id="dmPowerEffectAmt_${d.id}" value="${power.effect_amount ?? ''}" style="max-width:90px;"></td>
       <td><input type="text" id="dmControlName_${d.id}" value="${esc(control.name || '')}" placeholder="baseline" style="max-width:150px;"></td>
       <td><input type="number" step="0.01" min="0.01" id="dmControlVal_${d.id}" value="${control.power ?? ''}" style="max-width:80px;"></td>
       <td><input type="number" min="1" id="dmControlShave_${d.id}" value="${control.swiftness_shave ?? ''}" style="max-width:80px;"></td>
-      <td><input type="text" id="dmControlEffectKey_${d.id}" value="${esc(control.effect_key || '')}" placeholder="e.g. burn_flat" style="max-width:130px;"></td>
+      <td><select id="dmControlEffectKey_${d.id}" style="max-width:220px;">${effectKeyOptionsHtml(MOVE_EFFECT_OPTIONS, control.effect_key)}</select></td>
       <td><input type="number" step="0.01" id="dmControlEffectAmt_${d.id}" value="${control.effect_amount ?? ''}" style="max-width:90px;"></td>
     </tr>`;
   }).join('');
@@ -5408,7 +5417,7 @@ async function saveDeityMoves(){
   if(!rows.length) return;
   const { error } = await supabaseClient.from('deity_moves').upsert(rows, { onConflict: 'deity_id,kind' });
   status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. A blank name/power falls back to the affinity baseline. Wired effect keys: lifesteal_pct, stun_pct, crit_bonus_pct, burn_flat — anything else is recorded but inert. Applies to the next fight, no redeploy needed.';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. A blank name/power falls back to the affinity baseline. Applies to the next fight, no redeploy needed.';
   if(!error) loadDeityMoves();
 }
 
@@ -5443,7 +5452,7 @@ async function loadDeityBlessings(){
         </select>
       </td>
       <td><input type="number" min="1" id="blsStatAmount_${d.id}" value="${o.stat_amount ?? ''}" style="max-width:90px;"></td>
-      <td><input type="text" id="blsEffectKey_${d.id}" value="${esc(o.effect_key || '')}" placeholder="e.g. crit_bonus_pct" style="max-width:150px;"></td>
+      <td><select id="blsEffectKey_${d.id}" style="max-width:220px;">${effectKeyOptionsHtml(AURA_EFFECT_OPTIONS, o.effect_key)}</select></td>
       <td><input type="number" step="0.01" id="blsEffectAmount_${d.id}" value="${o.effect_amount ?? ''}" style="max-width:100px;"></td>
       <td><input type="checkbox" id="blsActive_${d.id}" ${o.active ? 'checked' : ''}></td>
     </tr>`;
@@ -5491,6 +5500,65 @@ async function saveDeityBlessings(){
 }
 
 /* =====================================================================
+   EFFECT KEY DROPDOWNS — shared across every "effect key" field in this
+   file (Circle Patron Bonuses, Deity Signature Moves, Deity Blessings,
+   Guardian Items' consumable + enchantment effects, Arena Shop). Direct
+   feedback: "im noticing while filling out the forms there is stuff not
+   wired up yet like effects and things" → "i would like to see stuff like
+   that wired up in full and attached to dropdowns i can choose from and
+   that goes for anywhere like this." Every list below is exactly the set
+   of keys the matching edge function actually reads — nothing here can be
+   typo'd into a dead value anymore. `current` is always kept selectable
+   even if it isn't in the list (a row saved before this dropdown existed,
+   or with some other text) so loading a row never silently discards what
+   was actually stored — it just shows up flagged "(unrecognized)".
+   ===================================================================== */
+
+function effectKeyOptionsHtml(options, current){
+  const cur = current || '';
+  const known = options.some(o => o.value === cur);
+  const all = [{ value: '', label: '(none)' }].concat(options, cur && !known ? [{ value: cur, label: cur + ' (unrecognized)' }] : []);
+  return all.map(o => `<option value="${esc(o.value)}" ${o.value === cur ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
+}
+
+// Wired by combat/index.ts as a passive, whole-fight aura — deity_blessings'
+// effect key, and guardian_item_catalog's enchantment effect key (same
+// vocabulary, same code path).
+const AURA_EFFECT_OPTIONS = [
+  { value: 'crit_bonus_pct', label: 'crit_bonus_pct - plus N crit chance, all fight' },
+  { value: 'lifesteal_pct', label: 'lifesteal_pct - heal N% of damage dealt, all fight' },
+  { value: 'ward_bonus_pct', label: 'ward_bonus_pct - N% more effective Ward, all fight' },
+  { value: 'essence_bonus_pct', label: 'essence_bonus_pct - N% bonus Essence on a Gauntlet win' },
+];
+// Wired by combat/index.ts, triggered only on the round that move is cast.
+const MOVE_EFFECT_OPTIONS = [
+  { value: 'lifesteal_pct', label: 'lifesteal_pct - heal N% of this hit damage' },
+  { value: 'stun_pct', label: 'stun_pct - N% chance to stun the target' },
+  { value: 'crit_bonus_pct', label: 'crit_bonus_pct - plus N crit chance, this hit' },
+  { value: 'burn_flat', label: 'burn_flat - plus N burn dmg/round, rest of fight' },
+];
+// Wired by circle/index.ts — any of the 8 affinity rows can use any of these.
+const CIRCLE_PATRON_EFFECT_OPTIONS = [
+  { value: 'devotion_yield_pct', label: 'devotion_yield_pct - N% more Devotion on Altar harvests' },
+  { value: 'dragon_damage_pct', label: 'dragon_damage_pct - N% more damage vs Circle Dragons' },
+  { value: 'invasion_power_pct', label: 'invasion_power_pct - N% more committed power in invasions' },
+  { value: 'shop_discount_pct', label: 'shop_discount_pct - N% off Circle Shop purchases' },
+];
+// Wired by craft/index.ts's use-item action — grants Consumable amount of
+// that currency immediately, no separate step.
+const CONSUMABLE_EFFECT_OPTIONS = [
+  { value: 'essence_surge', label: 'essence_surge - grants Essence immediately' },
+  { value: 'bond_surge', label: 'bond_surge - grants Bond immediately' },
+  { value: 'favor_surge', label: 'favor_surge - grants Favor immediately' },
+];
+// Wired by pvp/index.ts's shop-buy + respond actions.
+const ARENA_EFFECT_OPTIONS = [
+  { value: 'challenge_shield', label: 'challenge_shield - immune to challenges for Effect hours' },
+  { value: 'favor_boost_pct', label: 'favor_boost_pct - +Effect amount% Favor on wins for Effect hours' },
+  { value: 'ladder_shield', label: 'ladder_shield - no ladder loss on defeat for Effect hours' },
+];
+
+/* =====================================================================
    CIRCLE PATRON BONUSES (placeholders — inactive until approved)
    ===================================================================== */
 
@@ -5505,7 +5573,7 @@ async function loadCirclePatronBonuses(){
     <td class="dim">${esc(b.affinity)}</td>
     <td><input type="text" id="cbName_${esc(b.affinity)}" value="${esc(b.name || '')}" style="max-width:160px;"></td>
     <td><input type="text" id="cbDesc_${esc(b.affinity)}" value="${esc(b.description || '')}" style="max-width:260px;"></td>
-    <td><input type="text" id="cbEffectKey_${esc(b.affinity)}" value="${esc(b.effect_key || '')}" placeholder="e.g. devotion_yield_pct" style="max-width:180px;"></td>
+    <td><select id="cbEffectKey_${esc(b.affinity)}" style="max-width:220px;">${effectKeyOptionsHtml(CIRCLE_PATRON_EFFECT_OPTIONS, b.effect_key)}</select></td>
     <td><input type="number" step="0.01" id="cbEffectAmount_${esc(b.affinity)}" value="${b.effect_amount ?? ''}" style="max-width:100px;"></td>
     <td><input type="checkbox" id="cbActive_${esc(b.affinity)}" ${b.active ? 'checked' : ''}></td>
   </tr>`).join('') || '<tr><td colspan="6">No rows found.</td></tr>';
@@ -5531,7 +5599,7 @@ async function saveCirclePatronBonuses(){
   status.textContent = 'Saving…';
   const { error } = await supabaseClient.from('circle_patron_bonuses').upsert(rows, { onConflict: 'affinity' });
   status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Only effect key devotion_yield_pct is actually wired (Altar Devotion harvests) — anything else is recorded but inert. Rows stay inactive until you check Active.';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Rows stay inactive until you check Active.';
   if(!error) loadCirclePatronBonuses();
 }
 
@@ -5544,15 +5612,20 @@ function updateNewGuardianItemTypeFields(){
   document.getElementById('newGuardianItemStatKeyField').style.display = type === 'stat_boost' ? '' : 'none';
   document.getElementById('newGuardianItemStatAmountField').style.display = type === 'stat_boost' ? '' : 'none';
   document.getElementById('newGuardianItemEffectField').style.display = type === 'consumable' ? '' : 'none';
+  document.getElementById('newGuardianItemAmountField').style.display = type === 'consumable' ? '' : 'none';
   document.getElementById('newGuardianItemEnchantKeyField').style.display = type === 'enchantment' ? '' : 'none';
   document.getElementById('newGuardianItemEnchantAmountField').style.display = type === 'enchantment' ? '' : 'none';
+  const effectSelect = document.getElementById('newGuardianItemEffect');
+  if(!effectSelect.options.length) effectSelect.innerHTML = effectKeyOptionsHtml(CONSUMABLE_EFFECT_OPTIONS, '');
+  const enchantSelect = document.getElementById('newGuardianItemEnchantKey');
+  if(!enchantSelect.options.length) enchantSelect.innerHTML = effectKeyOptionsHtml(AURA_EFFECT_OPTIONS, '');
 }
 
 async function loadGuardianItemCatalog(){
   const { data, error } = await supabaseClient.from('guardian_item_catalog').select('*').order('key', { ascending: true });
   const rows = document.getElementById('guardianItemRows');
   if(error){
-    rows.innerHTML = '<tr><td colspan="12">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="13">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = (data || []).map(i => `<tr data-key="${esc(i.key)}">
@@ -5574,13 +5647,14 @@ async function loadGuardianItemCatalog(){
       </select>
     </td>
     <td><input type="number" min="1" id="giStatAmount_${esc(i.key)}" value="${i.stat_amount ?? ''}" style="max-width:90px;"></td>
-    <td><input type="text" id="giEffect_${esc(i.key)}" value="${esc(i.consumable_effect || '')}" style="max-width:150px;"></td>
-    <td><input type="text" id="giEnchantKey_${esc(i.key)}" value="${esc(i.effect_key || '')}" placeholder="e.g. ward_bonus_pct" style="max-width:150px;"></td>
+    <td><select id="giEffect_${esc(i.key)}" style="max-width:200px;">${effectKeyOptionsHtml(CONSUMABLE_EFFECT_OPTIONS, i.consumable_effect)}</select></td>
+    <td><input type="number" step="0.01" min="0.01" id="giConsumableAmount_${esc(i.key)}" value="${i.consumable_amount ?? ''}" style="max-width:100px;"></td>
+    <td><select id="giEnchantKey_${esc(i.key)}" style="max-width:200px;">${effectKeyOptionsHtml(AURA_EFFECT_OPTIONS, i.effect_key)}</select></td>
     <td><input type="number" step="0.01" id="giEnchantAmount_${esc(i.key)}" value="${i.effect_amount ?? ''}" style="max-width:100px;"></td>
     <td><input type="number" min="1" id="giCost_${esc(i.key)}" value="${i.shard_cost}" style="max-width:90px;"></td>
     <td><input type="text" id="giImg_${esc(i.key)}" value="${esc(i.image_url || '')}" style="max-width:180px;"></td>
     <td><input type="checkbox" id="giActive_${esc(i.key)}" ${i.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="12">No items yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="13">No items yet.</td></tr>';
 }
 
 async function saveGuardianItemCatalog(){
@@ -5589,6 +5663,7 @@ async function saveGuardianItemCatalog(){
   const rows = Array.from(trs).map(tr => {
     const key = tr.getAttribute('data-key');
     const statAmountVal = document.getElementById('giStatAmount_' + key).value;
+    const consumableAmountVal = document.getElementById('giConsumableAmount_' + key).value;
     const enchantAmountVal = document.getElementById('giEnchantAmount_' + key).value;
     return {
       key,
@@ -5597,8 +5672,9 @@ async function saveGuardianItemCatalog(){
       item_type: document.getElementById('giType_' + key).value,
       stat_key: document.getElementById('giStatKey_' + key).value || null,
       stat_amount: statAmountVal === '' ? null : parseInt(statAmountVal, 10),
-      consumable_effect: document.getElementById('giEffect_' + key).value.trim() || null,
-      effect_key: document.getElementById('giEnchantKey_' + key).value.trim() || null,
+      consumable_effect: document.getElementById('giEffect_' + key).value || null,
+      consumable_amount: consumableAmountVal === '' ? null : parseFloat(consumableAmountVal),
+      effect_key: document.getElementById('giEnchantKey_' + key).value || null,
       effect_amount: enchantAmountVal === '' ? null : parseFloat(enchantAmountVal),
       shard_cost: parseInt(document.getElementById('giCost_' + key).value, 10),
       image_url: document.getElementById('giImg_' + key).value.trim() || null,
@@ -5609,7 +5685,7 @@ async function saveGuardianItemCatalog(){
   status.textContent = 'Saving…';
   const { error } = await supabaseClient.from('guardian_item_catalog').upsert(rows, { onConflict: 'key' });
   status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Enchantment effect keys wired in combat: crit_bonus_pct, lifesteal_pct, ward_bonus_pct, essence_bonus_pct.';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
   if(!error) loadGuardianItemCatalog();
 }
 
@@ -5622,8 +5698,9 @@ async function addGuardianItem(){
   const cost = parseInt(document.getElementById('newGuardianItemCost').value, 10);
   const statKey = document.getElementById('newGuardianItemStatKey').value;
   const statAmountVal = document.getElementById('newGuardianItemStatAmount').value;
-  const effect = document.getElementById('newGuardianItemEffect').value.trim();
-  const enchantKey = document.getElementById('newGuardianItemEnchantKey').value.trim();
+  const effect = document.getElementById('newGuardianItemEffect').value;
+  const amountVal = document.getElementById('newGuardianItemAmount').value;
+  const enchantKey = document.getElementById('newGuardianItemEnchantKey').value;
   const enchantAmountVal = document.getElementById('newGuardianItemEnchantAmount').value;
   const imageUrl = document.getElementById('newGuardianItemImageUrl').value.trim();
 
@@ -5633,8 +5710,8 @@ async function addGuardianItem(){
   if(itemType === 'stat_boost' && (!statKey || !statAmountVal || parseInt(statAmountVal, 10) < 1)){
     status.className = 'status err'; status.textContent = 'Stat boosts need a stat key and an amount greater than 0.'; return;
   }
-  if(itemType === 'consumable' && !effect){
-    status.className = 'status err'; status.textContent = 'Consumables need an effect key.'; return;
+  if(itemType === 'consumable' && (!effect || !amountVal || parseFloat(amountVal) <= 0)){
+    status.className = 'status err'; status.textContent = 'Consumables need an effect and an amount greater than 0.'; return;
   }
   if(itemType === 'enchantment' && !enchantKey){
     status.className = 'status err'; status.textContent = 'Enchantments need an effect key.'; return;
@@ -5647,6 +5724,7 @@ async function addGuardianItem(){
     stat_key: itemType === 'stat_boost' ? statKey : null,
     stat_amount: itemType === 'stat_boost' ? parseInt(statAmountVal, 10) : null,
     consumable_effect: itemType === 'consumable' ? effect : null,
+    consumable_amount: itemType === 'consumable' ? parseFloat(amountVal) : null,
     effect_key: itemType === 'enchantment' ? enchantKey : null,
     effect_amount: itemType === 'enchantment' ? (enchantAmountVal === '' ? null : parseFloat(enchantAmountVal)) : null,
     image_url: imageUrl || null
@@ -5654,8 +5732,10 @@ async function addGuardianItem(){
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
 
   status.className = 'status ok';
-  status.textContent = name + ' added to the crafting catalog.' + (itemType === 'consumable' ? ' Remember: this only records the effect key — real game logic for it is separate wiring.' : '') + (itemType === 'enchantment' && !['crit_bonus_pct','lifesteal_pct','ward_bonus_pct','essence_bonus_pct'].includes(enchantKey) ? ' Note: that effect key isn\'t one of the wired ones — it will be owned but inert until code catches up.' : '');
-  ['newGuardianItemKey','newGuardianItemName','newGuardianItemCost','newGuardianItemStatAmount','newGuardianItemEffect','newGuardianItemEnchantKey','newGuardianItemEnchantAmount','newGuardianItemDescription','newGuardianItemImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
+  status.textContent = name + ' added to the crafting catalog.';
+  ['newGuardianItemKey','newGuardianItemName','newGuardianItemCost','newGuardianItemStatAmount','newGuardianItemAmount','newGuardianItemEnchantAmount','newGuardianItemDescription','newGuardianItemImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newGuardianItemEffect').value = '';
+  document.getElementById('newGuardianItemEnchantKey').value = '';
   updateNewGuardianItemTypeFields();
   loadGuardianItemCatalog();
 }
@@ -6199,7 +6279,7 @@ async function loadArenaShopCatalog(){
   const { data, error } = await supabaseClient.from('arena_shop_items').select('*').order('key', { ascending: true });
   const rows = document.getElementById('arenaItemRows');
   if(error){
-    rows.innerHTML = '<tr><td colspan="9">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="10">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = (data || []).map(i => `<tr data-key="${esc(i.key)}">
@@ -6212,12 +6292,13 @@ async function loadArenaShopCatalog(){
         <option value="cosmetic" ${i.category === 'cosmetic' ? 'selected' : ''}>cosmetic</option>
       </select>
     </td>
-    <td><input type="text" id="aiEffect_${esc(i.key)}" value="${esc(i.effect_key || '')}" style="max-width:150px;"></td>
+    <td><select id="aiEffect_${esc(i.key)}" style="max-width:220px;">${effectKeyOptionsHtml(ARENA_EFFECT_OPTIONS, i.effect_key)}</select></td>
     <td><input type="number" min="1" id="aiEffectHours_${esc(i.key)}" value="${i.effect_hours ?? ''}" style="max-width:90px;"></td>
+    <td><input type="number" step="0.01" min="0.01" id="aiEffectAmount_${esc(i.key)}" value="${i.effect_amount ?? ''}" style="max-width:100px;"></td>
     <td><input type="number" min="1" id="aiCost_${esc(i.key)}" value="${i.cost_favor}" style="max-width:90px;"></td>
     <td><input type="text" id="aiImg_${esc(i.key)}" value="${esc(i.image_url || '')}" style="max-width:180px;"></td>
     <td><input type="checkbox" id="aiActive_${esc(i.key)}" ${i.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="9">No items yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="10">No items yet.</td></tr>';
 }
 
 async function saveArenaShopCatalog(){
@@ -6226,13 +6307,15 @@ async function saveArenaShopCatalog(){
   const rows = Array.from(trs).map(tr => {
     const key = tr.getAttribute('data-key');
     const hoursVal = document.getElementById('aiEffectHours_' + key).value;
+    const amountVal = document.getElementById('aiEffectAmount_' + key).value;
     return {
       key,
       name: document.getElementById('aiName_' + key).value.trim(),
       description: document.getElementById('aiDesc_' + key).value.trim(),
       category: document.getElementById('aiCategory_' + key).value,
-      effect_key: document.getElementById('aiEffect_' + key).value.trim() || null,
+      effect_key: document.getElementById('aiEffect_' + key).value || null,
       effect_hours: hoursVal === '' ? null : parseInt(hoursVal, 10),
+      effect_amount: amountVal === '' ? null : parseFloat(amountVal),
       cost_favor: parseInt(document.getElementById('aiCost_' + key).value, 10),
       image_url: document.getElementById('aiImg_' + key).value.trim() || null,
       active: document.getElementById('aiActive_' + key).checked
@@ -6253,8 +6336,9 @@ async function addArenaShopItem(){
   const description = document.getElementById('newArenaItemDescription').value.trim();
   const category = document.getElementById('newArenaItemCategory').value;
   const cost = parseInt(document.getElementById('newArenaItemCost').value, 10);
-  const effect = document.getElementById('newArenaItemEffect').value.trim();
+  const effect = document.getElementById('newArenaItemEffect').value;
   const hoursVal = document.getElementById('newArenaItemEffectHours').value.trim();
+  const amountVal = document.getElementById('newArenaItemEffectAmount').value.trim();
   const imageUrl = document.getElementById('newArenaItemImageUrl').value.trim();
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
@@ -6267,6 +6351,10 @@ async function addArenaShopItem(){
   if(effectHours !== null && (isNaN(effectHours) || effectHours < 1)){
     status.className = 'status err'; status.textContent = 'Effect hours must be greater than 0 (or left blank).'; return;
   }
+  const effectAmount = amountVal === '' ? null : parseFloat(amountVal);
+  if(effect === 'favor_boost_pct' && (!effectHours || !effectAmount || effectAmount <= 0)){
+    status.className = 'status err'; status.textContent = 'favor_boost_pct needs both Effect hours and Effect amount.'; return;
+  }
 
   status.className = 'status';
   status.textContent = 'Adding…';
@@ -6274,13 +6362,15 @@ async function addArenaShopItem(){
     key, name, description, category, cost_favor: cost,
     effect_key: category === 'utility' ? effect : (effect || null),
     effect_hours: effectHours,
+    effect_amount: effectAmount,
     image_url: imageUrl || null
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
 
   status.className = 'status ok';
-  status.textContent = name + ' added to the Arena Store.' + (effect && effect !== 'challenge_shield' ? ' Remember: only challenge_shield is wired to real game logic — this effect key will be honestly recorded but non-functional until code catches up.' : '');
-  ['newArenaItemKey','newArenaItemName','newArenaItemCost','newArenaItemEffect','newArenaItemEffectHours','newArenaItemDescription','newArenaItemImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
+  status.textContent = name + ' added to the Arena Store.';
+  ['newArenaItemKey','newArenaItemName','newArenaItemCost','newArenaItemEffectHours','newArenaItemEffectAmount','newArenaItemDescription','newArenaItemImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newArenaItemEffect').value = '';
   loadArenaShopCatalog();
 }
 
