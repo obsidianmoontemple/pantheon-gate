@@ -2811,11 +2811,15 @@ function backFromPromo(){
   render();
 }
 
-async function loadPromoEvents(){
+async function ensureCurrencyDefsLoaded(){
   if(!currencyDefs.length){
     const { data, error } = await supabaseClient.from('currency_definitions').select('key, name, icon');
     if(!error) currencyDefs = data || [];
   }
+}
+
+async function loadPromoEvents(){
+  await ensureCurrencyDefsLoaded();
   const { data, error } = await supabaseClient.rpc('list_visible_promo_events');
   if(error){ console.error('promo events load failed', error); promoEvents = []; return; }
   promoEvents = data || [];
@@ -6433,8 +6437,54 @@ async function doPvpRespond(challengeId, decision){
   const data = await pvpFetch('respond', { challengeId, decision });
   if(!data.ok){ setPvpActionStatus(data.error || 'Could not respond.', false); return; }
   if(decision === 'decline'){ setPvpActionStatus('Challenge declined.', true); await refreshPvpStatus(); return; }
-  pvpLastMatch = data.match;
+  await ensureCurrencyDefsLoaded();
+  // pvpLastMatch is only ever set here, by the player who just accepted —
+  // so within its render, side 'b' (defender) is always "You" and side
+  // 'a' (challenger) is always "Opponent". winnerGrants/loserGrants (item
+  // 6's admin-configurable payouts, 0064) aren't part of the raw
+  // pvp_matches row, so they're folded onto the display object here.
+  pvpLastMatch = { ...data.match, winnerGrants: data.winnerGrants || [], loserGrants: data.loserGrants || [] };
   await refreshPvpStatus();
+}
+
+// item 6: every duel now resolves through a real move loadout + the full
+// status-effect system (poison/weaken/vulnerability/shields/dodge/crit/
+// lifesteal), same as a Gauntlet fight — this renders that round-by-round
+// log the same way renderBattleScreen()'s does, just with 'a'/'b' actors
+// instead of 'guardian'/'opponent'.
+function pvpVerb(subject, thirdPerson, secondPerson){
+  return subject === 'You' ? secondPerson : thirdPerson;
+}
+function pvpDuelLogHtml(rounds){
+  return (rounds || []).map(e => {
+    const who = e.actor === 'a' ? 'Opponent' : 'You';
+    const defender = e.actor === 'a' ? 'You' : 'Opponent';
+    if(e.move === undefined && e.burnTick !== undefined){
+      return `<div class="entry burntick">Round ${e.round}: ${who} ${pvpVerb(who, 'takes', 'take')} ${e.burnTick} burn damage.</div>`;
+    }
+    if(e.move === undefined && e.poisonTick !== undefined){
+      return `<div class="entry poisontick">Round ${e.round}: ${who} ${pvpVerb(who, 'takes', 'take')} ${e.poisonTick} poison damage.</div>`;
+    }
+    if(e.move === undefined && e.stunned){
+      return `<div class="entry stunskip">Round ${e.round}: ${who} ${pvpVerb(who, 'is', 'are')} stunned and cannot act!</div>`;
+    }
+    if(e.dodged){
+      return `<div class="entry dodgeskip">Round ${e.round}: ${who} ${pvpVerb(who, 'attacks', 'attack')} — ${defender} ${pvpVerb(defender, 'dodges', 'dodge')}!</div>`;
+    }
+    const tag = e.crit ? ' (critical!)' : (e.control ? ' (swiftness shaved)' : '');
+    const extra = (e.healed ? ` (+${e.healed} lifesteal)` : '') + (e.stunned ? ' (stunned!)' : '') + (e.burn ? ' (burning)' : '') +
+      (e.poison ? ' (poisoned)' : '') + (e.weakened ? ' (weakened)' : '') + (e.vulnerable ? ' (vulnerable)' : '') +
+      (e.shieldGranted ? ' (shielded)' : '') + (e.shieldAbsorbed ? ` (shield absorbed ${e.shieldAbsorbed})` : '');
+    return `<div class="entry${e.crit ? ' crit' : ''}">Round ${e.round}: ${who} used ${esc(e.move)}${tag} — ${e.damage} damage${extra}.</div>`;
+  }).join('');
+}
+function pvpGrantsLine(grants){
+  if(!grants || !grants.length) return '';
+  return grants.map(g => {
+    const cur = currencyDefs.find(c => c.key === g.currencyKey);
+    const label = cur ? `${cur.icon || ''} ${cur.name}`.trim() : g.currencyKey;
+    return `+${g.amount} ${label}`;
+  }).join(', ');
 }
 
 async function doPvpCancel(challengeId){
@@ -6520,11 +6570,14 @@ function renderPvpHome(){
     const won = m.winner_user_id === session.user.id;
     const yourOldPos = won ? m.winner_old_position : m.loser_old_position;
     const yourNewPos = won ? m.winner_new_position : m.loser_new_position;
+    const grantsLine = pvpGrantsLine(won ? m.winnerGrants : m.loserGrants);
     app.innerHTML = `
       <div class="card verdict-card"${bgAttr('arena')}>
         <div class="verdict-badge ${won ? 'full' : 'partial'}">${won ? 'Victory' : 'Defeat'}</div>
         <p class="verdict-text">${won ? 'You won the duel.' : 'You lost the duel.'}</p>
         <p class="gain-note">${m.swapped ? `Ranks swapped — you moved from #${yourOldPos} to #${yourNewPos}.` : `No change in rank — #${yourOldPos} was already correctly ordered.`}</p>
+        ${grantsLine ? `<p class="gain-note">${esc(grantsLine)}</p>` : ''}
+        <div class="battle-log">${pvpDuelLogHtml(m.rounds) || '<div class="entry">No round data.</div>'}</div>
         <button onclick="dismissPvpMatch()">Continue</button>
       </div>
     `;
