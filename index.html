@@ -435,7 +435,10 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .dmg-float.control{color:var(--moon);font-size:13px;}
 .dmg-float.heal{color:#7fbf6a;}
 .dmg-float.burntick{color:var(--ember);font-size:13px;}
+.dmg-float.poisontick{color:#6fae4a;font-size:13px;}
 .dmg-float.stunlabel{left:4px;right:auto;color:var(--moon);font-size:12px;letter-spacing:0.06em;text-transform:uppercase;}
+.dmg-float.dodgelabel{left:4px;right:auto;color:#cfd6e0;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;}
+.dmg-float.shieldlabel{color:#7ea8c4;font-size:13px;}
 @keyframes dmgFloat{ 0%{opacity:1;transform:translateY(0);} 100%{opacity:0;transform:translateY(-28px);} }
 
 /* Particle bursts — real sprite art (CC0, Kenney's Particle Pack), not
@@ -477,7 +480,9 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .battle-log .entry{margin-bottom:5px;}
 .battle-log .crit{color:var(--gold-bright);}
 .battle-log .entry.burntick{color:var(--ember);font-style:italic;}
+.battle-log .entry.poisontick{color:#6fae4a;font-style:italic;}
 .battle-log .entry.stunskip{color:var(--moon);font-style:italic;}
+.battle-log .entry.dodgeskip{color:#cfd6e0;font-style:italic;}
 
 .affinity-glow{border-radius:50%;filter:drop-shadow(0 0 26px var(--glow-color, transparent));}
 
@@ -3820,14 +3825,23 @@ function renderBattleScreen(){
   const logHtml = v.log.slice().reverse().map(entry => {
     const lines = entry.events.map(e => {
       const who = e.actor === 'guardian' ? esc(guardian.name) : esc(v.opponentName);
+      const defender = e.actor === 'guardian' ? esc(v.opponentName) : esc(guardian.name);
       if(e.move === undefined && e.burnTick !== undefined){
         return `<div class="entry burntick">Round ${entry.round}: ${who} takes ${e.burnTick} burn damage.</div>`;
+      }
+      if(e.move === undefined && e.poisonTick !== undefined){
+        return `<div class="entry poisontick">Round ${entry.round}: ${who} takes ${e.poisonTick} poison damage.</div>`;
       }
       if(e.move === undefined && e.stunned){
         return `<div class="entry stunskip">Round ${entry.round}: ${who} is stunned and cannot act!</div>`;
       }
+      if(e.dodged){
+        return `<div class="entry dodgeskip">Round ${entry.round}: ${who} attacks — ${defender} dodges!</div>`;
+      }
       const tag = e.crit ? ' (critical!)' : (e.control ? ' (swiftness shaved)' : '');
-      const extra = (e.healed ? ` (+${e.healed} lifesteal)` : '') + (e.stunned ? ' (stunned!)' : '') + (e.burn ? ' (burning)' : '');
+      const extra = (e.healed ? ` (+${e.healed} lifesteal)` : '') + (e.stunned ? ' (stunned!)' : '') + (e.burn ? ' (burning)' : '') +
+        (e.poison ? ' (poisoned)' : '') + (e.weakened ? ' (weakened)' : '') + (e.vulnerable ? ' (vulnerable)' : '') +
+        (e.shieldGranted ? ' (shielded)' : '') + (e.shieldAbsorbed ? ` (shield absorbed ${e.shieldAbsorbed})` : '');
       return `<div class="entry${e.crit ? ' crit' : ''}">Round ${entry.round}: ${who} used ${esc(e.move)}${tag} — ${e.damage} damage${extra}.</div>`;
     }).join('');
     return lines;
@@ -3976,6 +3990,25 @@ function animateBurnTick(side, amount, hpAfter, maxHp){
   spawnParticles(wrap, { count: 3, color: '#c05a34', size: 32, distance: 20, duration: 700, lift: 10, sprite: 'particle-fx/fx_ember.png' });
 }
 
+// Poison ticking at the top of a round — same shape as animateBurnTick,
+// a separate (green, not ember) color so the two afflictions read as
+// visually distinct even though they both just chip HP each round.
+function animatePoisonTick(side, amount, hpAfter, maxHp){
+  const fill = document.getElementById(side === 'guardian' ? 'gHpFill' : 'oHpFill');
+  const text = document.getElementById(side === 'guardian' ? 'gHpText' : 'oHpText');
+  const wrap = document.getElementById(side === 'guardian' ? 'gHpWrap' : 'oHpWrap');
+  if(fill) fill.style.width = Math.max(0, Math.round((hpAfter / maxHp) * 100)) + '%';
+  if(text) text.textContent = hpAfter + ' / ' + maxHp;
+  if(!wrap) return;
+  wrap.classList.remove('flash-hit'); void wrap.offsetWidth; wrap.classList.add('flash-hit');
+  const num = document.createElement('div');
+  num.className = 'dmg-float poisontick';
+  num.textContent = '-' + amount;
+  wrap.appendChild(num);
+  setTimeout(() => num.remove(), 900);
+  spawnParticles(wrap, { count: 3, color: '#6fae4a', size: 32, distance: 20, duration: 700, lift: 10, sprite: 'particle-fx/fx_smoke_thin.png' });
+}
+
 // A stunned turn — no damage, the side just loses its action. A moon-tinted
 // binding-rune ring plus a text badge in place of a damage number.
 function animateStunSkip(side){
@@ -3988,6 +4021,19 @@ function animateStunSkip(side){
   wrap.appendChild(num);
   setTimeout(() => num.remove(), 900);
   spawnParticles(wrap, { count: 4, color: 'var(--moon)', size: 38, distance: 28, duration: 750, sprite: 'particle-fx/fx_rune.png' });
+}
+
+// A dodged hit — the defender's bar never moves at all, just a pale
+// evasive streak and a text badge in place of a damage number.
+function animateDodge(side){
+  const wrap = document.getElementById(side === 'guardian' ? 'gHpWrap' : 'oHpWrap');
+  if(!wrap) return;
+  const num = document.createElement('div');
+  num.className = 'dmg-float dodgelabel';
+  num.textContent = 'DODGED';
+  wrap.appendChild(num);
+  setTimeout(() => num.remove(), 900);
+  spawnParticles(wrap, { count: 4, color: '#cfd6e0', size: 34, distance: 30, duration: 650, sprite: 'particle-fx/fx_streak.png' });
 }
 
 // Lifesteal — the actor's own bar rises. Upward green glow rings instead of
@@ -4007,17 +4053,26 @@ function animateHeal(side, amount, hpAfter, maxHp){
   spawnParticles(wrap, { count: 3, color: '#7fbf6a', size: 36, distance: 18, duration: 850, lift: 18, sprite: 'particle-fx/fx_glow_rings.png' });
 }
 
-// A status proc riding along on a normal hit (stun/burn just applied to the
-// target, before it ever ticks/skips a turn) — a small floating tinted
-// sprite badge, no HP change of its own. Matches the burn/stun particle
-// sprites above so the same affliction always reads the same way.
+// A status proc riding along on a normal hit (an affliction/boon just
+// applied to a side, before it ever ticks/skips a turn or gets used up) —
+// a small floating tinted sprite badge, no HP change of its own. Each
+// kind gets its own color/sprite so the same affliction or boon always
+// reads the same way wherever it shows up.
+const STATUS_PROC_STYLE = {
+  burn: { color: '#c05a34', sprite: 'particle-fx/fx_ember.png' },
+  poison: { color: '#6fae4a', sprite: 'particle-fx/fx_smoke_thin.png' },
+  weaken: { color: '#9c8aa8', sprite: 'particle-fx/fx_dust.png' },
+  vulnerable: { color: '#c0405a', sprite: 'particle-fx/fx_ripple.png' },
+  shield: { color: '#7ea8c4', sprite: 'particle-fx/fx_glow_ring.png' },
+};
 function animateStatusProc(side, kind){
   const wrap = document.getElementById(side === 'guardian' ? 'gHpWrap' : 'oHpWrap');
   if(!wrap) return;
+  const style = STATUS_PROC_STYLE[kind] || { color: 'var(--moon)', sprite: 'particle-fx/fx_rune.png' };
   const badge = document.createElement('div');
   badge.className = 'status-badge';
-  badge.style.setProperty('--p-color', kind === 'burn' ? '#c05a34' : 'var(--moon)');
-  badge.style.setProperty('--p-sprite', "url('" + (kind === 'burn' ? 'particle-fx/fx_ember.png' : 'particle-fx/fx_rune.png') + "')");
+  badge.style.setProperty('--p-color', style.color);
+  badge.style.setProperty('--p-sprite', "url('" + style.sprite + "')");
   wrap.appendChild(badge);
   setTimeout(() => badge.remove(), 950);
 }
@@ -4043,7 +4098,7 @@ async function actMove(moveIndex){
 
     let gHp = combatView.guardianHp, oHp = combatView.opponentHp;
     for(const ev of data.events){
-      // Burn tick: no attacker, actor is simply taking its own DoT damage.
+      // Burn/poison tick: no attacker, actor is simply taking its own DoT damage.
       if(ev.move === undefined && ev.burnTick !== undefined){
         if(ev.actor === 'guardian') gHp = Math.max(0, gHp - ev.burnTick); else oHp = Math.max(0, oHp - ev.burnTick);
         animateBurnTick(ev.actor, ev.burnTick, ev.actor === 'guardian' ? gHp : oHp,
@@ -4051,9 +4106,24 @@ async function actMove(moveIndex){
         await sleep(550);
         continue;
       }
+      if(ev.move === undefined && ev.poisonTick !== undefined){
+        if(ev.actor === 'guardian') gHp = Math.max(0, gHp - ev.poisonTick); else oHp = Math.max(0, oHp - ev.poisonTick);
+        animatePoisonTick(ev.actor, ev.poisonTick, ev.actor === 'guardian' ? gHp : oHp,
+          ev.actor === 'guardian' ? combatView.guardianMaxHp : combatView.opponentMaxHp);
+        await sleep(550);
+        continue;
+      }
       // Stunned skip: actor loses the whole turn, no damage either way.
       if(ev.move === undefined && ev.stunned){
         animateStunSkip(ev.actor);
+        await sleep(550);
+        continue;
+      }
+      // A landed move that was fully dodged: no HP change on either side,
+      // just an evasion beat on the defender.
+      if(ev.dodged){
+        const dodgerSide = ev.actor === 'guardian' ? 'opponent' : 'guardian';
+        animateDodge(dodgerSide);
         await sleep(550);
         continue;
       }
@@ -4071,6 +4141,11 @@ async function actMove(moveIndex){
       // Secondary effects riding this same move, layered on after the beat.
       if(ev.stunned){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'stun'); await sleep(350); }
       if(ev.burn){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'burn'); await sleep(350); }
+      if(ev.poison){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'poison'); await sleep(350); }
+      if(ev.weakened){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'weaken'); await sleep(350); }
+      if(ev.vulnerable){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'vulnerable'); await sleep(350); }
+      if(ev.shieldGranted){ animateStatusProc(ev.actor, 'shield'); await sleep(350); } // self-buff — badge on the caster, not the target
+      if(ev.shieldAbsorbed){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'shield'); await sleep(350); }
       if(ev.healed){
         if(ev.actor === 'guardian'){
           gHp = Math.min(combatView.guardianMaxHp, gHp + ev.healed);
