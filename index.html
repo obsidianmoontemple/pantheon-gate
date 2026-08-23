@@ -519,6 +519,12 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .hp-bar-track{background:rgba(0,0,0,0.4);border:1px solid var(--line);border-radius:20px;height:10px;overflow:hidden;margin-bottom:18px;}
 .hp-bar-fill{height:100%;background:linear-gradient(90deg,var(--ember),var(--gold-bright));transition:width .35s ease;}
 .hp-bar-fill.opponent{background:linear-gradient(90deg,var(--amethyst,#8a6bb8),var(--moon));}
+/* 0069 — the Mage's own HP bar. A third color (green, not the XP bar's
+   gold or the opponent bar's purple) so all three are readable at a
+   glance whenever a fight screen shows Mage HP next to Monster HP next
+   to the level's XP bar. */
+.hp-bar-fill.mage-vit{background:linear-gradient(90deg,#3f8f5f,#8fe3ae);}
+.hp-bar-fill.mage-vit.low{background:linear-gradient(90deg,#8a3a3a,#d9776f);}
 .battle-arena{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px;}
 .battle-side{flex:1;min-width:0;display:flex;flex-direction:column;align-items:stretch;}
 .battle-sprite{display:flex;align-items:flex-end;justify-content:center;height:100px;margin-bottom:6px;}
@@ -812,7 +818,7 @@ function mageArtFor(key){ return MAGE_ARTS.find(a => a.key === key) || null; }
 async function loadMage(){
   const { data, error } = await supabaseClient
     .from('mages')
-    .select('id, name, art_key, level, xp, xp_to_next, upgrade_points, vitality, might, ward, swiftness, cunning, last_trained_at, last_duel_at, equipped_weapon_id, equipped_armor_id, equipped_accessory_id, has_seen_guide')
+    .select('id, name, art_key, level, xp, xp_to_next, upgrade_points, vitality, might, ward, swiftness, cunning, last_trained_at, last_duel_at, equipped_weapon_id, equipped_armor_id, equipped_accessory_id, has_seen_guide, current_hp, hp_updated_at, active_buff_stat_key, active_buff_amount, active_buff_expires_at')
     .eq('owner_user_id', session.user.id)
     .maybeSingle();
   if(error){ console.error('mage load failed', error); return; }
@@ -1858,7 +1864,12 @@ function renderMapHub(){
 function openGuardianHome(){
   guardianHomeView = { step: 'home' };
   render();
-  Promise.all([loadMageGearCatalog(), loadMageGearOwned()]).then(() => { if(guardianHomeView) render(); });
+  const loaders = [loadMageGearCatalog(), loadMageGearOwned()];
+  // 0069 — HP/reagents/potions loaded alongside gear the same
+  // progressive-render way, so they're ready the moment the player
+  // switches to the Mage tab instead of showing a blank flash first.
+  if(mage) loaders.push(loadMageStatus(), loadMageReagentCatalog(), loadMageReagentsOwned(), loadMagePotionCatalog(), loadMagePotionRecipes(), loadMagePotionsOwned());
+  Promise.all(loaders).then(() => { if(guardianHomeView) render(); });
 }
 
 // Direct feedback: "give both the mage and familiar their own tab page
@@ -1877,6 +1888,11 @@ let guardianHomeTab = 'familiar'; // 'familiar' | 'mage' — which side of the G
 function switchGuardianTab(tab){
   guardianHomeTab = tab;
   render();
+  // Refetch HP on every switch into the Mage tab — it's the one number
+  // that changes just from time passing (passive regen), so a cached
+  // value from whenever the Guardian Page first opened could read low
+  // even though the real, server-computed number has since ticked up.
+  if(tab === 'mage' && mage) loadMageStatus().then(() => { if(guardianHomeTab === 'mage') render(); });
 }
 
 function guardianTabStrip(){
@@ -1974,6 +1990,15 @@ function renderGuardianMageTab(){
   // editable (mage_progression_settings).
   const xpNeeded = mage.xp_to_next || 40;
   const xpPct = Math.max(0, Math.min(100, Math.round((mage.xp / xpNeeded) * 100)));
+
+  // 0069 — HP is never computed client-side (see loadMageStatus()'s
+  // comment); until the "status" fetch lands this just shows a full bar
+  // rather than guessing, since a brand-new/just-loaded Mage really is
+  // at full HP almost all the time anyway.
+  const hpCurrent = mageStatus ? mageStatus.currentHp : mage.current_hp;
+  const hpMax = mageStatus ? mageStatus.maxHp : mage.current_hp;
+  const hpPct = hpMax > 0 ? Math.max(0, Math.min(100, Math.round((hpCurrent / hpMax) * 100))) : 0;
+  const buff = mageStatus && mageStatus.activeBuff;
   const equippedNames = ['weapon', 'armor', 'accessory'].map(slot => {
     const itemId = mage['equipped_' + slot + '_id'];
     if(!itemId) return null;
@@ -1997,6 +2022,13 @@ function renderGuardianMageTab(){
           </div>
           <div class="hp-bar-track"><div class="hp-bar-fill" style="width:${xpPct}%;"></div></div>
           ${mage.upgrade_points > 0 ? `<p class="hint">${mage.upgrade_points} upgrade point${mage.upgrade_points === 1 ? '' : 's'} to spend — see Manage Gear.</p>` : ''}
+
+          <div class="essence-row">
+            <span class="essence-label">HP</span>
+            <span class="essence-value">${hpCurrent} / ${hpMax}</span>
+          </div>
+          <div class="hp-bar-track"><div class="hp-bar-fill mage-vit${hpPct <= 25 ? ' low' : ''}" style="width:${hpPct}%;"></div></div>
+          ${buff ? `<p class="hint">+${buff.amount} ${esc(buff.statKey)} buff active.</p>` : ''}
         </div>
       </div>
 
@@ -2018,8 +2050,54 @@ function renderGuardianMageTab(){
       </div>
     </div>
 
+    ${mageAlchemySectionMarkup()}
+
     <button class="secondary" style="display:block;margin:18px auto 0;" onclick="returnToMapHub()">Back to the Map</button>
   `;
+}
+
+// 0069 — "the ability to create different potions for sale and or craft
+// we need a reagent list." Reagents are only ever spent by crafting
+// (no direct-use action exists for them), so they get a compact
+// read-only tally here; Potions get a live "Use" button right on the
+// Mage Home tab since using one is a one-tap action a player will want
+// mid-session, not something worth a whole extra screen for. Buying/
+// crafting either lives in Shard Crafting, alongside every other thing
+// God Shards already buy (see renderCraft()'s mageGearSection — same
+// consolidation pattern).
+function mageAlchemySectionMarkup(){
+  const reagentLine = mageReagentsOwned.filter(r => r.quantity > 0).length
+    ? mageReagentsOwned.filter(r => r.quantity > 0).map(r => `${esc(reagentName(r.reagent_key))} ×${r.quantity}`).join(', ')
+    : 'None yet — found from Duels, or bought in Shard Crafting.';
+
+  const potionRows = magePotionsOwned.filter(p => p.quantity > 0).map(p => {
+    const cat = magePotionCatalog.find(c => c.key === p.potion_key);
+    const name = cat ? cat.name : p.potion_key;
+    const effectNote = cat ? (cat.effect_type === 'heal' ? `Heals ${cat.heal_amount} HP` : `+${cat.buff_amount} ${cat.buff_stat_key} for ${cat.buff_duration_minutes}m`) : '';
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(name)} ×${p.quantity}</div><div class="cblurb">${esc(effectNote)}</div></div>
+      <div class="ractions"><button class="secondary" onclick="doUsePotionFromMageHome('${esc(p.potion_key)}')">Use</button></div>
+    </div>`;
+  }).join('') || '<p class="hint">No potions in reserve — brew or buy some in Shard Crafting.</p>';
+
+  return `
+    <div class="card"${bgAttr('mageHome')}>
+      <h2>Alchemy</h2>
+      <p class="hint">Reagents: ${reagentLine}</p>
+      ${potionRows}
+      <button class="secondary" style="margin-top:10px;" onclick="openCraft()">Buy / Craft in Shard Crafting</button>
+    </div>
+  `;
+}
+
+async function doUsePotionFromMageHome(potionKey){
+  setMageActionStatus('Uncorking…');
+  const data = await mageFetch('use-potion', { potionKey });
+  if(!data.ok){ setMageActionStatus(data.error || 'Could not use that potion.', false); return; }
+  await Promise.all([loadMage(), loadMageStatus(), loadMagePotionsOwned()]);
+  render();
+  if(data.effect === 'heal') setMageActionStatus(`Healed to ${data.healedTo} / ${data.maxHp} HP.`, true);
+  else setMageActionStatus(`+${data.amount} ${data.statKey} until it wears off.`, true);
 }
 
 /* ---------------- mage gear (0054/0056) ----------------
@@ -2028,6 +2106,72 @@ function renderGuardianMageTab(){
    from the combined Guardian Page above via "Manage Gear". */
 
 let mageGearCatalog = []; // mage_gear_catalog, public catalog — loaded once and cached, like craftCatalog
+
+/* ---------------- mage HP, reagents, potions (0069) ----------------
+   Direct feedback: "we need to handle things like personal hp monster
+   retaliation because that's not working and the ability to create
+   different potions for sale and or craft we need a reagent list."
+   mageStatus is the ONLY place current_hp/max_hp ever get displayed —
+   it comes straight from mage/index.ts's read-only "status" action so
+   the frontend never duplicates mageMaxHp()/mageRegenedHp()'s formulas
+   (see 0069's migration header). Catalogs are public and cached once;
+   owned stacks are small quantity rows, refreshed whenever something
+   could have changed them. */
+let mageStatus = null;          // { currentHp, maxHp, activeBuff } or null until loadMageStatus() lands
+let mageReagentCatalog = [];    // mage_reagent_catalog
+let mageReagentsOwned = [];     // [{ reagent_key, quantity }]
+let magePotionCatalog = [];     // mage_potion_catalog
+let magePotionRecipes = [];     // [{ potion_key, reagent_key, quantity_required }]
+let magePotionsOwned = [];      // [{ potion_key, quantity }]
+
+async function loadMageStatus(){
+  const data = await mageFetch('status');
+  if(data.ok) mageStatus = data;
+}
+
+async function loadMageReagentCatalog(){
+  const { data, error } = await supabaseClient
+    .from('mage_reagent_catalog')
+    .select('key, name, description, image_url, drop_weight, shard_cost, active, sort_order')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+  if(error){ console.error('mage_reagent_catalog load failed', error); return; }
+  mageReagentCatalog = data || [];
+}
+
+async function loadMageReagentsOwned(){
+  if(!mage) return;
+  const { data, error } = await supabaseClient.from('mage_reagents').select('reagent_key, quantity').eq('mage_id', mage.id);
+  if(error){ console.error('mage_reagents load failed', error); return; }
+  mageReagentsOwned = data || [];
+}
+
+async function loadMagePotionCatalog(){
+  const { data, error } = await supabaseClient
+    .from('mage_potion_catalog')
+    .select('key, name, description, effect_type, heal_amount, buff_stat_key, buff_amount, buff_duration_minutes, shard_cost, image_url, active, sort_order')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+  if(error){ console.error('mage_potion_catalog load failed', error); return; }
+  magePotionCatalog = data || [];
+}
+
+async function loadMagePotionRecipes(){
+  const { data, error } = await supabaseClient.from('mage_potion_recipes').select('potion_key, reagent_key, quantity_required');
+  if(error){ console.error('mage_potion_recipes load failed', error); return; }
+  magePotionRecipes = data || [];
+}
+
+async function loadMagePotionsOwned(){
+  if(!mage) return;
+  const { data, error } = await supabaseClient.from('mage_potions').select('potion_key, quantity').eq('mage_id', mage.id);
+  if(error){ console.error('mage_potions load failed', error); return; }
+  magePotionsOwned = data || [];
+}
+
+function reagentQty(key){ const row = mageReagentsOwned.find(r => r.reagent_key === key); return row ? row.quantity : 0; }
+function potionQty(key){ const row = magePotionsOwned.find(p => p.potion_key === key); return row ? row.quantity : 0; }
+function reagentName(key){ const cat = mageReagentCatalog.find(r => r.key === key); return cat ? cat.name : key; }
 
 // Gear bonuses are computed here, not stored on the mages row — same
 // "compute effective, don't mutate base" idea as the edge function's own
@@ -2110,11 +2254,23 @@ async function doDuelMage(){
   setMageActionStatus('Stepping into the ring…');
   const data = await mageFetch('duel');
   if(!data.ok){ setMageActionStatus(mageErrorMsg(data, 'Could not duel right now.'), false); return; }
-  await loadMage();
-  render();
-  if(!data.won){ setMageActionStatus(`Defeated (${data.mageScore} vs ${data.npcScore}) — no penalty, try again once you're recovered.`, false); return; }
-  let msg = `Victory! (${data.mageScore} vs ${data.npcScore}) +${data.xpGained} XP, +${data.shardsGained} God Shards.`;
+  // 0069 — duel is a real multi-round fight now (was a one-shot coin
+  // flip with mageScore/npcScore and no HP at all). current_hp moved
+  // for real either way (win or lose), so both loadMage() (base row)
+  // and loadMageStatus() (regen-inclusive display number) refresh here.
+  await Promise.all([loadMage(), loadMageStatus()]);
+  const roundsFought = data.rounds ? data.rounds.length : 0;
+  const hpNote = `${data.mageHpRemaining} / ${data.mageMaxHp} HP left.`;
+  if(!data.won){
+    render();
+    setMageActionStatus(`Beaten back after ${roundsFought} round${roundsFought === 1 ? '' : 's'} — ${hpNote} No reward, but no other penalty either. Heal up or wait it out.`, false);
+    return;
+  }
+  let msg = `Victory in ${roundsFought} round${roundsFought === 1 ? '' : 's'}! ${hpNote} +${data.xpGained} XP, +${data.shardsGained} God Shards.`;
   if(data.levelsGained > 0) msg += ` Leveled up to ${data.level}!`;
+  if(data.reagentWon) msg += ` Found: ${data.reagentWon.name}.`;
+  if(data.reagentWon) await loadMageReagentsOwned();
+  render();
   setMageActionStatus(msg, true);
   celebrate({ count: 18, distance: 50, duration: 900, color: '#e6c777', size: 20, sprite: 'particle-fx/fx_starburst.png' });
 }
@@ -6299,9 +6455,43 @@ async function openCraft(){
   if(mage){
     if(!mageGearCatalog.length) loaders.push(loadMageGearCatalog());
     loaders.push(loadMageGearOwned());
+    // 0069 — reagents/potions buy-or-craft, folded in here too so this
+    // one screen stays "everything God Shards (or reagents) buy," same
+    // reasoning as mage gear joining it in 0068.
+    if(!mageReagentCatalog.length) loaders.push(loadMageReagentCatalog());
+    if(!magePotionCatalog.length) loaders.push(loadMagePotionCatalog());
+    if(!magePotionRecipes.length) loaders.push(loadMagePotionRecipes());
+    loaders.push(loadMageReagentsOwned(), loadMagePotionsOwned());
   }
   await Promise.all(loaders);
   if(craftView) render();
+}
+
+async function doBuyReagentFromCraft(reagentKey){
+  setCraftStatus('Trading Shards…');
+  const data = await mageFetch('buy-reagent', { reagentKey });
+  if(!data.ok){ setCraftStatus(data.error || 'Could not buy that.', false); return; }
+  await Promise.all([loadGuardian(), loadMageReagentsOwned()]);
+  render();
+  setCraftStatus(`Bought ${data.name}.`, true);
+}
+
+async function doBuyPotionFromCraft(potionKey){
+  setCraftStatus('Trading Shards…');
+  const data = await mageFetch('buy-potion', { potionKey });
+  if(!data.ok){ setCraftStatus(data.error || 'Could not buy that.', false); return; }
+  await Promise.all([loadGuardian(), loadMagePotionsOwned()]);
+  render();
+  setCraftStatus(`Bought ${data.name} — use it from the Mage tab.`, true);
+}
+
+async function doCraftPotionFromCraft(potionKey){
+  setCraftStatus('Brewing…');
+  const data = await mageFetch('craft-potion', { potionKey });
+  if(!data.ok){ setCraftStatus(data.error || 'Could not craft that.', false); return; }
+  await Promise.all([loadMageReagentsOwned(), loadMagePotionsOwned()]);
+  render();
+  setCraftStatus(`Brewed ${data.name} — use it from the Mage tab.`, true);
 }
 
 async function doCraftMageGearFromCraft(gearKey){
@@ -6430,6 +6620,49 @@ function renderCraft(){
     </div>`;
   })() : '';
 
+  // 0069 — reagents (buy only — no direct "craft a reagent" action
+  // exists, they only come from Duels or a straight Shard purchase) and
+  // potions (buy AND/OR craft, per potion — "two paths to the same
+  // item," confirmed). A potion's Craft button is only shown when it
+  // actually has recipe rows (mage_potion_recipes); Buy only shows when
+  // shard_cost is set. A potion with neither is retired/display-only.
+  const mageAlchemySection = mage ? (() => {
+    const reagentRows = mageReagentCatalog.map(r => {
+      const owned = reagentQty(r.key);
+      const affordable = r.shard_cost && (guardian.god_shards || 0) >= r.shard_cost;
+      return `<div class="roster-row">
+        <div><div class="rname">${esc(r.name)} ${owned ? '(have ' + owned + ')' : ''}</div><div class="cblurb">${esc(r.description || '')}</div></div>
+        <div class="ractions">${r.shard_cost ? `<button class="secondary" ${affordable ? '' : 'disabled'} onclick="doBuyReagentFromCraft('${esc(r.key)}')">Buy — ${r.shard_cost}</button>` : '<span class="hint">Duel drop only</span>'}</div>
+      </div>`;
+    }).join('') || '<p class="hint">No reagents set up yet.</p>';
+
+    const potionRows = magePotionCatalog.map(p => {
+      const owned = potionQty(p.key);
+      const recipe = magePotionRecipes.filter(r => r.potion_key === p.key);
+      const craftable = recipe.length > 0;
+      const canCraft = craftable && recipe.every(r => reagentQty(r.reagent_key) >= r.quantity_required);
+      const recipeNote = craftable ? 'Needs ' + recipe.map(r => `${r.quantity_required}× ${esc(reagentName(r.reagent_key))}`).join(', ') : '';
+      const affordable = p.shard_cost && (guardian.god_shards || 0) >= p.shard_cost;
+      const effectNote = p.effect_type === 'heal' ? `Heals ${p.heal_amount} HP` : `+${p.buff_amount} ${p.buff_stat_key} for ${p.buff_duration_minutes}m`;
+      return `<div class="roster-row">
+        <div><div class="rname">${esc(p.name)} ${owned ? '(have ' + owned + ')' : ''}</div><div class="cblurb">${esc(effectNote)}${recipeNote ? ' — ' + recipeNote : ''}</div></div>
+        <div class="ractions">
+          ${p.shard_cost ? `<button class="secondary" ${affordable ? '' : 'disabled'} onclick="doBuyPotionFromCraft('${esc(p.key)}')">Buy — ${p.shard_cost}</button>` : ''}
+          ${craftable ? `<button class="secondary" ${canCraft ? '' : 'disabled'} onclick="doCraftPotionFromCraft('${esc(p.key)}')">Brew</button>` : ''}
+        </div>
+      </div>`;
+    }).join('') || '<p class="hint">No potions set up yet.</p>';
+
+    return `<div class="card"${bgAttr('craft')}>
+      <h2>${esc(mage.name)}'s Alchemy</h2>
+      <h3 style="margin-top:0;">Reagents</h3>
+      ${reagentRows}
+      <h3>Potions</h3>
+      ${potionRows}
+      <p class="hint" style="margin-top:10px;">Use a brewed or bought potion from the Mage tab on the Guardian Page.</p>
+    </div>`;
+  })() : '';
+
   const craftBg = bgAttr('craft');
   app.innerHTML = `
     <div class="card"${bgAttr('craft', 'text-align:center;')}>
@@ -6443,6 +6676,7 @@ function renderCraft(){
       ${catalogRows}
     </div>
     ${mageGearSection}
+    ${mageAlchemySection}
     <div class="card"${craftBg}>
       <h2>Bonus Petition Credit</h2>
       <p class="hint">Costs a set number of Shards, decided by the gods — if you can't afford it, the attempt will tell you the price.</p>
