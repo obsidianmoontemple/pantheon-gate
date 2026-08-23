@@ -1079,7 +1079,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="form-row">
           <div class="field"><label>Max Energy</label><input type="number" min="1" id="stEnergyMax" style="max-width:120px;"></div>
           <div class="field"><label>Regen per hour</label><input type="number" min="0" id="stEnergyRegenPerHour" style="max-width:140px;"></div>
+          <div class="field"><label>&nbsp;</label><label><input type="checkbox" id="stEnergyOverflowEnabled"> Allow Energy to exceed max</label></div>
         </div>
+        <p class="hint">Off by default. Turn this on to run a temporary "no cap" event — grants (admin or gift) and regen stop clamping at Max Energy above, so a balance can sit above it. Nothing is lost when you turn it back off; balances above the cap just stop being usable again until you either re-enable this or raise Max Energy to match.</p>
         <h3>Energy cost per attempt</h3>
         <div class="form-row">
           <div class="field"><label>Campaign</label><input type="number" min="0" id="stEnergyCostCampaign" style="max-width:110px;"></div>
@@ -4838,6 +4840,7 @@ async function loadStaminaSettings(){
   }
   document.getElementById('stEnergyMax').value = data.energy_max;
   document.getElementById('stEnergyRegenPerHour').value = data.energy_regen_per_hour;
+  document.getElementById('stEnergyOverflowEnabled').checked = Boolean(data.energy_overflow_enabled);
   document.getElementById('stEnergyCostCampaign').value = data.energy_cost_campaign;
   document.getElementById('stEnergyCostGauntlet').value = data.energy_cost_gauntlet;
   document.getElementById('stEnergyCostWorldBoss').value = data.energy_cost_world_boss;
@@ -4854,6 +4857,7 @@ async function saveStaminaSettings(){
   const energyMax = v('stEnergyMax'), energyRegenPerHour = v('stEnergyRegenPerHour');
   const energyCostCampaign = v('stEnergyCostCampaign'), energyCostGauntlet = v('stEnergyCostGauntlet');
   const energyCostWorldBoss = v('stEnergyCostWorldBoss'), energyCostDragon = v('stEnergyCostDragon'), energyCostMageDuel = v('stEnergyCostMageDuel');
+  const energyOverflowEnabled = document.getElementById('stEnergyOverflowEnabled').checked;
   const ticketMax = v('stTicketMax'), ticketRegenPerHour = v('stTicketRegenPerHour'), ticketCostPvp = v('stTicketCostPvp');
 
   const allValues = [energyMax, energyRegenPerHour, energyCostCampaign, energyCostGauntlet, energyCostWorldBoss, energyCostDragon, energyCostMageDuel, ticketMax, ticketRegenPerHour, ticketCostPvp];
@@ -4871,7 +4875,7 @@ async function saveStaminaSettings(){
   status.className = 'status';
   status.textContent = 'Saving…';
   const { error } = await supabaseClient.from('stamina_settings').update({
-    energy_max: energyMax, energy_regen_per_hour: energyRegenPerHour,
+    energy_max: energyMax, energy_regen_per_hour: energyRegenPerHour, energy_overflow_enabled: energyOverflowEnabled,
     energy_cost_campaign: energyCostCampaign, energy_cost_gauntlet: energyCostGauntlet,
     energy_cost_world_boss: energyCostWorldBoss, energy_cost_dragon: energyCostDragon, energy_cost_mage_duel: energyCostMageDuel,
     ticket_max: ticketMax, ticket_regen_per_hour: ticketRegenPerHour, ticket_cost_pvp: ticketCostPvp,
