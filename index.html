@@ -1111,7 +1111,17 @@ let shrineEntitlements = []; // cached entitlements rows (scope_type, scope_id, 
 let mailView = null;       // null | {step:'home'} — top-level; surfaces the long-existing broadcasts/claim_broadcast backend for the first time (Map hub's "Mail" hotspot only — Promo is its own separate screen, see promoView)
 let mailBroadcasts = [];   // cached list for renderMail()
 let mailClaimedIds = new Set(); // broadcast ids this user has already claimed
-let backpackView = null;   // null | {step:'home'} — top-level, read-only aggregator over Craft items / Arena items / Expedition fragments (Map hub's "Backpack" hotspot)
+let backpackView = null;   // null | {step:'home'} — top-level aggregator over every inventory in the game (Map hub's "Backpack" hotspot)
+// "Backpack consolidation ... it will need a few different tabs" — was a
+// single screen with three stacked read-only cards (Craft items, Arena
+// items, Expedition fragments); now a proper tab strip, same
+// guardianHomeTab/switchGuardianTab pattern as the Guardian Page's
+// Familiar/Mage split, PLUS the three Mage-side inventories (gear,
+// reagents, potions) that screen never included at all. Craft Items and
+// Mage Gear got real Use/Equip/Unequip actions here too (not just a
+// read-only mirror) since a consolidation that still bounces you to
+// another screen to actually use anything isn't much of one.
+let backpackTab = 'craft'; // 'craft' | 'magegear' | 'alchemy' | 'arena' | 'expeditions'
 let checkinView = null;    // null | {step:'home'} — top-level (Map hub's "Check-in" hotspot): the once-a-day streak/calendar-reward action (still tend_guardian() under the hood), now its own screen separate from Bond-tending on the home screen
 let promoView = null;      // null | {step:'home'} — top-level (Map hub's "Promo" hotspot): read-only list of active/recent promo_events via list_visible_promo_events() — separate from Mail
 let worldBossView = null;  // null | {step:'home'} — top-level (Map hub's "World Boss" hotspot, top-right dark corner): shared HP pool every player attacks together, admin-spawned via world-boss/index.ts
@@ -2264,6 +2274,7 @@ async function doDuelMage(){
   if(!data.won){
     render();
     setMageActionStatus(`Beaten back after ${roundsFought} round${roundsFought === 1 ? '' : 's'} — ${hpNote} No reward, but no other penalty either. Heal up or wait it out.`, false);
+    playMageDuelRoundParticles(data.rounds);
     return;
   }
   let msg = `Victory in ${roundsFought} round${roundsFought === 1 ? '' : 's'}! ${hpNote} +${data.xpGained} XP, +${data.shardsGained} God Shards.`;
@@ -2272,7 +2283,29 @@ async function doDuelMage(){
   if(data.reagentWon) await loadMageReagentsOwned();
   render();
   setMageActionStatus(msg, true);
+  playMageDuelRoundParticles(data.rounds);
   celebrate({ count: 18, distance: 50, duration: 900, color: '#e6c777', size: 20, sprite: 'particle-fx/fx_starburst.png' });
+}
+
+// 0070 — the Mage's duel resolves the whole multi-round fight in one
+// call, same "no live round-by-round screen" shape as PvP — so, like
+// playPvpRoundParticles(), this replays it as a staggered particle
+// sequence instead of one instant burst. No move system here either
+// (a flat stat-roll exchange, see mage/index.ts's duel action), so
+// every round gets the same generic hit look — crit gets a starburst,
+// a normal landed hit gets a plain impact. Anchored to #app via
+// celebrate() rather than a specific wrap element since this screen has
+// no per-combatant HP-bar DOM the way Campaign/Gauntlet do.
+function playMageDuelRoundParticles(rounds){
+  if(!rounds) return;
+  let delay = 0;
+  rounds.forEach(r => {
+    setTimeout(() => {
+      if(r.mageCrit) celebrate({ count: 6, distance: 36, duration: 600, color: '#e6c777', size: 26, sprite: 'particle-fx/fx_starburst.png' });
+      else celebrate({ count: 4, distance: 28, duration: 550, color: '#c8a24a', size: 22, sprite: 'particle-fx/fx_impact.png' });
+    }, delay);
+    delay += 220;
+  });
 }
 
 async function doSpendMagePoint(statKey){
@@ -2679,7 +2712,23 @@ async function doTrainGuardian(){
 function openProfile(){
   profileView = { step: 'home' };
   render();
-  loadProfileMessageStatus().then(() => { if(profileView) render(); });
+  // "redo the profile to show more about the mage" — the redesigned
+  // screen leads with a live Mage HP bar, so loadMageStatus() (the same
+  // regen-inclusive read the Mage Home tab uses, see 0069) needs to run
+  // here too rather than assuming a visit to that tab already refreshed
+  // it — a player can reach Profile straight from the map without ever
+  // opening the Guardian Page first.
+  const loaders = [loadProfileMessageStatus()];
+  if(mage){
+    loaders.push(loadMageStatus());
+    // mageEffectiveStats() (used for the new stat row here) folds in
+    // equipped gear bonuses — load them too so those numbers are
+    // correct even if the player lands on Profile straight from the
+    // map without ever visiting the Guardian Page this session.
+    if(!mageGearCatalog.length) loaders.push(loadMageGearCatalog());
+    if(!mageGearOwned.length) loaders.push(loadMageGearOwned());
+  }
+  Promise.all(loaders).then(() => { if(profileView) render(); });
 }
 
 function backFromProfile(){
@@ -2695,12 +2744,18 @@ async function loadProfileMessageStatus(){
   const [{ data: priceRow }, { data: usageRow }, { data: profileRow }] = await Promise.all([
     supabaseClient.from('pricing_settings').select('included_messages_per_month').eq('id', 1).maybeSingle(),
     supabaseClient.from('message_usage').select('count').eq('user_id', session.user.id).eq('period', period).maybeSingle(),
-    supabaseClient.from('profiles').select('bonus_messages').eq('id', session.user.id).maybeSingle()
+    // display_name added here (not a new query) for the Profile
+    // redesign's "username" line — it's the one player-facing name
+    // that already existed in the schema (auto-set at signup to their
+    // full name or email, see 0001_init.sql's handle_new_user trigger)
+    // but had never actually been read anywhere in the frontend before.
+    supabaseClient.from('profiles').select('bonus_messages, display_name').eq('id', session.user.id).maybeSingle()
   ]);
   profileMessageStatus = {
     includedPerMonth: priceRow ? (priceRow.included_messages_per_month || 0) : 0,
     usedThisMonth: usageRow ? usageRow.count : 0,
-    bonusMessages: profileRow ? (profileRow.bonus_messages || 0) : 0
+    bonusMessages: profileRow ? (profileRow.bonus_messages || 0) : 0,
+    displayName: profileRow ? (profileRow.display_name || null) : null
   };
 }
 
@@ -2750,25 +2805,64 @@ function renderProfile(){
         <div class="status" id="passwordStatus"></div>
       </div>`
     : `<button class="secondary" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto;" onclick="openPasswordForm()">Set / change password</button>`;
-  // Direct feedback: "we will want the bust of the character they
-  // choose to show up on the profile page" — the character is the
-  // Mage: the portrait tied to whichever Art they picked at creation
-  // (MAGE_ART_IMAGES[mage.art_key], same art shown on the Guardian Page
-  // and the creation screen itself). Falls back to the same affinity-
-  // tinted placeholder circle every other art-less portrait uses if no
-  // image has been set for that Art yet.
+  // Redesign, direct feedback: "redo the profile to show more about the
+  // mage with a small notation of their familiar it should have picture
+  // username user id and a get help button." The Mage is now the hero
+  // (portrait + name/level/HP/stats in the same split-panel layout the
+  // Mage Home tab uses), the Guardian/familiar drops to one summary
+  // line instead of two full stat-grids, and a new Account card carries
+  // the player's display name, raw account id, and a mailto Get Help
+  // button — none of which existed on this screen (or anywhere else)
+  // before. Guardian currencies/marks/messages/Hall of
+  // Ancestors/password/release all stay exactly as they were; only the
+  // hero content and ordering changed.
   const mageArt = mage ? mageArtFor(mage.art_key) : null;
-  const mageBustBlock = mage ? `
-    <div class="art">${opponentImgFor(MAGE_ART_IMAGES[mage.art_key], mageArt ? mageArt.affinity : null, 96)}</div>
-    <div class="species-line" style="margin-bottom:10px;">${esc(mage.name)}${mageArt ? ' · ' + esc(mageArt.label) : ''}</div>
-  ` : '';
+  const mageXpNeeded = mage ? (mage.xp_to_next || 40) : 0;
+  const mageXpPct = mage ? Math.max(0, Math.min(100, Math.round((mage.xp / mageXpNeeded) * 100))) : 0;
+  const mageHpCurrent = mage ? (mageStatus ? mageStatus.currentHp : mage.current_hp) : 0;
+  const mageHpMax = mage ? (mageStatus ? mageStatus.maxHp : mage.current_hp) : 0;
+  const mageHpPct = mageHpMax > 0 ? Math.max(0, Math.min(100, Math.round((mageHpCurrent / mageHpMax) * 100))) : 0;
+  const mageStats = mage ? mageEffectiveStats() : null;
+
+  const heroBlock = mage ? `
+    <div class="split-panel">
+      <div class="split-art">${opponentImgFor(MAGE_ART_IMAGES[mage.art_key], mageArt ? mageArt.affinity : null, 220)}</div>
+      <div class="split-info">
+        <h2 style="margin:4px 0;">${esc(mage.name)}</h2>
+        <div class="species-line">${mageArt ? esc(mageArt.label) : esc(mage.art_key)}${mageArt && mageArt.affinity ? ' · ' + esc(mageArt.affinity) + '-touched' : ''}</div>
+
+        <div class="essence-row">
+          <span class="essence-label">Level ${mage.level}</span>
+          <span class="essence-value">${mage.xp} / ${mageXpNeeded} XP</span>
+        </div>
+        <div class="hp-bar-track"><div class="hp-bar-fill" style="width:${mageXpPct}%;"></div></div>
+
+        <div class="essence-row">
+          <span class="essence-label">HP</span>
+          <span class="essence-value">${mageHpCurrent} / ${mageHpMax}</span>
+        </div>
+        <div class="hp-bar-track"><div class="hp-bar-fill mage-vit${mageHpPct <= 25 ? ' low' : ''}" style="width:${mageHpPct}%;"></div></div>
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-tile"><div class="num">${mageStats.vitality}</div><div class="label">Vitality</div></div>
+      <div class="stat-tile"><div class="num">${mageStats.might}</div><div class="label">Might</div></div>
+      <div class="stat-tile"><div class="num">${mageStats.ward}</div><div class="label">Ward</div></div>
+      <div class="stat-tile"><div class="num">${mageStats.swiftness}</div><div class="label">Swiftness</div></div>
+      <div class="stat-tile"><div class="num">${mageStats.cunning}</div><div class="label">Cunning</div></div>
+    </div>
+    <p class="marks-note">Familiar: ${esc(guardian.name)}, a ${esc((SPECIES.find(s => s.id === guardian.species) || {}).label || guardian.species)} (${esc(STAGE_LABEL[guardian.stage] || guardian.stage)}).</p>
+  ` : `
+    <h2>${esc(guardian.name)}'s Profile</h2>
+    <div class="species-line">${esc(STAGE_LABEL[guardian.stage] || guardian.stage)} · ${guardian.checkin_streak || 0} day check-in streak</div>
+    <p class="hint">No Mage yet — create one from the Guardian Page.</p>
+  `;
+
   app.innerHTML = `
     <div class="card"${bgAttr('profile', 'text-align:center;')}>
-      ${mageBustBlock}
-      <h2>${esc(guardian.name)}'s Profile</h2>
-      <div class="species-line">${esc(STAGE_LABEL[guardian.stage] || guardian.stage)} · ${guardian.checkin_streak || 0} day check-in streak</div>
+      ${heroBlock}
 
-      <div class="essence-row">
+      <div class="essence-row" style="margin-top:14px;">
         <span class="essence-label">Essence</span>
         <span class="essence-value">${guardian.essence || 0}</span>
       </div>
@@ -2778,14 +2872,6 @@ function renderProfile(){
         <div class="stat-tile"><div class="num">${guardian.god_shards || 0}</div><div class="label">God Shards</div></div>
         <div class="stat-tile"><div class="num">${guardian.god_tokens || 0}</div><div class="label">God Tokens</div></div>
         <div class="stat-tile"><div class="num">${guardian.key_of_night || 0}</div><div class="label">Key of Night</div></div>
-      </div>
-
-      <div class="stat-grid">
-        <div class="stat-tile"><div class="num">${guardian.vitality}</div><div class="label">Vitality</div></div>
-        <div class="stat-tile"><div class="num">${guardian.might}</div><div class="label">Might</div></div>
-        <div class="stat-tile"><div class="num">${guardian.ward}</div><div class="label">Ward</div></div>
-        <div class="stat-tile"><div class="num">${guardian.swiftness}</div><div class="label">Swiftness</div></div>
-        <div class="stat-tile"><div class="num">${guardian.cunning}</div><div class="label">Cunning</div></div>
       </div>
 
       <p class="marks-note">${marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.'}</p>
@@ -2801,6 +2887,14 @@ function renderProfile(){
       ${hallBlock}
       ${passwordBlock}
       ${releaseBlock}
+    </div>
+
+    <div class="card"${bgAttr('profile')}>
+      <h2>Account</h2>
+      <p class="hint" style="margin-top:-6px;">Player: ${esc((profileMessageStatus && profileMessageStatus.displayName) || session.user.email || 'Unknown')}</p>
+      <p class="hint">Account ID: <span style="user-select:all;">${esc(session.user.id)}</span> <span style="opacity:0.7;">(have this handy if you email support)</span></p>
+      <a href="mailto:silverstag212007@gmail.com?subject=${encodeURIComponent('Pantheon Gate help — ' + session.user.id)}"
+        style="display:block;width:fit-content;margin:10px auto 0;background:transparent;border:1px solid var(--gold);color:var(--gold-bright);padding:12px 26px;font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;text-decoration:none;">Get Help</a>
     </div>
   `;
 }
@@ -3016,42 +3110,85 @@ async function doClaimMail(broadcastId){
   if(error){ setMailStatus(error.message, false); return; }
   await Promise.all([loadMail(), loadGuardian()]);
   render();
-  setMailStatus(data ? 'Claimed.' : 'Already claimed.', true);
+  // renderMail() only ever shows unclaimed rows now (see its filter), so
+  // by the time this status line paints, the row this button was on has
+  // already disappeared from the list above it — "Claimed." here is
+  // confirming a letter that just vanished, not one still on screen.
+  setMailStatus(data ? 'Claimed — that letter is gone from your mailbox now.' : 'Already claimed.', true);
   if(data) celebrate({ count: 12, distance: 40, duration: 850, color: '#e6c777', size: 20, sprite: 'particle-fx/fx_burst.png' });
+}
+
+// "we need a clear mailbox option or even better mail should disappear
+// after reading" — did both. Reading/claiming a single letter (doClaimMail
+// above) already made it vanish on the very next render via the filter in
+// renderMail() below, using the existing broadcast_claims plumbing (no
+// schema change). This adds the one-click bulk version of the same thing.
+async function doClearMailbox(){
+  const unclaimed = mailBroadcasts.filter(b => !mailClaimedIds.has(b.id));
+  if(!unclaimed.length){ setMailStatus('Nothing to clear.', true); return; }
+  setMailStatus('Clearing mailbox…');
+  const results = await Promise.all(unclaimed.map(b =>
+    supabaseClient.rpc('claim_broadcast', { p_broadcast_id: b.id }).then(
+      r => ({ ok: !r.error, id: b.id, error: r.error }),
+      e => ({ ok: false, id: b.id, error: e })
+    )
+  ));
+  const failed = results.filter(r => !r.ok);
+  await Promise.all([loadMail(), loadGuardian()]);
+  render();
+  if(failed.length){
+    setMailStatus(`Cleared ${results.length - failed.length} of ${results.length} — ${failed[0].error && failed[0].error.message ? failed[0].error.message : 'some letters failed to clear.'}`, false);
+  } else {
+    setMailStatus('Mailbox cleared.', true);
+  }
 }
 
 function renderMail(){
   const app = document.getElementById('app');
-  const rows = mailBroadcasts.map(b => {
-    const claimed = mailClaimedIds.has(b.id);
+  // Auto-disappear-after-reading: a claimed/read letter simply never
+  // appears in this list again. mailClaimedIds already flips the instant
+  // doClaimMail()/doClearMailbox() succeeds, so this filter is the whole
+  // implementation — nothing server-side needed beyond broadcast_claims,
+  // which already existed for the gift-claim case.
+  const visible = mailBroadcasts.filter(b => !mailClaimedIds.has(b.id));
+  const rows = visible.map(b => {
     const hasGift = !!(b.gift_bonus_messages || b.gift_scope_type || b.gift_reward_key || b.gift_store_item_id || b.gift_bundle_key);
     return `<div class="roster-row">
       <div><div class="rname">${new Date(b.created_at).toLocaleString()}</div><div class="cblurb">${esc(b.message)}</div></div>
-      <div class="ractions">${claimed ? '<span class="hint">Claimed</span>' : `<button class="secondary" onclick="doClaimMail('${esc(b.id)}')">${hasGift ? 'Claim' : 'Mark read'}</button>`}</div>
+      <div class="ractions"><button class="secondary" onclick="doClaimMail('${esc(b.id)}')">${hasGift ? 'Claim' : 'Mark read'}</button></div>
     </div>`;
-  }).join('') || '<p class="hint">Nothing here yet.</p>';
+  }).join('') || (mailBroadcasts.length ? '<p class="hint">You\'re all caught up — no unread mail.</p>' : '<p class="hint">Nothing here yet.</p>');
 
   app.innerHTML = `
     <div class="card"${bgAttr('mail')}>
       <h2 style="text-align:center;">Mail</h2>
-      <p class="hint" style="text-align:center;">Announcements and gifts sent your way. Claim a gift once and it's yours — checking again never takes anything back.</p>
+      <p class="hint" style="text-align:center;">Announcements and gifts sent your way. Claim a gift once and it's yours. Reading (or claiming) a letter clears it from this list for good — checking again never takes back a gift you've already claimed, but the letter itself won't show here anymore.</p>
       <div class="status" id="mailStatus"></div>
       ${rows}
+      ${visible.length ? `<button class="secondary" style="margin-top:14px;" onclick="doClearMailbox()">Clear mailbox</button>` : ''}
       <button class="secondary" style="margin-top:14px;" onclick="backFromMail()">Back to the map</button>
     </div>
   `;
 }
 
 /* ---------------- backpack (Map hub's "Backpack" hotspot) ----------------
-   Read-only aggregator over three previously-separate inventories (Craft
-   items, Arena items, Expedition artifact fragments) that had no unified
-   view anywhere. Each row still points back to its home screen to
-   actually use/manage the item — this screen only answers "what do I own." */
+   A tabbed aggregator over every inventory in the game. See backpackTab's
+   declaration comment above for why this replaced the old three-stacked-
+   cards, Guardian-only screen. */
 
 async function openBackpack(){
   backpackView = { step: 'home' };
   render();
-  await Promise.all([loadCraftCatalog(), loadCraftInventory(), loadArenaShopCatalog(), loadArenaInventory(), loadExpeditionCatalog()]);
+  const loaders = [loadCraftCatalog(), loadCraftInventory(), loadArenaShopCatalog(), loadArenaInventory(), loadExpeditionCatalog()];
+  if(mage){
+    if(!mageGearCatalog.length) loaders.push(loadMageGearCatalog());
+    loaders.push(loadMageGearOwned());
+    if(!mageReagentCatalog.length) loaders.push(loadMageReagentCatalog());
+    if(!magePotionCatalog.length) loaders.push(loadMagePotionCatalog());
+    if(!magePotionRecipes.length) loaders.push(loadMagePotionRecipes());
+    loaders.push(loadMageReagentsOwned(), loadMagePotionsOwned());
+  }
+  await Promise.all(loaders);
   if(backpackView) render();
 }
 
@@ -3060,37 +3197,169 @@ function backFromBackpack(){
   render();
 }
 
-function renderBackpack(){
-  const app = document.getElementById('app');
+function switchBackpackTab(tab){
+  backpackTab = tab;
+  render();
+}
 
+function backpackTabStrip(){
+  return `
+    <div class="tab-strip">
+      <button class="tab-btn${backpackTab === 'craft' ? ' active' : ''}" onclick="switchBackpackTab('craft')">Craft Items</button>
+      ${mage ? `<button class="tab-btn${backpackTab === 'magegear' ? ' active' : ''}" onclick="switchBackpackTab('magegear')">Mage Gear</button>` : ''}
+      ${mage ? `<button class="tab-btn${backpackTab === 'alchemy' ? ' active' : ''}" onclick="switchBackpackTab('alchemy')">Alchemy</button>` : ''}
+      <button class="tab-btn${backpackTab === 'arena' ? ' active' : ''}" onclick="switchBackpackTab('arena')">Arena</button>
+      <button class="tab-btn${backpackTab === 'expeditions' ? ' active' : ''}" onclick="switchBackpackTab('expeditions')">Expeditions</button>
+    </div>
+  `;
+}
+
+// A Mage-owning player could, in principle, be sitting on the 'magegear'
+// or 'alchemy' tab and then... there's no way to lose a Mage once
+// created, so no need to guard against that tab going stale — unlike
+// guardianHomeTab, which does need that guard (a fresh account has no
+// Mage yet). Left as a comment rather than a runtime check since it's
+// genuinely unreachable, not just unlikely.
+function renderBackpack(){
+  if(backpackTab === 'magegear' && mage) return renderBackpackMageGear();
+  if(backpackTab === 'alchemy' && mage) return renderBackpackAlchemy();
+  if(backpackTab === 'arena') return renderBackpackArena();
+  if(backpackTab === 'expeditions') return renderBackpackExpeditions();
+  return renderBackpackCraft();
+}
+
+function renderBackpackCraft(){
+  const app = document.getElementById('app');
+  // Same shape as renderCraft()'s "Your Items" section, including the
+  // Use button for an unconsumed consumable — the read-only version of
+  // this list (name + Held/Used text only, no action) predates this tab
+  // strip and undersold what "consolidation" should mean.
   const craftRows = craftInventory.map(it => {
     const catalogItem = craftCatalog.find(c => c.key === it.item_key);
     const name = catalogItem ? catalogItem.name : it.item_key;
-    return `<div class="roster-row"><div><div class="rname">${esc(name)}</div><div class="cblurb">${it.consumed_at ? 'Used/Applied' : 'Held'}</div></div></div>`;
+    const type = catalogItem ? catalogItem.item_type : '';
+    const statusLabel = it.consumed_at ? (type === 'consumable' ? 'Used' : 'Applied') : 'Held';
+    const canUse = type === 'consumable' && !it.consumed_at;
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(name)}</div><div class="cblurb">${statusLabel}</div></div>
+      ${canUse ? `<div class="ractions"><button class="secondary" onclick="doUseItem('${esc(it.id)}')">Use</button></div>` : ''}
+    </div>`;
   }).join('') || '<p class="hint">No crafted items yet.</p>';
 
+  app.innerHTML = `
+    <div class="card"${bgAttr('backpack', 'text-align:center;')}>
+      <h2>Backpack</h2>
+      ${backpackTabStrip()}
+      <div class="status" id="craftStatus"></div>
+    </div>
+    <div class="card"${bgAttr('backpack')}>
+      <h2>Crafted Items</h2>
+      ${craftRows}
+      <button class="secondary" style="margin-top:10px;" onclick="openCraft()">Buy / Craft more in Shard Crafting</button>
+    </div>
+    <div class="card"${bgAttr('backpack')}><button class="secondary" onclick="backFromBackpack()">Back to the map</button></div>
+  `;
+}
+
+function renderBackpackMageGear(){
+  const app = document.getElementById('app');
+  // Same equip/unequip actions as renderMageGear() (openMageGear()'s own
+  // screen, reached from the Mage tab's "Manage Gear" — kept as-is, not
+  // replaced) reused here so this tab is a real second way to manage
+  // gear, not a read-only echo of it.
+  const slotRows = ['weapon', 'armor', 'accessory'].map(slot => {
+    const itemId = mage['equipped_' + slot + '_id'];
+    const owned = itemId ? mageGearOwned.find(g => g.id === itemId) : null;
+    const cat = owned ? mageGearCatalog.find(c => c.key === owned.gear_key) : null;
+    return `<div class="roster-row">
+      <div><div class="rname">${slot.charAt(0).toUpperCase() + slot.slice(1)}</div><div class="cblurb">${cat ? esc(cat.name) + ' (+' + cat.stat_amount + ' ' + cat.stat_key + ')' : 'Empty'}</div></div>
+      ${cat ? `<div class="ractions"><button class="secondary" onclick="doUnequipMageGear('${slot}')">Unequip</button></div>` : ''}
+    </div>`;
+  }).join('');
+
+  const equippedIds = new Set([mage.equipped_weapon_id, mage.equipped_armor_id, mage.equipped_accessory_id].filter(Boolean));
+  const inventoryRows = mageGearOwned.filter(g => !equippedIds.has(g.id)).map(g => {
+    const cat = mageGearCatalog.find(c => c.key === g.gear_key);
+    return `<div class="roster-row">
+      <div><div class="rname">${cat ? esc(cat.name) : esc(g.gear_key)}</div><div class="cblurb">${cat ? '+' + cat.stat_amount + ' ' + cat.stat_key : ''}</div></div>
+      <div class="ractions"><button class="secondary" onclick="doEquipMageGear('${g.id}')">Equip</button></div>
+    </div>`;
+  }).join('') || '<p class="hint">Nothing in reserve — craft some in Shard Crafting.</p>';
+
+  app.innerHTML = `
+    <div class="card"${bgAttr('backpack', 'text-align:center;')}>
+      <h2>Backpack</h2>
+      ${backpackTabStrip()}
+      <div class="status" id="mageActionStatus"></div>
+    </div>
+    <div class="card"${bgAttr('backpack')}><h2>Equipped</h2>${slotRows}</div>
+    <div class="card"${bgAttr('backpack')}>
+      <h2>In Reserve</h2>
+      ${inventoryRows}
+      <button class="secondary" style="margin-top:10px;" onclick="openCraft()">Craft more in Shard Crafting</button>
+    </div>
+    <div class="card"${bgAttr('backpack')}><button class="secondary" onclick="backFromBackpack()">Back to the map</button></div>
+  `;
+}
+
+function renderBackpackAlchemy(){
+  const app = document.getElementById('app');
+  // mageAlchemySectionMarkup() already builds a complete card (reagent
+  // tally + potions with working Use buttons) for the Mage Home tab —
+  // reused verbatim here rather than duplicated, so a Use button
+  // anywhere always behaves identically.
+  app.innerHTML = `
+    <div class="card"${bgAttr('backpack', 'text-align:center;')}>
+      <h2>Backpack</h2>
+      ${backpackTabStrip()}
+      <div class="status" id="mageActionStatus"></div>
+    </div>
+    ${mageAlchemySectionMarkup()}
+    <div class="card"${bgAttr('backpack')}><button class="secondary" onclick="backFromBackpack()">Back to the map</button></div>
+  `;
+}
+
+function renderBackpackArena(){
+  const app = document.getElementById('app');
   const arenaRows = arenaInventory.map(it => {
     const catalogItem = arenaShopCatalog.find(c => c.key === it.item_key);
     const name = catalogItem ? catalogItem.name : it.item_key;
     return `<div class="roster-row"><div><div class="rname">${esc(name)}</div><div class="cblurb">${it.consumed_at ? 'Used/Applied' : 'Held'}</div></div></div>`;
   }).join('') || '<p class="hint">No Arena items yet.</p>';
 
+  app.innerHTML = `
+    <div class="card"${bgAttr('backpack', 'text-align:center;')}>
+      <h2>Backpack</h2>
+      ${backpackTabStrip()}
+    </div>
+    <div class="card"${bgAttr('backpack')}>
+      <h2>Arena Items</h2>
+      ${arenaRows}
+      <button class="secondary" style="margin-top:10px;" onclick="openPvpArena()">Go to the Arena</button>
+    </div>
+    <div class="card"${bgAttr('backpack')}><button class="secondary" onclick="backFromBackpack()">Back to the map</button></div>
+  `;
+}
+
+function renderBackpackExpeditions(){
+  const app = document.getElementById('app');
   const artifactRows = ((expeditionCatalog && expeditionCatalog.artifacts) || []).filter(a => (a.fragmentsOwned || []).length > 0).map(a => {
     const owned = new Set(a.fragmentsOwned || []);
     const complete = owned.size >= a.total_fragments;
     return `<div class="roster-row"><div><div class="rname">${esc(a.name)}</div><div class="cblurb">${complete ? 'Complete' : owned.size + '/' + a.total_fragments + ' fragments'}</div></div></div>`;
   }).join('') || '<p class="hint">No artifact fragments found yet.</p>';
 
-  const backpackBg = bgAttr('backpack');
   app.innerHTML = `
-    <div class="card"${backpackBg}>
-      <h2 style="text-align:center;">Backpack</h2>
-      <p class="hint" style="text-align:center;">Everything your guardian is holding, in one place. Use or manage items from their home screens — Crafting, the Arena, Expeditions.</p>
+    <div class="card"${bgAttr('backpack', 'text-align:center;')}>
+      <h2>Backpack</h2>
+      ${backpackTabStrip()}
     </div>
-    <div class="card"${backpackBg}><h2>Crafted Items</h2>${craftRows}<button class="secondary" style="margin-top:10px;" onclick="openCraft()">Go to Crafting</button></div>
-    <div class="card"${backpackBg}><h2>Arena Items</h2>${arenaRows}<button class="secondary" style="margin-top:10px;" onclick="openPvpArena()">Go to the Arena</button></div>
-    <div class="card"${backpackBg}><h2>Artifact Fragments</h2>${artifactRows}<button class="secondary" style="margin-top:10px;" onclick="openExpedition()">Go to Expeditions</button></div>
-    <div class="card"${backpackBg}><button class="secondary" onclick="backFromBackpack()">Back to the map</button></div>
+    <div class="card"${bgAttr('backpack')}>
+      <h2>Artifact Fragments</h2>
+      ${artifactRows}
+      <button class="secondary" style="margin-top:10px;" onclick="openExpedition()">Go to Expeditions</button>
+    </div>
+    <div class="card"${bgAttr('backpack')}><button class="secondary" onclick="backFromBackpack()">Back to the map</button></div>
   `;
 }
 
@@ -3272,7 +3541,20 @@ async function doAttackWorldBoss(){
     }else{
       setWorldBossStatusMsg(`Hit for ${data.damage}${data.crit ? ' (critical!)' : ''} — took ${data.damageTaken} in return. ${data.hpRemaining.toLocaleString()}/${data.hpTotal.toLocaleString()} HP left.`, true);
     }
+    // refreshWorldBossStatus() re-renders #app before this returns — so
+    // celebrate() (which appends particles into #app) has to fire AFTER
+    // that render, not before, or the innerHTML swap wipes the particles
+    // mid-animation. World Boss has no move system to hang a per-move
+    // particle on (flat single-swing fight, confirmed out of scope back
+    // in the 0063 moves-catalog migration), so this is a generic
+    // celebratory burst — bigger on the kill, smaller on a landed hit,
+    // none on a repel since nothing actually landed.
     await refreshWorldBossStatus();
+    if(data.defeated){
+      celebrate({ count: 16, distance: 46, duration: 800, color: data.crit ? '#e6c777' : '#c8a24a', size: 22, sprite: data.crit ? 'particle-fx/fx_starburst.png' : 'particle-fx/fx_impact.png' });
+    }else if(!data.repelled){
+      celebrate({ count: 6, distance: 34, duration: 600, color: data.crit ? '#e6c777' : '#c8a24a', size: 20, sprite: data.crit ? 'particle-fx/fx_starburst.png' : 'particle-fx/fx_impact.png' });
+    }
   }catch(e){
     setWorldBossStatusMsg('Could not reach the relay: ' + e.message, false);
   }
@@ -4341,7 +4623,17 @@ function hitSprite(affinity){
   return AFFINITY_SPRITES[affinity] || 'particle-fx/fx_burst.png';
 }
 
-function animateHit(side, damage, crit, control, hpAfter, maxHp, affinity){
+// 0070 — "particle effects should be used for every move ... the
+// particular effect should be modifiable in the admin panel." A move's
+// admin-picked particle_key (passed through from combat/index.ts as
+// particleKey on each event) wins when set; unset (the common case)
+// falls back to exactly the old affinity-based sprite, so this changes
+// nothing for a move an admin never touches.
+function moveHitSprite(affinity, particleKey){
+  return particleKey ? ('particle-fx/fx_' + particleKey + '.png') : hitSprite(affinity);
+}
+
+function animateHit(side, damage, crit, control, hpAfter, maxHp, affinity, particleKey){
   const fill = document.getElementById(side === 'guardian' ? 'gHpFill' : 'oHpFill');
   const text = document.getElementById(side === 'guardian' ? 'gHpText' : 'oHpText');
   const wrap = document.getElementById(side === 'guardian' ? 'gHpWrap' : 'oHpWrap');
@@ -4360,7 +4652,7 @@ function animateHit(side, damage, crit, control, hpAfter, maxHp, affinity){
   } else if(control){
     spawnParticles(wrap, { count: 4, color: 'var(--moon)', size: 38, distance: 28, duration: 750, sprite: 'particle-fx/fx_streak.png' });
   } else {
-    spawnParticles(wrap, { count: 4, color: hitColor(affinity), size: 40, distance: 32, duration: 650, sprite: hitSprite(affinity) });
+    spawnParticles(wrap, { count: 4, color: hitColor(affinity), size: 40, distance: 32, duration: 650, sprite: moveHitSprite(affinity, particleKey) });
   }
 }
 
@@ -4527,7 +4819,7 @@ async function actMove(moveIndex){
         targetIsOpponent ? 'opponent' : 'guardian', ev.damage, ev.crit, ev.control,
         targetIsOpponent ? oHp : gHp,
         targetIsOpponent ? combatView.opponentMaxHp : combatView.guardianMaxHp,
-        ev.affinity
+        ev.affinity, ev.particleKey
       );
       await sleep(650);
 
@@ -6007,7 +6299,18 @@ async function doDragonAttack(){
     setDragonActionStatus(`Hit for ${data.damage}${data.crit ? ' (critical!)' : ''} — took ${data.damageTaken} in return. ${data.hpRemaining}/${data.hpTotal} HP left.`, true);
   }
   await loadGuardian();
+  // refreshDragonStatus() re-renders #app — celebrate() has to fire
+  // after that (see doAttackWorldBoss()'s identical comment) so the
+  // particles don't get wiped mid-animation by the innerHTML swap.
+  // Circle Dragon has no move system either (0063's stated scope), so
+  // this is the same generic hit/kill burst World Boss got, no
+  // per-move admin customization here.
   await refreshDragonStatus();
+  if(data.defeated){
+    celebrate({ count: 16, distance: 46, duration: 800, color: data.crit ? '#e6c777' : '#c8a24a', size: 22, sprite: data.crit ? 'particle-fx/fx_starburst.png' : 'particle-fx/fx_impact.png' });
+  }else if(!data.repelled){
+    celebrate({ count: 6, distance: 34, duration: 600, color: data.crit ? '#e6c777' : '#c8a24a', size: 20, sprite: data.crit ? 'particle-fx/fx_starburst.png' : 'particle-fx/fx_impact.png' });
+  }
 }
 
 function renderCircleDragon(){
@@ -7027,6 +7330,32 @@ async function doPvpRespond(challengeId, decision){
   // pvp_matches row, so they're folded onto the display object here.
   pvpLastMatch = { ...data.match, winnerGrants: data.winnerGrants || [], loserGrants: data.loserGrants || [] };
   await refreshPvpStatus();
+  // 0070 — PvP resolves the whole match instantly server-side (unlike
+  // Campaign/Gauntlet's live actMove() loop), so there's no natural
+  // per-round moment to hang a particle on. refreshPvpStatus() above
+  // just rendered the result screen (with #pvpResultCard already in the
+  // DOM), so play the same per-move particles here instead, staggered
+  // to read as a quick replay rather than one instant blob. Anchored to
+  // the whole result card, not the scrolling .battle-log text underneath
+  // it — that div can grow taller than its own visible scroll window,
+  // which would place/clip a particle at the wrong spot.
+  playPvpRoundParticles(pvpLastMatch.rounds);
+}
+
+function playPvpRoundParticles(rounds){
+  const card = document.getElementById('pvpResultCard');
+  if(!card || !rounds) return;
+  let delay = 0;
+  rounds.forEach(e => {
+    if(e.move === undefined || e.dodged) return; // ticks/stuns/dodges have their own text-only log lines, no move to attach a particle to
+    setTimeout(() => {
+      if(!document.getElementById('pvpResultCard')) return; // screen navigated away before this round's turn came up
+      if(e.crit) spawnParticles(card, { count: 6, color: '#e6c777', size: 40, distance: 44, duration: 700, sprite: 'particle-fx/fx_starburst.png' });
+      else if(e.control) spawnParticles(card, { count: 4, color: 'var(--moon)', size: 34, distance: 30, duration: 700, sprite: 'particle-fx/fx_streak.png' });
+      else spawnParticles(card, { count: 4, color: hitColor(e.affinity), size: 36, distance: 32, duration: 600, sprite: moveHitSprite(e.affinity, e.particleKey) });
+    }, delay);
+    delay += 260;
+  });
 }
 
 // item 6: every duel now resolves through a real move loadout + the full
@@ -7154,7 +7483,7 @@ function renderPvpHome(){
     const yourNewPos = won ? m.winner_new_position : m.loser_new_position;
     const grantsLine = pvpGrantsLine(won ? m.winnerGrants : m.loserGrants);
     app.innerHTML = `
-      <div class="card verdict-card"${bgAttr('arena')}>
+      <div class="card verdict-card" id="pvpResultCard" style="position:relative;"${bgAttr('arena')}>
         <div class="verdict-badge ${won ? 'full' : 'partial'}">${won ? 'Victory' : 'Defeat'}</div>
         <p class="verdict-text">${won ? 'You won the duel.' : 'You lost the duel.'}</p>
         <p class="gain-note">${m.swapped ? `Ranks swapped — you moved from #${yourOldPos} to #${yourNewPos}.` : `No change in rank — #${yourOldPos} was already correctly ordered.`}</p>
