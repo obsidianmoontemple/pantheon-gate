@@ -1440,7 +1440,11 @@ function energyNow(){
   if(!staminaSettings) return guardian.energy_current ?? 0;
   const hoursElapsed = (Date.now() - new Date(guardian.energy_updated_at).getTime()) / (1000 * 60 * 60);
   const regened = Math.floor(hoursElapsed * staminaSettings.energy_regen_per_hour);
-  return Math.min(staminaSettings.energy_max, guardian.energy_current + Math.max(0, regened));
+  const raw = guardian.energy_current + Math.max(0, regened);
+  // Overflow toggle (0074) — while an admin has it on, Energy is allowed
+  // to sit above energy_max (from a deliberate over-cap grant) instead of
+  // being silently clamped back down the moment this bar re-renders.
+  return staminaSettings.energy_overflow_enabled ? raw : Math.min(staminaSettings.energy_max, raw);
 }
 function ticketsNow(){
   if(!guardian) return 0;
