@@ -159,8 +159,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="altars" onclick="showTab('altars')">Altars</button>
       <button class="tab-btn" data-tab="gauntlet" onclick="showTab('gauntlet')">Gauntlet</button>
       <button class="tab-btn" data-tab="species" onclick="showTab('species')">Guardian Species</button>
-      <button class="tab-btn" data-tab="magearts" onclick="showTab('magearts')">Mage Arts</button>
-      <button class="tab-btn" data-tab="magegear" onclick="showTab('magegear')">Mage Gear</button>
+      <button class="tab-btn" data-tab="mage" onclick="showTab('mage')">Mage</button>
       <button class="tab-btn" data-tab="moves" onclick="showTab('moves')">Moves</button>
       <button class="tab-btn" data-tab="wheel" onclick="showTab('wheel')">Element Wheel</button>
       <button class="tab-btn" data-tab="blessings" onclick="showTab('blessings')">Deity Blessings</button>
@@ -487,36 +486,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="status" id="progressionStatus"></div>
         </div>
       </div>
-
-      <div class="card">
-        <h2>Mage Progression (item 4)</h2>
-        <p class="hint">Every one of these numbers used to be a hardcoded constant in the `mage` edge function — changing any of them meant a code edit + redeploy. Now they're admin-editable, same as the Guardian settings above. The XP curve is xpToNextLevel(level) = Base + (level-1) &times; Scale — changing it takes effect immediately for every future level-up (a Mage's already-earned levels are untouched).</p>
-        <h3>Train (non-combat)</h3>
-        <div class="form-row">
-          <div class="field"><label>Cooldown (minutes)</label><input type="number" min="1" id="mpTrainCooldown" style="max-width:140px;"></div>
-          <div class="field"><label>XP</label><input type="number" min="0" id="mpTrainXp" style="max-width:110px;"></div>
-          <div class="field"><label>Shards min</label><input type="number" min="0" id="mpTrainShardsMin" style="max-width:110px;"></div>
-          <div class="field"><label>Shards max</label><input type="number" min="0" id="mpTrainShardsMax" style="max-width:110px;"></div>
-        </div>
-        <h3>Duel (combat)</h3>
-        <div class="form-row">
-          <div class="field"><label>Cooldown (minutes)</label><input type="number" min="1" id="mpDuelCooldown" style="max-width:140px;"></div>
-          <div class="field"><label>XP</label><input type="number" min="0" id="mpDuelXp" style="max-width:110px;"></div>
-          <div class="field"><label>Shards min</label><input type="number" min="0" id="mpDuelShardsMin" style="max-width:110px;"></div>
-          <div class="field"><label>Shards max</label><input type="number" min="0" id="mpDuelShardsMax" style="max-width:110px;"></div>
-        </div>
-        <h3>Level curve &amp; upgrade points</h3>
-        <div class="form-row">
-          <div class="field"><label>XP curve base</label><input type="number" min="1" id="mpXpCurveBase" style="max-width:130px;"></div>
-          <div class="field"><label>XP curve scale (per level)</label><input type="number" min="0" id="mpXpCurveScale" style="max-width:170px;"></div>
-          <div class="field"><label>Upgrade points per level</label><input type="number" min="0" id="mpUpgradePointsPerLevel" style="max-width:170px;"></div>
-        </div>
-        <div class="save-bar">
-          <button id="saveMageProgressionBtn">Save changes</button>
-          <div class="status" id="mageProgressionStatus"></div>
-        </div>
-      </div>
     </div>
+    <!-- ^ Mage Progression card moved out of here to the consolidated
+         Mage tab below (item 11: "any consolidation we are going to do
+         on the mage tab") — this comment marks where it used to live. -->
 
     <!-- ============================== BIG BADDIES (DRAGONS) ============================== -->
     <div class="tab-content" id="tab-dragons">
@@ -815,8 +788,62 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
     </div>
 
-    <!-- ============================== MAGE ARTS (creation picker) ============================== -->
-    <div class="tab-content" id="tab-magearts">
+    <!-- ============================== MAGE (consolidated — item 11) ==============================
+         "any consolidation we are going to do on the mage tab": Mage Arts,
+         Mage Gear, Mage Progression (moved out of Guardian Progression),
+         and the new 0069 Reagents/Potions catalogs all live under this one
+         tab now, instead of Progression/Arts/Gear each having a separate
+         nav button. -->
+    <div class="tab-content" id="tab-mage">
+
+      <div class="card">
+        <h2>Mage Progression (item 4)</h2>
+        <p class="hint">Every one of these numbers used to be a hardcoded constant in the `mage` edge function — changing any of them meant a code edit + redeploy. Now they're admin-editable, same as the Guardian settings above. The XP curve is xpToNextLevel(level) = Base + (level-1) &times; Scale — changing it takes effect immediately for every future level-up (a Mage's already-earned levels are untouched).</p>
+        <h3>Train (non-combat)</h3>
+        <div class="form-row">
+          <div class="field"><label>Cooldown (minutes)</label><input type="number" min="1" id="mpTrainCooldown" style="max-width:140px;"></div>
+          <div class="field"><label>XP</label><input type="number" min="0" id="mpTrainXp" style="max-width:110px;"></div>
+          <div class="field"><label>Shards min</label><input type="number" min="0" id="mpTrainShardsMin" style="max-width:110px;"></div>
+          <div class="field"><label>Shards max</label><input type="number" min="0" id="mpTrainShardsMax" style="max-width:110px;"></div>
+        </div>
+        <h3>Duel (combat)</h3>
+        <div class="form-row">
+          <div class="field"><label>Cooldown (minutes)</label><input type="number" min="1" id="mpDuelCooldown" style="max-width:140px;"></div>
+          <div class="field"><label>XP</label><input type="number" min="0" id="mpDuelXp" style="max-width:110px;"></div>
+          <div class="field"><label>Shards min</label><input type="number" min="0" id="mpDuelShardsMin" style="max-width:110px;"></div>
+          <div class="field"><label>Shards max</label><input type="number" min="0" id="mpDuelShardsMax" style="max-width:110px;"></div>
+        </div>
+        <h3>Level curve &amp; upgrade points</h3>
+        <div class="form-row">
+          <div class="field"><label>XP curve base</label><input type="number" min="1" id="mpXpCurveBase" style="max-width:130px;"></div>
+          <div class="field"><label>XP curve scale (per level)</label><input type="number" min="0" id="mpXpCurveScale" style="max-width:170px;"></div>
+          <div class="field"><label>Upgrade points per level</label><input type="number" min="0" id="mpUpgradePointsPerLevel" style="max-width:170px;"></div>
+        </div>
+        <h3>Mage HP (0069)</h3>
+        <p class="hint">Direct feedback: "we need to handle things like personal hp monster retaliation because that's not working." The Mage is the one fighter in this game that keeps real HP between fights (see the 0069 migration's header for why that's a deliberate exception) — max HP is Base + Vitality &times; Per-Vitality, and it regenerates passively at the rate below, computed fresh whenever needed rather than ticking on a timer.</p>
+        <div class="form-row">
+          <div class="field"><label>HP base</label><input type="number" min="1" id="mpHpBase" style="max-width:110px;"></div>
+          <div class="field"><label>HP per Vitality</label><input type="number" min="0" id="mpHpPerVitality" style="max-width:130px;"></div>
+          <div class="field"><label>Regen per hour</label><input type="number" min="0" id="mpHpRegenPerHour" style="max-width:130px;"></div>
+        </div>
+        <h3>Duel monster scaling (0069)</h3>
+        <p class="hint">The level-scaled opponent a Duel fights: Monster HP = Base + Mage Level &times; Per-Level, Monster Attack = Base + Mage Level &times; Per-Level (reduced by the Mage's Ward each round).</p>
+        <div class="form-row">
+          <div class="field"><label>Monster HP base</label><input type="number" min="1" id="mpMonsterHpBase" style="max-width:130px;"></div>
+          <div class="field"><label>Monster HP / level</label><input type="number" min="0" id="mpMonsterHpPerLevel" style="max-width:140px;"></div>
+          <div class="field"><label>Monster attack base</label><input type="number" min="0" id="mpMonsterAttackBase" style="max-width:140px;"></div>
+          <div class="field"><label>Monster attack / level</label><input type="number" min="0" id="mpMonsterAttackPerLevel" style="max-width:150px;"></div>
+        </div>
+        <h3>Reagent drops (0069)</h3>
+        <div class="form-row">
+          <div class="field"><label>Drop chance per Duel win (0–1)</label><input type="number" step="0.01" min="0" max="1" id="mpReagentDropChance" style="max-width:140px;"></div>
+        </div>
+        <div class="save-bar">
+          <button id="saveMageProgressionBtn">Save changes</button>
+          <div class="status" id="mageProgressionStatus"></div>
+        </div>
+      </div>
+
       <div class="card">
         <h2>Mage Arts — creation picker</h2>
         <p class="hint">The premade Art list a player picks from when creating their Mage (0052). Every Art grants the same flat +10% duel-score baseline, plus a further +15% lean toward one specific stat drawn from its own flavor (fire/war -&gt; might, storm/shadow -&gt; swiftness, death/light -&gt; cunning, sea/earth -&gt; vitality — hardcoded in the mage edge function's ART_STAT_LEAN, not editable from here). Sort order controls left-to-right position on the Mage creation screen.</p>
@@ -850,10 +877,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         </div>
         <div class="status" id="newMageArtStatus"></div>
       </div>
-    </div>
 
-    <!-- ============================== MAGE GEAR (crafting catalog) ============================== -->
-    <div class="tab-content" id="tab-magegear">
       <div class="card">
         <h2>Mage gear catalog</h2>
         <p class="hint">What a Mage can craft from Manage → Catalog, spending the SAME God Shard balance the guardian earns (Mages don't have their own Shard balance) — an extension of Shard Crafting, not a new economy. Each piece fills exactly one slot (weapon/armor/accessory) and grants a flat bonus to exactly one stat while equipped. Equipped gear also now feeds a passive support bonus (up to +20% Guardian might) in Gauntlet, Campaign, Circle Dragon, World Boss, and PvP fights — a well-leveled, fully-geared Mage genuinely helps outside the Duel screen too, not just inside it.</p>
@@ -900,6 +924,112 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <input type="text" id="newMageGearImageUrl" placeholder="https://…" style="max-width:400px;">
         </div>
         <div class="status" id="newMageGearStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Mage reagents (0069)</h2>
+        <p class="hint">"A reagent list we can create and maintain for different crafts." Each reagent can be bought outright (set a Shard cost) and/or found from a Duel win (Drop weight — higher means it turns up more often relative to the others; a reagent with a 0 weight simply never drops, buy-only). Reagents are spent by Potion recipes below.</p>
+        <div class="scroll-table" style="max-height:360px;">
+          <table>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Drop weight</th><th>Shard cost</th><th>Sort</th><th>Image URL</th><th>Active</th></tr></thead>
+            <tbody id="mageReagentRows"><tr><td colspan="8">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveMageReagentsBtn">Save changes</button>
+          <div class="status" id="mageReagentsStatus"></div>
+        </div>
+        <h3>Add a new reagent</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newMageReagentKey" style="max-width:150px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newMageReagentName" style="max-width:160px;"></div>
+          <div class="field"><label>Drop weight</label><input type="number" step="0.1" min="0" value="1" id="newMageReagentDropWeight" style="max-width:110px;"></div>
+          <div class="field"><label>Shard cost (blank = drop-only)</label><input type="number" min="1" id="newMageReagentCost" style="max-width:150px;"></div>
+          <div class="field"><label>Sort order</label><input type="number" value="0" id="newMageReagentSort" style="max-width:90px;"></div>
+          <button id="addMageReagentBtn">Add reagent</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (shown to players)</label>
+          <input type="text" id="newMageReagentDescription" style="max-width:none;">
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Image URL (optional)</label>
+          <input type="text" id="newMageReagentImageUrl" placeholder="https://…" style="max-width:400px;">
+        </div>
+        <div class="status" id="newMageReagentStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Mage potions (0069)</h2>
+        <p class="hint">"The ability to create different potions for sale and or craft." A potion can have a Shard cost (buyable outright), a recipe below (craftable from reagents), or both — "two paths to the same item," confirmed. Effect is either a flat heal (restores current HP, capped at max) or a timed stat buff (added on top of gear the same way gear bonuses already layer, replacing any buff already running rather than stacking).</p>
+        <div class="scroll-table" style="max-height:360px;">
+          <table>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Effect</th><th>Heal amt</th><th>Buff stat</th><th>Buff amt</th><th>Buff mins</th><th>Shard cost</th><th>Sort</th><th>Image URL</th><th>Active</th></tr></thead>
+            <tbody id="magePotionRows"><tr><td colspan="12">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveMagePotionsBtn">Save changes</button>
+          <div class="status" id="magePotionsStatus"></div>
+        </div>
+        <h3>Add a new potion</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newMagePotionKey" style="max-width:150px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newMagePotionName" style="max-width:160px;"></div>
+          <div class="field"><label>Effect</label>
+            <select id="newMagePotionEffect" style="max-width:130px;">
+              <option value="heal">heal</option>
+              <option value="stat_buff">stat_buff</option>
+            </select>
+          </div>
+          <div class="field"><label>Heal amount</label><input type="number" min="1" id="newMagePotionHealAmount" style="max-width:110px;"></div>
+          <div class="field"><label>Buff stat</label>
+            <select id="newMagePotionBuffStat" style="max-width:130px;">
+              <option value="vitality">vitality</option>
+              <option value="might">might</option>
+              <option value="ward">ward</option>
+              <option value="swiftness">swiftness</option>
+              <option value="cunning">cunning</option>
+            </select>
+          </div>
+          <div class="field"><label>Buff amount</label><input type="number" min="1" id="newMagePotionBuffAmount" style="max-width:110px;"></div>
+          <div class="field"><label>Buff minutes</label><input type="number" min="1" id="newMagePotionBuffMinutes" style="max-width:110px;"></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Shard cost (blank = craft-only)</label><input type="number" min="1" id="newMagePotionCost" style="max-width:170px;"></div>
+          <div class="field"><label>Sort order</label><input type="number" value="0" id="newMagePotionSort" style="max-width:90px;"></div>
+          <button id="addMagePotionBtn">Add potion</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (shown to players)</label>
+          <input type="text" id="newMagePotionDescription" style="max-width:none;">
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Image URL (optional)</label>
+          <input type="text" id="newMagePotionImageUrl" placeholder="https://…" style="max-width:400px;">
+        </div>
+        <div class="status" id="newMagePotionStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Potion recipes</h2>
+        <p class="hint">Pick a potion above, then add the reagents (and how many of each) it costs to craft. A potion with nothing listed here simply can't be crafted — the frontend only shows a Brew button when at least one row exists.</p>
+        <div class="form-row">
+          <div class="field"><label>Potion</label><select id="potionRecipeSelect" style="max-width:220px;"></select></div>
+        </div>
+        <div class="scroll-table" style="max-height:280px;">
+          <table>
+            <thead><tr><th>Reagent</th><th>Qty required</th><th></th></tr></thead>
+            <tbody id="potionRecipeRows"><tr><td colspan="3">Pick a potion above.</td></tr></tbody>
+          </table>
+        </div>
+        <h3>Add a reagent requirement</h3>
+        <div class="form-row">
+          <div class="field"><label>Reagent</label><select id="newRecipeReagentKey" style="max-width:200px;"></select></div>
+          <div class="field"><label>Qty required</label><input type="number" min="1" value="1" id="newRecipeQty" style="max-width:110px;"></div>
+          <button id="addRecipeItemBtn">Add to recipe</button>
+        </div>
+        <div class="status" id="newRecipeItemStatus"></div>
       </div>
     </div>
 
@@ -2240,6 +2370,8 @@ async function handleSession(session){
   loadSpeciesCatalog();
   loadMageArts();
   loadMageGear();
+  await loadMageReagents(); // awaited — loadMagePotions()'s recipe select needs mageReagentCatalogCache populated first
+  loadMagePotions();
   loadNarratorSettingsAdmin();
   loadGuideStepsAdmin();
   loadSpeciesMoves();
@@ -2703,6 +2835,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addMageArtBtn').addEventListener('click', addMageArt);
   document.getElementById('saveMageGearBtn').addEventListener('click', saveMageGear);
   document.getElementById('addMageGearBtn').addEventListener('click', addMageGear);
+  document.getElementById('saveMageReagentsBtn').addEventListener('click', saveMageReagents);
+  document.getElementById('addMageReagentBtn').addEventListener('click', addMageReagent);
+  document.getElementById('saveMagePotionsBtn').addEventListener('click', saveMagePotions);
+  document.getElementById('addMagePotionBtn').addEventListener('click', addMagePotion);
+  document.getElementById('potionRecipeSelect').addEventListener('change', loadPotionRecipeItems);
+  document.getElementById('addRecipeItemBtn').addEventListener('click', addRecipeItem);
   document.getElementById('saveNarratorSettingsBtn').addEventListener('click', saveNarratorSettings);
   document.getElementById('saveNarratorSettingsBtn2').addEventListener('click', saveNarratorChatSettings);
   document.getElementById('saveGuideStepsBtn').addEventListener('click', saveGuideSteps);
@@ -4527,6 +4665,15 @@ async function loadMageProgression(){
   document.getElementById('mpXpCurveBase').value = data.xp_curve_base;
   document.getElementById('mpXpCurveScale').value = data.xp_curve_scale;
   document.getElementById('mpUpgradePointsPerLevel').value = data.upgrade_points_per_level;
+  // 0069 — HP/monster/reagent-drop tuning, same settings row.
+  document.getElementById('mpHpBase').value = data.hp_base;
+  document.getElementById('mpHpPerVitality').value = data.hp_per_vitality;
+  document.getElementById('mpHpRegenPerHour').value = data.hp_regen_per_hour;
+  document.getElementById('mpMonsterHpBase').value = data.monster_hp_base;
+  document.getElementById('mpMonsterHpPerLevel').value = data.monster_hp_per_level;
+  document.getElementById('mpMonsterAttackBase').value = data.monster_attack_base;
+  document.getElementById('mpMonsterAttackPerLevel').value = data.monster_attack_per_level;
+  document.getElementById('mpReagentDropChance').value = data.reagent_drop_chance;
 }
 
 async function saveMageProgression(){
@@ -4535,8 +4682,13 @@ async function saveMageProgression(){
   const trainCooldown = v('mpTrainCooldown'), trainXp = v('mpTrainXp'), trainShardsMin = v('mpTrainShardsMin'), trainShardsMax = v('mpTrainShardsMax');
   const duelCooldown = v('mpDuelCooldown'), duelXp = v('mpDuelXp'), duelShardsMin = v('mpDuelShardsMin'), duelShardsMax = v('mpDuelShardsMax');
   const xpCurveBase = v('mpXpCurveBase'), xpCurveScale = v('mpXpCurveScale'), upgradePointsPerLevel = v('mpUpgradePointsPerLevel');
+  // 0069 — HP/monster/reagent-drop tuning.
+  const hpBase = v('mpHpBase'), hpPerVitality = v('mpHpPerVitality'), hpRegenPerHour = v('mpHpRegenPerHour');
+  const monsterHpBase = v('mpMonsterHpBase'), monsterHpPerLevel = v('mpMonsterHpPerLevel');
+  const monsterAttackBase = v('mpMonsterAttackBase'), monsterAttackPerLevel = v('mpMonsterAttackPerLevel');
+  const reagentDropChance = parseFloat(document.getElementById('mpReagentDropChance').value);
 
-  const allValues = [trainCooldown, trainXp, trainShardsMin, trainShardsMax, duelCooldown, duelXp, duelShardsMin, duelShardsMax, xpCurveBase, xpCurveScale, upgradePointsPerLevel];
+  const allValues = [trainCooldown, trainXp, trainShardsMin, trainShardsMax, duelCooldown, duelXp, duelShardsMin, duelShardsMax, xpCurveBase, xpCurveScale, upgradePointsPerLevel, hpBase, hpPerVitality, hpRegenPerHour, monsterHpBase, monsterHpPerLevel, monsterAttackBase, monsterAttackPerLevel];
   if(allValues.some(n => isNaN(n) || n < 0)){
     status.className = 'status err';
     status.textContent = 'Every field must be a non-negative number.';
@@ -4557,6 +4709,16 @@ async function saveMageProgression(){
     status.textContent = 'Each Shards max must be at or above its min.';
     return;
   }
+  if(hpBase < 1 || monsterHpBase < 1){
+    status.className = 'status err';
+    status.textContent = 'HP base and Monster HP base must be at least 1.';
+    return;
+  }
+  if(isNaN(reagentDropChance) || reagentDropChance < 0 || reagentDropChance > 1){
+    status.className = 'status err';
+    status.textContent = 'Reagent drop chance must be between 0 and 1.';
+    return;
+  }
 
   status.className = 'status';
   status.textContent = 'Saving…';
@@ -4564,6 +4726,10 @@ async function saveMageProgression(){
     train_cooldown_minutes: trainCooldown, train_xp: trainXp, train_shards_min: trainShardsMin, train_shards_max: trainShardsMax,
     duel_cooldown_minutes: duelCooldown, duel_xp: duelXp, duel_shards_min: duelShardsMin, duel_shards_max: duelShardsMax,
     xp_curve_base: xpCurveBase, xp_curve_scale: xpCurveScale, upgrade_points_per_level: upgradePointsPerLevel,
+    hp_base: hpBase, hp_per_vitality: hpPerVitality, hp_regen_per_hour: hpRegenPerHour,
+    monster_hp_base: monsterHpBase, monster_hp_per_level: monsterHpPerLevel,
+    monster_attack_base: monsterAttackBase, monster_attack_per_level: monsterAttackPerLevel,
+    reagent_drop_chance: reagentDropChance,
     updated_at: new Date().toISOString()
   }).eq('id', 1);
   status.className = error ? 'status err' : 'status ok';
@@ -5687,6 +5853,268 @@ async function addMageGear(){
   status.className = 'status ok'; status.textContent = name + ' added.';
   ['newMageGearKey','newMageGearName','newMageGearStatAmount','newMageGearCost','newMageGearDescription','newMageGearImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadMageGear();
+}
+
+/* =========================================================================
+   MAGE REAGENTS (0069) — "a reagent list we can create and maintain for
+   different crafts." Same bulk-save-plus-add-new pattern as Mage Arts/
+   Gear above. Feeds two selects elsewhere: the potion-recipe editor
+   below (newRecipeReagentKey) picks from this same catalog.
+   ===================================================================== */
+
+async function loadMageReagents(){
+  const { data, error } = await supabaseClient.from('mage_reagent_catalog').select('*').order('sort_order', { ascending: true });
+  const rows = document.getElementById('mageReagentRows');
+  if(error){ rows.innerHTML = '<tr><td colspan="8">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  mageReagentCatalogCache = data || [];
+  rows.innerHTML = mageReagentCatalogCache.map(r => `<tr data-key="${esc(r.key)}">
+    <td class="dim">${esc(r.key)}</td>
+    <td><input type="text" id="mrName_${esc(r.key)}" value="${esc(r.name)}" style="max-width:140px;"></td>
+    <td><input type="text" id="mrDesc_${esc(r.key)}" value="${esc(r.description || '')}" style="max-width:220px;"></td>
+    <td><input type="number" step="0.1" min="0" id="mrDropWeight_${esc(r.key)}" value="${r.drop_weight}" style="max-width:90px;"></td>
+    <td><input type="number" min="1" id="mrCost_${esc(r.key)}" value="${r.shard_cost || ''}" style="max-width:90px;"></td>
+    <td><input type="number" id="mrSort_${esc(r.key)}" value="${r.sort_order}" style="max-width:70px;"></td>
+    <td><input type="text" id="mrImageUrl_${esc(r.key)}" value="${esc(r.image_url || '')}" style="max-width:170px;" placeholder="https://…"></td>
+    <td><input type="checkbox" id="mrActive_${esc(r.key)}" ${r.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="8">No reagents yet — add one below.</td></tr>';
+
+  refreshRecipeReagentSelect();
+}
+
+async function saveMageReagents(){
+  const status = document.getElementById('mageReagentsStatus');
+  const trs = document.querySelectorAll('#mageReagentRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    const costRaw = document.getElementById('mrCost_' + key).value;
+    return {
+      key,
+      name: document.getElementById('mrName_' + key).value.trim(),
+      description: document.getElementById('mrDesc_' + key).value.trim(),
+      drop_weight: parseFloat(document.getElementById('mrDropWeight_' + key).value) || 0,
+      shard_cost: costRaw ? (parseInt(costRaw, 10) || null) : null,
+      sort_order: parseInt(document.getElementById('mrSort_' + key).value, 10) || 0,
+      image_url: document.getElementById('mrImageUrl_' + key).value.trim() || null,
+      active: document.getElementById('mrActive_' + key).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('mage_reagent_catalog').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadMageReagents();
+}
+
+async function addMageReagent(){
+  const status = document.getElementById('newMageReagentStatus');
+  const key = document.getElementById('newMageReagentKey').value.trim().toLowerCase();
+  const name = document.getElementById('newMageReagentName').value.trim();
+  const description = document.getElementById('newMageReagentDescription').value.trim();
+  const dropWeight = parseFloat(document.getElementById('newMageReagentDropWeight').value) || 0;
+  const costRaw = document.getElementById('newMageReagentCost').value;
+  const shardCost = costRaw ? (parseInt(costRaw, 10) || null) : null;
+  const sortOrder = parseInt(document.getElementById('newMageReagentSort').value, 10) || 0;
+  const imageUrl = document.getElementById('newMageReagentImageUrl').value.trim() || null;
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('mage_reagent_catalog').insert({
+    key, name, description, drop_weight: dropWeight, shard_cost: shardCost, sort_order: sortOrder, image_url: imageUrl, active: true
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+  status.className = 'status ok'; status.textContent = name + ' added.';
+  ['newMageReagentKey','newMageReagentName','newMageReagentCost','newMageReagentDescription','newMageReagentImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newMageReagentDropWeight').value = '1';
+  document.getElementById('newMageReagentSort').value = '0';
+  loadMageReagents();
+}
+
+/* =========================================================================
+   MAGE POTIONS + RECIPES (0069) — "the ability to create different
+   potions for sale and or craft." Catalog is the same bulk-save-plus-
+   add-new pattern; recipes are a join table edited the same
+   pick-one-then-add/remove-rows way giftable_reward_bundle_items already
+   is (see loadBundleItems()/addBundleItem()/removeBundleItem() above).
+   ===================================================================== */
+
+let mageReagentCatalogCache = []; // mage_reagent_catalog rows, refreshed by loadMageReagents() — feeds the recipe reagent picker
+
+function refreshRecipeReagentSelect(){
+  const sel = document.getElementById('newRecipeReagentKey');
+  if(!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = mageReagentCatalogCache.map(r => `<option value="${esc(r.key)}">${esc(r.name)} (${esc(r.key)})</option>`).join('') || '<option value="">No reagents yet</option>';
+  if(prev && mageReagentCatalogCache.some(r => r.key === prev)) sel.value = prev;
+}
+
+async function loadMagePotions(){
+  const { data, error } = await supabaseClient.from('mage_potion_catalog').select('*').order('sort_order', { ascending: true });
+  const rows = document.getElementById('magePotionRows');
+  if(error){ rows.innerHTML = '<tr><td colspan="12">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  magePotionCatalogCache = data || [];
+  rows.innerHTML = magePotionCatalogCache.map(p => `<tr data-key="${esc(p.key)}">
+    <td class="dim">${esc(p.key)}</td>
+    <td><input type="text" id="mpotName_${esc(p.key)}" value="${esc(p.name)}" style="max-width:130px;"></td>
+    <td><input type="text" id="mpotDesc_${esc(p.key)}" value="${esc(p.description || '')}" style="max-width:200px;"></td>
+    <td><select id="mpotEffect_${esc(p.key)}">
+      <option value="heal" ${p.effect_type === 'heal' ? 'selected' : ''}>heal</option>
+      <option value="stat_buff" ${p.effect_type === 'stat_buff' ? 'selected' : ''}>stat_buff</option>
+    </select></td>
+    <td><input type="number" min="1" id="mpotHeal_${esc(p.key)}" value="${p.heal_amount || ''}" style="max-width:80px;"></td>
+    <td><select id="mpotBuffStat_${esc(p.key)}">
+      <option value="">—</option>
+      ${['vitality','might','ward','swiftness','cunning'].map(k => `<option value="${k}" ${k === p.buff_stat_key ? 'selected' : ''}>${k}</option>`).join('')}
+    </select></td>
+    <td><input type="number" min="1" id="mpotBuffAmt_${esc(p.key)}" value="${p.buff_amount || ''}" style="max-width:80px;"></td>
+    <td><input type="number" min="1" id="mpotBuffMins_${esc(p.key)}" value="${p.buff_duration_minutes || ''}" style="max-width:80px;"></td>
+    <td><input type="number" min="1" id="mpotCost_${esc(p.key)}" value="${p.shard_cost || ''}" style="max-width:90px;"></td>
+    <td><input type="number" id="mpotSort_${esc(p.key)}" value="${p.sort_order}" style="max-width:70px;"></td>
+    <td><input type="text" id="mpotImageUrl_${esc(p.key)}" value="${esc(p.image_url || '')}" style="max-width:150px;" placeholder="https://…"></td>
+    <td><input type="checkbox" id="mpotActive_${esc(p.key)}" ${p.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="12">No potions yet — add one below.</td></tr>';
+
+  const sel = document.getElementById('potionRecipeSelect');
+  if(sel){
+    const prev = sel.value;
+    sel.innerHTML = magePotionCatalogCache.map(p => `<option value="${esc(p.key)}">${esc(p.name)} (${esc(p.key)})</option>`).join('') || '<option value="">No potions yet</option>';
+    if(prev && magePotionCatalogCache.some(p => p.key === prev)) sel.value = prev;
+    loadPotionRecipeItems();
+  }
+}
+
+async function saveMagePotions(){
+  const status = document.getElementById('magePotionsStatus');
+  const trs = document.querySelectorAll('#magePotionRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    const effectType = document.getElementById('mpotEffect_' + key).value;
+    const healRaw = document.getElementById('mpotHeal_' + key).value;
+    const buffStatRaw = document.getElementById('mpotBuffStat_' + key).value;
+    const buffAmtRaw = document.getElementById('mpotBuffAmt_' + key).value;
+    const buffMinsRaw = document.getElementById('mpotBuffMins_' + key).value;
+    const costRaw = document.getElementById('mpotCost_' + key).value;
+    return {
+      key,
+      name: document.getElementById('mpotName_' + key).value.trim(),
+      description: document.getElementById('mpotDesc_' + key).value.trim(),
+      effect_type: effectType,
+      heal_amount: effectType === 'heal' ? (parseInt(healRaw, 10) || null) : null,
+      buff_stat_key: effectType === 'stat_buff' ? (buffStatRaw || null) : null,
+      buff_amount: effectType === 'stat_buff' ? (parseInt(buffAmtRaw, 10) || null) : null,
+      buff_duration_minutes: effectType === 'stat_buff' ? (parseInt(buffMinsRaw, 10) || null) : null,
+      shard_cost: costRaw ? (parseInt(costRaw, 10) || null) : null,
+      sort_order: parseInt(document.getElementById('mpotSort_' + key).value, 10) || 0,
+      image_url: document.getElementById('mpotImageUrl_' + key).value.trim() || null,
+      active: document.getElementById('mpotActive_' + key).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  for(const r of rows){
+    if(r.effect_type === 'heal' && !r.heal_amount){ status.className = 'status err'; status.textContent = r.key + ': heal potions need a Heal amt.'; return; }
+    if(r.effect_type === 'stat_buff' && (!r.buff_stat_key || !r.buff_amount || !r.buff_duration_minutes)){ status.className = 'status err'; status.textContent = r.key + ': stat_buff potions need Buff stat, amount, and minutes.'; return; }
+  }
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('mage_potion_catalog').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadMagePotions();
+}
+
+async function addMagePotion(){
+  const status = document.getElementById('newMagePotionStatus');
+  const key = document.getElementById('newMagePotionKey').value.trim().toLowerCase();
+  const name = document.getElementById('newMagePotionName').value.trim();
+  const description = document.getElementById('newMagePotionDescription').value.trim();
+  const effectType = document.getElementById('newMagePotionEffect').value;
+  const healAmount = parseInt(document.getElementById('newMagePotionHealAmount').value, 10) || null;
+  const buffStatKey = document.getElementById('newMagePotionBuffStat').value || null;
+  const buffAmount = parseInt(document.getElementById('newMagePotionBuffAmount').value, 10) || null;
+  const buffDurationMinutes = parseInt(document.getElementById('newMagePotionBuffMinutes').value, 10) || null;
+  const costRaw = document.getElementById('newMagePotionCost').value;
+  const shardCost = costRaw ? (parseInt(costRaw, 10) || null) : null;
+  const sortOrder = parseInt(document.getElementById('newMagePotionSort').value, 10) || 0;
+  const imageUrl = document.getElementById('newMagePotionImageUrl').value.trim() || null;
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  if(effectType === 'heal' && !healAmount){ status.className = 'status err'; status.textContent = 'Heal potions need a Heal amount.'; return; }
+  if(effectType === 'stat_buff' && (!buffStatKey || !buffAmount || !buffDurationMinutes)){ status.className = 'status err'; status.textContent = 'Stat_buff potions need Buff stat, amount, and minutes.'; return; }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('mage_potion_catalog').insert({
+    key, name, description, effect_type: effectType,
+    heal_amount: effectType === 'heal' ? healAmount : null,
+    buff_stat_key: effectType === 'stat_buff' ? buffStatKey : null,
+    buff_amount: effectType === 'stat_buff' ? buffAmount : null,
+    buff_duration_minutes: effectType === 'stat_buff' ? buffDurationMinutes : null,
+    shard_cost: shardCost, sort_order: sortOrder, image_url: imageUrl, active: true
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+  status.className = 'status ok'; status.textContent = name + ' added — set its recipe below if it should be craftable.';
+  ['newMagePotionKey','newMagePotionName','newMagePotionHealAmount','newMagePotionBuffAmount','newMagePotionBuffMinutes','newMagePotionCost','newMagePotionDescription','newMagePotionImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newMagePotionSort').value = '0';
+  loadMagePotions();
+}
+
+let magePotionCatalogCache = []; // mage_potion_catalog rows, refreshed by loadMagePotions()
+
+async function loadPotionRecipeItems(){
+  const potionKey = document.getElementById('potionRecipeSelect').value;
+  const rows = document.getElementById('potionRecipeRows');
+  if(!potionKey){
+    rows.innerHTML = '<tr><td colspan="3">Add a potion above first.</td></tr>';
+    return;
+  }
+  const { data, error } = await supabaseClient.from('mage_potion_recipes').select('*').eq('potion_key', potionKey).order('reagent_key', { ascending: true });
+  if(error){
+    rows.innerHTML = '<tr><td colspan="3">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  if(!data.length){
+    rows.innerHTML = '<tr><td colspan="3">No recipe yet — this potion is buy-only until reagents are added below.</td></tr>';
+    return;
+  }
+  rows.innerHTML = data.map(r => {
+    const reagent = mageReagentCatalogCache.find(c => c.key === r.reagent_key);
+    const label = reagent ? reagent.name : r.reagent_key;
+    return `<tr>
+      <td>${esc(label)}${reagent && !reagent.active ? ' <span class="dim">(inactive)</span>' : ''}</td>
+      <td class="dim">${r.quantity_required}</td>
+      <td><button class="small danger" onclick="removeRecipeItem('${esc(potionKey)}','${esc(r.reagent_key)}')">Remove</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function addRecipeItem(){
+  const status = document.getElementById('newRecipeItemStatus');
+  const potionKey = document.getElementById('potionRecipeSelect').value;
+  const reagentKey = document.getElementById('newRecipeReagentKey').value;
+  const qty = parseInt(document.getElementById('newRecipeQty').value, 10);
+
+  if(!potionKey){ status.className = 'status err'; status.textContent = 'Add a potion above first.'; return; }
+  if(!reagentKey){ status.className = 'status err'; status.textContent = 'Pick a reagent, or add one first in Mage reagents.'; return; }
+  if(isNaN(qty) || qty < 1){ status.className = 'status err'; status.textContent = 'Enter a qty of 1 or more.'; return; }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('mage_potion_recipes').upsert(
+    { potion_key: potionKey, reagent_key: reagentKey, quantity_required: qty },
+    { onConflict: 'potion_key,reagent_key' }
+  );
+  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+
+  status.className = 'status ok'; status.textContent = 'Added to the recipe.';
+  document.getElementById('newRecipeQty').value = '1';
+  loadPotionRecipeItems();
+}
+
+async function removeRecipeItem(potionKey, reagentKey){
+  if(!confirm('Remove this reagent from the recipe?')) return;
+  const { error } = await supabaseClient.from('mage_potion_recipes').delete().eq('potion_key', potionKey).eq('reagent_key', reagentKey);
+  if(error){ alert('Failed: ' + error.message); return; }
+  loadPotionRecipeItems();
 }
 
 /* ---------------- Narrator / Guide (0055) ----------------
