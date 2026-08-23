@@ -1036,12 +1036,12 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-moves">
       <div class="card">
         <h2>Move Catalog</h2>
-        <p class="hint">13-point update item 13: every individual move in the game, defined once here — edit a move's stats and it updates everywhere it's assigned below (an affinity baseline, a species's signature move, or a deity's signature override), no more hunting down the same move in three tables. Kind picks the slot a move can fill: Power (no swiftness shave) or Control (hits softer, shaves the defender's Swiftness for the rest of the fight) need an Affinity (used by the Element Wheel); Basic is the universal fallback strike and has none. A move can also carry a real triggered effect on top of its damage: <code>lifesteal_pct</code> (heal this % of the hit's damage), <code>stun_pct</code> (this % chance to skip the target's next action), <code>crit_bonus_pct</code> (+this many points of crit chance on this hit), <code>burn_flat</code> (ongoing damage/round for the rest of the fight), <code>poison_pct</code> (a second, independent DoT — this % of the target's max Vitality/round), <code>weaken_pct</code> (cuts the target's own Might by this % for the rest of the fight), <code>vulnerability_pct</code> (the target takes this % more damage from everything for the rest of the fight), or <code>shield_flat</code> (self-buff — absorbs your own next this-much total damage taken). Role is just a label for where a move is meant to be used — nothing reads it, so any move (including a brand new "custom" one) can be assigned anywhere a dropdown below lets you pick one.</p>
+        <p class="hint">13-point update item 13: every individual move in the game, defined once here — edit a move's stats and it updates everywhere it's assigned below (an affinity baseline, a species's signature move, or a deity's signature override), no more hunting down the same move in three tables. Kind picks the slot a move can fill: Power (no swiftness shave) or Control (hits softer, shaves the defender's Swiftness for the rest of the fight) need an Affinity (used by the Element Wheel); Basic is the universal fallback strike and has none. A move can also carry a real triggered effect on top of its damage: <code>lifesteal_pct</code> (heal this % of the hit's damage), <code>stun_pct</code> (this % chance to skip the target's next action), <code>crit_bonus_pct</code> (+this many points of crit chance on this hit), <code>burn_flat</code> (ongoing damage/round for the rest of the fight), <code>poison_pct</code> (a second, independent DoT — this % of the target's max Vitality/round), <code>weaken_pct</code> (cuts the target's own Might by this % for the rest of the fight), <code>vulnerability_pct</code> (the target takes this % more damage from everything for the rest of the fight), or <code>shield_flat</code> (self-buff — absorbs your own next this-much total damage taken). Role is just a label for where a move is meant to be used — nothing reads it, so any move (including a brand new "custom" one) can be assigned anywhere a dropdown below lets you pick one. Particle (0070) picks which burst sprite plays when this move lands in Campaign, Gauntlet, and PvP — leave it "— affinity default —" to keep the automatic look every other move of that affinity already has, or pick a specific one to make this move stand out.</p>
         <input class="search-box" type="text" id="moveCatalogSearch" placeholder="Search by name or key…">
         <div class="scroll-table" style="max-height:480px;">
           <table>
-            <thead><tr><th>Key</th><th>Name</th><th>Role</th><th>Affinity</th><th>Kind</th><th>Power</th><th>Swiftness shave</th><th>Effect key</th><th>Effect amt</th><th>Active</th></tr></thead>
-            <tbody id="moveCatalogRows"><tr><td colspan="10">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Name</th><th>Role</th><th>Affinity</th><th>Kind</th><th>Power</th><th>Swiftness shave</th><th>Effect key</th><th>Effect amt</th><th>Particle</th><th>Active</th></tr></thead>
+            <tbody id="moveCatalogRows"><tr><td colspan="11">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -1071,6 +1071,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <select id="newMoveEffectKey" style="max-width:220px;"></select>
           </div>
           <div class="field"><label>Effect amount</label><input type="number" step="0.01" id="newMoveEffectAmt" style="max-width:90px;"></div>
+          <div class="field"><label>Particle</label>
+            <select id="newMoveParticleKey" style="max-width:170px;"></select>
+          </div>
           <button id="addMoveCatalogBtn">Add move</button>
         </div>
         <div class="status" id="newMoveStatus"></div>
@@ -5444,12 +5447,14 @@ async function loadMoveCatalog(){
   if(affSel && !affSel.options.length) affSel.innerHTML = AFFINITIES.map(a => `<option value="${a}">${a}</option>`).join('');
   const effSel = document.getElementById('newMoveEffectKey');
   if(effSel && !effSel.options.length) effSel.innerHTML = effectKeyOptionsHtml(MOVE_EFFECT_OPTIONS, '');
+  const particleSel = document.getElementById('newMoveParticleKey');
+  if(particleSel && !particleSel.options.length) particleSel.innerHTML = particleKeyOptionsHtml('');
 
   const { data, error } = await supabaseClient.from('moves_catalog').select('*').order('role', { ascending: true }).order('sort_order', { ascending: true });
   moveCatalogCache = data || [];
   const rows = document.getElementById('moveCatalogRows');
   if(error){
-    rows.innerHTML = '<tr><td colspan="10">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="11">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = moveCatalogCache.map(m => `<tr data-key="${esc(m.key)}" data-name="${esc((m.name || '').toLowerCase())}">
@@ -5471,8 +5476,9 @@ async function loadMoveCatalog(){
     <td><input type="number" min="1" id="mcShave_${esc(m.key)}" value="${m.swiftness_shave ?? ''}" style="max-width:90px;"></td>
     <td><select id="mcEffectKey_${esc(m.key)}" style="max-width:200px;">${effectKeyOptionsHtml(MOVE_EFFECT_OPTIONS, m.effect_key)}</select></td>
     <td><input type="number" step="0.01" id="mcEffectAmt_${esc(m.key)}" value="${m.effect_amount ?? ''}" style="max-width:90px;"></td>
+    <td><select id="mcParticleKey_${esc(m.key)}" style="max-width:160px;">${particleKeyOptionsHtml(m.particle_key)}</select></td>
     <td><input type="checkbox" id="mcActive_${esc(m.key)}" ${m.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="10">No moves found.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="11">No moves found.</td></tr>';
 
   // The Species/Deity move pointer dropdowns below list catalog moves by
   // name — re-render them too so a rename/save here is reflected there
@@ -5506,6 +5512,7 @@ async function saveMoveCatalog(){
       swiftness_shave: shaveVal === '' ? null : parseInt(shaveVal, 10),
       effect_key: document.getElementById('mcEffectKey_' + key).value || null,
       effect_amount: effectAmtVal === '' ? null : parseFloat(effectAmtVal),
+      particle_key: document.getElementById('mcParticleKey_' + key).value || null,
       active: document.getElementById('mcActive_' + key).checked,
       updated_at: new Date().toISOString()
     };
@@ -5529,6 +5536,7 @@ async function addMoveCatalogEntry(){
   const shaveVal = document.getElementById('newMoveShave').value;
   const effectKey = document.getElementById('newMoveEffectKey').value || null;
   const effectAmtVal = document.getElementById('newMoveEffectAmt').value;
+  const particleKey = document.getElementById('newMoveParticleKey').value || null;
 
   if(!key || /\s/.test(key)){ status.className = 'status err'; status.textContent = 'Key is required and cannot contain spaces.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -5540,6 +5548,7 @@ async function addMoveCatalogEntry(){
     key, name, role, kind, affinity: kind === 'basic' ? null : affinity, power,
     swiftness_shave: shaveVal === '' ? null : parseInt(shaveVal, 10),
     effect_key: effectKey, effect_amount: effectAmtVal === '' ? null : parseFloat(effectAmtVal),
+    particle_key: particleKey,
     active: true
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
@@ -6475,6 +6484,17 @@ function effectKeyOptionsHtml(options, current){
   return all.map(o => `<option value="${esc(o.value)}" ${o.value === cur ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
 }
 
+// Same shape as effectKeyOptionsHtml, but the empty option reads as
+// "use the automatic affinity-based sprite" rather than "(none)" — a
+// move with particle_key unset still gets a particle, just not a
+// hand-picked one, so "no particle" would be a misleading label here.
+function particleKeyOptionsHtml(current){
+  const cur = current || '';
+  const known = MOVE_PARTICLE_OPTIONS.some(o => o.value === cur);
+  const all = [{ value: '', label: '— affinity default —' }].concat(MOVE_PARTICLE_OPTIONS, cur && !known ? [{ value: cur, label: cur + ' (unrecognized)' }] : []);
+  return all.map(o => `<option value="${esc(o.value)}" ${o.value === cur ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
+}
+
 // Wired by combat/index.ts as a passive, whole-fight aura — deity_blessings'
 // effect key, and guardian_item_catalog's enchantment effect key (same
 // vocabulary, same code path). dodge_pct and damage_reduction_pct added
@@ -6489,6 +6509,26 @@ const AURA_EFFECT_OPTIONS = [
 ];
 // Wired by combat/index.ts, triggered only on the round that move is cast.
 // poison_pct/weaken_pct/vulnerability_pct/shield_flat added for item 5.
+// Wired by combat/index.ts and pvp/index.ts (0070) — overrides the
+// affinity-based particle a move would otherwise spawn on hit. Values
+// match the sprite filenames already committed under particle-fx/
+// (fx_<value>.png) — see index.html's spawnParticles()/hitSprite().
+const MOVE_PARTICLE_OPTIONS = [
+  { value: 'burst', label: 'burst' },
+  { value: 'dust', label: 'dust' },
+  { value: 'ember', label: 'ember' },
+  { value: 'flame', label: 'flame' },
+  { value: 'glow_ring', label: 'glow_ring' },
+  { value: 'glow_rings', label: 'glow_rings' },
+  { value: 'impact', label: 'impact' },
+  { value: 'lightning', label: 'lightning' },
+  { value: 'ripple', label: 'ripple' },
+  { value: 'rune', label: 'rune' },
+  { value: 'smoke_thick', label: 'smoke_thick' },
+  { value: 'smoke_thin', label: 'smoke_thin' },
+  { value: 'starburst', label: 'starburst' },
+  { value: 'streak', label: 'streak' },
+];
 const MOVE_EFFECT_OPTIONS = [
   { value: 'lifesteal_pct', label: 'lifesteal_pct - heal N% of this hit damage' },
   { value: 'stun_pct', label: 'stun_pct - N% chance to stun the target' },
