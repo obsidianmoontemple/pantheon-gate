@@ -160,6 +160,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="gauntlet" onclick="showTab('gauntlet')">Gauntlet</button>
       <button class="tab-btn" data-tab="species" onclick="showTab('species')">Guardian Species</button>
       <button class="tab-btn" data-tab="mage" onclick="showTab('mage')">Mage</button>
+      <button class="tab-btn" data-tab="stamina" onclick="showTab('stamina')">Energy &amp; Tickets</button>
       <button class="tab-btn" data-tab="moves" onclick="showTab('moves')">Moves</button>
       <button class="tab-btn" data-tab="wheel" onclick="showTab('wheel')">Element Wheel</button>
       <button class="tab-btn" data-tab="blessings" onclick="showTab('blessings')">Deity Blessings</button>
@@ -1030,6 +1031,36 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <button id="addRecipeItemBtn">Add to recipe</button>
         </div>
         <div class="status" id="newRecipeItemStatus"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-stamina">
+      <div class="card">
+        <h2>Energy &amp; Tickets (0071)</h2>
+        <p class="hint">"We need to create an energy system for campaigning and fighting." Energy gates Campaign, Gauntlet, World Boss, Circle Dragon, and Mage Duel attempts — one shared pool per player, since it lives on their Guardian row. PvP uses a separate pool, Tickets, so grinding one kind of fight dry never blocks the other. Both regenerate passively over time (no cron job — the elapsed time since each was last spent is computed fresh whenever it's checked, same as Mage HP). World Boss, Circle Dragon, and Mage Duel keep their existing per-user cooldowns on top of this — the cooldown stops burst-clicking one request, Energy is the budget across a whole session.</p>
+        <h3>Energy</h3>
+        <div class="form-row">
+          <div class="field"><label>Max Energy</label><input type="number" min="1" id="stEnergyMax" style="max-width:120px;"></div>
+          <div class="field"><label>Regen per hour</label><input type="number" min="0" id="stEnergyRegenPerHour" style="max-width:140px;"></div>
+        </div>
+        <h3>Energy cost per attempt</h3>
+        <div class="form-row">
+          <div class="field"><label>Campaign</label><input type="number" min="0" id="stEnergyCostCampaign" style="max-width:110px;"></div>
+          <div class="field"><label>Gauntlet</label><input type="number" min="0" id="stEnergyCostGauntlet" style="max-width:110px;"></div>
+          <div class="field"><label>World Boss</label><input type="number" min="0" id="stEnergyCostWorldBoss" style="max-width:120px;"></div>
+          <div class="field"><label>Circle Dragon</label><input type="number" min="0" id="stEnergyCostDragon" style="max-width:130px;"></div>
+          <div class="field"><label>Mage Duel</label><input type="number" min="0" id="stEnergyCostMageDuel" style="max-width:120px;"></div>
+        </div>
+        <h3>Tickets (PvP)</h3>
+        <div class="form-row">
+          <div class="field"><label>Max Tickets</label><input type="number" min="1" id="stTicketMax" style="max-width:120px;"></div>
+          <div class="field"><label>Regen per hour</label><input type="number" min="0" id="stTicketRegenPerHour" style="max-width:140px;"></div>
+          <div class="field"><label>Cost per challenge</label><input type="number" min="0" id="stTicketCostPvp" style="max-width:150px;"></div>
+        </div>
+        <div class="save-bar">
+          <button id="saveStaminaSettingsBtn">Save changes</button>
+          <div class="status" id="staminaSettingsStatus"></div>
+        </div>
       </div>
     </div>
 
@@ -2360,6 +2391,7 @@ async function handleSession(session){
   loadPromoEvents();
   loadGuardianProgression();
   loadMageProgression();
+  loadStaminaSettings();
   loadDragonCatalog();
   loadWorldBoss();
   loadAltarSeedCatalog();
@@ -2812,6 +2844,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('saveProgressionBtn').addEventListener('click', saveGuardianProgression);
   document.getElementById('saveMageProgressionBtn').addEventListener('click', saveMageProgression);
+  document.getElementById('saveStaminaSettingsBtn').addEventListener('click', saveStaminaSettings);
 
   document.getElementById('saveDragonsBtn').addEventListener('click', saveDragonCatalog);
   document.getElementById('addDragonBtn').addEventListener('click', addDragon);
@@ -4737,6 +4770,61 @@ async function saveMageProgression(){
   }).eq('id', 1);
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies to the next train/duel — a Mage\'s already-earned levels/XP are untouched.';
+}
+
+// Energy & Tickets (0071) — same "id=1 singleton settings row" shape as
+// mage_progression_settings above.
+async function loadStaminaSettings(){
+  const { data, error } = await supabaseClient.from('stamina_settings').select('*').eq('id', 1).maybeSingle();
+  const status = document.getElementById('staminaSettingsStatus');
+  if(!status) return; // this tab's markup isn't on the page (e.g. mid-deploy) — nothing to fill in
+  if(error || !data){
+    status.textContent = 'Could not load: ' + (error?.message || 'no row found');
+    return;
+  }
+  document.getElementById('stEnergyMax').value = data.energy_max;
+  document.getElementById('stEnergyRegenPerHour').value = data.energy_regen_per_hour;
+  document.getElementById('stEnergyCostCampaign').value = data.energy_cost_campaign;
+  document.getElementById('stEnergyCostGauntlet').value = data.energy_cost_gauntlet;
+  document.getElementById('stEnergyCostWorldBoss').value = data.energy_cost_world_boss;
+  document.getElementById('stEnergyCostDragon').value = data.energy_cost_dragon;
+  document.getElementById('stEnergyCostMageDuel').value = data.energy_cost_mage_duel;
+  document.getElementById('stTicketMax').value = data.ticket_max;
+  document.getElementById('stTicketRegenPerHour').value = data.ticket_regen_per_hour;
+  document.getElementById('stTicketCostPvp').value = data.ticket_cost_pvp;
+}
+
+async function saveStaminaSettings(){
+  const status = document.getElementById('staminaSettingsStatus');
+  const v = id => parseInt(document.getElementById(id).value, 10);
+  const energyMax = v('stEnergyMax'), energyRegenPerHour = v('stEnergyRegenPerHour');
+  const energyCostCampaign = v('stEnergyCostCampaign'), energyCostGauntlet = v('stEnergyCostGauntlet');
+  const energyCostWorldBoss = v('stEnergyCostWorldBoss'), energyCostDragon = v('stEnergyCostDragon'), energyCostMageDuel = v('stEnergyCostMageDuel');
+  const ticketMax = v('stTicketMax'), ticketRegenPerHour = v('stTicketRegenPerHour'), ticketCostPvp = v('stTicketCostPvp');
+
+  const allValues = [energyMax, energyRegenPerHour, energyCostCampaign, energyCostGauntlet, energyCostWorldBoss, energyCostDragon, energyCostMageDuel, ticketMax, ticketRegenPerHour, ticketCostPvp];
+  if(allValues.some(n => isNaN(n) || n < 0)){
+    status.className = 'status err';
+    status.textContent = 'Every field must be a non-negative number.';
+    return;
+  }
+  if(energyMax < 1 || ticketMax < 1){
+    status.className = 'status err';
+    status.textContent = 'Max Energy and Max Tickets must be at least 1.';
+    return;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('stamina_settings').update({
+    energy_max: energyMax, energy_regen_per_hour: energyRegenPerHour,
+    energy_cost_campaign: energyCostCampaign, energy_cost_gauntlet: energyCostGauntlet,
+    energy_cost_world_boss: energyCostWorldBoss, energy_cost_dragon: energyCostDragon, energy_cost_mage_duel: energyCostMageDuel,
+    ticket_max: ticketMax, ticket_regen_per_hour: ticketRegenPerHour, ticket_cost_pvp: ticketCostPvp,
+    updated_at: new Date().toISOString()
+  }).eq('id', 1);
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Existing balances are unaffected — new caps/costs apply the next time each is checked.';
 }
 
 /* =====================================================================
