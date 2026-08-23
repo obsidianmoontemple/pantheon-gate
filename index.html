@@ -1111,6 +1111,17 @@ let shrineEntitlements = []; // cached entitlements rows (scope_type, scope_id, 
 let mailView = null;       // null | {step:'home'} — top-level; surfaces the long-existing broadcasts/claim_broadcast backend for the first time (Map hub's "Mail" hotspot only — Promo is its own separate screen, see promoView)
 let mailBroadcasts = [];   // cached list for renderMail()
 let mailClaimedIds = new Set(); // broadcast ids this user has already claimed
+
+// Energy & Tickets (0071) — "an energy system for campaigning and
+// fighting." The authoritative balances live on `guardian` itself
+// (energy_current/energy_updated_at/tickets_current/tickets_updated_at,
+// already in loadGuardian()'s select above); this is just the shared
+// admin-tunable caps/rates row (stamina_settings), loaded once at
+// startup and read by energyNow()/ticketsNow() below to compute a live,
+// regen-inclusive number for display — same lazy "elapsed time since
+// last write" formula the server itself uses, so the bar shown here
+// never drifts from what the next action would actually charge.
+let staminaSettings = null;
 let backpackView = null;   // null | {step:'home'} — top-level aggregator over every inventory in the game (Map hub's "Backpack" hotspot)
 // "Backpack consolidation ... it will need a few different tabs" — was a
 // single screen with three stacked read-only cards (Craft items, Arena
@@ -1249,6 +1260,7 @@ async function afterLogin(){
   await loadMapHotspots().catch(e => console.error('map hotspots load failed', e));
   await loadGuardian();
   await loadMage();
+  loadStaminaSettings().catch(e => console.error('stamina settings load failed', e));
   if(guardian) await loadMarks();
   loadMoonPhase().catch(e => console.error('moon phase load failed', e));
   // For-sale flags need to be known site-wide, not just inside the Shop —
@@ -1405,11 +1417,61 @@ async function forgotPassword(){
 async function loadGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at, energy_current, energy_updated_at, tickets_current, tickets_updated_at')
     .eq('owner_user_id', session.user.id)
     .maybeSingle();
   if(error){ console.error('guardian load failed', error); return; }
   guardian = data;
+}
+
+async function loadStaminaSettings(){
+  const { data, error } = await supabaseClient.from('stamina_settings').select('*').eq('id', 1).maybeSingle();
+  if(error || !data){ console.error('stamina settings load failed', error); return; }
+  staminaSettings = data;
+}
+
+// Display-only regen preview — mirrors guardianRegenedEnergy()/the
+// ticket equivalent in every edge function exactly, but never writes
+// anything back (only an actual spend does that, server-side). Falls
+// back to the raw stored value if settings haven't loaded yet rather
+// than showing nothing.
+function energyNow(){
+  if(!guardian) return 0;
+  if(!staminaSettings) return guardian.energy_current ?? 0;
+  const hoursElapsed = (Date.now() - new Date(guardian.energy_updated_at).getTime()) / (1000 * 60 * 60);
+  const regened = Math.floor(hoursElapsed * staminaSettings.energy_regen_per_hour);
+  return Math.min(staminaSettings.energy_max, guardian.energy_current + Math.max(0, regened));
+}
+function ticketsNow(){
+  if(!guardian) return 0;
+  if(!staminaSettings) return guardian.tickets_current ?? 0;
+  const hoursElapsed = (Date.now() - new Date(guardian.tickets_updated_at).getTime()) / (1000 * 60 * 60);
+  const regened = Math.floor(hoursElapsed * staminaSettings.ticket_regen_per_hour);
+  return Math.min(staminaSettings.ticket_max, guardian.tickets_current + Math.max(0, regened));
+}
+function energyBarHtml(){
+  if(!guardian || !staminaSettings) return '';
+  const cur = energyNow(), max = staminaSettings.energy_max;
+  const pct = max > 0 ? Math.max(0, Math.min(100, Math.round((cur / max) * 100))) : 0;
+  return `<div style="margin-top:10px;">
+    <div class="essence-row" style="margin-bottom:4px;">
+      <span class="essence-label">⚡ Energy</span>
+      <span class="essence-value">${cur} / ${max}</span>
+    </div>
+    <div class="hp-bar-track"><div class="hp-bar-fill mage-vit${cur <= 0 ? ' low' : ''}" style="width:${pct}%;"></div></div>
+  </div>`;
+}
+function ticketsBarHtml(){
+  if(!guardian || !staminaSettings) return '';
+  const cur = ticketsNow(), max = staminaSettings.ticket_max;
+  const pct = max > 0 ? Math.max(0, Math.min(100, Math.round((cur / max) * 100))) : 0;
+  return `<div style="margin-top:10px;">
+    <div class="essence-row" style="margin-bottom:4px;">
+      <span class="essence-label">🎟️ Tickets</span>
+      <span class="essence-value">${cur} / ${max}</span>
+    </div>
+    <div class="hp-bar-track"><div class="hp-bar-fill mage-vit${cur <= 0 ? ' low' : ''}" style="width:${pct}%;"></div></div>
+  </div>`;
 }
 
 async function loadMarks(){
@@ -1546,7 +1608,7 @@ async function hatchGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
     .insert({ owner_user_id: session.user.id, species: pickedSpecies, name })
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at, energy_current, energy_updated_at, tickets_current, tickets_updated_at')
     .single();
 
   if(error){
@@ -1955,6 +2017,8 @@ function renderGuardianFamiliarTab(){
             <span class="essence-label">Essence</span>
             <span class="essence-value">${guardian.essence || 0}</span>
           </div>
+
+          ${energyBarHtml()}
         </div>
       </div>
 
@@ -2039,6 +2103,8 @@ function renderGuardianMageTab(){
           </div>
           <div class="hp-bar-track"><div class="hp-bar-fill mage-vit${hpPct <= 25 ? ' low' : ''}" style="width:${hpPct}%;"></div></div>
           ${buff ? `<p class="hint">+${buff.amount} ${esc(buff.statKey)} buff active.</p>` : ''}
+
+          ${energyBarHtml()}
         </div>
       </div>
 
@@ -2269,15 +2335,29 @@ async function doDuelMage(){
   // for real either way (win or lose), so both loadMage() (base row)
   // and loadMageStatus() (regen-inclusive display number) refresh here.
   await Promise.all([loadMage(), loadMageStatus()]);
+  // Energy (0071) — spent on the attempt itself, win or lose. Patch the
+  // locally-held guardian row immediately, same reasoning as Energy in
+  // startBattle() above (Mage Duel draws from the same shared pool).
+  if(guardian && typeof data.energyRemaining === 'number'){
+    guardian.energy_current = data.energyRemaining;
+    guardian.energy_updated_at = new Date().toISOString();
+  }
   const roundsFought = data.rounds ? data.rounds.length : 0;
   const hpNote = `${data.mageHpRemaining} / ${data.mageMaxHp} HP left.`;
+  // Element Wheel (0071) — "yes, add it to Mage duels." Naming both
+  // sides' elements is the simplest way to actually show it's live,
+  // rather than leaving the wheel's effect invisible inside the damage
+  // math the way it always has been in every other fight screen.
+  const elementNote = data.monsterAffinity
+    ? ` Foe's element: ${esc(data.monsterAffinity)}${data.mageAffinity ? `, yours: ${esc(data.mageAffinity)}` : ''}.`
+    : '';
   if(!data.won){
     render();
-    setMageActionStatus(`Beaten back after ${roundsFought} round${roundsFought === 1 ? '' : 's'} — ${hpNote} No reward, but no other penalty either. Heal up or wait it out.`, false);
+    setMageActionStatus(`Beaten back after ${roundsFought} round${roundsFought === 1 ? '' : 's'} — ${hpNote} No reward, but no other penalty either. Heal up or wait it out.${elementNote}`, false);
     playMageDuelRoundParticles(data.rounds);
     return;
   }
-  let msg = `Victory in ${roundsFought} round${roundsFought === 1 ? '' : 's'}! ${hpNote} +${data.xpGained} XP, +${data.shardsGained} God Shards.`;
+  let msg = `Victory in ${roundsFought} round${roundsFought === 1 ? '' : 's'}! ${hpNote} +${data.xpGained} XP, +${data.shardsGained} God Shards.${elementNote}`;
   if(data.levelsGained > 0) msg += ` Leveled up to ${data.level}!`;
   if(data.reagentWon) msg += ` Found: ${data.reagentWon.name}.`;
   if(data.reagentWon) await loadMageReagentsOwned();
@@ -3524,6 +3604,15 @@ async function doAttackWorldBoss(){
     const data = await resp.json();
     if(!data.ok){ setWorldBossStatusMsg(data.error || 'Could not land that attack.', false); await refreshWorldBossStatus(); return; }
 
+    // Energy (0071) — spent on every successful attempt (repelled, hit,
+    // or kill alike). Patch the locally-held guardian row immediately —
+    // loadGuardian() below only runs on the kill branch, so this is the
+    // one place that keeps the Energy bar accurate on every outcome.
+    if(guardian && typeof data.energyRemaining === 'number'){
+      guardian.energy_current = data.energyRemaining;
+      guardian.energy_updated_at = new Date().toISOString();
+    }
+
     if(data.repelled){
       // Direct feedback: "it needs to retaliate." Same shape/messaging as
       // renderCircleDragon's attack handler — the boss's counter-swing
@@ -3613,6 +3702,7 @@ function renderWorldBoss(){
               : `<p class="hint tap-action" onclick="doAttackWorldBoss()">Tap to attack.</p>`
           }
           <div class="status" id="worldBossActionStatus"></div>
+          ${energyBarHtml()}
 
           <h3 style="margin-top:16px;text-align:left;">Top damage</h3>
           ${leaderboardRows}
@@ -4444,6 +4534,7 @@ function renderLoadoutPicker(){
       <h2 style="text-align:center;">Choose your loadout</h2>
       <p class="hint" style="text-align:center;">Facing the ${esc(opponentLabel)}. Pick up to five full marks to bring — Basic Strike always comes free. ${loadoutPicks.length}/5 chosen.</p>
       ${rows}
+      ${energyBarHtml()}
       <button style="margin-top:14px;" onclick="startBattle()">Begin the trial</button>
       <button class="secondary" style="margin-top:10px;" onclick="${isCampaign ? 'backFromCampaignCombat()' : 'cancelCombat()'}">Back</button>
       <div class="status" id="loadoutStatus"></div>
@@ -4483,6 +4574,15 @@ async function startBattle(){
       moves: data.moves,
       log: []
     };
+    // Energy (0071) — the server already deducted this on a brand-new
+    // trial (resuming one in progress just echoes the current number
+    // back, unchanged). Patch the locally-held guardian row so the
+    // Energy bar reflects it immediately, without waiting on a separate
+    // loadGuardian() round trip.
+    if(guardian && typeof data.energyRemaining === 'number'){
+      guardian.energy_current = data.energyRemaining;
+      guardian.energy_updated_at = new Date().toISOString();
+    }
     render();
   }catch(e){
     if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
@@ -6363,6 +6463,7 @@ function renderCircleDragon(){
       ${dragonSprite}
       ${mainBlock}
       <div class="status" id="dragonActionStatus"></div>
+      ${energyBarHtml()}
     </div>
     <div class="card"${dragonBg}>
       <h2>Defeated</h2>
@@ -7311,6 +7412,12 @@ async function openPvpLeaderboard(){
 async function doPvpChallenge(targetUserId){
   const data = await pvpFetch('challenge', { targetUserId });
   if(!data.ok){ setPvpActionStatus(data.error || 'Could not send challenge.', false); return; }
+  // Tickets (0071) — patch the locally-held guardian row immediately,
+  // same reasoning as Energy in startBattle() above.
+  if(guardian && typeof data.ticketsRemaining === 'number'){
+    guardian.tickets_current = data.ticketsRemaining;
+    guardian.tickets_updated_at = new Date().toISOString();
+  }
   pvpView = { step: 'home' };
   render();
   setPvpActionStatus('Challenge sent.', true);
@@ -7530,6 +7637,7 @@ function renderPvpHome(){
       <h2>The Arena</h2>
       <p class="hint">Your ladder position: <strong style="color:var(--gold-bright);">${pvpStatus.ladderPosition ? '#' + pvpStatus.ladderPosition : 'unranked — play a duel to join the ladder'}</strong></p>
       <p class="hint">Favor: <strong style="color:var(--gold-bright);">${guardian.favor || 0}</strong></p>
+      ${ticketsBarHtml()}
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
         <button onclick="openPvpBrowse()">Find an opponent</button>
         <button class="secondary" onclick="openPvpLeaderboard()">Leaderboard</button>
