@@ -538,8 +538,41 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
 
       <div class="card">
+        <h2>Saved World Bosses</h2>
+        <p class="hint">Reusable boss templates — save one once, spawn it again for the next event instead of retyping everything. Spawning from here (or from the form below) never touches these rows; it only ever inserts a fresh event into the live World Boss.</p>
+        <div class="scroll-table" style="max-height:340px;">
+          <table>
+            <thead><tr>
+              <th>Key</th><th>Name</th><th>Affinity</th><th>Ward</th><th>Power</th><th>HP</th>
+              <th>Reward Essence</th><th>Reward Tokens</th><th>Image URL</th><th>Active</th><th></th>
+            </tr></thead>
+            <tbody id="worldBossCatalogRows"><tr><td colspan="11">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveWorldBossCatalogBtn">Save changes</button>
+          <div class="status" id="worldBossCatalogStatus"></div>
+        </div>
+        <h3>Save a new template</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newBossTplKey" style="max-width:140px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newBossTplName" style="max-width:180px;"></div>
+          <div class="field"><label>Affinity (optional)</label><select id="newBossTplAffinity" style="max-width:150px;"><option value="">— none —</option></select></div>
+          <div class="field"><label>Ward</label><input type="number" min="0" id="newBossTplWard" value="0" style="max-width:90px;"></div>
+          <div class="field"><label>Power</label><input type="number" min="0" id="newBossTplPower" value="60" style="max-width:90px;"></div>
+          <div class="field"><label>HP pool</label><input type="number" min="1" id="newBossTplHp" style="max-width:120px;"></div>
+          <button id="addWorldBossTplBtn">Save template</button>
+        </div>
+        <div class="status" id="newWorldBossTplStatus"></div>
+      </div>
+
+      <div class="card">
         <h2>Spawn a new World Boss</h2>
         <p class="hint">The boss now retaliates on every swing (direct feedback: "it needs to retaliate") — Power is its counter-attack strength; a swing that would meet or exceed an attacker's vitality repels that attack entirely (0 damage that swing, cooldown still applies).</p>
+        <div class="field" style="max-width:320px;">
+          <label>Start from a saved template (optional)</label>
+          <select id="newBossFromTemplate"><option value="">— hand-typed —</option></select>
+        </div>
         <div class="form-row">
           <div class="field"><label>Name</label><input type="text" id="newBossName" placeholder="e.g. The Unmade King" style="max-width:220px;"></div>
           <div class="field"><label>Affinity (optional)</label><select id="newBossAffinity" style="max-width:150px;"><option value="">— none —</option></select></div>
@@ -555,6 +588,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="field" style="max-width:none;">
           <label>Flavor text (optional, shown to players)</label>
           <textarea id="newBossFlavor" rows="2"></textarea>
+        </div>
+        <div class="field" style="max-width:320px;">
+          <label><input type="checkbox" id="newBossSaveAsTemplate"> Also save this as a reusable template</label>
+          <input type="text" id="newBossSaveAsTemplateKey" placeholder="template key (lowercase, no spaces)" style="margin-top:6px;">
         </div>
         <div class="save-bar">
           <button id="spawnWorldBossBtn">Spawn boss</button>
@@ -2865,6 +2902,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('spawnWorldBossBtn').addEventListener('click', spawnWorldBoss);
   document.getElementById('endWorldBossBtn').addEventListener('click', endWorldBoss);
+  document.getElementById('saveWorldBossCatalogBtn').addEventListener('click', saveWorldBossCatalog);
+  document.getElementById('addWorldBossTplBtn').addEventListener('click', addWorldBossTemplate);
+  document.getElementById('newBossFromTemplate').addEventListener('change', applyWorldBossTemplateToForm);
 
   document.getElementById('saveAltarSeedsBtn').addEventListener('click', saveAltarSeedCatalog);
   document.getElementById('addAltarSeedBtn').addEventListener('click', addAltarSeed);
@@ -4951,9 +4991,158 @@ function worldBossStatusLabel(status){
   return 'Ended';
 }
 
+/* =====================================================================
+   WORLD BOSS — SAVED TEMPLATES (world_boss_catalog)
+   ===================================================================== */
+
+async function loadWorldBossCatalog(){
+  const rows = document.getElementById('worldBossCatalogRows');
+  const tplAffSel = document.getElementById('newBossTplAffinity');
+  if(tplAffSel && tplAffSel.options.length <= 1) AFFINITIES.forEach(a => tplAffSel.insertAdjacentHTML('beforeend', `<option value="${a}">${a}</option>`));
+
+  const { data, error } = await supabaseClient.from('world_boss_catalog').select('*').order('name', { ascending: true });
+  if(error){
+    rows.innerHTML = '<tr><td colspan="11">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+
+  rows.innerHTML = (data || []).map(b => `<tr data-key="${esc(b.key)}">
+    <td class="dim">${esc(b.key)}</td>
+    <td><input type="text" id="wbtName_${esc(b.key)}" value="${esc(b.name)}"></td>
+    <td>
+      <select id="wbtAff_${esc(b.key)}">
+        <option value="" ${!b.affinity ? 'selected' : ''}>— none —</option>
+        ${AFFINITIES.map(a => `<option value="${a}" ${a === b.affinity ? 'selected' : ''}>${a}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="number" min="0" id="wbtWard_${esc(b.key)}" value="${b.ward}"></td>
+    <td><input type="number" min="0" id="wbtPower_${esc(b.key)}" value="${b.power}"></td>
+    <td><input type="number" min="1" id="wbtHp_${esc(b.key)}" value="${b.hp_total}"></td>
+    <td><input type="number" min="0" id="wbtRewardEss_${esc(b.key)}" value="${b.reward_essence_pool}"></td>
+    <td><input type="number" min="0" id="wbtRewardTok_${esc(b.key)}" value="${b.reward_god_tokens_pool}"></td>
+    <td><input type="text" id="wbtImg_${esc(b.key)}" value="${esc(b.image_url || '')}" style="max-width:160px;"></td>
+    <td><input type="checkbox" id="wbtActive_${esc(b.key)}" ${b.active ? 'checked' : ''}></td>
+    <td><button type="button" onclick="spawnWorldBossFromCatalog('${esc(b.key)}')">Spawn this</button></td>
+  </tr>`).join('') || '<tr><td colspan="11">No saved templates yet — spawn one below and tick "save as reusable", or fill in "Save a new template".</td></tr>';
+
+  const fromSel = document.getElementById('newBossFromTemplate');
+  if(fromSel){
+    const prev = fromSel.value;
+    fromSel.innerHTML = '<option value="">— hand-typed —</option>' +
+      (data || []).map(b => `<option value="${esc(b.key)}">${esc(b.name)}</option>`).join('');
+    if(prev) fromSel.value = prev;
+  }
+
+  worldBossCatalogCache = data || [];
+}
+
+let worldBossCatalogCache = [];
+
+async function saveWorldBossCatalog(){
+  const status = document.getElementById('worldBossCatalogStatus');
+  const trs = document.querySelectorAll('#worldBossCatalogRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    return {
+      key,
+      name: document.getElementById('wbtName_' + key).value.trim(),
+      affinity: document.getElementById('wbtAff_' + key).value || null,
+      ward: parseInt(document.getElementById('wbtWard_' + key).value, 10),
+      power: parseInt(document.getElementById('wbtPower_' + key).value, 10),
+      hp_total: parseInt(document.getElementById('wbtHp_' + key).value, 10),
+      reward_essence_pool: parseInt(document.getElementById('wbtRewardEss_' + key).value, 10),
+      reward_god_tokens_pool: parseInt(document.getElementById('wbtRewardTok_' + key).value, 10),
+      image_url: document.getElementById('wbtImg_' + key).value.trim() || null,
+      active: document.getElementById('wbtActive_' + key).checked,
+    };
+  });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('world_boss_catalog').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadWorldBossCatalog();
+}
+
+async function addWorldBossTemplate(){
+  const status = document.getElementById('newWorldBossTplStatus');
+  const key = document.getElementById('newBossTplKey').value.trim().toLowerCase();
+  const name = document.getElementById('newBossTplName').value.trim();
+  const affinity = document.getElementById('newBossTplAffinity').value || null;
+  const ward = parseInt(document.getElementById('newBossTplWard').value, 10);
+  const power = parseInt(document.getElementById('newBossTplPower').value, 10);
+  const hp = parseInt(document.getElementById('newBossTplHp').value, 10);
+
+  if(!key || !/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters, numbers, underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  if(isNaN(hp) || hp < 1){ status.className = 'status err'; status.textContent = 'Enter an HP pool greater than 0.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('world_boss_catalog').insert({
+    key, name, affinity,
+    ward: isNaN(ward) ? 0 : ward,
+    power: isNaN(power) ? 60 : power,
+    hp_total: hp,
+  });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : (name + ' saved — pick it from "Start from a saved template" any time.');
+  if(!error){
+    ['newBossTplKey','newBossTplName','newBossTplWard','newBossTplPower','newBossTplHp'].forEach(fid => {
+      const el = document.getElementById(fid);
+      if(fid === 'newBossTplWard') el.value = '0';
+      else if(fid === 'newBossTplPower') el.value = '60';
+      else el.value = '';
+    });
+    document.getElementById('newBossTplAffinity').value = '';
+    loadWorldBossCatalog();
+  }
+}
+
+function applyWorldBossTemplateToForm(){
+  const key = document.getElementById('newBossFromTemplate').value;
+  if(!key) return;
+  const tpl = worldBossCatalogCache.find(b => b.key === key);
+  if(!tpl) return;
+  document.getElementById('newBossName').value = tpl.name;
+  document.getElementById('newBossAffinity').value = tpl.affinity || '';
+  document.getElementById('newBossWard').value = tpl.ward;
+  document.getElementById('newBossPower').value = tpl.power;
+  document.getElementById('newBossHp').value = tpl.hp_total;
+  document.getElementById('newBossRewardEssence').value = tpl.reward_essence_pool;
+  document.getElementById('newBossRewardTokens').value = tpl.reward_god_tokens_pool;
+  document.getElementById('newBossImageUrl').value = tpl.image_url || '';
+}
+
+// Spawns straight from a saved row's button, bypassing the hand-typed form
+// entirely — reward pools default to the template's own saved pools since
+// there's no separate form to read them from here.
+async function spawnWorldBossFromCatalog(key){
+  const tpl = worldBossCatalogCache.find(b => b.key === key);
+  if(!tpl) return;
+  const status = document.getElementById('spawnWorldBossStatus');
+  status.className = 'status';
+  status.textContent = 'Spawning ' + tpl.name + '…';
+
+  await supabaseClient.from('world_bosses').update({ status: 'ended', resolved_at: new Date().toISOString() }).eq('status', 'active');
+  const { error } = await supabaseClient.from('world_bosses').insert({
+    name: tpl.name, affinity: tpl.affinity, ward: tpl.ward, power: tpl.power,
+    hp_total: tpl.hp_total, hp_remaining: tpl.hp_total,
+    reward_essence_pool: tpl.reward_essence_pool,
+    reward_god_tokens_pool: tpl.reward_god_tokens_pool,
+    image_url: tpl.image_url, flavor_text: tpl.flavor_text,
+    status: 'active',
+  });
+
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : (tpl.name + ' is live — players can attack it from the map now.');
+  if(!error) loadWorldBoss();
+}
+
 async function loadWorldBoss(){
   const affSel = document.getElementById('newBossAffinity');
   if(affSel && affSel.options.length <= 1) AFFINITIES.forEach(a => affSel.insertAdjacentHTML('beforeend', `<option value="${a}">${a}</option>`));
+  loadWorldBossCatalog();
 
   const current = document.getElementById('worldBossCurrent');
   const { data: boss, error } = await supabaseClient
@@ -5032,15 +5221,34 @@ async function spawnWorldBoss(){
 
   if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
 
+  let templateNote = '';
+  if(document.getElementById('newBossSaveAsTemplate').checked){
+    const tplKey = document.getElementById('newBossSaveAsTemplateKey').value.trim().toLowerCase();
+    if(!tplKey || !/^[a-z0-9_]+$/.test(tplKey)){
+      templateNote = ' (not saved as a template — key must be lowercase letters, numbers, underscores only)';
+    } else {
+      const { error: tplError } = await supabaseClient.from('world_boss_catalog').upsert({
+        key: tplKey, name, affinity, ward, power, hp_total: hp,
+        reward_essence_pool: isNaN(rewardEssence) ? 0 : rewardEssence,
+        reward_god_tokens_pool: isNaN(rewardTokens) ? 0 : rewardTokens,
+        image_url: imageUrl || null, flavor_text: flavor || null,
+      }, { onConflict: 'key' });
+      templateNote = tplError ? (' (template save failed: ' + tplError.message + ')') : ' Also saved as a reusable template.';
+      if(!tplError) loadWorldBossCatalog();
+    }
+  }
+
   status.className = 'status ok';
-  status.textContent = name + ' is live — players can attack it from the map now.';
-  ['newBossName','newBossWard','newBossHp','newBossRewardEssence','newBossRewardTokens','newBossImageUrl','newBossFlavor'].forEach(fid => {
+  status.textContent = name + ' is live — players can attack it from the map now.' + templateNote;
+  ['newBossName','newBossWard','newBossHp','newBossRewardEssence','newBossRewardTokens','newBossImageUrl','newBossFlavor','newBossSaveAsTemplateKey'].forEach(fid => {
     const el = document.getElementById(fid);
     if(fid === 'newBossWard') el.value = '0';
     else if(fid === 'newBossRewardEssence' || fid === 'newBossRewardTokens') el.value = '0';
     else el.value = '';
   });
   document.getElementById('newBossAffinity').value = '';
+  document.getElementById('newBossSaveAsTemplate').checked = false;
+  document.getElementById('newBossFromTemplate').value = '';
   loadWorldBoss();
 }
 
