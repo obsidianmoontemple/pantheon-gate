@@ -1417,7 +1417,7 @@ async function forgotPassword(){
 async function loadGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at, energy_current, energy_updated_at, tickets_current, tickets_updated_at')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at, energy_current, energy_updated_at, tickets_current, tickets_updated_at, current_hp, hp_updated_at')
     .eq('owner_user_id', session.user.id)
     .maybeSingle();
   if(error){ console.error('guardian load failed', error); return; }
@@ -1452,6 +1452,36 @@ function ticketsNow(){
   const hoursElapsed = (Date.now() - new Date(guardian.tickets_updated_at).getTime()) / (1000 * 60 * 60);
   const regened = Math.floor(hoursElapsed * staminaSettings.ticket_regen_per_hour);
   return Math.min(staminaSettings.ticket_max, guardian.tickets_current + Math.max(0, regened));
+}
+// Guardian HP (0076) — same lazy-regen preview shape as energyNow()/
+// ticketsNow(), mirroring guardianEffectiveHp() server-side exactly.
+// current_hp null means "at full" (guardianHpMax()), same as a brand-new
+// or never-fought guardian. "We have no sense of personal HP loss" —
+// this is what makes HP visible outside a fight screen at all.
+function guardianHpMax(){
+  return guardian ? guardian.vitality : 0;
+}
+function guardianHpNow(){
+  if(!guardian) return 0;
+  const max = guardianHpMax();
+  if(guardian.current_hp === null || guardian.current_hp === undefined) return max;
+  if(!staminaSettings || !guardian.hp_updated_at) return Math.min(max, guardian.current_hp);
+  const hoursElapsed = (Date.now() - new Date(guardian.hp_updated_at).getTime()) / (1000 * 60 * 60);
+  const regened = Math.floor(hoursElapsed * staminaSettings.guardian_hp_regen_per_hour);
+  return Math.min(max, guardian.current_hp + Math.max(0, regened));
+}
+function guardianHpBarHtml(){
+  if(!guardian) return '';
+  const max = guardianHpMax();
+  const cur = guardianHpNow();
+  const pct = max > 0 ? Math.max(0, Math.min(100, Math.round((cur / max) * 100))) : 0;
+  return `<div style="margin-top:10px;">
+    <div class="essence-row" style="margin-bottom:4px;">
+      <span class="essence-label">HP</span>
+      <span class="essence-value">${cur} / ${max}</span>
+    </div>
+    <div class="hp-bar-track"><div class="hp-bar-fill mage-vit${pct <= 25 ? ' low' : ''}" style="width:${pct}%;"></div></div>
+  </div>`;
 }
 function energyBarHtml(){
   if(!guardian || !staminaSettings) return '';
@@ -1612,7 +1642,7 @@ async function hatchGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
     .insert({ owner_user_id: session.user.id, species: pickedSpecies, name })
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at, energy_current, energy_updated_at, tickets_current, tickets_updated_at')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at, energy_current, energy_updated_at, tickets_current, tickets_updated_at, current_hp, hp_updated_at')
     .single();
 
   if(error){
@@ -2022,6 +2052,7 @@ function renderGuardianFamiliarTab(){
             <span class="essence-value">${guardian.essence || 0}</span>
           </div>
 
+          ${guardianHpBarHtml()}
           ${energyBarHtml()}
         </div>
       </div>
@@ -2285,6 +2316,7 @@ async function loadMageGearOwned(){
 
 async function openMageGear(){
   mageView = { step: 'gear' };
+  guardianHomeView = null;
   render();
   await Promise.all([loadMageGearCatalog(), loadMageGearOwned()]);
   if(mageView && mageView.step === 'gear') render();
@@ -2951,6 +2983,8 @@ function renderProfile(){
         <span class="essence-value">${guardian.essence || 0}</span>
       </div>
 
+      ${guardianHpBarHtml()}
+
       <div class="stat-grid">
         <div class="stat-tile"><div class="num">${guardian.favor || 0}</div><div class="label">Favor</div></div>
         <div class="stat-tile"><div class="num">${guardian.god_shards || 0}</div><div class="label">God Shards</div></div>
@@ -3616,23 +3650,31 @@ async function doAttackWorldBoss(){
       guardian.energy_current = data.energyRemaining;
       guardian.energy_updated_at = new Date().toISOString();
     }
+    // Guardian HP (0076) — the boss's counter-swing now leaves a real,
+    // persistent mark. Patch the locally-held guardian immediately, same
+    // reasoning as the Energy patch just above.
+    if(guardian && typeof data.guardianHp === 'number'){
+      guardian.current_hp = data.guardianHp;
+      guardian.hp_updated_at = new Date().toISOString();
+    }
+    const yourHpNote = typeof data.guardianHp === 'number' ? ` Your Guardian: ${data.guardianHp}/${data.guardianHpMax} HP.` : '';
 
     if(data.repelled){
       // Direct feedback: "it needs to retaliate." Same shape/messaging as
       // renderCircleDragon's attack handler — the boss's counter-swing
       // met or beat your vitality, so this swing dealt nothing.
-      setWorldBossStatusMsg(`Repelled! The boss hit back for ${data.damageTaken}${data.bossCrit ? ' (critical!)' : ''} before your strike landed — no damage dealt this time.`, false);
+      setWorldBossStatusMsg(`Repelled! The boss hit back for ${data.damageTaken}${data.bossCrit ? ' (critical!)' : ''} before your strike landed — no damage dealt this time.${yourHpNote}`, false);
     }else if(data.defeated){
       const rewardBits = [];
       if(data.yourEssence) rewardBits.push(`${data.yourEssence} Essence`);
       if(data.yourTokens) rewardBits.push(`${data.yourTokens} God Token${data.yourTokens === 1 ? '' : 's'}`);
       setWorldBossStatusMsg(
-        `${esc(data.bossName)} falls! You dealt ${data.damage}${data.crit ? ' (critical!)' : ''} and took ${data.damageTaken} in return — ${data.yourTotalDamage} total damage${rewardBits.length ? (', earning ' + rewardBits.join(' and ') + '.') : '.'}`,
+        `${esc(data.bossName)} falls! You dealt ${data.damage}${data.crit ? ' (critical!)' : ''} and took ${data.damageTaken} in return — ${data.yourTotalDamage} total damage${rewardBits.length ? (', earning ' + rewardBits.join(' and ') + '.') : '.'}${yourHpNote}`,
         true
       );
       await loadGuardian();
     }else{
-      setWorldBossStatusMsg(`Hit for ${data.damage}${data.crit ? ' (critical!)' : ''} — took ${data.damageTaken} in return. ${data.hpRemaining.toLocaleString()}/${data.hpTotal.toLocaleString()} HP left.`, true);
+      setWorldBossStatusMsg(`Hit for ${data.damage}${data.crit ? ' (critical!)' : ''} — took ${data.damageTaken} in return. ${data.hpRemaining.toLocaleString()}/${data.hpTotal.toLocaleString()} HP left.${yourHpNote}`, true);
     }
     // refreshWorldBossStatus() re-renders #app before this returns — so
     // celebrate() (which appends particles into #app) has to fire AFTER
@@ -6392,15 +6434,20 @@ async function doDragonAttack(){
   const data = await circleFetch('dragon-attack');
   if(!data.ok){ setDragonActionStatus(data.error || 'Could not attack.', false); await refreshDragonStatus(); return; }
 
+  // Guardian HP (0076) — the dragon's counter-swing now leaves a real,
+  // persistent mark; loadGuardian() below refreshes the stored value,
+  // this note just surfaces the number the attack itself just returned.
+  const yourHpNote = typeof data.guardianHp === 'number' ? ` Your Guardian: ${data.guardianHp}/${data.guardianHpMax} HP.` : '';
   if(data.repelled){
-    setDragonActionStatus(`Repelled! The dragon hit back for ${data.damageTaken}${data.dragonCrit ? ' (critical!)' : ''} before your strike landed — no damage dealt this time.`, false);
+    setDragonActionStatus(`Repelled! The dragon hit back for ${data.damageTaken}${data.dragonCrit ? ' (critical!)' : ''} before your strike landed — no damage dealt this time.${yourHpNote}`, false);
   }else if(data.defeated){
     const bits = [`${esc(data.dragonName)} falls!`, `You dealt ${data.damage}${data.crit ? ' (critical!)' : ''} and took ${data.damageTaken} in return.`, `The Circle gained ${data.rewardDevotion} Devotion and ${data.rewardRank} rank.`];
     if(data.yourShare) bits.push(`You personally earned ${data.yourShare} Essence.`);
     if(data.decorationWon) bits.push('A new Altar decoration was won!');
+    if(yourHpNote) bits.push(yourHpNote.trim());
     setDragonActionStatus(bits.join(' '), true);
   }else{
-    setDragonActionStatus(`Hit for ${data.damage}${data.crit ? ' (critical!)' : ''} — took ${data.damageTaken} in return. ${data.hpRemaining}/${data.hpTotal} HP left.`, true);
+    setDragonActionStatus(`Hit for ${data.damage}${data.crit ? ' (critical!)' : ''} — took ${data.damageTaken} in return. ${data.hpRemaining}/${data.hpTotal} HP left.${yourHpNote}`, true);
   }
   await loadGuardian();
   // refreshDragonStatus() re-renders #app — celebrate() has to fire
