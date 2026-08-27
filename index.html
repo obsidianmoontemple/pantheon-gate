@@ -841,7 +841,7 @@ function mageArtFor(key){ return MAGE_ARTS.find(a => a.key === key) || null; }
 async function loadMage(){
   const { data, error } = await supabaseClient
     .from('mages')
-    .select('id, name, art_key, level, xp, xp_to_next, upgrade_points, vitality, might, ward, swiftness, cunning, last_trained_at, last_duel_at, equipped_weapon_id, equipped_armor_id, equipped_accessory_id, has_seen_guide, current_hp, hp_updated_at, active_buff_stat_key, active_buff_amount, active_buff_expires_at')
+    .select('id, name, art_key, level, xp, xp_to_next, upgrade_points, vitality, might, ward, swiftness, cunning, last_trained_at, last_duel_at, equipped_weapon_id, equipped_armor_id, equipped_accessory_id, has_seen_guide, current_hp, hp_updated_at, active_buff_stat_key, active_buff_amount, active_buff_expires_at, milestones_seen_level')
     .eq('owner_user_id', session.user.id)
     .maybeSingle();
   if(error){ console.error('mage load failed', error); return; }
@@ -885,6 +885,30 @@ async function loadGuideSteps(){
     .order('sort_order', { ascending: true });
   if(error){ console.error('guide_steps load failed', error); return; }
   GUIDE_STEPS = (data || []).map(s => ({ key: s.step_key, title: s.title, body: s.body }));
+}
+
+// Milestone guidance + feature access (0081) — both small, public,
+// admin-curated catalogs, loaded once at boot exactly like the two above.
+async function loadMilestoneCatalog(){
+  const { data, error } = await supabaseClient
+    .from('milestone_catalog')
+    .select('key, category, stage_key, level_threshold, title, body, sort_order')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+  if(error){ console.error('milestone_catalog load failed', error); return; }
+  MILESTONE_CATALOG = (data || []).map(m => ({
+    key: m.key, category: m.category, stageKey: m.stage_key, levelThreshold: m.level_threshold,
+    title: m.title, body: m.body,
+  }));
+}
+
+async function loadFeatureGates(){
+  const { data, error } = await supabaseClient.from('feature_gates').select('*');
+  if(error){ console.error('feature_gates load failed', error); return; }
+  FEATURE_GATES = (data || []).map(g => ({
+    featureKey: g.feature_key, label: g.label, requirementType: g.requirement_type,
+    requirementValue: g.requirement_value, lockedMessage: g.locked_message, active: g.active,
+  }));
 }
 
 /* Chained Gods — the seasonal deity pool. God Tokens draw a random deity
@@ -1060,6 +1084,20 @@ let guideStepIndex = 0;
 let GUIDE_STEPS = [];         // [{key,title,body}], from guide_steps
 let narratorSettings = { name: 'Ganymede', portraitUrl: null, largePortraitUrl: null, dailyQuestionLimit: 3 };
 let narratorChatView = null; // null | {messages:[{role,content}], remaining:number|null, sending:boolean, error:string|null}
+
+// Milestone guidance (0081) — Ganymede narrating progression, not
+// onboarding (that's guide_steps/GUIDE_STEPS above, untouched). Same
+// "load the small admin catalog once at boot" pattern as GUIDE_STEPS.
+let MILESTONE_CATALOG = [];  // [{key,category,stageKey,levelThreshold,title,body}], from milestone_catalog
+let milestoneView = null;    // null | {queue:[milestone,...], index:number} — the auto-triggered popup, one at a time
+let milestoneRoadmapView = null; // null | {} — the on-demand "everything, earned vs locked" screen
+const STAGE_RANK = { egg: 0, hatchling: 1, fledged: 2, ascendant: 3, sovereign: 4 };
+
+// Feature access gates (0081) — an admin-configurable requirement to even
+// open a whole screen (Gauntlet/Arena/Circles today), separate from any
+// per-opponent required_level gating already inside those screens.
+let FEATURE_GATES = [];      // [{featureKey,label,requirementType,requirementValue,lockedMessage,active}], from feature_gates
+let featureLockView = null;  // null | {label, message} — shown instead of a gated feature's own screen
 let marks = [];          // [{deity_id, pantheon_id, mark_type}]
 let currentPhase = null; // {cycle_id, phase, phase_index} — flavor + gating text only, edge function re-checks server-side
 let petitionView = null; // null | {step:'pick'} | {step:'challenge', ...} | {step:'verdict', ...}
@@ -1256,7 +1294,7 @@ async function boot(){
       petitionView = null; combatView = null; craftView = null; redeemView = null;
       expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
       profileView = null; shrineView = null; mailView = null; backpackView = null;
-      checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null;
+      checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
       shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
       profilePasswordOpen = false;
       renderLoginScreen();
@@ -1279,6 +1317,8 @@ async function afterLogin(){
   await loadMageArtsCatalog().catch(e => console.error('mage arts catalog load failed', e));
   await loadNarratorSettings().catch(e => console.error('narrator settings load failed', e));
   await loadGuideSteps().catch(e => console.error('guide steps load failed', e));
+  await loadMilestoneCatalog().catch(e => console.error('milestone catalog load failed', e));
+  await loadFeatureGates().catch(e => console.error('feature gates load failed', e));
   loadSeasonInfo().catch(e => console.error('season pool load failed', e));
   await loadMapHotspots().catch(e => console.error('map hotspots load failed', e));
   await loadGuardian();
@@ -1440,7 +1480,7 @@ async function forgotPassword(){
 async function loadGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at, energy_current, energy_updated_at, tickets_current, tickets_updated_at, current_hp, hp_updated_at, active_buff_stat_key, active_buff_amount, active_buff_expires_at')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at, energy_current, energy_updated_at, tickets_current, tickets_updated_at, current_hp, hp_updated_at, active_buff_stat_key, active_buff_amount, active_buff_expires_at, milestones_seen_stage, milestones_seen_campaign_level')
     .eq('owner_user_id', session.user.id)
     .maybeSingle();
   if(error){ console.error('guardian load failed', error); return; }
@@ -1585,6 +1625,9 @@ function render(){
   if(guardian && mageView){ renderMageGear(); return; }
   if(guardian && guideView){ renderGuide(); return; }
   if(guardian && narratorChatView){ renderNarratorChat(); return; }
+  if(guardian && milestoneView){ renderMilestone(); return; }
+  if(guardian && milestoneRoadmapView){ renderMilestoneRoadmap(); return; }
+  if(guardian && featureLockView){ renderFeatureLock(); return; }
   // Mage creation (0052) comes first now — direct feedback: "the mage
   // becomes who you play as and then you will get your egg shortly
   // after the game starts." No mage row yet takes priority over
@@ -1604,6 +1647,20 @@ function render(){
     markGuideSeen();
     renderGuide();
     return;
+  }
+  // Milestone guidance (0081) — same "right here, once the essentials
+  // exist" spot as the guide above, but re-checked every time render()
+  // falls all the way through to here (not gated by a single one-shot
+  // flag), so a milestone crossed mid-session (leveling up, evolving,
+  // clearing a chapter) surfaces the next time the player lands back on
+  // the Map Hub, not just at login.
+  if(mage.has_seen_guide && !milestoneView){
+    const pending = pendingMilestones();
+    if(pending.length){
+      milestoneView = { queue: pending, index: 0 };
+      renderMilestone();
+      return;
+    }
   }
   // Default landing screen once a guardian exists: the map hub itself,
   // not the guardian stats page — see the Guardian Home note above.
@@ -1665,7 +1722,7 @@ async function hatchGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
     .insert({ owner_user_id: session.user.id, species: pickedSpecies, name })
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at, energy_current, energy_updated_at, tickets_current, tickets_updated_at, current_hp, hp_updated_at, active_buff_stat_key, active_buff_amount, active_buff_expires_at')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at, energy_current, energy_updated_at, tickets_current, tickets_updated_at, current_hp, hp_updated_at, active_buff_stat_key, active_buff_amount, active_buff_expires_at, milestones_seen_stage, milestones_seen_campaign_level')
     .single();
 
   if(error){
@@ -1810,6 +1867,12 @@ const DEFAULT_MAP_AREAS = [
   // the same guardian tab not separate." Both now live together on the
   // Guardian Page screen, opened the same way as always.)
   { id: 'guide',         label: 'Ask Ganymede', left: 32,   top: 68,   width: 10,   height: 16,   action: openGuide, glow: true },
+  // Milestone guidance (0081) — the on-demand roadmap, a separate
+  // hotspot from Ask Ganymede above since it's a different screen (a
+  // full earned/locked list, not the chat/walkthrough). Another
+  // starting-guess position, right next to Guide; drag into place once
+  // there's art to line up against.
+  { id: 'milestones',    label: "Ganymede's Guidance", left: 42, top: 68, width: 10, height: 16, action: openMilestoneRoadmap, glow: true },
 ];
 // Mutable copy — loadMapHotspots() (see near loadSpeciesCatalog) overrides
 // individual entries' left/top/width/height from the admin-editable
@@ -2699,6 +2762,162 @@ function renderGuide(){
   `;
 }
 
+/* ---------------- Milestone guidance (0081) ----------------
+   Ganymede again — same portrait/name/voice as the Guide above, this
+   time narrating progression instead of onboarding. Two screens: an
+   auto-triggered popup (one milestone at a time, queued) the moment
+   render() notices progress has crossed something new, and an on-demand
+   "Ganymede's Guidance" roadmap reachable from its own Map Hub hotspot
+   any time, showing every milestone earned or still locked. */
+
+// Which catalog rows has this player crossed but not yet been shown —
+// compares live guardian/mage progress against the watermark columns
+// (0081), never against anything cached from a previous computation.
+function pendingMilestones(){
+  if(!guardian || !mage || !MILESTONE_CATALOG.length) return [];
+  const seenStageRank = STAGE_RANK[guardian.milestones_seen_stage] ?? -1;
+  const curStageRank = STAGE_RANK[guardian.stage] ?? 0;
+  const seenCampaign = guardian.milestones_seen_campaign_level || 0;
+  const curCampaign = guardian.campaign_level || 0;
+  const seenMageLevel = mage.milestones_seen_level || 0;
+  const curMageLevel = mage.level || 0;
+  return MILESTONE_CATALOG.filter(m => {
+    if(m.category === 'guardian_stage'){
+      const rank = STAGE_RANK[m.stageKey] ?? -1;
+      return rank > seenStageRank && rank <= curStageRank;
+    }
+    if(m.category === 'mage_level') return m.levelThreshold > seenMageLevel && m.levelThreshold <= curMageLevel;
+    if(m.category === 'campaign_level') return m.levelThreshold > seenCampaign && m.levelThreshold <= curCampaign;
+    return false;
+  });
+}
+
+// Whether a given catalog row has already been earned (for the roadmap's
+// checked/locked display) — same comparisons as pendingMilestones() but
+// against CURRENT progress directly, not the watermark (a milestone the
+// player crossed and already dismissed still shows as earned here).
+function milestoneEarned(m){
+  if(!guardian || !mage) return false;
+  if(m.category === 'guardian_stage') return (STAGE_RANK[m.stageKey] ?? 99) <= (STAGE_RANK[guardian.stage] ?? 0);
+  if(m.category === 'mage_level') return (mage.level || 0) >= m.levelThreshold;
+  if(m.category === 'campaign_level') return (guardian.campaign_level || 0) >= m.levelThreshold;
+  return false;
+}
+
+async function markMilestonesSeen(){
+  try{
+    await fetch(FUNCTIONS_URL + '/mage', {
+      method: 'POST', headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'mark-milestones-seen' })
+    });
+  }catch(e){ console.error('mark-milestones-seen failed', e); }
+  // Optimistic local mirror, same reasoning as markGuideSeen() — avoids
+  // this exact queue re-triggering on the next render() before the
+  // network call lands.
+  if(guardian){ guardian.milestones_seen_stage = guardian.stage; guardian.milestones_seen_campaign_level = guardian.campaign_level; }
+  if(mage) mage.milestones_seen_level = mage.level;
+}
+
+function milestoneNext(){
+  if(!milestoneView) return;
+  if(milestoneView.index < milestoneView.queue.length - 1){
+    milestoneView.index++;
+    render();
+  } else {
+    milestoneView = null;
+    markMilestonesSeen();
+    returnToMapHub();
+  }
+}
+
+function renderMilestone(){
+  const app = document.getElementById('app');
+  const m = milestoneView.queue[milestoneView.index];
+  const isLast = milestoneView.index >= milestoneView.queue.length - 1;
+  app.innerHTML = `
+    <div class="card verdict-card"${bgAttr('guide')}>
+      <div class="art">${opponentImgFor(narratorSettings.portraitUrl, null, 110)}</div>
+      <div class="essence-label" style="display:block;margin-bottom:6px;">${esc(narratorSettings.name)}</div>
+      <h2>${esc(m.title)}</h2>
+      <p class="challenge-text">${esc(m.body)}</p>
+      ${milestoneView.queue.length > 1 ? `<p class="hint">${milestoneView.index + 1} / ${milestoneView.queue.length}</p>` : ''}
+      <button onclick="milestoneNext()">${isLast ? 'Onward' : 'Next'}</button>
+    </div>
+  `;
+}
+
+function openMilestoneRoadmap(){
+  milestoneRoadmapView = {};
+  render();
+}
+
+function backFromMilestoneRoadmap(){
+  milestoneRoadmapView = null;
+  returnToMapHub();
+}
+
+function renderMilestoneRoadmap(){
+  const app = document.getElementById('app');
+  const CATEGORY_LABEL = { guardian_stage: 'Your Guardian', mage_level: 'You, as a Mage', campaign_level: 'The Campaign' };
+  const groups = ['guardian_stage', 'mage_level', 'campaign_level'].map(cat => {
+    const rows = MILESTONE_CATALOG.filter(m => m.category === cat);
+    if(!rows.length) return '';
+    const rowsHtml = rows.map(m => {
+      const earned = milestoneEarned(m);
+      return `<div class="roster-row"${earned ? '' : ' style="opacity:0.55;"'}>
+        <div><div class="rname">${earned ? '✓ ' : '🔒 '}${esc(m.title)}</div><div class="cblurb">${esc(m.body)}</div></div>
+      </div>`;
+    }).join('');
+    return `<h3 style="margin-top:16px;">${esc(CATEGORY_LABEL[cat])}</h3>${rowsHtml}`;
+  }).join('') || '<p class="hint">Nothing written yet — check back later.</p>';
+  app.innerHTML = `
+    <div class="card"${bgAttr('guide')}>
+      <div class="art">${opponentImgFor(narratorSettings.portraitUrl, null, 90)}</div>
+      <h2 style="text-align:center;">Ganymede's Guidance</h2>
+      <p class="hint" style="text-align:center;">Everything I've watched for so far — checked off what you've already reached, locked what's still ahead.</p>
+      ${groups}
+      <button class="secondary" style="margin-top:14px;" onclick="backFromMilestoneRoadmap()">Back to the map</button>
+    </div>
+  `;
+}
+
+/* ---------------- Feature access gates (0081) ----------------
+   An admin-configurable requirement to even open a whole screen
+   (Gauntlet/Arena/Circles today), separate from the per-opponent
+   required_level gating already inside the Gauntlet/Campaign. Checked
+   at the moment a player taps the hotspot — always against live
+   guardian/mage state, never a cached verdict. */
+function featureGateStatus(featureKey){
+  const gate = FEATURE_GATES.find(g => g.featureKey === featureKey);
+  if(!gate || !gate.active || gate.requirementType === 'none') return { open: true };
+  let met = true;
+  if(gate.requirementType === 'guardian_stage'){
+    met = !!guardian && (STAGE_RANK[guardian.stage] ?? 0) >= (STAGE_RANK[gate.requirementValue] ?? 0);
+  } else if(gate.requirementType === 'guardian_campaign_level'){
+    met = !!guardian && (guardian.campaign_level || 0) >= parseInt(gate.requirementValue || '0', 10);
+  } else if(gate.requirementType === 'mage_level'){
+    met = !!mage && (mage.level || 0) >= parseInt(gate.requirementValue || '0', 10);
+  }
+  return { open: met, label: gate.label, message: gate.lockedMessage || "This isn't open to you yet." };
+}
+
+function renderFeatureLock(){
+  const app = document.getElementById('app');
+  const v = featureLockView;
+  app.innerHTML = `
+    <div class="card"${bgAttr('guide')}>
+      <h2 style="text-align:center;">${esc(v.label || 'Not yet')}</h2>
+      <p class="hint" style="text-align:center;">${esc(v.message)}</p>
+      <button class="secondary" onclick="backFromFeatureLock()">Back to the map</button>
+    </div>
+  `;
+}
+
+function backFromFeatureLock(){
+  featureLockView = null;
+  returnToMapHub();
+}
+
 /* ---------------- Ganymede: ask-a-question chat ----------------
    Direct feedback: "I think he will use his current training along with
    an override modification teaching him about the game I will most
@@ -3146,7 +3365,7 @@ async function confirmReleaseGuardian(){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
   shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
   render();
 }
@@ -3177,7 +3396,7 @@ async function doRestoreGuardian(retiredId){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
   shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
   profilePasswordOpen = false;
   await afterLogin();
@@ -4279,7 +4498,7 @@ function returnToMapHub(){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
   shopView = null;
   render();
 }
@@ -4579,6 +4798,8 @@ async function loadGauntletOpponents(){
 }
 
 function openProving(){
+  const gate = featureGateStatus('gauntlet');
+  if(!gate.open){ featureLockView = { label: gate.label, message: gate.message }; render(); return; }
   combatView = { step: 'pick' };
   render();
   loadGauntletOpponents().then(() => { if(combatView && combatView.step === 'pick') render(); });
@@ -5281,6 +5502,8 @@ async function openCircle(){
     render();
     return;
   }
+  const gate = featureGateStatus('circles');
+  if(!gate.open){ featureLockView = { label: gate.label, message: gate.message }; render(); return; }
   circleView = { step: 'loading' };
   render();
   await loadMyCircle();
@@ -7524,6 +7747,8 @@ async function openPvpArena(){
     render();
     return;
   }
+  const gate = featureGateStatus('arena');
+  if(!gate.open){ featureLockView = { label: gate.label, message: gate.message }; render(); return; }
   pvpView = { step: 'home' };
   pvpStatus = null;
   pvpLastMatch = null;
