@@ -3753,6 +3753,12 @@ async function doAttackWorldBoss(){
       // renderCircleDragon's attack handler — the boss's counter-swing
       // met or beat your vitality, so this swing dealt nothing.
       setWorldBossStatusMsg(`Repelled! The boss hit back for ${data.damageTaken}${data.bossCrit ? ' (critical!)' : ''} before your strike landed — no damage dealt this time.${yourHpNote}`, false);
+    }else if(data.reflectHeal){
+      // Counter-affinity healing (0079) — your attack shared the boss's own
+      // affinity, so it healed instead of taking damage. Distinct branch so
+      // this never falls into the "Hit for" wording below with no `damage`
+      // field to show (that boss took none this swing, on purpose).
+      setWorldBossStatusMsg(`${esc(data.bossName || 'The boss')} shares your affinity and healed ${data.healedAmount} instead of taking damage — still took ${data.damageTaken}${data.bossCrit ? ' (critical!)' : ''} in return. ${data.hpRemaining.toLocaleString()}/${data.hpTotal.toLocaleString()} HP left.${yourHpNote}`, false);
     }else if(data.defeated){
       const rewardBits = [];
       if(data.yourEssence) rewardBits.push(`${data.yourEssence} Essence`);
@@ -6530,6 +6536,11 @@ async function doDragonAttack(){
   const yourHpNote = typeof data.guardianHp === 'number' ? ` Your Guardian: ${data.guardianHp}/${data.guardianHpMax} HP.` : '';
   if(data.repelled){
     setDragonActionStatus(`Repelled! The dragon hit back for ${data.damageTaken}${data.dragonCrit ? ' (critical!)' : ''} before your strike landed — no damage dealt this time.${yourHpNote}`, false);
+  }else if(data.reflectHeal){
+    // Counter-affinity healing (0079) — your attack shared the dragon's own
+    // affinity, so it healed instead of taking damage. Distinct branch, same
+    // reasoning as doAttackWorldBoss()'s identical addition.
+    setDragonActionStatus(`The dragon shares your affinity and healed ${data.healedAmount} instead of taking damage — still hit back for ${data.damageTaken}${data.dragonCrit ? ' (critical!)' : ''}. ${data.hpRemaining}/${data.hpTotal} HP left.${yourHpNote}`, false);
   }else if(data.defeated){
     const bits = [`${esc(data.dragonName)} falls!`, `You dealt ${data.damage}${data.crit ? ' (critical!)' : ''} and took ${data.damageTaken} in return.`, `The Circle gained ${data.rewardDevotion} Devotion and ${data.rewardRank} rank.`];
     if(data.yourShare) bits.push(`You personally earned ${data.yourShare} Essence.`);
@@ -7109,9 +7120,24 @@ async function doUseItem(itemId){
     });
     const data = await resp.json();
     if(!data.ok){ setCraftStatus(data.error || 'Could not use that item.', false); return; }
+    // heal_hp (potions affecting the HP system, direct feedback) — patch
+    // the locally-held guardian immediately, same pattern as every other
+    // HP-touching response this session (World Boss/Circle Dragon attacks).
+    if(guardian && typeof data.guardianHp === 'number'){
+      guardian.current_hp = data.guardianHp;
+      guardian.hp_updated_at = new Date().toISOString();
+    }
     await loadCraftInventory();
     render();
-    setCraftStatus(`${data.itemName} used.`, true);
+    let msg = `${data.itemName} used.`;
+    if(data.effect === 'heal_hp'){
+      msg = data.healedAmount > 0
+        ? `${data.itemName} restored ${data.healedAmount} HP. Guardian: ${data.guardianHp}/${data.guardianHpMax} HP.`
+        : `${data.itemName} used, but your Guardian was already at full HP.`;
+    } else if(data.grantedCurrency && data.grantedAmount){
+      msg = `${data.itemName} granted ${data.grantedAmount} ${data.grantedCurrency}.`;
+    }
+    setCraftStatus(msg, true);
   }catch(e){
     setCraftStatus('Could not reach the relay: ' + e.message, false);
   }
