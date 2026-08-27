@@ -1494,13 +1494,13 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-guardianitems">
       <div class="card">
         <h2>Guardian item catalog</h2>
-        <p class="hint">What God Shards can be crafted into. A stat boost applies immediately at craft time. A cosmetic is owned forever — ownership is the effect. A consumable sits in inventory until a player uses it, then grants Consumable amount of the picked effect's currency immediately. An enchantment is owned forever like a cosmetic, but grants a real passive combat ability for as long as it's owned (same wired vocabulary and all-fight behavior as Deity Blessings' Effect key).</p>
+        <p class="hint">What God Shards can be crafted into. A stat boost applies immediately at craft time. A cosmetic is owned forever — ownership is the effect. A consumable sits in inventory until a player uses it, then applies the picked effect: essence_surge/bond_surge/favor_surge grant Consumable amount of that currency, heal_hp restores that much Guardian HP, stat_buff uses Stat key + Consumable amount + Buff duration for a temporary combat boost (Guardian's own item shop — Craft tab), and cure_status clears a poisoned/weakened/vulnerable status mid-fight from the battle screen (needs no Stat key/amount/duration — it just cures). An enchantment is owned forever like a cosmetic, but grants a real passive combat ability for as long as it's owned (same wired vocabulary and all-fight behavior as Deity Blessings' Effect key).</p>
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr>
-              <th>Key</th><th>Name</th><th>Description</th><th>Type</th><th>Stat key</th><th>Stat amount</th><th>Consumable effect</th><th>Consumable amount</th><th>Enchant effect key</th><th>Enchant effect amt</th><th>Shard cost</th><th>Image URL</th><th>Active</th>
+              <th>Key</th><th>Name</th><th>Description</th><th>Type</th><th>Stat key</th><th>Stat amount</th><th>Consumable effect</th><th>Consumable amount</th><th>Buff duration (min)</th><th>Enchant effect key</th><th>Enchant effect amt</th><th>Shard cost</th><th>Image URL</th><th>Active</th>
             </tr></thead>
-            <tbody id="guardianItemRows"><tr><td colspan="13">Loading…</td></tr></tbody>
+            <tbody id="guardianItemRows"><tr><td colspan="14">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -1537,6 +1537,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <select id="newGuardianItemEffect" style="max-width:220px;"></select>
           </div>
           <div class="field" id="newGuardianItemAmountField" style="display:none;"><label>Consumable amount</label><input type="number" step="0.01" min="0.01" id="newGuardianItemAmount" style="max-width:110px;"></div>
+          <div class="field" id="newGuardianItemDurationField" style="display:none;"><label>Buff duration (minutes)</label><input type="number" min="1" id="newGuardianItemDuration" style="max-width:130px;"></div>
           <div class="field" id="newGuardianItemEnchantKeyField" style="display:none;"><label>Enchant effect key</label>
             <select id="newGuardianItemEnchantKey" style="max-width:220px;"></select>
           </div>
@@ -3208,6 +3209,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveGuardianItemsBtn').addEventListener('click', saveGuardianItemCatalog);
   document.getElementById('addGuardianItemBtn').addEventListener('click', addGuardianItem);
   document.getElementById('newGuardianItemType').addEventListener('change', updateNewGuardianItemTypeFields);
+  document.getElementById('newGuardianItemEffect').addEventListener('change', updateNewGuardianItemTypeFields);
   updateNewGuardianItemTypeFields();
 
   document.getElementById('saveGiftableRewardsBtn').addEventListener('click', saveGiftableRewardCatalog);
@@ -7545,6 +7547,8 @@ const CONSUMABLE_EFFECT_OPTIONS = [
   { value: 'bond_surge', label: 'bond_surge - grants Bond immediately' },
   { value: 'favor_surge', label: 'favor_surge - grants Favor immediately' },
   { value: 'heal_hp', label: 'heal_hp - restores that much Guardian HP immediately' },
+  { value: 'stat_buff', label: 'stat_buff - temporary +Stat amount to Stat key for Duration minutes (combat)' },
+  { value: 'cure_status', label: 'cure_status - clears poison/weaken/vulnerable mid-fight (battle screen only)' },
 ];
 // Wired by pvp/index.ts's shop-buy + respond actions.
 const ARENA_EFFECT_OPTIONS = [
@@ -7604,10 +7608,14 @@ async function saveCirclePatronBonuses(){
 
 function updateNewGuardianItemTypeFields(){
   const type = document.getElementById('newGuardianItemType').value;
-  document.getElementById('newGuardianItemStatKeyField').style.display = type === 'stat_boost' ? '' : 'none';
+  const effect = document.getElementById('newGuardianItemEffect').value;
+  // stat_buff is a consumable effect that also needs a Stat key, same
+  // field a stat_boost item uses — shown for either case.
+  document.getElementById('newGuardianItemStatKeyField').style.display = (type === 'stat_boost' || (type === 'consumable' && effect === 'stat_buff')) ? '' : 'none';
   document.getElementById('newGuardianItemStatAmountField').style.display = type === 'stat_boost' ? '' : 'none';
   document.getElementById('newGuardianItemEffectField').style.display = type === 'consumable' ? '' : 'none';
   document.getElementById('newGuardianItemAmountField').style.display = type === 'consumable' ? '' : 'none';
+  document.getElementById('newGuardianItemDurationField').style.display = (type === 'consumable' && effect === 'stat_buff') ? '' : 'none';
   document.getElementById('newGuardianItemEnchantKeyField').style.display = type === 'enchantment' ? '' : 'none';
   document.getElementById('newGuardianItemEnchantAmountField').style.display = type === 'enchantment' ? '' : 'none';
   const effectSelect = document.getElementById('newGuardianItemEffect');
@@ -7620,7 +7628,7 @@ async function loadGuardianItemCatalog(){
   const { data, error } = await supabaseClient.from('guardian_item_catalog').select('*').order('key', { ascending: true });
   const rows = document.getElementById('guardianItemRows');
   if(error){
-    rows.innerHTML = '<tr><td colspan="13">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="14">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = (data || []).map(i => `<tr data-key="${esc(i.key)}">
@@ -7644,12 +7652,13 @@ async function loadGuardianItemCatalog(){
     <td><input type="number" min="1" id="giStatAmount_${esc(i.key)}" value="${i.stat_amount ?? ''}" style="max-width:90px;"></td>
     <td><select id="giEffect_${esc(i.key)}" style="max-width:200px;">${effectKeyOptionsHtml(CONSUMABLE_EFFECT_OPTIONS, i.consumable_effect)}</select></td>
     <td><input type="number" step="0.01" min="0.01" id="giConsumableAmount_${esc(i.key)}" value="${i.consumable_amount ?? ''}" style="max-width:100px;"></td>
+    <td><input type="number" min="1" id="giDuration_${esc(i.key)}" value="${i.consumable_duration_minutes ?? ''}" style="max-width:100px;"></td>
     <td><select id="giEnchantKey_${esc(i.key)}" style="max-width:200px;">${effectKeyOptionsHtml(AURA_EFFECT_OPTIONS, i.effect_key)}</select></td>
     <td><input type="number" step="0.01" id="giEnchantAmount_${esc(i.key)}" value="${i.effect_amount ?? ''}" style="max-width:100px;"></td>
     <td><input type="number" min="1" id="giCost_${esc(i.key)}" value="${i.shard_cost}" style="max-width:90px;"></td>
     <td><input type="text" id="giImg_${esc(i.key)}" value="${esc(i.image_url || '')}" style="max-width:180px;"></td>
     <td><input type="checkbox" id="giActive_${esc(i.key)}" ${i.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="13">No items yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="14">No items yet.</td></tr>';
 }
 
 async function saveGuardianItemCatalog(){
@@ -7659,6 +7668,7 @@ async function saveGuardianItemCatalog(){
     const key = tr.getAttribute('data-key');
     const statAmountVal = document.getElementById('giStatAmount_' + key).value;
     const consumableAmountVal = document.getElementById('giConsumableAmount_' + key).value;
+    const durationVal = document.getElementById('giDuration_' + key).value;
     const enchantAmountVal = document.getElementById('giEnchantAmount_' + key).value;
     return {
       key,
@@ -7669,6 +7679,7 @@ async function saveGuardianItemCatalog(){
       stat_amount: statAmountVal === '' ? null : parseInt(statAmountVal, 10),
       consumable_effect: document.getElementById('giEffect_' + key).value || null,
       consumable_amount: consumableAmountVal === '' ? null : parseFloat(consumableAmountVal),
+      consumable_duration_minutes: durationVal === '' ? null : parseInt(durationVal, 10),
       effect_key: document.getElementById('giEnchantKey_' + key).value || null,
       effect_amount: enchantAmountVal === '' ? null : parseFloat(enchantAmountVal),
       shard_cost: parseInt(document.getElementById('giCost_' + key).value, 10),
@@ -7695,9 +7706,12 @@ async function addGuardianItem(){
   const statAmountVal = document.getElementById('newGuardianItemStatAmount').value;
   const effect = document.getElementById('newGuardianItemEffect').value;
   const amountVal = document.getElementById('newGuardianItemAmount').value;
+  const durationVal = document.getElementById('newGuardianItemDuration').value;
   const enchantKey = document.getElementById('newGuardianItemEnchantKey').value;
   const enchantAmountVal = document.getElementById('newGuardianItemEnchantAmount').value;
   const imageUrl = document.getElementById('newGuardianItemImageUrl').value.trim();
+  const isStatBuff = itemType === 'consumable' && effect === 'stat_buff';
+  const isCureStatus = itemType === 'consumable' && effect === 'cure_status';
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -7705,8 +7719,11 @@ async function addGuardianItem(){
   if(itemType === 'stat_boost' && (!statKey || !statAmountVal || parseInt(statAmountVal, 10) < 1)){
     status.className = 'status err'; status.textContent = 'Stat boosts need a stat key and an amount greater than 0.'; return;
   }
-  if(itemType === 'consumable' && (!effect || !amountVal || parseFloat(amountVal) <= 0)){
+  if(itemType === 'consumable' && !isCureStatus && (!effect || !amountVal || parseFloat(amountVal) <= 0)){
     status.className = 'status err'; status.textContent = 'Consumables need an effect and an amount greater than 0.'; return;
+  }
+  if(isStatBuff && (!statKey || !durationVal || parseInt(durationVal, 10) < 1)){
+    status.className = 'status err'; status.textContent = 'Stat buffs need a stat key and a duration (minutes) greater than 0.'; return;
   }
   if(itemType === 'enchantment' && !enchantKey){
     status.className = 'status err'; status.textContent = 'Enchantments need an effect key.'; return;
@@ -7716,10 +7733,11 @@ async function addGuardianItem(){
   status.textContent = 'Adding…';
   const { error } = await supabaseClient.from('guardian_item_catalog').insert({
     key, name, description, item_type: itemType, shard_cost: cost,
-    stat_key: itemType === 'stat_boost' ? statKey : null,
+    stat_key: (itemType === 'stat_boost' || isStatBuff) ? statKey : null,
     stat_amount: itemType === 'stat_boost' ? parseInt(statAmountVal, 10) : null,
     consumable_effect: itemType === 'consumable' ? effect : null,
-    consumable_amount: itemType === 'consumable' ? parseFloat(amountVal) : null,
+    consumable_amount: (itemType === 'consumable' && !isCureStatus) ? parseFloat(amountVal) : null,
+    consumable_duration_minutes: isStatBuff ? parseInt(durationVal, 10) : null,
     effect_key: itemType === 'enchantment' ? enchantKey : null,
     effect_amount: itemType === 'enchantment' ? (enchantAmountVal === '' ? null : parseFloat(enchantAmountVal)) : null,
     image_url: imageUrl || null
@@ -7728,7 +7746,7 @@ async function addGuardianItem(){
 
   status.className = 'status ok';
   status.textContent = name + ' added to the crafting catalog.';
-  ['newGuardianItemKey','newGuardianItemName','newGuardianItemCost','newGuardianItemStatAmount','newGuardianItemAmount','newGuardianItemEnchantAmount','newGuardianItemDescription','newGuardianItemImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newGuardianItemKey','newGuardianItemName','newGuardianItemCost','newGuardianItemStatAmount','newGuardianItemAmount','newGuardianItemDuration','newGuardianItemEnchantAmount','newGuardianItemDescription','newGuardianItemImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   document.getElementById('newGuardianItemEffect').value = '';
   document.getElementById('newGuardianItemEnchantKey').value = '';
   updateNewGuardianItemTypeFields();
