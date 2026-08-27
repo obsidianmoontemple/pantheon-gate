@@ -1096,6 +1096,11 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Regen per hour</label><input type="number" min="0" id="stTicketRegenPerHour" style="max-width:140px;"></div>
           <div class="field"><label>Cost per challenge</label><input type="number" min="0" id="stTicketCostPvp" style="max-width:150px;"></div>
         </div>
+        <h3>Guardian HP (0076)</h3>
+        <p class="hint">"We have no sense of personal HP loss." Guardian HP now actually persists between fights (Campaign, Gauntlet, World Boss, Circle Dragon) instead of always resetting to full — this is the passive regen rate it heals back at while resting, same lazy-regen shape as Energy above.</p>
+        <div class="form-row">
+          <div class="field"><label>HP regen per hour</label><input type="number" min="0" id="stGuardianHpRegenPerHour" style="max-width:140px;"></div>
+        </div>
         <div class="save-bar">
           <button id="saveStaminaSettingsBtn">Save changes</button>
           <div class="status" id="staminaSettingsStatus"></div>
@@ -4849,6 +4854,7 @@ async function loadStaminaSettings(){
   document.getElementById('stTicketMax').value = data.ticket_max;
   document.getElementById('stTicketRegenPerHour').value = data.ticket_regen_per_hour;
   document.getElementById('stTicketCostPvp').value = data.ticket_cost_pvp;
+  document.getElementById('stGuardianHpRegenPerHour').value = data.guardian_hp_regen_per_hour;
 }
 
 async function saveStaminaSettings(){
@@ -4859,8 +4865,9 @@ async function saveStaminaSettings(){
   const energyCostWorldBoss = v('stEnergyCostWorldBoss'), energyCostDragon = v('stEnergyCostDragon'), energyCostMageDuel = v('stEnergyCostMageDuel');
   const energyOverflowEnabled = document.getElementById('stEnergyOverflowEnabled').checked;
   const ticketMax = v('stTicketMax'), ticketRegenPerHour = v('stTicketRegenPerHour'), ticketCostPvp = v('stTicketCostPvp');
+  const guardianHpRegenPerHour = v('stGuardianHpRegenPerHour');
 
-  const allValues = [energyMax, energyRegenPerHour, energyCostCampaign, energyCostGauntlet, energyCostWorldBoss, energyCostDragon, energyCostMageDuel, ticketMax, ticketRegenPerHour, ticketCostPvp];
+  const allValues = [energyMax, energyRegenPerHour, energyCostCampaign, energyCostGauntlet, energyCostWorldBoss, energyCostDragon, energyCostMageDuel, ticketMax, ticketRegenPerHour, ticketCostPvp, guardianHpRegenPerHour];
   if(allValues.some(n => isNaN(n) || n < 0)){
     status.className = 'status err';
     status.textContent = 'Every field must be a non-negative number.';
@@ -4879,6 +4886,7 @@ async function saveStaminaSettings(){
     energy_cost_campaign: energyCostCampaign, energy_cost_gauntlet: energyCostGauntlet,
     energy_cost_world_boss: energyCostWorldBoss, energy_cost_dragon: energyCostDragon, energy_cost_mage_duel: energyCostMageDuel,
     ticket_max: ticketMax, ticket_regen_per_hour: ticketRegenPerHour, ticket_cost_pvp: ticketCostPvp,
+    guardian_hp_regen_per_hour: guardianHpRegenPerHour,
     updated_at: new Date().toISOString()
   }).eq('id', 1);
   status.className = error ? 'status err' : 'status ok';
