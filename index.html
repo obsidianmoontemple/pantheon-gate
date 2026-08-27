@@ -1440,7 +1440,7 @@ async function forgotPassword(){
 async function loadGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at, energy_current, energy_updated_at, tickets_current, tickets_updated_at, current_hp, hp_updated_at')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at, energy_current, energy_updated_at, tickets_current, tickets_updated_at, current_hp, hp_updated_at, active_buff_stat_key, active_buff_amount, active_buff_expires_at')
     .eq('owner_user_id', session.user.id)
     .maybeSingle();
   if(error){ console.error('guardian load failed', error); return; }
@@ -1665,7 +1665,7 @@ async function hatchGuardian(){
   const { data, error } = await supabaseClient
     .from('guardians')
     .insert({ owner_user_id: session.user.id, species: pickedSpecies, name })
-    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at, energy_current, energy_updated_at, tickets_current, tickets_updated_at, current_hp, hp_updated_at')
+    .select('id, species, palette, name, stage, bond, vitality, might, ward, swiftness, cunning, last_tended_at, dominant_affinity, essence, proving_rank, campaign_level, checkin_streak, favor, god_shards, god_tokens, key_of_night, bonus_petition_credits, pvp_shield_until, last_bond_tend_at, last_trained_at, energy_current, energy_updated_at, tickets_current, tickets_updated_at, current_hp, hp_updated_at, active_buff_stat_key, active_buff_amount, active_buff_expires_at')
     .single();
 
   if(error){
@@ -2102,6 +2102,7 @@ function renderGuardianFamiliarTab(){
           </div>
 
           ${guardianHpBarHtml()}
+          ${(() => { const b = guardianActiveBuff(); return b ? `<p class="hint">+${b.amount} ${esc(b.statKey)} buff active until ${new Date(b.expiresAt).toLocaleTimeString()}.</p>` : ''; })()}
           ${energyBarHtml()}
         </div>
       </div>
@@ -2362,6 +2363,16 @@ function mageEffectiveStats(){
 // purely-cosmetic display number — separate on purpose from circle/
 // index.ts's existing guardianPowerScore() (which is tuned for invasion
 // balance and must not shift just because this display feature shipped).
+// Guardian temporary combat buffs (0080) — same active_buff_* shape as the
+// Mage potion system (0069), just read directly off the guardian row
+// client-side (display only — the authoritative apply happens server-side
+// in combat/world-boss/circle, each on its own freshly-fetched copy) since
+// Guardian has no separate "status" endpoint the way Mage does.
+function guardianActiveBuff(){
+  if(!guardian || !guardian.active_buff_stat_key || !guardian.active_buff_amount || !guardian.active_buff_expires_at) return null;
+  if(new Date(guardian.active_buff_expires_at).getTime() <= Date.now()) return null;
+  return { statKey: guardian.active_buff_stat_key, amount: guardian.active_buff_amount, expiresAt: guardian.active_buff_expires_at };
+}
 const GUARDIAN_STAGE_POWER_BONUS = { egg: 0, hatchling: 15, fledged: 40, ascendant: 80, sovereign: 150 };
 function guardianPowerRating(g){
   if(!g) return 0;
@@ -4730,6 +4741,25 @@ async function startBattle(){
   }
 }
 
+// Mid-fight cure items (0080, direct follow-up "cures (remove a bad
+// status mid-fight)") — an out-of-turn action, deliberately separate from
+// the move row: using one doesn't cost a round or trigger the opponent's
+// counter-attack, it just clears whatever's on the guardian's own status
+// columns for THIS battle (craft/index.ts validates battleId server-side).
+function battleCureItemsHtml(){
+  if(!combatView || !combatView.battleId) return '';
+  const items = craftInventory.filter(it => {
+    if(it.consumed_at) return false;
+    const cat = craftCatalog.find(c => c.key === it.item_key);
+    return cat && cat.item_type === 'consumable' && cat.consumable_effect === 'cure_status';
+  });
+  if(!items.length) return '';
+  const buttons = items.map(it => {
+    const cat = craftCatalog.find(c => c.key === it.item_key);
+    return `<button class="secondary" onclick="doUseItem('${esc(it.id)}', '${esc(combatView.battleId)}')">${esc(cat.name)}</button>`;
+  }).join('');
+  return `<div class="move-row" style="margin-top:6px;">${buttons}</div>`;
+}
 function renderBattleScreen(){
   const app = document.getElementById('app');
   const v = combatView;
@@ -4788,6 +4818,7 @@ function renderBattleScreen(){
       </div>
 
       <div class="move-row" id="moveRow">${moveButtons}</div>
+      ${battleCureItemsHtml()}
       <div class="status" id="battleStatus"></div>
       <div class="battle-log">${logHtml || '<div class="entry">The trial has not yet begun its first round.</div>'}</div>
     </div>
@@ -7110,22 +7141,39 @@ async function doCraftPetition(){
   }
 }
 
-async function doUseItem(itemId){
-  setCraftStatus('Using…');
+function setBattleUseItemStatus(text, ok){
+  const el = document.getElementById('battleStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+async function doUseItem(itemId, battleId){
+  const setStatus = battleId ? setBattleUseItemStatus : setCraftStatus;
+  setStatus('Using…');
   try{
     const resp = await fetch(FUNCTIONS_URL + '/craft', {
       method: 'POST',
       headers: await petitionHeaders(),
-      body: JSON.stringify({ action: 'use-item', guardianId: guardian.id, itemId })
+      body: JSON.stringify({ action: 'use-item', guardianId: guardian.id, itemId, battleId })
     });
     const data = await resp.json();
-    if(!data.ok){ setCraftStatus(data.error || 'Could not use that item.', false); return; }
+    if(!data.ok){ setStatus(data.error || 'Could not use that item.', false); return; }
     // heal_hp (potions affecting the HP system, direct feedback) — patch
     // the locally-held guardian immediately, same pattern as every other
     // HP-touching response this session (World Boss/Circle Dragon attacks).
     if(guardian && typeof data.guardianHp === 'number'){
       guardian.current_hp = data.guardianHp;
       guardian.hp_updated_at = new Date().toISOString();
+    }
+    // stat_buff/cure_status (0080, direct follow-up "we gonna need more
+    // than health potions we need stat effects and cures and such") —
+    // stat_buff patches the same active_buff_* fields guardianActiveBuff()
+    // reads for display; cure_status has nothing to patch locally, the
+    // battles row it touched isn't held client-side at all.
+    if(data.effect === 'stat_buff' && guardian){
+      guardian.active_buff_stat_key = data.buffStatKey;
+      guardian.active_buff_amount = data.buffAmount;
+      guardian.active_buff_expires_at = data.buffExpiresAt;
     }
     await loadCraftInventory();
     render();
@@ -7134,12 +7182,16 @@ async function doUseItem(itemId){
       msg = data.healedAmount > 0
         ? `${data.itemName} restored ${data.healedAmount} HP. Guardian: ${data.guardianHp}/${data.guardianHpMax} HP.`
         : `${data.itemName} used, but your Guardian was already at full HP.`;
+    } else if(data.effect === 'stat_buff'){
+      msg = `${data.itemName} used — +${data.buffAmount} ${data.buffStatKey} until ${new Date(data.buffExpiresAt).toLocaleTimeString()}.`;
+    } else if(data.effect === 'cure_status'){
+      msg = (data.cleared && data.cleared.length) ? `${data.itemName} cured: ${data.cleared.join(', ')}.` : `${data.itemName} used — nothing needed curing.`;
     } else if(data.grantedCurrency && data.grantedAmount){
       msg = `${data.itemName} granted ${data.grantedAmount} ${data.grantedCurrency}.`;
     }
-    setCraftStatus(msg, true);
+    setStatus(msg, true);
   }catch(e){
-    setCraftStatus('Could not reach the relay: ' + e.message, false);
+    setStatus('Could not reach the relay: ' + e.message, false);
   }
 }
 
@@ -7149,6 +7201,8 @@ function renderCraft(){
   const catalogRows = craftCatalog.map(item => {
     const affordable = (guardian.god_shards || 0) >= item.shard_cost;
     const typeNote = item.item_type === 'stat_boost' ? `+${item.stat_amount} ${item.stat_key}`
+      : item.item_type === 'consumable' && item.consumable_effect === 'stat_buff' ? `+${item.consumable_amount} ${item.stat_key} for ${item.consumable_duration_minutes}m`
+      : item.item_type === 'consumable' && item.consumable_effect === 'cure_status' ? 'Cures poison/weaken/vulnerable mid-fight'
       : item.item_type === 'consumable' ? 'Consumable' : 'Cosmetic';
     return `<div class="roster-row">
       <div><div class="rname">${esc(item.name)}</div><div class="cblurb">${esc(item.description || '')} — ${esc(typeNote)} — ${item.shard_cost} Shards</div></div>
@@ -7160,8 +7214,12 @@ function renderCraft(){
     const catalogItem = craftCatalog.find(c => c.key === it.item_key);
     const name = catalogItem ? catalogItem.name : it.item_key;
     const type = catalogItem ? catalogItem.item_type : '';
-    const statusLabel = it.consumed_at ? (type === 'consumable' ? 'Used' : 'Applied') : 'Held';
-    const canUse = type === 'consumable' && !it.consumed_at;
+    // cure_status only means anything against an active battle's status
+    // columns, so it isn't offered here — the battle screen surfaces it
+    // instead (0080, direct follow-up "cures... mid-fight").
+    const isCureItem = catalogItem && catalogItem.consumable_effect === 'cure_status';
+    const statusLabel = it.consumed_at ? (type === 'consumable' ? 'Used' : 'Applied') : (isCureItem ? 'Held — use during a fight' : 'Held');
+    const canUse = type === 'consumable' && !it.consumed_at && !isCureItem;
     return `<div class="roster-row">
       <div><div class="rname">${esc(name)}</div><div class="cblurb">${statusLabel}</div></div>
       ${canUse ? `<div class="ractions"><button class="secondary" onclick="doUseItem('${esc(it.id)}')">Use</button></div>` : ''}
