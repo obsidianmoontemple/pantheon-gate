@@ -179,6 +179,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="pantheons" onclick="showTab('pantheons')">Pantheons &amp; Gods</button>
       <button class="tab-btn" data-tab="chainedgods" onclick="showTab('chainedgods')">Chained Gods</button>
       <button class="tab-btn" data-tab="guide" onclick="showTab('guide')">Narrator/Guide</button>
+      <button class="tab-btn" data-tab="featureaccess" onclick="showTab('featureaccess')">Feature Access</button>
       <button class="tab-btn" data-tab="customers" onclick="showTab('customers')">Customers</button>
     </div>
 
@@ -2412,6 +2413,67 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         </div>
         <div class="status" id="newGuideStepStatus"></div>
       </div>
+
+      <div class="card">
+        <h2>Milestone guidance</h2>
+        <p class="hint">Same voice as the walkthrough above, but for ongoing progression instead of onboarding — direct feedback: "we need milestone guidance." A row fires as a one-time popup the first time a player's own progress crosses it (Guardian stage reached, Mage level reached, or Campaign chapter count reached), and every row also shows on the player-facing "Ganymede's Guidance" roadmap (reachable from its own Map Hub hotspot) as either earned or still locked. Only Stage key (for a Guardian stage row) or Level threshold (for a Mage level / Campaign level row) matters — leave the other blank.</p>
+        <div class="scroll-table" style="max-height:460px;">
+          <table>
+            <thead><tr><th>Key</th><th>Category</th><th>Stage key</th><th>Level threshold</th><th>Title</th><th>Body</th><th>Sort</th><th>Active</th></tr></thead>
+            <tbody id="milestoneRows"><tr><td colspan="8">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveMilestonesBtn">Save changes</button>
+          <div class="status" id="milestonesStatus"></div>
+        </div>
+        <h3>Add a new milestone</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newMilestoneKey" placeholder="e.g. mage_level_25" style="max-width:170px;"></div>
+          <div class="field"><label>Category</label>
+            <select id="newMilestoneCategory" style="max-width:170px;">
+              <option value="guardian_stage">Guardian stage</option>
+              <option value="mage_level">Mage level</option>
+              <option value="campaign_level">Campaign chapter</option>
+            </select>
+          </div>
+          <div class="field" id="newMilestoneStageKeyField"><label>Stage key</label>
+            <select id="newMilestoneStageKey" style="max-width:150px;">
+              <option value="hatchling">hatchling</option>
+              <option value="fledged">fledged</option>
+              <option value="ascendant">ascendant</option>
+              <option value="sovereign">sovereign</option>
+            </select>
+          </div>
+          <div class="field" id="newMilestoneLevelField" style="display:none;"><label>Level threshold</label><input type="number" min="1" id="newMilestoneLevel" style="max-width:120px;"></div>
+          <div class="field"><label>Title</label><input type="text" id="newMilestoneTitle" style="max-width:200px;"></div>
+          <div class="field"><label>Sort order</label><input type="number" id="newMilestoneSort" value="120" style="max-width:90px;"></div>
+          <button id="addMilestoneBtn">Add milestone</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Body (Ganymede's words, shown on the popup and the roadmap)</label>
+          <textarea id="newMilestoneBody" rows="3" style="max-width:none;width:100%;"></textarea>
+        </div>
+        <div class="status" id="newMilestoneStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== FEATURE ACCESS ============================== -->
+    <div class="tab-content" id="tab-featureaccess">
+      <div class="card">
+        <h2>Feature access</h2>
+        <p class="hint">Direct feedback: "abilities access tab... all features of the game gauntlet arena circles that kind of thing." Today none of these screens require anything to open beyond a real (non-anonymous) account — this is the missing control. Set a Requirement to gate the whole screen behind a Guardian stage, Guardian Campaign chapter count, or Mage level; leave it "None" (the default) to keep it open to everyone, same as today. Uncheck Active to fully open a feature regardless of its Requirement, without losing that configuration. This is separate from the Gauntlet's own per-opponent Level requirement (Creatures tab) — that still applies underneath whatever's set here.</p>
+        <div class="scroll-table" style="max-height:360px;">
+          <table>
+            <thead><tr><th>Feature</th><th>Requirement</th><th>Value</th><th>Locked message (shown to players)</th><th>Active</th></tr></thead>
+            <tbody id="featureGateRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveFeatureGatesBtn">Save changes</button>
+          <div class="status" id="featureGateStatus"></div>
+        </div>
+      </div>
     </div>
 
     <!-- ============================== CUSTOMERS ============================== -->
@@ -2684,6 +2746,8 @@ async function handleSession(session){
   loadMagePotions();
   loadNarratorSettingsAdmin();
   loadGuideStepsAdmin();
+  loadMilestonesAdmin();
+  loadFeatureGatesAdmin();
   loadSpeciesMoves();
   loadDeityMoves();
   loadDeityBlessings();
@@ -2833,7 +2897,8 @@ const DEFAULT_MAP_AREAS_ADMIN = [
   // "I need the mage and familiar both under the same guardian tab not
   // separate." Both now live together on the Guardian Page screen,
   // opened from the 'guardianPage' hotspot above.
-  { id: 'guide',         label: 'Ask Ganymede',                        left: 32,   top: 68,   width: 10,   height: 16 }
+  { id: 'guide',         label: 'Ask Ganymede',                        left: 32,   top: 68,   width: 10,   height: 16 },
+  { id: 'milestones',    label: "Ganymede's Guidance",                 left: 42,   top: 68,   width: 10,   height: 16 }
 ];
 const DEFAULT_MAP_BG = "https://static.wixstatic.com/media/d6c75e_11a7f28595a041d49639dce6f72788d7~mv2.jpg";
 
@@ -3161,6 +3226,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveNarratorSettingsBtn2').addEventListener('click', saveNarratorChatSettings);
   document.getElementById('saveGuideStepsBtn').addEventListener('click', saveGuideSteps);
   document.getElementById('addGuideStepBtn').addEventListener('click', addGuideStep);
+  document.getElementById('saveMilestonesBtn').addEventListener('click', saveMilestones);
+  document.getElementById('addMilestoneBtn').addEventListener('click', addMilestone);
+  document.getElementById('newMilestoneCategory').addEventListener('change', updateNewMilestoneCategoryFields);
+  updateNewMilestoneCategoryFields();
+  document.getElementById('saveFeatureGatesBtn').addEventListener('click', saveFeatureGates);
 
   document.getElementById('saveSeasonSettingsBtn').addEventListener('click', saveSeasonSettings);
   document.getElementById('saveSeasonPoolBtn').addEventListener('click', saveSeasonPool);
@@ -7219,6 +7289,145 @@ async function addGuideStep(){
   ['newGuideStepKey','newGuideStepTitle','newGuideStepBody'].forEach(fid => { document.getElementById(fid).value = ''; });
   document.getElementById('newGuideStepSort').value = '50';
   loadGuideStepsAdmin();
+}
+
+/* ---------------- Milestone guidance (0081) ----------------
+   Same voice as guide_steps above, same bulk-editable table shape —
+   just fired repeatedly over a player's whole progression instead of
+   once at onboarding, and split by category (guardian_stage/mage_level/
+   campaign_level) instead of a single fixed sequence. */
+
+function updateNewMilestoneCategoryFields(){
+  const cat = document.getElementById('newMilestoneCategory').value;
+  document.getElementById('newMilestoneStageKeyField').style.display = cat === 'guardian_stage' ? '' : 'none';
+  document.getElementById('newMilestoneLevelField').style.display = cat === 'guardian_stage' ? 'none' : '';
+}
+
+async function loadMilestonesAdmin(){
+  const { data, error } = await supabaseClient.from('milestone_catalog').select('*').order('sort_order', { ascending: true });
+  const rows = document.getElementById('milestoneRows');
+  if(error){ rows.innerHTML = '<tr><td colspan="8">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  rows.innerHTML = (data || []).map(m => `<tr data-key="${esc(m.key)}">
+    <td class="dim">${esc(m.key)}</td>
+    <td>
+      <select id="msCategory_${esc(m.key)}" style="max-width:150px;">
+        <option value="guardian_stage" ${m.category === 'guardian_stage' ? 'selected' : ''}>guardian_stage</option>
+        <option value="mage_level" ${m.category === 'mage_level' ? 'selected' : ''}>mage_level</option>
+        <option value="campaign_level" ${m.category === 'campaign_level' ? 'selected' : ''}>campaign_level</option>
+      </select>
+    </td>
+    <td>
+      <select id="msStageKey_${esc(m.key)}" style="max-width:130px;">
+        <option value="">—</option>
+        ${['hatchling','fledged','ascendant','sovereign'].map(s => `<option value="${s}" ${s === m.stage_key ? 'selected' : ''}>${s}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="number" min="1" id="msLevel_${esc(m.key)}" value="${m.level_threshold ?? ''}" style="max-width:90px;"></td>
+    <td><input type="text" id="msTitle_${esc(m.key)}" value="${esc(m.title)}" style="max-width:160px;"></td>
+    <td><textarea id="msBody_${esc(m.key)}" rows="2" style="max-width:320px;width:100%;">${esc(m.body)}</textarea></td>
+    <td><input type="number" id="msSort_${esc(m.key)}" value="${m.sort_order}" style="max-width:70px;"></td>
+    <td><input type="checkbox" id="msActive_${esc(m.key)}" ${m.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="8">No milestones yet — run migration 0081.</td></tr>';
+}
+
+async function saveMilestones(){
+  const status = document.getElementById('milestonesStatus');
+  const trs = document.querySelectorAll('#milestoneRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    const levelVal = document.getElementById('msLevel_' + key).value;
+    return {
+      key,
+      category: document.getElementById('msCategory_' + key).value,
+      stage_key: document.getElementById('msStageKey_' + key).value || null,
+      level_threshold: levelVal === '' ? null : parseInt(levelVal, 10),
+      title: document.getElementById('msTitle_' + key).value.trim(),
+      body: document.getElementById('msBody_' + key).value.trim(),
+      sort_order: parseInt(document.getElementById('msSort_' + key).value, 10) || 0,
+      active: document.getElementById('msActive_' + key).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('milestone_catalog').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadMilestonesAdmin();
+}
+
+async function addMilestone(){
+  const status = document.getElementById('newMilestoneStatus');
+  const key = document.getElementById('newMilestoneKey').value.trim().toLowerCase();
+  const category = document.getElementById('newMilestoneCategory').value;
+  const stageKey = document.getElementById('newMilestoneStageKey').value;
+  const levelVal = document.getElementById('newMilestoneLevel').value;
+  const title = document.getElementById('newMilestoneTitle').value.trim();
+  const body = document.getElementById('newMilestoneBody').value.trim();
+  const sortOrder = parseInt(document.getElementById('newMilestoneSort').value, 10) || 0;
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!title){ status.className = 'status err'; status.textContent = 'Title is required.'; return; }
+  if(category === 'guardian_stage' && !stageKey){ status.className = 'status err'; status.textContent = 'Guardian stage milestones need a stage key.'; return; }
+  if(category !== 'guardian_stage' && (!levelVal || parseInt(levelVal, 10) < 1)){ status.className = 'status err'; status.textContent = 'Mage level / Campaign chapter milestones need a level threshold greater than 0.'; return; }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('milestone_catalog').insert({
+    key, category, title, body, sort_order: sortOrder, active: true,
+    stage_key: category === 'guardian_stage' ? stageKey : null,
+    level_threshold: category === 'guardian_stage' ? null : parseInt(levelVal, 10),
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+  status.className = 'status ok'; status.textContent = title + ' added.';
+  ['newMilestoneKey','newMilestoneTitle','newMilestoneBody','newMilestoneLevel'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newMilestoneSort').value = '120';
+  loadMilestonesAdmin();
+}
+
+/* ---------------- Feature access (0081) ----------------
+   A fixed, small set of rows (one per gateable screen) — bulk-save only,
+   same shape as circle_patron_bonuses, no "add new" form since the set
+   of features is defined by what index.html actually checks, not
+   admin-extensible. */
+
+const FEATURE_REQUIREMENT_OPTIONS = [
+  { value: 'none', label: 'None — always open' },
+  { value: 'guardian_stage', label: 'Guardian stage — Value is a stage key (hatchling/fledged/ascendant/sovereign)' },
+  { value: 'guardian_campaign_level', label: 'Guardian Campaign chapters cleared — Value is a number' },
+  { value: 'mage_level', label: 'Mage level — Value is a number' },
+];
+
+async function loadFeatureGatesAdmin(){
+  const { data, error } = await supabaseClient.from('feature_gates').select('*').order('feature_key', { ascending: true });
+  const rows = document.getElementById('featureGateRows');
+  if(error){ rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  rows.innerHTML = (data || []).map(g => `<tr data-key="${esc(g.feature_key)}">
+    <td class="dim">${esc(g.label)}</td>
+    <td><select id="fgType_${esc(g.feature_key)}" style="max-width:340px;">${FEATURE_REQUIREMENT_OPTIONS.map(o => `<option value="${o.value}" ${o.value === g.requirement_type ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></td>
+    <td><input type="text" id="fgValue_${esc(g.feature_key)}" value="${esc(g.requirement_value || '')}" style="max-width:120px;"></td>
+    <td><input type="text" id="fgMessage_${esc(g.feature_key)}" value="${esc(g.locked_message || '')}" style="max-width:280px;width:100%;"></td>
+    <td><input type="checkbox" id="fgActive_${esc(g.feature_key)}" ${g.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="5">No feature rows yet — run migration 0081.</td></tr>';
+}
+
+async function saveFeatureGates(){
+  const status = document.getElementById('featureGateStatus');
+  const trs = document.querySelectorAll('#featureGateRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    return {
+      feature_key: key,
+      requirement_type: document.getElementById('fgType_' + key).value,
+      requirement_value: document.getElementById('fgValue_' + key).value.trim() || null,
+      locked_message: document.getElementById('fgMessage_' + key).value.trim(),
+      active: document.getElementById('fgActive_' + key).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('feature_gates').upsert(rows, { onConflict: 'feature_key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadFeatureGatesAdmin();
 }
 
 let speciesMovePointerCache = {}; // species -> { power: row|null, control: row|null }
