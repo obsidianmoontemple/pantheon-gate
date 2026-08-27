@@ -7361,11 +7361,16 @@ const CIRCLE_PATRON_EFFECT_OPTIONS = [
   { value: 'shop_discount_pct', label: 'shop_discount_pct - N% off Circle Shop purchases' },
 ];
 // Wired by craft/index.ts's use-item action — grants Consumable amount of
-// that currency immediately, no separate step.
+// that currency immediately, no separate step. heal_hp (13-point update
+// follow-up: "your hp system and all other stats should take into effect
+// item creation such as potions and such") restores that much persistent
+// Guardian HP (0076) instead of a currency, capped at the guardian's
+// vitality — a real potion, at last.
 const CONSUMABLE_EFFECT_OPTIONS = [
   { value: 'essence_surge', label: 'essence_surge - grants Essence immediately' },
   { value: 'bond_surge', label: 'bond_surge - grants Bond immediately' },
   { value: 'favor_surge', label: 'favor_surge - grants Favor immediately' },
+  { value: 'heal_hp', label: 'heal_hp - restores that much Guardian HP immediately' },
 ];
 // Wired by pvp/index.ts's shop-buy + respond actions.
 const ARENA_EFFECT_OPTIONS = [
