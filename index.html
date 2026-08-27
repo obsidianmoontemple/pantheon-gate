@@ -318,6 +318,29 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
 }
 @keyframes mapBadgePulse{0%,100%{transform:scale(0.9);opacity:0.9;}50%{transform:scale(1.15);opacity:1;}}
 
+/* Currency & Energy HUD (13-point update item 6) — direct feedback: "I
+   need to see all currency and energy amounts listed on the main map hub
+   as well." Tucked into the open water top-left of the map art, clear of
+   the top bar's Profile/Check-in/Mail/Promo hotspots (which start at
+   left:22.7%) and every realm plaque (the nearest, Circle Battles, starts
+   at top:11.7%). Unlike the invisible .map-hotspot buttons this is
+   deliberately visible chrome — a HUD, not a location — so it gets its
+   own dark plaque background rather than blending into the art.
+   pointer-events:none so it never intercepts a click meant for the map
+   underneath it. */
+.map-hub-stats{
+  position:absolute;left:1%;top:1.2%;pointer-events:none;
+  display:flex;flex-direction:column;gap:3px;
+  background:rgba(10,8,16,0.68);border:1px solid rgba(230,199,119,0.35);
+  border-radius:8px;padding:8px 12px;
+}
+.map-hub-stats .row{display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.map-hub-stats .icon{font-size:13px;}
+.map-hub-stats .val{
+  font-family:'Cinzel',serif;font-weight:700;font-size:13px;
+  color:var(--gold-bright);
+}
+
 /* Generic "hub" screen shell — originated with Guardian Home, direct
    feedback: "I would actually like the art I provide to lay over the
    entirety of the page covering everything except the buttons." Same
@@ -1758,7 +1781,12 @@ const DEFAULT_MAP_AREAS = [
   // spot on the art for it, and an invisible hotspot needs SOME visual
   // affordance to be discoverable at all. The map's own title text reads
   // naturally as "open the chronicle of these realms," so that's the spot.
-  { id: 'campaign',      label: 'The Divine Realms (Campaign)',       left: 41,   top: 9,    width: 15,   height: 6,    action: openCampaign },
+  // Direct feedback: "the Campaign area needs a nice node as well make
+  // sure it can stand out against the map" — was fully invisible (no glow
+  // affordance at all, unlike World Boss/Personal Altar/Guide below), so
+  // players had no way to discover it without already knowing it overlaps
+  // the map's title text. Same glow treatment as those three now applies.
+  { id: 'campaign',      label: 'The Divine Realms (Campaign)',       left: 41,   top: 9,    width: 15,   height: 6,    action: openCampaign, glow: true },
   // World Boss (per your note: "top right dark corner area of the map")
   // — a starting guess, not a measurement; there's no illustrated plaque
   // there yet to line up against, so drag it into the exact spot in
@@ -1937,6 +1965,27 @@ function hotspotDropdownMarkup(areas, innerHtml){
   return `<div class="map-hotspot-dropdown" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;">${innerHtml}</div>`;
 }
 
+// Currency & Energy HUD (13-point update item 6) — see the .map-hub-stats
+// CSS comment for placement reasoning. Guardian-only (no guardian yet
+// means no currencies exist regardless), and Energy/Tickets only show once
+// staminaSettings has loaded (same guard energyBarHtml()/ticketsBarHtml()
+// already use) rather than printing a misleading 0/0 before it arrives.
+function mapHubStatsHtml(){
+  if(!guardian) return '';
+  const rows = [
+    ['💎', guardian.essence || 0],
+    ['🙏', guardian.favor || 0],
+    ['✨', guardian.god_shards || 0],
+    ['🪙', guardian.god_tokens || 0],
+    ['🗝️', guardian.key_of_night || 0],
+  ];
+  if(staminaSettings){
+    rows.push(['⚡', `${energyNow()}/${staminaSettings.energy_max}`]);
+    rows.push(['🎟️', `${ticketsNow()}/${staminaSettings.ticket_max}`]);
+  }
+  return `<div class="map-hub-stats">${rows.map(([icon, val]) => `<div class="row"><span class="icon">${icon}</span><span class="val">${val}</span></div>`).join('')}</div>`;
+}
+
 function mapHubMarkup(){
   // Direct feedback: "please get rid of the overlay dotted boxes on the
   // map hub they look bad and I know where everything is" — no pageKey
@@ -1945,7 +1994,7 @@ function mapHubMarkup(){
   // its art is set; hotspots stay fully invisible, same as before that
   // fallback existed. World Boss/Chained Gods/Check-in still get the
   // fallback until their own art is in place.
-  return `<div class="map-hub" id="mapHub"${bgAttrPlain('map')}>${hotspotButtonsMarkup(MAP_AREAS, 'MAP_AREAS')}</div>`;
+  return `<div class="map-hub" id="mapHub"${bgAttrPlain('map')}>${mapHubStatsHtml()}${hotspotButtonsMarkup(MAP_AREAS, 'MAP_AREAS')}</div>`;
 }
 
 // The landing screen once a guardian exists (render()'s fallback) — every
@@ -2070,6 +2119,7 @@ function renderGuardianFamiliarTab(){
         <div class="stat-tile"><div class="num">${guardian.ward}</div><div class="label">Ward</div></div>
         <div class="stat-tile"><div class="num">${guardian.swiftness}</div><div class="label">Swiftness</div></div>
         <div class="stat-tile"><div class="num">${guardian.cunning}</div><div class="label">Cunning</div></div>
+        <div class="stat-tile"><div class="num">${Math.round(guardianPowerRating(guardian))}</div><div class="label">Power</div></div>
       </div>
 
       <p class="marks-note">${guardian.stage === 'egg'
@@ -2149,6 +2199,7 @@ function renderGuardianMageTab(){
         <div class="stat-tile"><div class="num">${mageStats.ward}</div><div class="label">Ward</div></div>
         <div class="stat-tile"><div class="num">${mageStats.swiftness}</div><div class="label">Swiftness</div></div>
         <div class="stat-tile"><div class="num">${mageStats.cunning}</div><div class="label">Cunning</div></div>
+        <div class="stat-tile"><div class="num">${Math.round(magePowerRating(mage, mageStats))}</div><div class="label">Power</div></div>
       </div>
 
       <p class="marks-note">${equippedNames.length ? 'Wearing: ' + equippedNames.map(n => esc(n)).join(', ') : 'Nothing equipped yet.'}</p>
@@ -2296,6 +2347,39 @@ function mageEffectiveStats(){
     if(cat) base[cat.stat_key] += cat.stat_amount;
   });
   return base;
+}
+
+// Power Rating (13-point update item 4) — a single at-a-glance strength
+// number, "guardian stats, progression and mage stats and equipment also
+// deity blessings" per direct feedback. Deliberately NOT its own DB column
+// or its own separate bonus term for items/blessings: guardian_item_catalog
+// stat_boost crafts (0028) and deity_blessings (0035) both bake their bonus
+// permanently into guardians.vitality/might/ward/swiftness/cunning at the
+// moment they're granted, so they're already inside guardianPowerScore()
+// below with zero extra bookkeeping — only Mage Gear (0052) stays a
+// separate, unequip-able bonus, which is why mageEffectiveStats() (equip-
+// aware) feeds this instead of the raw mage.* columns. This is a NEW,
+// purely-cosmetic display number — separate on purpose from circle/
+// index.ts's existing guardianPowerScore() (which is tuned for invasion
+// balance and must not shift just because this display feature shipped).
+const GUARDIAN_STAGE_POWER_BONUS = { egg: 0, hatchling: 15, fledged: 40, ascendant: 80, sovereign: 150 };
+function guardianPowerRating(g){
+  if(!g) return 0;
+  return g.vitality * 0.5 + g.might * 1.0 + g.ward * 0.6 + g.swiftness * 0.4 + g.cunning * 0.4
+    + (GUARDIAN_STAGE_POWER_BONUS[g.stage] || 0);
+}
+function magePowerRating(m, effectiveStats){
+  if(!m) return 0;
+  const s = effectiveStats || { vitality: m.vitality, might: m.might, ward: m.ward, swiftness: m.swiftness, cunning: m.cunning };
+  return s.vitality * 0.5 + s.might * 1.0 + s.ward * 0.6 + s.swiftness * 0.4 + s.cunning * 0.4 + (m.level || 1) * 8;
+}
+// The combined "Personal Power" shown on the Profile/hub — sum of whatever
+// the player currently has (a Mage isn't required to have a Guardian
+// power, and vice versa).
+function personalPowerRating(){
+  const gp = guardianPowerRating(guardian);
+  const mp = mage ? magePowerRating(mage, mageEffectiveStats()) : 0;
+  return Math.round(gp + mp);
 }
 
 async function loadMageGearCatalog(){
@@ -2965,7 +3049,7 @@ function renderProfile(){
       <div class="stat-tile"><div class="num">${mageStats.might}</div><div class="label">Might</div></div>
       <div class="stat-tile"><div class="num">${mageStats.ward}</div><div class="label">Ward</div></div>
       <div class="stat-tile"><div class="num">${mageStats.swiftness}</div><div class="label">Swiftness</div></div>
-      <div class="stat-tile"><div class="num">${mageStats.cunning}</div><div class="label">Cunning</div></div>
+      <div class="stat-tile"><div class="num">${Math.round(magePowerRating(mage, mageStats))}</div><div class="label">Mage Power</div></div>
     </div>
     <p class="marks-note">Familiar: ${esc(guardian.name)}, a ${esc((SPECIES.find(s => s.id === guardian.species) || {}).label || guardian.species)} (${esc(STAGE_LABEL[guardian.stage] || guardian.stage)}).</p>
   ` : `
@@ -2976,6 +3060,11 @@ function renderProfile(){
 
   app.innerHTML = `
     <div class="card"${bgAttr('profile', 'text-align:center;')}>
+      <div class="essence-row" style="background:rgba(0,0,0,0.25);border-radius:8px;padding:8px 14px;">
+        <span class="essence-label">Power Rating</span>
+        <span class="essence-value" style="font-size:22px;">${personalPowerRating()}</span>
+      </div>
+
       ${heroBlock}
 
       <div class="essence-row" style="margin-top:14px;">
@@ -5484,6 +5573,7 @@ function renderCircleHome(){
     return `<div class="roster-row">
       <div>
         <div class="rname">${esc(g.name || 'Unnamed')} <span class="role-badge ${m.role}">${roleLabel(m.role)}</span>${isSelf ? ' <em style="color:var(--parchment-dim);font-size:11px;">(you)</em>' : ''}</div>
+        <div class="cblurb">Power: ${m.power || 0}</div>
       </div>
       <div class="ractions">${actions}</div>
     </div>`;
@@ -5549,7 +5639,7 @@ function renderCircleHome(){
       ${renderCircleBanner(c.banner_shape, c.banner_primary, c.banner_secondary, c.banner_preset_key, 140)}
       <h2>${esc(c.name)}</h2>
       <p class="hint">${esc(c.blurb || 'No blurb yet.')}</p>
-      <p class="ccount" style="text-align:center;">${roster.length}/${c.member_cap} members · Circle rank ${c.rank_score}</p>
+      <p class="ccount" style="text-align:center;">${roster.length}/${c.member_cap} members · Circle rank ${c.rank_score} · Circle Power ${myCircle.circlePower || 0}</p>
       <div class="role-badge ${myRole}" style="margin-top:6px;">Your rank: ${roleLabel(myRole)}</div>
       ${patronLine}
       ${territoryLine}
