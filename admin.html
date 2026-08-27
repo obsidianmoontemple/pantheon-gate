@@ -149,6 +149,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tabnav" id="tabNav">
       <button class="tab-btn active" data-tab="overview" onclick="showTab('overview')">Overview</button>
       <button class="tab-btn" data-tab="leaderboards" onclick="showTab('leaderboards')">Leaderboards</button>
+      <button class="tab-btn" data-tab="playerstats" onclick="showTab('playerstats')">Player Battle Stats</button>
       <button class="tab-btn" data-tab="circles" onclick="showTab('circles')">Circles</button>
       <button class="tab-btn" data-tab="circlebonuses" onclick="showTab('circlebonuses')">Circle Patron Bonuses</button>
       <button class="tab-btn" data-tab="currencies" onclick="showTab('currencies')">Currencies &amp; Gifts</button>
@@ -174,7 +175,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="campaign" onclick="showTab('campaign')">Campaign</button>
       <button class="tab-btn" data-tab="deities" onclick="showTab('deities')">Deity Personalities</button>
       <button class="tab-btn" data-tab="pricing" onclick="showTab('pricing')">Pricing &amp; Store</button>
-      <button class="tab-btn" data-tab="maphotspots" onclick="showTab('maphotspots')">Map Hotspots</button>
+      <button class="tab-btn" data-tab="maphotspots" onclick="showTab('maphotspots')">Backgrounds &amp; Hotspots</button>
       <button class="tab-btn" data-tab="pantheons" onclick="showTab('pantheons')">Pantheons &amp; Gods</button>
       <button class="tab-btn" data-tab="chainedgods" onclick="showTab('chainedgods')">Chained Gods</button>
       <button class="tab-btn" data-tab="guide" onclick="showTab('guide')">Narrator/Guide</button>
@@ -249,6 +250,48 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <thead><tr><th>#</th><th>Customer</th><th>Total (proxy)</th><th>Purchase events</th></tr></thead>
             <tbody id="spenderLbRows"><tr><td colspan="4">Loading…</td></tr></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================== PLAYER BATTLE STATS ==============================
+         Direct feedback: "I still do not see anywhere to effect battle stats on anything
+         much less mages" — there was genuinely no admin control anywhere to directly view
+         or edit one specific player's own Guardian/Mage combat stats (Currency grants exist
+         on the Gifting tab, catalog editors exist for every enemy/item, but nothing let you
+         reach into a live player's own numbers). This is that control. ============================== -->
+    <div class="tab-content" id="tab-playerstats">
+      <div class="card">
+        <h2>Player battle stats</h2>
+        <p class="hint">Look up one player by email to view and directly edit their Guardian's and Mage's combat stats — the same five numbers (Vitality/Might/Ward/Swiftness/Cunning) everything in Combat, World Boss, Circle Dragons, and Mage Duels reads. For currency/item grants, use the Gifting tab instead — this is stats only.</p>
+        <div class="form-row">
+          <div class="field"><label>Player email</label><input type="email" id="playerStatsEmail" style="max-width:240px;"></div>
+          <button id="playerStatsSearchBtn">Look up</button>
+        </div>
+        <div class="status" id="playerStatsStatus"></div>
+
+        <div id="playerStatsResult" style="display:none;margin-top:16px;">
+          <div class="pantheon-group" style="text-align:left;">
+            <h3 id="playerStatsGuardianTitle">Guardian</h3>
+            <div class="form-row">
+              <div class="field"><label>Vitality</label><input type="number" min="1" id="psGuardianVitality" style="max-width:100px;"></div>
+              <div class="field"><label>Might</label><input type="number" min="0" id="psGuardianMight" style="max-width:100px;"></div>
+              <div class="field"><label>Ward</label><input type="number" min="0" id="psGuardianWard" style="max-width:100px;"></div>
+              <div class="field"><label>Swiftness</label><input type="number" min="0" id="psGuardianSwiftness" style="max-width:100px;"></div>
+              <div class="field"><label>Cunning</label><input type="number" min="0" id="psGuardianCunning" style="max-width:100px;"></div>
+            </div>
+            <div class="form-row">
+              <div class="field"><label>Current HP (blank = full)</label><input type="number" min="0" id="psGuardianCurrentHp" style="max-width:120px;"></div>
+              <button class="secondary" type="button" onclick="document.getElementById('psGuardianCurrentHp').value='';">Set to full</button>
+              <button id="playerStatsSaveGuardianBtn">Save Guardian stats</button>
+            </div>
+            <div class="status" id="playerStatsGuardianStatus"></div>
+          </div>
+
+          <div class="pantheon-group" style="text-align:left;margin-top:14px;" id="playerStatsMageBlock">
+            <h3 id="playerStatsMageTitle">Mage</h3>
+            <div id="playerStatsMageFields"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -2099,6 +2142,15 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         </div>
       </div>
 
+    </div>
+
+    <!-- ============================== BACKGROUNDS & MAP HOTSPOTS ==============================
+         Direct feedback: "why are my background controls in pricing and store I mean no sence."
+         Moved here (out of Pricing & Store, which never had anything to do with screen art) and
+         paired with Screen hotspots below since that editor's own preview canvas already depends
+         directly on whatever background is set here — they were always two halves of the same job,
+         just filed under unrelated tabs before. ============================== -->
+    <div class="tab-content" id="tab-maphotspots">
       <div class="card">
         <h2>Site backgrounds</h2>
         <p class="hint">One background image URL per screen — every page a player can land on, not just the two that used to be hardcoded into the CSS. Leave a field blank to fall back to the built-in dark card look. Saves all of these in one go.</p>
@@ -2106,13 +2158,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <button id="saveSiteSettingsBtn" style="margin-top:10px;">Save all backgrounds</button>
         <div class="status" id="siteSettingsStatus"></div>
       </div>
-    </div>
 
-    <!-- ============================== MAP HOTSPOTS ============================== -->
-    <div class="tab-content" id="tab-maphotspots">
       <div class="card">
         <h2>Screen hotspots</h2>
-        <p class="hint">Pick a screen, drag a box to move it, drag the corner handle to resize it. The canvas below is the exact same 1408:768 frame that screen renders (using whatever background you've set for it on Pricing &amp; Store's Site backgrounds card), so what you see here is what players see — no guessing. Boxes are invisible in the actual game; the fill below is just so you can see and grab them while editing.</p>
+        <p class="hint">Pick a screen, drag a box to move it, drag the corner handle to resize it. The canvas below is the exact same 1408:768 frame that screen renders (using whatever background you've set above), so what you see here is what players see — no guessing. Boxes are invisible in the actual game; the fill below is just so you can see and grab them while editing.</p>
 
         <div class="hotspot-controls">
           <div class="field">
@@ -3032,6 +3081,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveSiteSettingsBtn').addEventListener('click', saveSiteSettings);
   document.getElementById('savePantheonsBtn').addEventListener('click', savePantheonSettings);
   document.getElementById('saveDeitiesBtn').addEventListener('click', saveDeitySettings);
+  document.getElementById('playerStatsSearchBtn').addEventListener('click', searchPlayerStats);
+  document.getElementById('playerStatsSaveGuardianBtn').addEventListener('click', savePlayerGuardianStats);
   document.getElementById('grantBtn').addEventListener('click', grantAccess);
   document.getElementById('godSearch').addEventListener('input', filterGodRows);
   document.getElementById('postBroadcastBtn').addEventListener('click', postBroadcast);
@@ -3826,6 +3877,129 @@ async function removeStoreItem(id){
   const { error } = await supabaseClient.from('store_items').update({ active: false }).eq('id', id);
   if(error){ alert('Failed: ' + error.message); return; }
   loadStoreItems();
+}
+
+/* ---------------- player battle stats (direct feedback: "I still do not
+   see anywhere to effect battle stats on anything much less mages") ---------------- */
+
+let playerStatsGuardian = null;
+let playerStatsMage = null;
+
+async function searchPlayerStats(){
+  const status = document.getElementById('playerStatsStatus');
+  const email = document.getElementById('playerStatsEmail').value.trim();
+  document.getElementById('playerStatsResult').style.display = 'none';
+  if(!email){ status.className = 'status err'; status.textContent = 'Enter an email.'; return; }
+
+  status.className = 'status'; status.textContent = 'Looking up…';
+  const userId = await findUserIdByEmail(email);
+  if(!userId){ status.className = 'status err'; status.textContent = 'No player found with that email.'; return; }
+
+  const { data: guardian, error: gErr } = await supabaseClient
+    .from('guardians')
+    .select('id, name, stage, vitality, might, ward, swiftness, cunning, current_hp')
+    .eq('owner_user_id', userId)
+    .maybeSingle();
+  if(gErr || !guardian){ status.className = 'status err'; status.textContent = 'That player has no Guardian yet.'; return; }
+
+  const { data: mage } = await supabaseClient
+    .from('mages')
+    .select('id, name, level, xp, vitality, might, ward, swiftness, cunning, current_hp')
+    .eq('owner_user_id', userId)
+    .maybeSingle();
+
+  playerStatsGuardian = guardian;
+  playerStatsMage = mage || null;
+
+  document.getElementById('playerStatsGuardianTitle').textContent = `Guardian — ${guardian.name} (${guardian.stage})`;
+  document.getElementById('psGuardianVitality').value = guardian.vitality;
+  document.getElementById('psGuardianMight').value = guardian.might;
+  document.getElementById('psGuardianWard').value = guardian.ward;
+  document.getElementById('psGuardianSwiftness').value = guardian.swiftness;
+  document.getElementById('psGuardianCunning').value = guardian.cunning;
+  document.getElementById('psGuardianCurrentHp').value = guardian.current_hp === null || guardian.current_hp === undefined ? '' : guardian.current_hp;
+  document.getElementById('playerStatsGuardianStatus').textContent = '';
+
+  renderPlayerStatsMageFields();
+  document.getElementById('playerStatsResult').style.display = '';
+  status.className = 'status ok';
+  status.textContent = 'Loaded.';
+}
+
+function renderPlayerStatsMageFields(){
+  const title = document.getElementById('playerStatsMageTitle');
+  const fields = document.getElementById('playerStatsMageFields');
+  if(!playerStatsMage){
+    title.textContent = 'Mage';
+    fields.innerHTML = '<p class="hint">This player has no Mage yet — nothing to edit.</p>';
+    return;
+  }
+  const m = playerStatsMage;
+  title.textContent = `Mage — ${m.name} (Level ${m.level})`;
+  fields.innerHTML = `
+    <div class="form-row">
+      <div class="field"><label>Vitality</label><input type="number" min="1" id="psMageVitality" value="${m.vitality}" style="max-width:100px;"></div>
+      <div class="field"><label>Might</label><input type="number" min="0" id="psMageMight" value="${m.might}" style="max-width:100px;"></div>
+      <div class="field"><label>Ward</label><input type="number" min="0" id="psMageWard" value="${m.ward}" style="max-width:100px;"></div>
+      <div class="field"><label>Swiftness</label><input type="number" min="0" id="psMageSwiftness" value="${m.swiftness}" style="max-width:100px;"></div>
+      <div class="field"><label>Cunning</label><input type="number" min="0" id="psMageCunning" value="${m.cunning}" style="max-width:100px;"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Level</label><input type="number" min="1" id="psMageLevel" value="${m.level}" style="max-width:90px;"></div>
+      <div class="field"><label>XP</label><input type="number" min="0" id="psMageXp" value="${m.xp}" style="max-width:100px;"></div>
+      <div class="field"><label>Current HP (blank = full)</label><input type="number" min="0" id="psMageCurrentHp" value="${m.current_hp === null || m.current_hp === undefined ? '' : m.current_hp}" style="max-width:120px;"></div>
+      <button id="playerStatsSaveMageBtn" onclick="savePlayerMageStats()">Save Mage stats</button>
+    </div>
+    <div class="status" id="playerStatsMageStatus"></div>
+  `;
+}
+
+async function savePlayerGuardianStats(){
+  const status = document.getElementById('playerStatsGuardianStatus');
+  if(!playerStatsGuardian){ return; }
+  const vitality = parseInt(document.getElementById('psGuardianVitality').value, 10);
+  if(isNaN(vitality) || vitality < 1){ status.className = 'status err'; status.textContent = 'Vitality must be at least 1.'; return; }
+  const hpRaw = document.getElementById('psGuardianCurrentHp').value.trim();
+
+  const payload = {
+    vitality,
+    might: parseInt(document.getElementById('psGuardianMight').value, 10) || 0,
+    ward: parseInt(document.getElementById('psGuardianWard').value, 10) || 0,
+    swiftness: parseInt(document.getElementById('psGuardianSwiftness').value, 10) || 0,
+    cunning: parseInt(document.getElementById('psGuardianCunning').value, 10) || 0,
+    current_hp: hpRaw === '' ? null : Math.max(0, parseInt(hpRaw, 10) || 0),
+    hp_updated_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('guardians').update(payload).eq('id', playerStatsGuardian.id);
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+}
+
+async function savePlayerMageStats(){
+  const status = document.getElementById('playerStatsMageStatus');
+  if(!playerStatsMage){ return; }
+  const vitality = parseInt(document.getElementById('psMageVitality').value, 10);
+  if(isNaN(vitality) || vitality < 1){ status.className = 'status err'; status.textContent = 'Vitality must be at least 1.'; return; }
+  const hpRaw = document.getElementById('psMageCurrentHp').value.trim();
+
+  const payload = {
+    vitality,
+    might: parseInt(document.getElementById('psMageMight').value, 10) || 0,
+    ward: parseInt(document.getElementById('psMageWard').value, 10) || 0,
+    swiftness: parseInt(document.getElementById('psMageSwiftness').value, 10) || 0,
+    cunning: parseInt(document.getElementById('psMageCunning').value, 10) || 0,
+    level: parseInt(document.getElementById('psMageLevel').value, 10) || 1,
+    xp: parseInt(document.getElementById('psMageXp').value, 10) || 0,
+    current_hp: hpRaw === '' ? null : Math.max(0, parseInt(hpRaw, 10) || 0),
+    hp_updated_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('mages').update(payload).eq('id', playerStatsMage.id);
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
 }
 
 /* ---------------- grant / revoke ---------------- */
