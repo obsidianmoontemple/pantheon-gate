@@ -152,8 +152,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="circles" onclick="showTab('circles')">Circles</button>
       <button class="tab-btn" data-tab="circlebonuses" onclick="showTab('circlebonuses')">Circle Patron Bonuses</button>
       <button class="tab-btn" data-tab="currencies" onclick="showTab('currencies')">Currencies &amp; Gifts</button>
+      <button class="tab-btn" data-tab="gifting" onclick="showTab('gifting')">Gifting</button>
       <button class="tab-btn" data-tab="checkins" onclick="showTab('checkins')">Check-ins &amp; Events</button>
       <button class="tab-btn" data-tab="progression" onclick="showTab('progression')">Guardian Progression</button>
+      <button class="tab-btn" data-tab="creatures" onclick="showTab('creatures')">Creatures</button>
       <button class="tab-btn" data-tab="dragons" onclick="showTab('dragons')">Big Baddies</button>
       <button class="tab-btn" data-tab="worldboss" onclick="showTab('worldboss')">World Boss</button>
       <button class="tab-btn" data-tab="altars" onclick="showTab('altars')">Altars</button>
@@ -176,7 +178,6 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="pantheons" onclick="showTab('pantheons')">Pantheons &amp; Gods</button>
       <button class="tab-btn" data-tab="chainedgods" onclick="showTab('chainedgods')">Chained Gods</button>
       <button class="tab-btn" data-tab="guide" onclick="showTab('guide')">Narrator/Guide</button>
-      <button class="tab-btn" data-tab="access" onclick="showTab('access')">Access &amp; Broadcasts</button>
       <button class="tab-btn" data-tab="customers" onclick="showTab('customers')">Customers</button>
     </div>
 
@@ -346,9 +347,40 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         </div>
         <div class="status" id="newCurrencyStatus"></div>
       </div>
+    </div>
+
+    <!-- ============================== CHECK-INS & EVENTS ============================== -->
+    <div class="tab-content" id="tab-checkins">
+      <div class="card">
+        <h2>Monthly check-in calendar</h2>
+        <p class="hint">One reward per day of the month, 1 through 31, the same every month — day 31 simply doesn't fire in shorter months, no other bookkeeping needed. Replaces the old streak-milestone system. Every day ships with Active unchecked so nothing pays out until you've reviewed and approved it — fill in a currency/amount/label per day, then check Active when it's ready.</p>
+        <div class="checkin-calendar-grid" id="checkinCalendarGrid"><p class="hint">Loading…</p></div>
+        <div class="save-bar">
+          <button id="saveCheckinCalendarBtn">Save changes</button>
+          <div class="status" id="checkinCalendarStatus"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================== GIFTING (13-point update item 5) ==============================
+         Direct feedback: "All gifting ability for whatever the case it may be all needs to have
+         control in one tab right now it is spread out and i never no right where to go and since
+         all payout dropdowns should have the same info anyway it should be easier just destinations
+         and messages." Every admin flow that sends something to a player now lives here instead of
+         scattered across Currencies & Gifts / Check-ins & Events / Access & Broadcasts. "Grant or
+         revoke access" and "Broadcasts" below also gained a "Every member of a Circle" destination
+         option (fanning out to each member individually) so all six cards now offer as close to the
+         same destination vocabulary — Everyone / One Player / One Circle — as each one's underlying
+         mechanic allows (the two currency-to-a-Circle flows are a shared BALANCE, not a per-member
+         fan-out, which is why they only take a Circle, never "everyone"). ============================== -->
+    <div class="tab-content" id="tab-gifting">
+      <div class="card">
+        <h2>Gifting — one stop for every outgoing grant</h2>
+        <p class="hint">Every admin flow that sends something to a player or players lives here now — currency, items/rewards, promo campaigns, access unlocks, and mailbox announcements. Pick the card for what you're sending, then a destination: one player (by email), one Circle (by exact name), or everyone.</p>
+      </div>
 
       <div class="card">
-        <h2>Grant to a player</h2>
+        <h2>Grant currency to a player</h2>
         <p class="hint">Comp a player directly. They must have signed in (and, for a personal currency, have a guardian) already.</p>
         <div class="form-row">
           <div class="field"><label>Their email</label><input type="email" id="grantPlayerEmail" style="max-width:220px;"></div>
@@ -364,27 +396,11 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
 
       <div class="card">
-        <h2>Grant to a Circle</h2>
-        <p class="hint">Adjusts one Circle's shared balance directly — same effect as the Circles tab's balance control, kept here too since currency work often starts from this side.</p>
-        <div class="form-row">
-          <div class="field"><label>Circle name (exact)</label><input type="text" id="grantCircleName" style="max-width:200px;"></div>
-          <div class="field"><label>Currency</label><select id="grantCircleCurrency" style="max-width:160px;"></select></div>
-          <div class="field"><label>Mode</label>
-            <select id="grantCircleMode" style="max-width:120px;"><option value="delta">Add</option><option value="set">Set to</option></select>
-          </div>
-          <div class="field"><label>Amount</label><input type="number" id="grantCircleAmount" style="max-width:120px;"></div>
-          <div class="field"><label>Reason (optional)</label><input type="text" id="grantCircleReason" style="max-width:200px;"></div>
-          <button id="grantCircleBtn">Grant</button>
-        </div>
-        <div class="status" id="grantCircleStatus"></div>
-      </div>
-
-      <div class="card">
-        <h2>Bulk / broadcast gift</h2>
-        <p class="hint">Personal currencies only — fans out to every member of one Circle, or to every player site-wide. Instant and unrecorded beyond the admin action log; for a repeatable named campaign, use Check-ins &amp; Events instead.</p>
+        <h2>Grant currency to everyone, or every member of a Circle</h2>
+        <p class="hint">Personal currencies only — fans out to every member of one Circle, or to every player site-wide. Instant and unrecorded beyond the admin action log; for a repeatable named campaign, use the Promo events card below instead.</p>
         <div class="form-row">
           <div class="field"><label>Currency</label><select id="bulkGrantCurrency" style="max-width:160px;"></select></div>
-          <div class="field"><label>Scope</label>
+          <div class="field"><label>Destination</label>
             <select id="bulkGrantScope" style="max-width:140px;"><option value="sitewide">Everyone</option><option value="circle">One Circle</option></select>
           </div>
           <div class="field" id="bulkGrantCircleField" style="display:none;">
@@ -396,18 +412,21 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         </div>
         <div class="status" id="bulkGrantStatus"></div>
       </div>
-    </div>
 
-    <!-- ============================== CHECK-INS & EVENTS ============================== -->
-    <div class="tab-content" id="tab-checkins">
       <div class="card">
-        <h2>Monthly check-in calendar</h2>
-        <p class="hint">One reward per day of the month, 1 through 31, the same every month — day 31 simply doesn't fire in shorter months, no other bookkeeping needed. Replaces the old streak-milestone system. Every day ships with Active unchecked so nothing pays out until you've reviewed and approved it — fill in a currency/amount/label per day, then check Active when it's ready.</p>
-        <div class="checkin-calendar-grid" id="checkinCalendarGrid"><p class="hint">Loading…</p></div>
-        <div class="save-bar">
-          <button id="saveCheckinCalendarBtn">Save changes</button>
-          <div class="status" id="checkinCalendarStatus"></div>
+        <h2>Grant currency to a Circle's shared balance</h2>
+        <p class="hint">Adjusts one Circle's own shared balance (like Devotion) directly — not a per-member fan-out, since a Circle-scope currency is a single pooled number. Same effect as the Circles tab's balance control, kept here too since gifting work now starts from this tab.</p>
+        <div class="form-row">
+          <div class="field"><label>Circle name (exact)</label><input type="text" id="grantCircleName" style="max-width:200px;"></div>
+          <div class="field"><label>Currency</label><select id="grantCircleCurrency" style="max-width:160px;"></select></div>
+          <div class="field"><label>Mode</label>
+            <select id="grantCircleMode" style="max-width:120px;"><option value="delta">Add</option><option value="set">Set to</option></select>
+          </div>
+          <div class="field"><label>Amount</label><input type="number" id="grantCircleAmount" style="max-width:120px;"></div>
+          <div class="field"><label>Reason (optional)</label><input type="text" id="grantCircleReason" style="max-width:200px;"></div>
+          <button id="grantCircleBtn">Grant</button>
         </div>
+        <div class="status" id="grantCircleStatus"></div>
       </div>
 
       <div class="card">
@@ -428,7 +447,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Amount each</label><input type="number" min="1" id="newPromoAmount" style="max-width:120px;"></div>
         </div>
         <div class="form-row">
-          <div class="field"><label>Scope</label>
+          <div class="field"><label>Destination</label>
             <select id="newPromoScope" style="max-width:140px;"><option value="sitewide">Everyone</option><option value="circle">One Circle</option></select>
           </div>
           <div class="field" id="newPromoCircleField" style="display:none;">
@@ -444,6 +463,123 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <input type="text" id="newPromoDescription" style="max-width:none;">
         </div>
         <div class="status" id="newPromoStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Grant or revoke access</h2>
+        <p class="hint">Comp a friend, fix a support issue, or claw back access — without touching the database directly. Every recipient must have signed in at least once already; for "Everyone"/"One Circle" this quietly skips anyone who hasn't (same as every other bulk send in this tab).</p>
+        <div class="form-row">
+          <div class="field">
+            <label>Destination</label>
+            <select id="grantTargetType" style="max-width:150px;" onchange="updateGrantTargetVisibility()">
+              <option value="player">One player</option>
+              <option value="circle">One Circle</option>
+              <option value="everyone">Everyone</option>
+            </select>
+          </div>
+          <div class="field" id="grantEmailField">
+            <label>Their email</label>
+            <input type="email" id="grantEmail" style="max-width:240px;">
+          </div>
+          <div class="field" id="grantCircleNameField" style="display:none;">
+            <label>Circle name (exact)</label>
+            <input type="text" id="grantTargetCircleName" style="max-width:200px;">
+          </div>
+          <div class="field">
+            <label>Grant what</label>
+            <select id="grantScopeType" style="max-width:160px;">
+              <option value="deity">One god</option>
+              <option value="pantheon">One pantheon</option>
+              <option value="all">Full access</option>
+            </select>
+          </div>
+          <div class="field" id="grantScopeIdField">
+            <label>God or pantheon id</label>
+            <input type="text" id="grantScopeId" placeholder="e.g. hera or norse" style="max-width:180px;">
+          </div>
+          <div class="field">
+            <label>Note (optional)</label>
+            <input type="text" id="grantNote" placeholder="why" style="max-width:200px;">
+          </div>
+          <button id="grantBtn">Grant access</button>
+        </div>
+        <div class="status" id="grantStatus"></div>
+
+        <div class="scroll-table" style="max-height:320px;margin-top:10px;">
+          <table>
+            <thead><tr><th>Email</th><th>Scope</th><th>Source</th><th>Granted</th><th></th></tr></thead>
+            <tbody id="entitlementRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Broadcasts — mail, items &amp; rewards</h2>
+        <p class="hint">Post an announcement, optionally with a gift attached — currency, an unlock, a store item, or a reward/bundle from the catalogs. Players see it in their in-site mailbox and claim any gift with one click. "One Circle" sends the same message/gift individually to every current member.</p>
+        <div class="field" style="max-width:none;">
+          <label>Message</label>
+          <textarea id="broadcastMessage" rows="3"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Send to</label>
+            <select id="broadcastTargetType" style="max-width:150px;">
+              <option value="everyone">Everyone</option>
+              <option value="one">One player</option>
+              <option value="circle">One Circle</option>
+            </select>
+          </div>
+          <div class="field" id="broadcastTargetEmailField" style="display:none;">
+            <label>Their email</label>
+            <input type="email" id="broadcastTargetEmail" placeholder="player@example.com" style="max-width:220px;">
+          </div>
+          <div class="field" id="broadcastTargetCircleField" style="display:none;">
+            <label>Circle name (exact)</label>
+            <input type="text" id="broadcastTargetCircleName" style="max-width:200px;">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Attach a gift?</label>
+            <select id="broadcastGiftType" style="max-width:180px;">
+              <option value="none">No gift, just a message</option>
+              <option value="bonus_messages">Bonus messages</option>
+              <option value="deity">Free unlock: one god</option>
+              <option value="pantheon">Free unlock: one pantheon</option>
+              <option value="all">Free unlock: full access</option>
+              <option value="store_item">Give away a store item</option>
+            </select>
+          </div>
+          <div class="field" id="broadcastGiftBonusField" style="display:none;">
+            <label>How many bonus messages</label>
+            <input type="number" min="1" step="1" id="broadcastGiftBonus" style="max-width:140px;">
+          </div>
+          <div class="field" id="broadcastGiftScopeField" style="display:none;">
+            <label>God or pantheon id</label>
+            <input type="text" id="broadcastGiftScopeId" placeholder="e.g. hera or norse" style="max-width:180px;">
+          </div>
+          <div class="field" id="broadcastGiftStoreItemField" style="display:none;">
+            <label>Which item</label>
+            <select id="broadcastGiftStoreItem" style="max-width:200px;"><option value="">Loading…</option></select>
+          </div>
+          <div class="field">
+            <label>Also attach a reward package? (optional)</label>
+            <select id="broadcastGiftRewardKey" style="max-width:220px;"><option value="">Nothing — no reward package</option></select>
+          </div>
+          <div class="field">
+            <label>Also attach a reward bundle? (optional)</label>
+            <select id="broadcastGiftBundleKey" style="max-width:220px;"><option value="">Nothing — no reward bundle</option></select>
+          </div>
+          <button id="postBroadcastBtn">Post announcement</button>
+        </div>
+        <div class="status" id="broadcastStatus"></div>
+
+        <div class="scroll-table" style="max-height:280px;margin-top:14px;">
+          <table>
+            <thead><tr><th>To</th><th>Message</th><th>Gift</th><th></th></tr></thead>
+            <tbody id="broadcastRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -492,10 +628,68 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
          Mage tab below (item 11: "any consolidation we are going to do
          on the mage tab") — this comment marks where it used to live. -->
 
+    <!-- ============================== CREATURES (unified, 0078) ============================== -->
+    <div class="tab-content" id="tab-creatures">
+      <div class="card">
+        <h2>Creatures</h2>
+        <p class="hint">"Add creature button to set stats and moves too all creatures be it species boss or regular beast... so the fights actually have some real math." One database for every fightable thing — Gauntlet foes, Campaign creatures, Circle Dragons, and World Bosses — replacing the four separate catalogs (Dragon catalog, Gauntlet opponents, Bestiary, World Boss templates), which are now deprecated reference-only views. Give a creature real moves from the Moves tab's catalog and it fights with them, same as a guardian does.</p>
+        <div class="scroll-table" style="max-height:440px;">
+          <table>
+            <thead><tr><th>Key</th><th>Kind</th><th>Name</th><th>Affinity</th><th>Vit</th><th>Might</th><th>Ward</th><th>Swift</th><th>Cun</th><th>Active</th><th></th></tr></thead>
+            <tbody id="creatureRows"><tr><td colspan="11">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="newCreatureBtn">+ Add Creature</button>
+          <div class="status" id="creatureListStatus"></div>
+        </div>
+      </div>
+      <div class="card" id="creatureEditorCard" style="display:none;">
+        <h2 id="creatureEditorTitle">Add Creature</h2>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, a-z0-9_)</label><input type="text" id="crKey" style="max-width:160px;"></div>
+          <div class="field"><label>Kind</label>
+            <select id="crKind" onchange="renderCreatureKindFields()">
+              <option value="gauntlet">Gauntlet opponent</option>
+              <option value="campaign">Campaign creature</option>
+              <option value="dragon">Circle Dragon</option>
+              <option value="world_boss">World Boss</option>
+            </select>
+          </div>
+          <div class="field"><label>Name</label><input type="text" id="crName" style="max-width:180px;"></div>
+          <div class="field"><label>Affinity</label><select id="crAffinity" style="max-width:120px;"></select></div>
+          <div class="field"><label>Active</label><label><input type="checkbox" id="crActive" checked> Active</label></div>
+          <div class="field"><label>Counter-affinity</label><label><input type="checkbox" id="crHealsOnOwnAffinity" title="Heals instead of taking damage when hit by an attack of this creature's own affinity"> Heals when hit with its own affinity</label></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Vitality</label><input type="number" min="1" id="crVitality" style="max-width:100px;"></div>
+          <div class="field"><label>Might</label><input type="number" min="1" id="crMight" style="max-width:100px;"></div>
+          <div class="field"><label>Ward</label><input type="number" min="0" id="crWard" style="max-width:100px;"></div>
+          <div class="field"><label>Swiftness</label><input type="number" min="1" id="crSwiftness" style="max-width:100px;"></div>
+          <div class="field"><label>Cunning</label><input type="number" min="0" id="crCunning" style="max-width:100px;"></div>
+        </div>
+        <p class="hint">Circle Dragons and World Bosses never had Swiftness/Cunning before this — leave them blank to keep their current fight math exactly as-is (they fall back to their existing flat/tier-based formulas), or fill them in to start factoring those stats into future balance passes.</p>
+        <div class="form-row">
+          <div class="field"><label>Image URL</label><input type="text" id="crImageUrl" style="max-width:220px;"></div>
+          <div class="field"><label>Description / flavor text</label><input type="text" id="crDescription" style="max-width:260px;"></div>
+        </div>
+        <div id="crKindFields"></div>
+        <div class="save-bar">
+          <button id="saveCreatureBtn">Save Creature</button>
+          <button class="secondary" id="cancelCreatureBtn">Cancel</button>
+          <div class="status" id="creatureEditorStatus"></div>
+        </div>
+        <h3>Moves</h3>
+        <p class="hint">Every creature always fights with its affinity's baseline Power/Control moves and Basic Strike. Checking moves below adds them on top — a creature with real assigned moves is unpredictable in a way a bare affinity baseline isn't.</p>
+        <div id="crMovesList" class="scroll-table" style="max-height:220px;">Save the creature first to assign moves.</div>
+      </div>
+    </div>
+
     <!-- ============================== BIG BADDIES (DRAGONS) ============================== -->
     <div class="tab-content" id="tab-dragons">
       <div class="card">
-        <h2>Dragon catalog</h2>
+        <h2>Dragon catalog <span style="font-size:13px;font-weight:normal;color:#b3542b;">(deprecated — see the Creatures tab)</span></h2>
+        <p class="hint" style="color:#b3542b;">0078: dragons now live in the unified Creatures tab (kind = Dragon) — that's what Circle fights actually read. Editing rows here no longer affects live fights; this view is kept only as a reference until it's fully retired. Go to Creatures to change a dragon's stats or moves.</p>
         <p class="hint">Every dragon a Circle can face in the Lair — combat stats, the fight window, and what a win (or a loss) pays out.</p>
         <div class="scroll-table" style="max-height:420px;">
           <table>
@@ -544,9 +738,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <table>
             <thead><tr>
               <th>Key</th><th>Name</th><th>Affinity</th><th>Ward</th><th>Power</th><th>HP</th>
-              <th>Reward Essence</th><th>Reward Tokens</th><th>Image URL</th><th>Active</th><th></th>
+              <th>Reward Essence</th><th>Reward Tokens</th><th>Image URL</th><th>Active</th><th>Heals on own affinity</th><th></th>
             </tr></thead>
-            <tbody id="worldBossCatalogRows"><tr><td colspan="11">Loading…</td></tr></tbody>
+            <tbody id="worldBossCatalogRows"><tr><td colspan="12">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -561,6 +755,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Ward</label><input type="number" min="0" id="newBossTplWard" value="0" style="max-width:90px;"></div>
           <div class="field"><label>Power</label><input type="number" min="0" id="newBossTplPower" value="60" style="max-width:90px;"></div>
           <div class="field"><label>HP pool</label><input type="number" min="1" id="newBossTplHp" style="max-width:120px;"></div>
+          <div class="field"><label>Counter-affinity</label><label><input type="checkbox" id="newBossTplHeals" title="Heals instead of taking damage when hit by an attack of this boss's own affinity"> Heals when hit with its own affinity</label></div>
           <button id="addWorldBossTplBtn">Save template</button>
         </div>
         <div class="status" id="newWorldBossTplStatus"></div>
@@ -588,6 +783,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="field" style="max-width:none;">
           <label>Flavor text (optional, shown to players)</label>
           <textarea id="newBossFlavor" rows="2"></textarea>
+        </div>
+        <div class="field" style="max-width:320px;">
+          <label><input type="checkbox" id="newBossHealsOnOwnAffinity" title="Heals instead of taking damage when hit by an attack of this boss's own affinity"> Heals when hit with its own affinity</label>
         </div>
         <div class="field" style="max-width:320px;">
           <label><input type="checkbox" id="newBossSaveAsTemplate"> Also save this as a reusable template</label>
@@ -759,7 +957,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <!-- ============================== GAUNTLET ============================== -->
     <div class="tab-content" id="tab-gauntlet">
       <div class="card">
-        <h2>Gauntlet opponents</h2>
+        <h2>Gauntlet opponents <span style="font-size:13px;font-weight:normal;color:#b3542b;">(deprecated — see the Creatures tab)</span></h2>
+        <p class="hint" style="color:#b3542b;">0078: Gauntlet opponents now live in the unified Creatures tab (kind = Gauntlet) — that's what the Gauntlet actually reads. Editing rows here no longer affects live fights; this view is kept only as a reference until it's fully retired. Go to Creatures to change a tier's stats or give it real moves.</p>
         <p class="hint">The fixed solo trial ladder ("Enter the Gauntlet"), unlocked one tier at a time as a guardian clears the current frontier. A freshly hatched guardian starts at 10 in every stat with no combat moves beyond Basic Strike — if the Gauntlet is beating up new guardians, the fix is almost always to bring tier 0's stats down closer to that, not further above it. Tier must stay a unique, contiguous 0, 1, 2, 3… sequence for the unlock logic to make sense — leave gaps and later tiers may become unreachable or skip unlocking. 13-point update item 1: Required level is a SECOND, independent gate on top of the tier ladder (same required_level pattern as Campaign chapters) — a guardian needs BOTH the tier cleared below it AND their own Guardian Level (campaign_level) at or above this number to enter. Players now see the full ladder up front, including locked tiers — this Required level is what's shown to explain why a tier is still locked.</p>
         <div class="scroll-table" style="max-height:420px;">
           <table>
@@ -887,8 +1086,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <p class="hint">The premade Art list a player picks from when creating their Mage (0052). Every Art grants the same flat +10% duel-score baseline, plus a further +15% lean toward one specific stat drawn from its own flavor (fire/war -&gt; might, storm/shadow -&gt; swiftness, death/light -&gt; cunning, sea/earth -&gt; vitality — hardcoded in the mage edge function's ART_STAT_LEAN, not editable from here). Sort order controls left-to-right position on the Mage creation screen.</p>
         <div class="scroll-table" style="max-height:420px;">
           <table>
-            <thead><tr><th>Key</th><th>Label</th><th>Blurb</th><th>Affinity</th><th>Sort</th><th>Image URL</th><th>Active</th></tr></thead>
-            <tbody id="mageArtsRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Label</th><th>Blurb</th><th>Affinity</th><th>Sort</th><th>Image URL</th><th>Active</th><th>Heals on own affinity</th></tr></thead>
+            <tbody id="mageArtsRows"><tr><td colspan="8">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -903,6 +1102,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <select id="newMageArtAffinity" style="max-width:140px;"></select>
           </div>
           <div class="field"><label>Sort order</label><input type="number" id="newMageArtSort" value="0" style="max-width:90px;"></div>
+          <div class="field"><label>Heals on own affinity</label><input type="checkbox" id="newMageArtHeals" title="Heals instead of taking damage when hit by an attack of this Art's own affinity"></div>
           <button id="addMageArtBtn">Add Art</button>
         </div>
         <div class="field" style="max-width:none;">
@@ -1188,6 +1388,29 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
     <!-- ============================== ELEMENT WHEEL ============================== -->
     <div class="tab-content" id="tab-wheel">
+      <div class="card">
+        <h2>Affinities (0077)</h2>
+        <p class="hint">"I would like to be able to create and alter affinity list." The 8 below are the shipped defaults, but they're no longer fixed — add a new one and it's immediately usable everywhere an affinity dropdown appears (dragons, world bosses, gauntlet foes, campaign creatures, moves, circle banners, mage arts) and gets a full row/column in the Element Wheel below automatically, seeded at a neutral 1.0 until you tune it. Existing affinities are never deleted (too much data references them by key) — deactivate one instead to stop offering it in new dropdowns without breaking anything that already uses it.</p>
+        <div class="scroll-table">
+          <table>
+            <thead><tr><th>Key</th><th>Name</th><th>Glyph</th><th>Color</th><th>Active</th><th></th></tr></thead>
+            <tbody id="affinityListRows"><tr><td colspan="6">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveAffinityListBtn">Save changes</button>
+          <div class="status" id="affinityListStatus"></div>
+        </div>
+        <h3>Add a new affinity</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, a-z0-9_)</label><input type="text" id="newAffinityKey" placeholder="e.g. venom" style="max-width:140px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newAffinityName" placeholder="Venom" style="max-width:140px;"></div>
+          <div class="field"><label>Glyph</label><input type="text" id="newAffinityGlyph" placeholder="🐍" style="max-width:80px;"></div>
+          <div class="field"><label>Color</label><input type="color" id="newAffinityColor" value="#4a7c2f" style="max-width:80px;"></div>
+          <button id="addAffinityBtn">Add affinity</button>
+        </div>
+        <div class="status" id="newAffinityStatus"></div>
+      </div>
       <div class="card">
         <h2>Element Wheel</h2>
         <p class="hint">13-point update item 10: the affinity matchup table every fight in the game reads from — Gauntlet, Campaign, Circle Dragon, World Boss, and PvP duels all pull the same live table now, instead of each having their own hardcoded copy. Rows are the attacker's affinity, columns are the defender's — each cell is that matchup's damage multiplier (1.5 = strong, 0.66 = weak, 1.0 = neutral is the shipped default, but any cell can be any positive number). Changes apply to every fight in the game the moment you save, no redeploy needed.</p>
@@ -1589,7 +1812,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
 
       <div class="card">
-        <h2>Bestiary (campaign creatures)</h2>
+        <h2>Bestiary (campaign creatures) <span style="font-size:13px;font-weight:normal;color:#b3542b;">(deprecated — see the Creatures tab)</span></h2>
+        <p class="hint" style="color:#b3542b;">0078: campaign creatures now live in the unified Creatures tab (kind = Campaign) — that's what Campaign fights actually read. Editing rows here no longer affects live fights; this view is kept only as a reference until it's fully retired. Go to Creatures to change a creature's stats or give it real moves.</p>
         <p class="hint">New creatures for combat encounters below — same stat shape as Gauntlet opponents (a fresh guardian starts at 10 in every stat) so they fight through the exact same combat engine, unmodified. Not tied to a tier; how hard one hits is entirely up to the stats you give it here.</p>
         <div class="scroll-table" style="max-height:340px;">
           <table>
@@ -2140,109 +2364,6 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
     </div>
 
-    <!-- ============================== ACCESS & BROADCASTS ============================== -->
-    <div class="tab-content" id="tab-access">
-      <div class="card">
-        <h2>Grant or revoke access</h2>
-        <p class="hint">Comp a friend, fix a support issue, or claw back access — without touching the database directly. The person must have signed in at least once already.</p>
-        <div class="form-row">
-          <div class="field">
-            <label>Their email</label>
-            <input type="email" id="grantEmail" style="max-width:240px;">
-          </div>
-          <div class="field">
-            <label>Grant what</label>
-            <select id="grantScopeType" style="max-width:160px;">
-              <option value="deity">One god</option>
-              <option value="pantheon">One pantheon</option>
-              <option value="all">Full access</option>
-            </select>
-          </div>
-          <div class="field" id="grantScopeIdField">
-            <label>God or pantheon id</label>
-            <input type="text" id="grantScopeId" placeholder="e.g. hera or norse" style="max-width:180px;">
-          </div>
-          <div class="field">
-            <label>Note (optional)</label>
-            <input type="text" id="grantNote" placeholder="why" style="max-width:200px;">
-          </div>
-          <button id="grantBtn">Grant access</button>
-        </div>
-        <div class="status" id="grantStatus"></div>
-
-        <div class="scroll-table" style="max-height:320px;margin-top:10px;">
-          <table>
-            <thead><tr><th>Email</th><th>Scope</th><th>Source</th><th>Granted</th><th></th></tr></thead>
-            <tbody id="entitlementRows"><tr><td colspan="5">Loading…</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Broadcasts — the comm line</h2>
-        <p class="hint">Post a server-wide announcement, optionally with a gift attached. Players see it in their in-site mailbox and claim any gift with one click.</p>
-        <div class="field" style="max-width:none;">
-          <label>Message</label>
-          <textarea id="broadcastMessage" rows="3"></textarea>
-        </div>
-        <div class="form-row">
-          <div class="field">
-            <label>Send to</label>
-            <select id="broadcastTargetType" style="max-width:150px;">
-              <option value="everyone">Everyone</option>
-              <option value="one">One player</option>
-            </select>
-          </div>
-          <div class="field" id="broadcastTargetEmailField" style="display:none;">
-            <label>Their email</label>
-            <input type="email" id="broadcastTargetEmail" placeholder="player@example.com" style="max-width:220px;">
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="field">
-            <label>Attach a gift?</label>
-            <select id="broadcastGiftType" style="max-width:180px;">
-              <option value="none">No gift, just a message</option>
-              <option value="bonus_messages">Bonus messages</option>
-              <option value="deity">Free unlock: one god</option>
-              <option value="pantheon">Free unlock: one pantheon</option>
-              <option value="all">Free unlock: full access</option>
-              <option value="store_item">Give away a store item</option>
-            </select>
-          </div>
-          <div class="field" id="broadcastGiftBonusField" style="display:none;">
-            <label>How many bonus messages</label>
-            <input type="number" min="1" step="1" id="broadcastGiftBonus" style="max-width:140px;">
-          </div>
-          <div class="field" id="broadcastGiftScopeField" style="display:none;">
-            <label>God or pantheon id</label>
-            <input type="text" id="broadcastGiftScopeId" placeholder="e.g. hera or norse" style="max-width:180px;">
-          </div>
-          <div class="field" id="broadcastGiftStoreItemField" style="display:none;">
-            <label>Which item</label>
-            <select id="broadcastGiftStoreItem" style="max-width:200px;"><option value="">Loading…</option></select>
-          </div>
-          <div class="field">
-            <label>Also attach a reward package? (optional)</label>
-            <select id="broadcastGiftRewardKey" style="max-width:220px;"><option value="">Nothing — no reward package</option></select>
-          </div>
-          <div class="field">
-            <label>Also attach a reward bundle? (optional)</label>
-            <select id="broadcastGiftBundleKey" style="max-width:220px;"><option value="">Nothing — no reward bundle</option></select>
-          </div>
-          <button id="postBroadcastBtn">Post announcement</button>
-        </div>
-        <div class="status" id="broadcastStatus"></div>
-
-        <div class="scroll-table" style="max-height:280px;margin-top:14px;">
-          <table>
-            <thead><tr><th>To</th><th>Message</th><th>Gift</th><th></th></tr></thead>
-            <tbody id="broadcastRows"><tr><td colspan="4">Loading…</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
     <!-- ============================== CUSTOMERS ============================== -->
     <div class="tab-content" id="tab-customers">
       <div class="card">
@@ -2282,7 +2403,21 @@ Object.keys(CATALOG).forEach(pid => {
   });
 });
 
-const AFFINITIES = ['fire', 'sea', 'storm', 'earth', 'death', 'shadow', 'war', 'light'];
+// Affinity catalog (0077) — was a hardcoded fixed 8; now the shipped list
+// is only a fallback used until loadAffinitiesList() (called at startup,
+// see loadStaminaSettings() call site) replaces it with the live,
+// admin-editable public.affinities table. Every dropdown that reads
+// AFFINITIES already re-populates itself lazily (see the affSel.options.length
+// guards throughout), so as long as this loads before a tab is first opened,
+// newly-added affinities show up everywhere automatically — no per-tab change needed.
+let AFFINITIES = ['fire', 'sea', 'storm', 'earth', 'death', 'shadow', 'war', 'light'];
+let affinityCatalog = [];
+async function loadAffinitiesList(){
+  const { data, error } = await supabaseClient.from('affinities').select('*').order('sort_order');
+  if(error || !data || !data.length) return;
+  affinityCatalog = data;
+  AFFINITIES = data.filter(a => a.active).map(a => a.key);
+}
 const GUARDIAN_STAT_KEYS = ['vitality', 'might', 'ward', 'swiftness', 'cunning'];
 const CIRCLE_ROLES = ['high_priest', 'high_priestess', 'magus', 'initiate'];
 const ROLE_LABEL = { high_priest: 'High Priest', high_priestess: 'High Priestess', magus: 'Magus', initiate: 'Initiate' };
@@ -2344,6 +2479,30 @@ async function findUserIdByEmail(email){
   return data.id;
 }
 
+// Gifting (13-point update item 5) — a couple of flows (Broadcasts, Grant/
+// revoke access) never had a "whole Circle" destination at all; rather than
+// touch their underlying mechanics (a security-sensitive claim flow and an
+// idempotent-grant RPC, respectively), this fans out client-side: resolve
+// the Circle's current member emails, then run the flow's existing
+// single-player call once per member. Everything downstream (idempotency,
+// RLS, audit logging) is exactly what already runs for "One player".
+async function circleMemberEmails(circleName){
+  const circleId = await findCircleIdByName(circleName);
+  if(!circleId) return { error: 'No Circle found with that exact name.' };
+  const { data: members, error: mErr } = await supabaseClient.from('circle_members').select('user_id').eq('circle_id', circleId);
+  if(mErr) return { error: mErr.message };
+  const userIds = (members || []).map(m => m.user_id);
+  if(!userIds.length) return { emails: [] };
+  const { data: rows, error: pErr } = await supabaseClient.from('profiles').select('email').in('id', userIds);
+  if(pErr) return { error: pErr.message };
+  return { emails: (rows || []).map(p => p.email).filter(Boolean) };
+}
+async function allPlayerEmails(){
+  const { data, error } = await supabaseClient.from('profiles').select('email').not('email', 'is', null);
+  if(error) return { error: error.message };
+  return { emails: (data || []).map(p => p.email).filter(Boolean) };
+}
+
 async function init(){
   const gateMsg = document.getElementById('gateMsg');
   if(SUPABASE_URL.indexOf('PASTE_YOUR') === 0){
@@ -2388,6 +2547,12 @@ async function init(){
 function updateGrantScopeVisibility(){
   const type = document.getElementById('grantScopeType').value;
   document.getElementById('grantScopeIdField').style.display = (type === 'all') ? 'none' : '';
+}
+
+function updateGrantTargetVisibility(){
+  const type = document.getElementById('grantTargetType').value;
+  document.getElementById('grantEmailField').style.display = (type === 'player') ? '' : 'none';
+  document.getElementById('grantCircleNameField').style.display = (type === 'circle') ? '' : 'none';
 }
 
 async function handleSession(session){
@@ -2450,6 +2615,7 @@ async function handleSession(session){
   loadGuardianProgression();
   loadMageProgression();
   loadStaminaSettings();
+  loadAffinitiesList().then(() => { loadAffinityWheel(); renderAffinityList(); });
   loadDragonCatalog();
   loadWorldBoss();
   loadAltarSeedCatalog();
@@ -2459,6 +2625,7 @@ async function handleSession(session){
   loadGauntletOpponents();
   loadBannerPresets();
   await loadMoveCatalog();
+  loadCreaturesList();
   loadAffinityWheel();
   loadSpeciesCatalog();
   loadMageArts();
@@ -2973,6 +3140,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('moveCatalogSearch').addEventListener('input', filterMoveCatalogRows);
   document.getElementById('saveWheelBtn').addEventListener('click', saveAffinityWheel);
   document.getElementById('resetWheelBtn').addEventListener('click', resetAffinityWheelToDefault);
+  document.getElementById('saveAffinityListBtn').addEventListener('click', saveAffinityList);
+  document.getElementById('addAffinityBtn').addEventListener('click', addAffinity);
+  document.getElementById('newCreatureBtn').addEventListener('click', () => openCreatureEditor(null));
+  document.getElementById('saveCreatureBtn').addEventListener('click', saveCreature);
+  document.getElementById('cancelCreatureBtn').addEventListener('click', closeCreatureEditor);
   document.getElementById('saveSpeciesMovesBtn').addEventListener('click', saveSpeciesMoves);
   document.getElementById('saveDeityMovesBtn').addEventListener('click', saveDeityMoves);
   document.getElementById('deityMoveSearch').addEventListener('input', filterDeityMoveRows);
@@ -3658,28 +3830,60 @@ async function removeStoreItem(id){
 
 /* ---------------- grant / revoke ---------------- */
 
-async function grantAccess(){
-  const status = document.getElementById('grantStatus');
-  const email = document.getElementById('grantEmail').value.trim();
-  const scopeType = document.getElementById('grantScopeType').value;
-  const scopeId = document.getElementById('grantScopeId').value.trim();
-  const note = document.getElementById('grantNote').value.trim();
-
-  if(!email){ status.className = 'status err'; status.textContent = 'Enter an email.'; return; }
-  if(scopeType !== 'all' && !scopeId){ status.className = 'status err'; status.textContent = 'Enter a god or pantheon id.'; return; }
-
-  status.className = 'status';
-  status.textContent = 'Granting…';
-  const { error } = await supabaseClient.rpc('admin_grant_entitlement', {
+async function grantAccessToEmail(email, scopeType, scopeId, note){
+  return supabaseClient.rpc('admin_grant_entitlement', {
     p_target_email: email,
     p_scope_type: scopeType,
     p_scope_id: scopeType === 'all' ? null : scopeId,
     p_note: note || null
   });
-  status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? ('Failed: ' + error.message) : 'Granted.';
-  if(!error){
+}
+
+async function grantAccess(){
+  const status = document.getElementById('grantStatus');
+  const targetType = document.getElementById('grantTargetType').value;
+  const scopeType = document.getElementById('grantScopeType').value;
+  const scopeId = document.getElementById('grantScopeId').value.trim();
+  const note = document.getElementById('grantNote').value.trim();
+
+  if(scopeType !== 'all' && !scopeId){ status.className = 'status err'; status.textContent = 'Enter a god or pantheon id.'; return; }
+
+  let emails = [];
+  if(targetType === 'player'){
+    const email = document.getElementById('grantEmail').value.trim();
+    if(!email){ status.className = 'status err'; status.textContent = 'Enter an email.'; return; }
+    emails = [email];
+  } else if(targetType === 'circle'){
+    const name = document.getElementById('grantTargetCircleName').value.trim();
+    if(!name){ status.className = 'status err'; status.textContent = 'Enter a Circle name.'; return; }
+    status.className = 'status'; status.textContent = 'Looking up Circle…';
+    const result = await circleMemberEmails(name);
+    if(result.error){ status.className = 'status err'; status.textContent = result.error; return; }
+    emails = result.emails;
+  } else {
+    if(!confirm('Grant this to every player who has ever signed in? This can be a lot of accounts.')) return;
+    status.className = 'status'; status.textContent = 'Loading player list…';
+    const result = await allPlayerEmails();
+    if(result.error){ status.className = 'status err'; status.textContent = result.error; return; }
+    emails = result.emails;
+  }
+
+  if(!emails.length){ status.className = 'status err'; status.textContent = 'No players found for that destination.'; return; }
+
+  status.className = 'status';
+  status.textContent = targetType === 'player' ? 'Granting…' : `Granting to ${emails.length} player(s)…`;
+  let failed = 0;
+  for(const email of emails){
+    const { error } = await grantAccessToEmail(email, scopeType, scopeId, note);
+    if(error) failed++;
+  }
+  status.className = failed ? 'status err' : 'status ok';
+  status.textContent = failed
+    ? `Granted to ${emails.length - failed}/${emails.length} — ${failed} failed (likely no account for that email).`
+    : (targetType === 'player' ? 'Granted.' : `Granted to ${emails.length} player(s).`);
+  if(!failed || failed < emails.length){
     document.getElementById('grantEmail').value = '';
+    document.getElementById('grantTargetCircleName').value = '';
     document.getElementById('grantScopeId').value = '';
     document.getElementById('grantNote').value = '';
     loadEntitlements();
@@ -3741,6 +3945,7 @@ function populateBroadcastGiftStoreItemSelect(){
 function updateBroadcastTargetField(){
   const type = document.getElementById('broadcastTargetType').value;
   document.getElementById('broadcastTargetEmailField').style.display = (type === 'one') ? '' : 'none';
+  document.getElementById('broadcastTargetCircleField').style.display = (type === 'circle') ? '' : 'none';
 }
 
 async function postBroadcast(){
@@ -3749,6 +3954,7 @@ async function postBroadcast(){
   const giftType = document.getElementById('broadcastGiftType').value;
   const targetType = document.getElementById('broadcastTargetType').value;
   const targetEmail = document.getElementById('broadcastTargetEmail').value.trim();
+  const targetCircleName = document.getElementById('broadcastTargetCircleName').value.trim();
 
   if(!message){
     status.className = 'status err';
@@ -3758,6 +3964,11 @@ async function postBroadcast(){
   if(targetType === 'one' && !targetEmail){
     status.className = 'status err';
     status.textContent = 'Enter the player\'s email, or switch back to Everyone.';
+    return;
+  }
+  if(targetType === 'circle' && !targetCircleName){
+    status.className = 'status err';
+    status.textContent = 'Enter a Circle name.';
     return;
   }
 
@@ -3791,22 +4002,44 @@ async function postBroadcast(){
     }
   }
 
-  status.className = 'status';
-  status.textContent = 'Posting…';
-  const { error } = await supabaseClient.rpc('admin_post_broadcast', {
+  const postOne = (email) => supabaseClient.rpc('admin_post_broadcast', {
     p_message: message,
     p_gift_bonus_messages: giftBonus,
     p_gift_scope_type: giftScopeType,
     p_gift_scope_id: giftScopeId,
-    p_target_email: targetType === 'one' ? targetEmail : null,
+    p_target_email: email,
     p_gift_store_item_id: giftStoreItemId,
     p_gift_reward_key: giftRewardKey,
     p_gift_bundle_key: giftBundleKey
   });
-  status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? ('Failed: ' + error.message) :
-    (targetType === 'one' ? ('Sent to ' + targetEmail + '.') : 'Posted — players will see it next time they sign in or refresh.');
-  if(!error){
+
+  status.className = 'status';
+  let resultText;
+  if(targetType === 'circle'){
+    status.textContent = 'Looking up Circle…';
+    const lookup = await circleMemberEmails(targetCircleName);
+    if(lookup.error){ status.className = 'status err'; status.textContent = lookup.error; return; }
+    if(!lookup.emails.length){ status.className = 'status err'; status.textContent = 'That Circle has no members yet.'; return; }
+    status.textContent = `Posting to ${lookup.emails.length} member(s)…`;
+    let failed = 0;
+    for(const email of lookup.emails){
+      const { error } = await postOne(email);
+      if(error) failed++;
+    }
+    if(failed && failed === lookup.emails.length){ status.className = 'status err'; status.textContent = 'Failed for every member.'; return; }
+    status.className = failed ? 'status err' : 'status ok';
+    resultText = failed
+      ? `Sent to ${lookup.emails.length - failed}/${lookup.emails.length} members — ${failed} failed.`
+      : `Sent to all ${lookup.emails.length} member(s) of ${targetCircleName}.`;
+  } else {
+    status.textContent = 'Posting…';
+    const { error } = await postOne(targetType === 'one' ? targetEmail : null);
+    if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+    status.className = 'status ok';
+    resultText = targetType === 'one' ? ('Sent to ' + targetEmail + '.') : 'Posted — players will see it next time they sign in or refresh.';
+  }
+  status.textContent = resultText;
+  {
     document.getElementById('broadcastMessage').value = '';
     document.getElementById('broadcastGiftBonus').value = '';
     document.getElementById('broadcastGiftScopeId').value = '';
@@ -3814,6 +4047,7 @@ async function postBroadcast(){
     document.getElementById('broadcastGiftRewardKey').value = '';
     document.getElementById('broadcastGiftBundleKey').value = '';
     document.getElementById('broadcastTargetEmail').value = '';
+    document.getElementById('broadcastTargetCircleName').value = '';
     document.getElementById('broadcastTargetType').value = 'everyone';
     updateBroadcastGiftFields();
     updateBroadcastTargetField();
@@ -5004,7 +5238,9 @@ function worldBossStatusLabel(status){
 }
 
 /* =====================================================================
-   WORLD BOSS — SAVED TEMPLATES (world_boss_catalog)
+   WORLD BOSS — SAVED TEMPLATES (0078: now backed by public.creatures,
+   kind='world_boss' — repointed from the old world_boss_catalog table,
+   same UI/behavior, power/hp_total read as creatures.might/vitality)
    ===================================================================== */
 
 async function loadWorldBossCatalog(){
@@ -5012,7 +5248,7 @@ async function loadWorldBossCatalog(){
   const tplAffSel = document.getElementById('newBossTplAffinity');
   if(tplAffSel && tplAffSel.options.length <= 1) AFFINITIES.forEach(a => tplAffSel.insertAdjacentHTML('beforeend', `<option value="${a}">${a}</option>`));
 
-  const { data, error } = await supabaseClient.from('world_boss_catalog').select('*').order('name', { ascending: true });
+  const { data, error } = await supabaseClient.from('creatures').select('*').eq('kind', 'world_boss').order('name', { ascending: true });
   if(error){
     rows.innerHTML = '<tr><td colspan="11">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
@@ -5028,14 +5264,15 @@ async function loadWorldBossCatalog(){
       </select>
     </td>
     <td><input type="number" min="0" id="wbtWard_${esc(b.key)}" value="${b.ward}"></td>
-    <td><input type="number" min="0" id="wbtPower_${esc(b.key)}" value="${b.power}"></td>
-    <td><input type="number" min="1" id="wbtHp_${esc(b.key)}" value="${b.hp_total}"></td>
+    <td><input type="number" min="0" id="wbtPower_${esc(b.key)}" value="${b.might}"></td>
+    <td><input type="number" min="1" id="wbtHp_${esc(b.key)}" value="${b.vitality}"></td>
     <td><input type="number" min="0" id="wbtRewardEss_${esc(b.key)}" value="${b.reward_essence_pool}"></td>
     <td><input type="number" min="0" id="wbtRewardTok_${esc(b.key)}" value="${b.reward_god_tokens_pool}"></td>
     <td><input type="text" id="wbtImg_${esc(b.key)}" value="${esc(b.image_url || '')}" style="max-width:160px;"></td>
     <td><input type="checkbox" id="wbtActive_${esc(b.key)}" ${b.active ? 'checked' : ''}></td>
+    <td><input type="checkbox" id="wbtHeals_${esc(b.key)}" ${b.heals_on_own_affinity ? 'checked' : ''} title="Heals instead of taking damage when hit by an attack of this boss's own affinity"></td>
     <td><button type="button" onclick="spawnWorldBossFromCatalog('${esc(b.key)}')">Spawn this</button></td>
-  </tr>`).join('') || '<tr><td colspan="11">No saved templates yet — spawn one below and tick "save as reusable", or fill in "Save a new template".</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="12">No saved templates yet — spawn one below and tick "save as reusable", or fill in "Save a new template".</td></tr>';
 
   const fromSel = document.getElementById('newBossFromTemplate');
   if(fromSel){
@@ -5066,11 +5303,13 @@ async function saveWorldBossCatalog(){
       reward_god_tokens_pool: parseInt(document.getElementById('wbtRewardTok_' + key).value, 10),
       image_url: document.getElementById('wbtImg_' + key).value.trim() || null,
       active: document.getElementById('wbtActive_' + key).checked,
+      heals_on_own_affinity: document.getElementById('wbtHeals_' + key).checked,
     };
   });
   status.className = 'status';
   status.textContent = 'Saving…';
-  const { error } = await supabaseClient.from('world_boss_catalog').upsert(rows, { onConflict: 'key' });
+  const payload = rows.map(r => ({ key: r.key, kind: 'world_boss', name: r.name, affinity: r.affinity, ward: r.ward, might: r.power, vitality: r.hp_total, reward_essence_pool: r.reward_essence_pool, reward_god_tokens_pool: r.reward_god_tokens_pool, image_url: r.image_url, active: r.active, heals_on_own_affinity: r.heals_on_own_affinity }));
+  const { error } = await supabaseClient.from('creatures').upsert(payload, { onConflict: 'key' });
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
   if(!error) loadWorldBossCatalog();
@@ -5084,6 +5323,7 @@ async function addWorldBossTemplate(){
   const ward = parseInt(document.getElementById('newBossTplWard').value, 10);
   const power = parseInt(document.getElementById('newBossTplPower').value, 10);
   const hp = parseInt(document.getElementById('newBossTplHp').value, 10);
+  const healsOnOwnAffinity = document.getElementById('newBossTplHeals').checked;
 
   if(!key || !/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters, numbers, underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -5091,11 +5331,12 @@ async function addWorldBossTemplate(){
 
   status.className = 'status';
   status.textContent = 'Saving…';
-  const { error } = await supabaseClient.from('world_boss_catalog').insert({
-    key, name, affinity,
+  const { error } = await supabaseClient.from('creatures').insert({
+    key, kind: 'world_boss', name, affinity,
     ward: isNaN(ward) ? 0 : ward,
-    power: isNaN(power) ? 60 : power,
-    hp_total: hp,
+    might: isNaN(power) ? 60 : power,
+    vitality: hp,
+    heals_on_own_affinity: healsOnOwnAffinity,
   });
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : (name + ' saved — pick it from "Start from a saved template" any time.');
@@ -5107,6 +5348,7 @@ async function addWorldBossTemplate(){
       else el.value = '';
     });
     document.getElementById('newBossTplAffinity').value = '';
+    document.getElementById('newBossTplHeals').checked = false;
     loadWorldBossCatalog();
   }
 }
@@ -5119,11 +5361,12 @@ function applyWorldBossTemplateToForm(){
   document.getElementById('newBossName').value = tpl.name;
   document.getElementById('newBossAffinity').value = tpl.affinity || '';
   document.getElementById('newBossWard').value = tpl.ward;
-  document.getElementById('newBossPower').value = tpl.power;
-  document.getElementById('newBossHp').value = tpl.hp_total;
+  document.getElementById('newBossPower').value = tpl.might;
+  document.getElementById('newBossHp').value = tpl.vitality;
   document.getElementById('newBossRewardEssence').value = tpl.reward_essence_pool;
   document.getElementById('newBossRewardTokens').value = tpl.reward_god_tokens_pool;
   document.getElementById('newBossImageUrl').value = tpl.image_url || '';
+  document.getElementById('newBossHealsOnOwnAffinity').checked = Boolean(tpl.heals_on_own_affinity);
 }
 
 // Spawns straight from a saved row's button, bypassing the hand-typed form
@@ -5138,12 +5381,12 @@ async function spawnWorldBossFromCatalog(key){
 
   await supabaseClient.from('world_bosses').update({ status: 'ended', resolved_at: new Date().toISOString() }).eq('status', 'active');
   const { error } = await supabaseClient.from('world_bosses').insert({
-    name: tpl.name, affinity: tpl.affinity, ward: tpl.ward, power: tpl.power,
-    hp_total: tpl.hp_total, hp_remaining: tpl.hp_total,
+    name: tpl.name, affinity: tpl.affinity, ward: tpl.ward, power: tpl.might,
+    hp_total: tpl.vitality, hp_remaining: tpl.vitality,
     reward_essence_pool: tpl.reward_essence_pool,
     reward_god_tokens_pool: tpl.reward_god_tokens_pool,
     image_url: tpl.image_url, flavor_text: tpl.flavor_text,
-    status: 'active',
+    status: 'active', heals_on_own_affinity: Boolean(tpl.heals_on_own_affinity),
   });
 
   status.className = error ? 'status err' : 'status ok';
@@ -5210,6 +5453,7 @@ async function spawnWorldBoss(){
   const rewardTokens = parseInt(document.getElementById('newBossRewardTokens').value, 10);
   const imageUrl = document.getElementById('newBossImageUrl').value.trim();
   const flavor = document.getElementById('newBossFlavor').value.trim();
+  const healsOnOwnAffinity = document.getElementById('newBossHealsOnOwnAffinity').checked;
 
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
   if(isNaN(hp) || hp < 1){ status.className = 'status err'; status.textContent = 'Enter an HP pool greater than 0.'; return; }
@@ -5229,6 +5473,7 @@ async function spawnWorldBoss(){
     image_url: imageUrl || null,
     flavor_text: flavor || null,
     status: 'active',
+    heals_on_own_affinity: healsOnOwnAffinity,
   });
 
   if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
@@ -5239,11 +5484,12 @@ async function spawnWorldBoss(){
     if(!tplKey || !/^[a-z0-9_]+$/.test(tplKey)){
       templateNote = ' (not saved as a template — key must be lowercase letters, numbers, underscores only)';
     } else {
-      const { error: tplError } = await supabaseClient.from('world_boss_catalog').upsert({
-        key: tplKey, name, affinity, ward, power, hp_total: hp,
+      const { error: tplError } = await supabaseClient.from('creatures').upsert({
+        key: tplKey, kind: 'world_boss', name, affinity, ward, might: power, vitality: hp,
         reward_essence_pool: isNaN(rewardEssence) ? 0 : rewardEssence,
         reward_god_tokens_pool: isNaN(rewardTokens) ? 0 : rewardTokens,
         image_url: imageUrl || null, flavor_text: flavor || null,
+        heals_on_own_affinity: healsOnOwnAffinity,
       }, { onConflict: 'key' });
       templateNote = tplError ? (' (template save failed: ' + tplError.message + ')') : ' Also saved as a reusable template.';
       if(!tplError) loadWorldBossCatalog();
@@ -5260,6 +5506,7 @@ async function spawnWorldBoss(){
   });
   document.getElementById('newBossAffinity').value = '';
   document.getElementById('newBossSaveAsTemplate').checked = false;
+  document.getElementById('newBossHealsOnOwnAffinity').checked = false;
   document.getElementById('newBossFromTemplate').value = '';
   loadWorldBoss();
 }
@@ -5888,6 +6135,248 @@ async function addMoveCatalogEntry(){
    since that's the mental model an "element wheel" actually has.
    ===================================================================== */
 
+// Affinities list (0077) — renders the admin-editable catalog and lets an
+// admin add a new one. affinityCatalog/AFFINITIES are populated by
+// loadAffinitiesList() (called at init, see the top of this file).
+function renderAffinityList(){
+  const rows = document.getElementById('affinityListRows');
+  if(!rows) return;
+  if(!affinityCatalog.length){ rows.innerHTML = '<tr><td colspan="6">No affinities found — run migration 0077.</td></tr>'; return; }
+  rows.innerHTML = affinityCatalog.map(a => `
+    <tr data-key="${esc(a.key)}">
+      <td class="dim">${esc(a.key)}</td>
+      <td><input type="text" id="aff_name_${esc(a.key)}" value="${esc(a.name)}" style="max-width:120px;"></td>
+      <td><input type="text" id="aff_glyph_${esc(a.key)}" value="${esc(a.glyph || '')}" style="max-width:60px;"></td>
+      <td><input type="color" id="aff_color_${esc(a.key)}" value="${esc(a.color_hex || '#888888')}" style="max-width:60px;"></td>
+      <td><input type="checkbox" id="aff_active_${esc(a.key)}" ${a.active ? 'checked' : ''}></td>
+      <td class="dim">${a.active ? '' : 'hidden from new dropdowns'}</td>
+    </tr>`).join('');
+}
+async function saveAffinityList(){
+  const status = document.getElementById('affinityListStatus');
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const updates = affinityCatalog.map(a => ({
+    key: a.key,
+    name: document.getElementById('aff_name_' + a.key).value.trim() || a.name,
+    glyph: document.getElementById('aff_glyph_' + a.key).value.trim() || null,
+    color_hex: document.getElementById('aff_color_' + a.key).value,
+    active: document.getElementById('aff_active_' + a.key).checked,
+    sort_order: a.sort_order,
+    updated_at: new Date().toISOString(),
+  }));
+  const { error } = await supabaseClient.from('affinities').upsert(updates, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error){ await loadAffinitiesList(); renderAffinityList(); loadAffinityWheel(); }
+}
+async function addAffinity(){
+  const status = document.getElementById('newAffinityStatus');
+  const key = document.getElementById('newAffinityKey').value.trim().toLowerCase();
+  const name = document.getElementById('newAffinityName').value.trim();
+  const glyph = document.getElementById('newAffinityGlyph').value.trim();
+  const color = document.getElementById('newAffinityColor').value;
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters, numbers, or underscores.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const sortOrder = affinityCatalog.length ? Math.max(...affinityCatalog.map(a => a.sort_order)) + 1 : 0;
+  const { error } = await supabaseClient.from('affinities').insert({ key, name, glyph: glyph || null, color_hex: color, sort_order: sortOrder });
+  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+  status.className = 'status ok';
+  status.textContent = `Added "${name}" — it's already seeded into the Element Wheel below at a neutral 1.0 and shows up in every affinity dropdown now.`;
+  document.getElementById('newAffinityKey').value = '';
+  document.getElementById('newAffinityName').value = '';
+  document.getElementById('newAffinityGlyph').value = '';
+  await loadAffinitiesList();
+  renderAffinityList();
+  loadAffinityWheel();
+}
+
+// Unified creature database (0078) — "add creature button to set stats and
+// moves too all creatures... so the fights actually have some real math."
+// One admin screen for every fightable thing (Gauntlet/Campaign/Dragon/
+// World Boss), replacing the four separate catalog editors below (now
+// marked deprecated). Moves come straight from moveCatalogCache (the
+// Moves tab's own catalog, already loaded by loadMoveCatalog() at init).
+let creaturesCache = [];
+let editingCreatureKey = null;
+let editingCreatureMoveKeys = new Set();
+
+async function loadCreaturesList(){
+  const { data, error } = await supabaseClient.from('creatures').select('*').order('kind').order('sort_order');
+  const rows = document.getElementById('creatureRows');
+  if(!rows) return;
+  if(error){ rows.innerHTML = '<tr><td colspan="11">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  creaturesCache = data || [];
+  renderCreatureTable();
+}
+const CREATURE_KIND_LABEL = { gauntlet: 'Gauntlet', campaign: 'Campaign', dragon: 'Dragon', world_boss: 'World Boss' };
+function renderCreatureTable(){
+  const rows = document.getElementById('creatureRows');
+  if(!creaturesCache.length){ rows.innerHTML = '<tr><td colspan="11">No creatures yet — run migration 0078, or add one below.</td></tr>'; return; }
+  rows.innerHTML = creaturesCache.map(c => `<tr>
+    <td class="dim">${esc(c.key)}</td>
+    <td>${esc(CREATURE_KIND_LABEL[c.kind] || c.kind)}</td>
+    <td>${esc(c.name)}</td>
+    <td>${esc(c.affinity || '—')}</td>
+    <td>${c.vitality}</td>
+    <td>${c.might ?? '—'}</td>
+    <td>${c.ward}</td>
+    <td>${c.swiftness ?? '—'}</td>
+    <td>${c.cunning ?? '—'}</td>
+    <td>${c.active ? 'Yes' : 'No'}</td>
+    <td><button type="button" class="secondary" onclick="openCreatureEditor('${esc(c.key)}')">Edit</button></td>
+  </tr>`).join('');
+}
+function creatureKindFieldsHtml(kind, c){
+  c = c || {};
+  if(kind === 'gauntlet'){
+    return `<div class="form-row">
+      <div class="field"><label>Tier (unique, contiguous from 0)</label><input type="number" min="0" id="crTier" value="${c.tier ?? ''}" style="max-width:100px;"></div>
+      <div class="field"><label>Required Level</label><input type="number" min="1" id="crRequiredLevel" value="${c.required_level ?? 1}" style="max-width:120px;"></div>
+    </div>`;
+  }
+  if(kind === 'dragon'){
+    return `<div class="form-row">
+      <div class="field"><label>Tier (unique)</label><input type="number" min="1" id="crTier" value="${c.tier ?? ''}" style="max-width:100px;"></div>
+      <div class="field"><label>Fight window (hours)</label><input type="number" min="1" id="crWindowHours" value="${c.window_hours ?? 72}" style="max-width:130px;"></div>
+      <div class="field"><label>Expiry rank penalty</label><input type="number" min="0" id="crExpiryPenalty" value="${c.expiry_rank_penalty ?? 0}" style="max-width:140px;"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Reward: Devotion</label><input type="number" min="0" id="crRewardDevotion" value="${c.reward_devotion ?? 0}" style="max-width:130px;"></div>
+      <div class="field"><label>Reward: Essence pool</label><input type="number" min="0" id="crRewardEssence" value="${c.reward_essence_pool ?? 0}" style="max-width:140px;"></div>
+      <div class="field"><label>Reward: Circle rank Δ</label><input type="number" min="0" id="crRewardRank" value="${c.reward_circle_rank_delta ?? 0}" style="max-width:140px;"></div>
+      <div class="field"><label>Deco key</label><input type="text" id="crDecoKey" value="${esc(c.reward_decoration_key || '')}" style="max-width:140px;"></div>
+      <div class="field"><label>Deco chance (0-1)</label><input type="number" min="0" max="1" step="0.01" id="crDecoChance" value="${c.reward_decoration_chance ?? 0}" style="max-width:110px;"></div>
+    </div>`;
+  }
+  if(kind === 'world_boss'){
+    return `<div class="form-row">
+      <div class="field"><label>Reward: Essence pool</label><input type="number" min="0" id="crRewardEssence" value="${c.reward_essence_pool ?? 0}" style="max-width:140px;"></div>
+      <div class="field"><label>Reward: God Tokens pool</label><input type="number" min="0" id="crRewardTokens" value="${c.reward_god_tokens_pool ?? 0}" style="max-width:150px;"></div>
+    </div>`;
+  }
+  return ''; // campaign — no extra fields
+}
+function renderCreatureKindFields(){
+  const kind = document.getElementById('crKind').value;
+  const c = editingCreatureKey ? (creaturesCache.find(x => x.key === editingCreatureKey) || {}) : {};
+  document.getElementById('crKindFields').innerHTML = creatureKindFieldsHtml(kind, c);
+}
+function openCreatureEditor(key){
+  editingCreatureKey = key || null;
+  const c = key ? creaturesCache.find(x => x.key === key) : null;
+  document.getElementById('creatureEditorCard').style.display = '';
+  document.getElementById('creatureEditorTitle').textContent = c ? ('Edit: ' + c.name) : 'Add Creature';
+  document.getElementById('crKey').value = c ? c.key : '';
+  document.getElementById('crKey').disabled = Boolean(c);
+  document.getElementById('crKind').value = c ? c.kind : 'gauntlet';
+  document.getElementById('crKind').disabled = Boolean(c);
+  document.getElementById('crName').value = c ? c.name : '';
+  const affSel = document.getElementById('crAffinity');
+  affSel.innerHTML = AFFINITIES.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+  affSel.value = c ? (c.affinity || AFFINITIES[0]) : AFFINITIES[0];
+  document.getElementById('crActive').checked = c ? c.active : true;
+  document.getElementById('crHealsOnOwnAffinity').checked = c ? Boolean(c.heals_on_own_affinity) : false;
+  document.getElementById('crVitality').value = c ? c.vitality : 20;
+  document.getElementById('crMight').value = c ? (c.might ?? '') : 15;
+  document.getElementById('crWard').value = c ? c.ward : 5;
+  document.getElementById('crSwiftness').value = c ? (c.swiftness ?? '') : 15;
+  document.getElementById('crCunning').value = c ? (c.cunning ?? '') : 10;
+  document.getElementById('crImageUrl').value = c ? (c.image_url || '') : '';
+  document.getElementById('crDescription').value = c ? (c.description || c.flavor_text || '') : '';
+  document.getElementById('creatureEditorStatus').textContent = '';
+  renderCreatureKindFields();
+  renderCreatureMovesList();
+  document.getElementById('creatureEditorCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function closeCreatureEditor(){
+  editingCreatureKey = null;
+  document.getElementById('creatureEditorCard').style.display = 'none';
+}
+async function saveCreature(){
+  const status = document.getElementById('creatureEditorStatus');
+  const isNew = !editingCreatureKey;
+  const key = isNew ? document.getElementById('crKey').value.trim().toLowerCase() : editingCreatureKey;
+  const kind = document.getElementById('crKind').value;
+  const name = document.getElementById('crName').value.trim();
+  if(isNew && !/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters, numbers, underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  const vitality = parseInt(document.getElementById('crVitality').value, 10);
+  if(isNaN(vitality) || vitality < 1){ status.className = 'status err'; status.textContent = 'Vitality must be at least 1.'; return; }
+  const mightRaw = document.getElementById('crMight').value.trim();
+  const swiftRaw = document.getElementById('crSwiftness').value.trim();
+  const cunRaw = document.getElementById('crCunning').value.trim();
+
+  const payload = {
+    key, kind, name,
+    description: document.getElementById('crDescription').value.trim(),
+    flavor_text: document.getElementById('crDescription').value.trim(),
+    image_url: document.getElementById('crImageUrl').value.trim() || null,
+    affinity: document.getElementById('crAffinity').value || null,
+    active: document.getElementById('crActive').checked,
+    heals_on_own_affinity: document.getElementById('crHealsOnOwnAffinity').checked,
+    vitality,
+    might: mightRaw === '' ? null : parseInt(mightRaw, 10),
+    ward: parseInt(document.getElementById('crWard').value, 10) || 0,
+    swiftness: swiftRaw === '' ? null : parseInt(swiftRaw, 10),
+    cunning: cunRaw === '' ? null : parseInt(cunRaw, 10),
+  };
+  if(kind === 'gauntlet'){
+    payload.tier = parseInt(document.getElementById('crTier').value, 10);
+    payload.required_level = parseInt(document.getElementById('crRequiredLevel').value, 10) || 1;
+  } else if(kind === 'dragon'){
+    payload.tier = parseInt(document.getElementById('crTier').value, 10);
+    payload.window_hours = parseInt(document.getElementById('crWindowHours').value, 10) || 72;
+    payload.expiry_rank_penalty = parseInt(document.getElementById('crExpiryPenalty').value, 10) || 0;
+    payload.reward_devotion = parseInt(document.getElementById('crRewardDevotion').value, 10) || 0;
+    payload.reward_essence_pool = parseInt(document.getElementById('crRewardEssence').value, 10) || 0;
+    payload.reward_circle_rank_delta = parseInt(document.getElementById('crRewardRank').value, 10) || 0;
+    payload.reward_decoration_key = document.getElementById('crDecoKey').value.trim() || null;
+    payload.reward_decoration_chance = parseFloat(document.getElementById('crDecoChance').value) || 0;
+  } else if(kind === 'world_boss'){
+    payload.reward_essence_pool = parseInt(document.getElementById('crRewardEssence').value, 10) || 0;
+    payload.reward_god_tokens_pool = parseInt(document.getElementById('crRewardTokens').value, 10) || 0;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('creatures').upsert(payload, { onConflict: 'key' });
+  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+  status.className = 'status ok';
+  status.textContent = 'Saved.';
+  editingCreatureKey = key;
+  document.getElementById('crKey').disabled = true;
+  document.getElementById('crKind').disabled = true;
+  await loadCreaturesList();
+  renderCreatureMovesList();
+}
+async function renderCreatureMovesList(){
+  const el = document.getElementById('crMovesList');
+  if(!editingCreatureKey){ el.textContent = 'Save the creature first to assign moves.'; return; }
+  const { data } = await supabaseClient.from('creature_moves').select('move_key').eq('creature_key', editingCreatureKey);
+  editingCreatureMoveKeys = new Set((data || []).map(r => r.move_key));
+  const relevant = moveCatalogCache.filter(m => m.kind !== 'basic');
+  if(!relevant.length){ el.innerHTML = 'No moves in the catalog yet — add some in the Moves tab first.'; return; }
+  el.innerHTML = '<table><tbody>' + relevant.map(m => `
+    <tr>
+      <td style="width:24px;"><input type="checkbox" id="crmv_${esc(m.key)}" ${editingCreatureMoveKeys.has(m.key) ? 'checked' : ''} onchange="toggleCreatureMove('${esc(m.key)}', this.checked)"></td>
+      <td>${esc(m.name)}</td>
+      <td class="dim">${esc(m.affinity || '—')} · ${esc(m.kind)} · power ${m.power}</td>
+    </tr>`).join('') + '</tbody></table>';
+}
+async function toggleCreatureMove(moveKey, checked){
+  const status = document.getElementById('creatureEditorStatus');
+  if(checked){
+    const { error } = await supabaseClient.from('creature_moves').insert({ creature_key: editingCreatureKey, move_key: moveKey });
+    if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; }
+  } else {
+    const { error } = await supabaseClient.from('creature_moves').delete().eq('creature_key', editingCreatureKey).eq('move_key', moveKey);
+    if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; }
+  }
+}
+
 // Shipped defaults (byte-for-byte what 0061 seeds and what every edge
 // function used to hardcode) — only used by "Reset grid to shipped
 // default" below, never touches the database until Save is clicked.
@@ -6059,7 +6548,8 @@ async function loadMageArts(){
     <td><input type="number" id="maSort_${esc(a.key)}" value="${a.sort_order}" style="max-width:70px;"></td>
     <td><input type="text" id="maImageUrl_${esc(a.key)}" value="${esc(a.image_url || '')}" style="max-width:200px;" placeholder="https://…"></td>
     <td><input type="checkbox" id="maActive_${esc(a.key)}" ${a.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="7">No Mage Arts yet — run migration 0052.</td></tr>';
+    <td><input type="checkbox" id="maHeals_${esc(a.key)}" ${a.heals_on_own_affinity ? 'checked' : ''} title="Heals instead of taking damage when hit by an attack of this Art's own affinity"></td>
+  </tr>`).join('') || '<tr><td colspan="8">No Mage Arts yet — run migration 0052.</td></tr>';
 }
 
 async function saveMageArts(){
@@ -6075,6 +6565,7 @@ async function saveMageArts(){
       sort_order: parseInt(document.getElementById('maSort_' + key).value, 10) || 0,
       image_url: document.getElementById('maImageUrl_' + key).value.trim() || null,
       active: document.getElementById('maActive_' + key).checked,
+      heals_on_own_affinity: document.getElementById('maHeals_' + key).checked,
       updated_at: new Date().toISOString()
     };
   });
@@ -6093,12 +6584,13 @@ async function addMageArt(){
   const affinity = document.getElementById('newMageArtAffinity').value;
   const sortOrder = parseInt(document.getElementById('newMageArtSort').value, 10) || 0;
   const imageUrl = document.getElementById('newMageArtImageUrl').value.trim() || null;
+  const healsOnOwnAffinity = document.getElementById('newMageArtHeals').checked;
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!label){ status.className = 'status err'; status.textContent = 'Label is required.'; return; }
 
   status.className = 'status'; status.textContent = 'Adding…';
-  const { error } = await supabaseClient.from('mage_arts').insert({ key, label, blurb, affinity, sort_order: sortOrder, image_url: imageUrl, active: true });
+  const { error } = await supabaseClient.from('mage_arts').insert({ key, label, blurb, affinity, sort_order: sortOrder, image_url: imageUrl, active: true, heals_on_own_affinity: healsOnOwnAffinity });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
   status.className = 'status ok'; status.textContent = label + ' added.';
   ['newMageArtKey','newMageArtLabel','newMageArtSort','newMageArtBlurb','newMageArtImageUrl'].forEach(fid => { document.getElementById(fid).value = fid === 'newMageArtSort' ? '0' : ''; });
