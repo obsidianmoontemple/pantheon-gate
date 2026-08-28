@@ -3597,10 +3597,29 @@ function backFromMail(){
 }
 
 async function loadMail(){
+  // Direct feedback: "the mailbox is still showing all broadcasts even if
+  // not meant for you... why even show it in someone else's mail." Root
+  // cause, confirmed by reading the RLS policies on `broadcasts` (migration
+  // 0007): a REGULAR player's SELECT is correctly scoped to
+  // "target_user_id is null or target_user_id = auth.uid()" — but a second
+  // policy, `broadcasts_select_admin`, OR's in full visibility for admins,
+  // added on purpose so admin.html's "sent broadcasts" management view
+  // (which lists every DM and who it went to) works at all. That's correct
+  // for admin.html — but this exact query also runs for an admin's own
+  // personal Mail screen (same broadcasts table, same helper), and RLS
+  // policies are OR'd together, so an admin account viewing their own
+  // mailbox got every player's DMs too, not just their own. Claiming one
+  // then correctly failed with claim_broadcast's "not your broadcast" (0059)
+  // — visibility had widened, but ownership never did, which is exactly the
+  // "shows it, then tells you it's not yours" experience reported. Fix: stop
+  // relying solely on RLS-as-ceiling for this personal-inbox query and add
+  // the same "mine or public" condition explicitly here, so this screen is
+  // correct regardless of what a broader admin policy additionally permits.
   const { data: rows, error } = await supabaseClient
     .from('broadcasts')
     .select('id, message, created_at, gift_bonus_messages, gift_scope_type, gift_reward_key, gift_store_item_id, gift_bundle_key')
     .eq('active', true)
+    .or(`target_user_id.is.null,target_user_id.eq.${session.user.id}`)
     .order('created_at', { ascending: false });
   if(error){ console.error('mail load failed', error); mailBroadcasts = []; return; }
   mailBroadcasts = rows || [];
