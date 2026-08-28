@@ -1218,6 +1218,7 @@ let palPickerTab = 'plant';   // 'plant' | 'decorate'
 let palTickTimer = null;      // periodic re-render so countdowns stay live, same convention as altarTickTimer
 
 let profileView = null;    // null | {step:'home'} — top-level; a dedicated stats/currency screen (Map hub's "Profile" hotspot)
+let creditsView = null;    // null | {step:'home'} — Game Credits, opened from a button on Profile; checked ahead of profileView in render() so it overlays it and "Back" just falls through to Profile again
 let shrineView = null;     // null | {step:'browse'} — top-level (Map hub's "Temple of the Gods"): read-only list of deities the player is actually chat-entitled to (via the entitlements table, same check redeem/gate.html use) — NOT guardian_marks; those are a separate system. Shows each one's blessing status and links out to gate.html to chat.
 let shrineEntitlements = []; // cached entitlements rows (scope_type, scope_id, expires_at) for renderShrine()'s unlock check
 let mailView = null;       // null | {step:'home'} — top-level; surfaces the long-existing broadcasts/claim_broadcast backend for the first time (Map hub's "Mail" hotspot only — Promo is its own separate screen, see promoView)
@@ -1239,6 +1240,10 @@ let staminaSettings = null;
 // read by invasionCostDevotion()/zoneClaimCostDevotion() wherever the old
 // hardcoded INVASION_COST_DEVOTION constant used to be inlined.
 let invasionSettings = null;
+// credits_settings (new) — same lazy "id=1, publicly readable" shape as
+// stamina_settings/invasionSettings above, backing the new Game Credits
+// screen (Profile → "Game Credits").
+let creditsSettings = null;
 let backpackView = null;   // null | {step:'home'} — top-level aggregator over every inventory in the game (Map hub's "Backpack" hotspot)
 // "Backpack consolidation ... it will need a few different tabs" — was a
 // single screen with three stacked read-only cards (Craft items, Arena
@@ -1351,7 +1356,7 @@ async function boot(){
       expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
       profileView = null; shrineView = null; mailView = null; backpackView = null;
       checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
-      shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
+      shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
       profilePasswordOpen = false;
       renderLoginScreen();
     }
@@ -1381,6 +1386,7 @@ async function afterLogin(){
   await loadMage();
   loadStaminaSettings().catch(e => console.error('stamina settings load failed', e));
   loadInvasionSettingsPublic().catch(e => console.error('invasion settings load failed', e));
+  loadCreditsSettings().catch(e => console.error('credits settings load failed', e));
   if(guardian) await loadMarks();
   loadMoonPhase().catch(e => console.error('moon phase load failed', e));
   // For-sale flags need to be known site-wide, not just inside the Shop —
@@ -1560,6 +1566,12 @@ async function loadInvasionSettingsPublic(){
   invasionSettings = data;
 }
 
+async function loadCreditsSettings(){
+  const { data, error } = await supabaseClient.from('credits_settings').select('*').eq('id', 1).maybeSingle();
+  if(error || !data){ console.error('credits settings load failed', error); return; }
+  creditsSettings = data;
+}
+
 // Display-only regen preview — mirrors guardianRegenedEnergy()/the
 // ticket equivalent in every edge function exactly, but never writes
 // anything back (only an actual spend does that, server-side). Falls
@@ -1679,6 +1691,11 @@ function render(){
   if(guardian && pvpView){ renderPvpArena(); return; }
   if(guardian && circleView){ renderCircle(); return; }
   if(guardian && personalAltarView){ renderPersonalAltar(); return; }
+  // Checked ahead of profileView (not just an alternative to it) so
+  // opening Credits from the Profile screen actually shows the Credits
+  // screen instead of Profile winning the check first; backFromCredits()
+  // only clears creditsView, so returning lands back on Profile.
+  if(guardian && creditsView){ renderCredits(); return; }
   if(guardian && profileView){ renderProfile(); return; }
   if(guardian && shrineView){ renderShrine(); return; }
   if(guardian && mailView){ renderMail(); return; }
@@ -1941,6 +1958,16 @@ const DEFAULT_MAP_AREAS = [
   // starting-guess position, right next to Guide; drag into place once
   // there's art to line up against.
   { id: 'milestones',    label: "Ganymede's Guidance", left: 42, top: 68, width: 10, height: 16, action: openMilestoneRoadmap, glow: true },
+  // The small "X" already illustrated on the map art — direct feedback:
+  // "there is a small X button on my main map and I want it to be hooked
+  // to a back to login button." No glow (the art already draws the eye to
+  // it, unlike the un-illustrated spots above); no ask-first confirm
+  // either — signOutOfGate() is exactly the same one-click sign-out the
+  // Profile screen's own "Sign out" button already uses, and
+  // onAuthStateChange in boot() takes it from there back to the login
+  // screen. A starting-guess position — drag it onto the actual X in
+  // admin.html's Map Hotspots editor.
+  { id: 'signOut',       label: 'Sign Out',            left: 2,  top: 2,  width: 6,   height: 5,    action: signOutOfGate },
 ];
 // Mutable copy — loadMapHotspots() (see near loadSpeciesCatalog) overrides
 // individual entries' left/top/width/height from the admin-editable
@@ -3467,6 +3494,7 @@ function renderProfile(){
       <p class="hint">Account ID: <span style="user-select:all;">${esc(session.user.id)}</span> <span style="opacity:0.7;">(have this handy if you email support)</span></p>
       <a href="mailto:silverstag212007@gmail.com?subject=${encodeURIComponent('Pantheon Gate help — ' + session.user.id)}"
         style="display:block;width:fit-content;margin:10px auto 0;background:transparent;border:1px solid var(--gold);color:var(--gold-bright);padding:12px 26px;font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;text-decoration:none;">Get Help</a>
+      <button class="secondary" style="margin-top:14px;display:block;margin-left:auto;margin-right:auto;" onclick="openCredits()">Game Credits</button>
     </div>
   `;
 }
@@ -3475,6 +3503,40 @@ async function signOutOfGate(){
   await supabaseClient.auth.signOut();
   // The onAuthStateChange listener in boot() picks this up (newSession is
   // null) and swaps back to the login screen on its own.
+}
+
+/* ---------------- Game Credits ----------------
+   New screen, reached only from Profile → "Game Credits" — admin-editable
+   free text (credits_settings, admin.html's new Credits tab) rather than
+   anything hardcoded here, since this is exactly the kind of content
+   (attributions, licensing, who made what) that needs to be edited
+   without a code deploy. Plain white-space:pre-wrap display — whatever
+   line breaks the admin typed are exactly what shows. */
+function openCredits(){
+  creditsView = { step: 'home' };
+  render();
+  if(!creditsSettings) loadCreditsSettings().then(() => { if(creditsView) render(); });
+}
+
+function backFromCredits(){
+  creditsView = null;
+  render();
+}
+
+function renderCredits(){
+  const app = document.getElementById('app');
+  const content = creditsSettings ? (creditsSettings.content || '').trim() : '';
+  app.innerHTML = `
+    <div class="card"${bgAttr('profile', 'text-align:center;')}>
+      <h2>Game Credits</h2>
+      ${creditsSettings
+        ? (content
+            ? `<p class="hint" style="white-space:pre-wrap;text-align:left;">${esc(content)}</p>`
+            : '<p class="hint">Nothing here yet.</p>')
+        : '<p class="status">Loading…</p>'}
+      <button class="secondary" style="margin-top:14px;" onclick="backFromCredits()">Back to Profile</button>
+    </div>
+  `;
 }
 
 function startReleaseGuardian(){
@@ -3501,7 +3563,7 @@ async function confirmReleaseGuardian(){
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
   checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
-  shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
+  shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
   render();
 }
 
@@ -3532,7 +3594,7 @@ async function doRestoreGuardian(retiredId){
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
   checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
-  shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
+  shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
   profilePasswordOpen = false;
   await afterLogin();
   celebrate();
