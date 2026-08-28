@@ -1127,7 +1127,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>Mage Arts — creation picker</h2>
-        <p class="hint">The premade Art list a player picks from when creating their Mage (0052). Every Art grants the same flat +10% duel-score baseline, plus a further +15% lean toward one specific stat drawn from its own flavor (fire/war -&gt; might, storm/shadow -&gt; swiftness, death/light -&gt; cunning, sea/earth -&gt; vitality — hardcoded in the mage edge function's ART_STAT_LEAN, not editable from here). Sort order controls left-to-right position on the Mage creation screen. Combat move (0082) is the real action that Art's Mage now takes once per round in Gauntlet/Campaign fights, alongside the Guardian — direct feedback: "there is no real battle schematics for mages... which i have asked for." Restricted to Power-kind moves from the shared move catalog; leave it "— no combat move —" and that Art's Mage simply doesn't act in these fights (same as before this feature).</p>
+        <p class="hint">The premade Art list a player picks from when creating their Mage (0052). Every Art grants the same flat +10% duel-score baseline, plus a further +15% lean toward one specific stat drawn from its own flavor (fire/war -&gt; might, storm/shadow -&gt; swiftness, death/light -&gt; cunning, sea/earth -&gt; vitality — hardcoded in the mage edge function's ART_STAT_LEAN, not editable from here). Sort order controls left-to-right position on the Mage creation screen. Combat move (0082) is the real action that Art's Mage now takes once per round in Gauntlet/Campaign fights, alongside the Guardian — direct feedback: "there is no real battle schematics for mages... which i have asked for." Offers Power-kind moves from the shared move catalog, plus (0086) any Support or Tank-archetype move — e.g. a heal — since those don't use Control's swiftness-shave mechanic either; leave it "— no combat move —" and that Art's Mage simply doesn't act in these fights (same as before this feature).</p>
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr><th>Key</th><th>Label</th><th>Blurb</th><th>Affinity</th><th>Sort</th><th>Image URL</th><th>Active</th><th>Heals on own affinity</th><th>Combat move</th></tr></thead>
@@ -1355,12 +1355,12 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-moves">
       <div class="card">
         <h2>Move Catalog</h2>
-        <p class="hint">13-point update item 13: every individual move in the game, defined once here — edit a move's stats and it updates everywhere it's assigned below (an affinity baseline, a species's signature move, or a deity's signature override), no more hunting down the same move in three tables. Kind picks the slot a move can fill: Power (no swiftness shave) or Control (hits softer, shaves the defender's Swiftness for the rest of the fight) need an Affinity (used by the Element Wheel); Basic is the universal fallback strike and has none. A move can also carry a real triggered effect on top of its damage: <code>lifesteal_pct</code> (heal this % of the hit's damage), <code>stun_pct</code> (this % chance to skip the target's next action), <code>crit_bonus_pct</code> (+this many points of crit chance on this hit), <code>burn_flat</code> (ongoing damage/round for the rest of the fight), <code>poison_pct</code> (a second, independent DoT — this % of the target's max Vitality/round), <code>weaken_pct</code> (cuts the target's own Might by this % for the rest of the fight), <code>vulnerability_pct</code> (the target takes this % more damage from everything for the rest of the fight), or <code>shield_flat</code> (self-buff — absorbs your own next this-much total damage taken). Role is just a label for where a move is meant to be used — nothing reads it, so any move (including a brand new "custom" one) can be assigned anywhere a dropdown below lets you pick one. Particle (0070) picks which burst sprite plays when this move lands in Campaign, Gauntlet, and PvP — leave it "— affinity default —" to keep the automatic look every other move of that affinity already has, or pick a specific one to make this move stand out.</p>
+        <p class="hint">13-point update item 13: every individual move in the game, defined once here — edit a move's stats and it updates everywhere it's assigned below (an affinity baseline, a species's signature move, or a deity's signature override), no more hunting down the same move in three tables. Kind picks the slot a move can fill: Power (no swiftness shave) or Control (hits softer, shaves the defender's Swiftness for the rest of the fight) need an Affinity (used by the Element Wheel); Basic is the universal fallback strike and has none. Archetype (0086) tags what the move is FOR, independent of Kind: Damage (the default — deals its Power as a hit), Support (heals/buffs the caster — set Power to 0 for a pure heal that deals no damage at all), or Tank (defensive — <code>shield_flat</code> works standalone now instead of only riding on a damage roll). A move can also carry a real triggered effect on top of its damage: <code>lifesteal_pct</code> (heal this % of the hit's damage), <code>stun_pct</code> (this % chance to skip the target's next action), <code>crit_bonus_pct</code> (+this many points of crit chance on this hit), <code>burn_flat</code> (ongoing damage/round for the rest of the fight), <code>poison_pct</code> (a second, independent DoT — this % of the target's max Vitality/round), <code>weaken_pct</code> (cuts the target's own Might by this % for the rest of the fight), <code>vulnerability_pct</code> (the target takes this % more damage from everything for the rest of the fight), <code>shield_flat</code> (self-buff — absorbs your own next this-much total damage taken), <code>heal_flat</code> (0086 — heal the caster this flat amount, no damage dealt), or <code>heal_pct</code> (0086 — heal the caster this % of their own max Vitality, no damage dealt). Role is just a label for where a move is meant to be used — nothing reads it, so any move (including a brand new "custom" one) can be assigned anywhere a dropdown below lets you pick one. Particle (0070) picks which burst sprite plays when this move lands in Campaign, Gauntlet, and PvP — leave it "— affinity default —" to keep the automatic look every other move of that affinity already has, or pick a specific one to make this move stand out.</p>
         <input class="search-box" type="text" id="moveCatalogSearch" placeholder="Search by name or key…">
         <div class="scroll-table" style="max-height:480px;">
           <table>
-            <thead><tr><th>Key</th><th>Name</th><th>Role</th><th>Affinity</th><th>Kind</th><th>Power</th><th>Swiftness shave</th><th>Effect key</th><th>Effect amt</th><th>Particle</th><th>Active</th></tr></thead>
-            <tbody id="moveCatalogRows"><tr><td colspan="11">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Name</th><th>Role</th><th>Affinity</th><th>Kind</th><th>Archetype</th><th>Power</th><th>Swiftness shave</th><th>Effect key</th><th>Effect amt</th><th>Particle</th><th>Active</th></tr></thead>
+            <tbody id="moveCatalogRows"><tr><td colspan="12">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -1381,10 +1381,15 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
               <option value="power">power</option><option value="control">control</option><option value="basic">basic</option>
             </select>
           </div>
+          <div class="field"><label>Archetype</label>
+            <select id="newMoveArchetype" style="max-width:100px;">
+              <option value="damage">damage</option><option value="support">support</option><option value="tank">tank</option>
+            </select>
+          </div>
           <div class="field"><label>Affinity</label>
             <select id="newMoveAffinity" style="max-width:120px;"></select>
           </div>
-          <div class="field"><label>Power</label><input type="number" step="0.01" min="0.01" id="newMovePower" placeholder="1.30" style="max-width:90px;"></div>
+          <div class="field"><label>Power</label><input type="number" step="0.01" min="0" id="newMovePower" placeholder="1.30 (0 for a pure support move)" style="max-width:150px;"></div>
           <div class="field"><label>Swiftness shave</label><input type="number" min="1" id="newMoveShave" style="max-width:90px;"></div>
           <div class="field"><label>Effect key</label>
             <select id="newMoveEffectKey" style="max-width:220px;"></select>
@@ -5633,6 +5638,10 @@ async function spawnWorldBossFromCatalog(key){
     reward_god_tokens_pool: tpl.reward_god_tokens_pool,
     image_url: tpl.image_url, flavor_text: tpl.flavor_text,
     status: 'active', heals_on_own_affinity: Boolean(tpl.heals_on_own_affinity),
+    // 0087 — keep a live pointer back to this catalog row so the boss's
+    // own counter-attack can draw on whatever moveset is assigned to it
+    // in creature_moves (Move Assignments tab), including future edits.
+    source_creature_key: tpl.key,
   });
 
   status.className = error ? 'status err' : 'status ok';
@@ -5700,6 +5709,11 @@ async function spawnWorldBoss(){
   const imageUrl = document.getElementById('newBossImageUrl').value.trim();
   const flavor = document.getElementById('newBossFlavor').value.trim();
   const healsOnOwnAffinity = document.getElementById('newBossHealsOnOwnAffinity').checked;
+  // 0087 — if this form was pre-filled from a template (newBossFromTemplate),
+  // keep that link so the spawned boss can use that creature's assigned
+  // moveset for its own counter-attack. Left null for a fully hand-typed
+  // boss with no template selected.
+  const sourceCreatureKey = document.getElementById('newBossFromTemplate').value || null;
 
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
   if(isNaN(hp) || hp < 1){ status.className = 'status err'; status.textContent = 'Enter an HP pool greater than 0.'; return; }
@@ -5711,7 +5725,7 @@ async function spawnWorldBoss(){
 
   await supabaseClient.from('world_bosses').update({ status: 'ended', resolved_at: new Date().toISOString() }).eq('status', 'active');
 
-  const { error } = await supabaseClient.from('world_bosses').insert({
+  const { data: spawned, error } = await supabaseClient.from('world_bosses').insert({
     name, affinity, ward, power,
     hp_total: hp, hp_remaining: hp,
     reward_essence_pool: isNaN(rewardEssence) ? 0 : rewardEssence,
@@ -5720,7 +5734,8 @@ async function spawnWorldBoss(){
     flavor_text: flavor || null,
     status: 'active',
     heals_on_own_affinity: healsOnOwnAffinity,
-  });
+    source_creature_key: sourceCreatureKey,
+  }).select('id').single();
 
   if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
 
@@ -5738,7 +5753,16 @@ async function spawnWorldBoss(){
         heals_on_own_affinity: healsOnOwnAffinity,
       }, { onConflict: 'key' });
       templateNote = tplError ? (' (template save failed: ' + tplError.message + ')') : ' Also saved as a reusable template.';
-      if(!tplError) loadWorldBossCatalog();
+      if(!tplError){
+        loadWorldBossCatalog();
+        // 0087 — a brand-new template obviously has no creature_moves
+        // assigned yet, but link the just-spawned boss to it anyway so
+        // assigning a moveset afterward (Move Assignments tab) takes
+        // effect on this same live boss with no need to respawn it.
+        if(!sourceCreatureKey && spawned && spawned.id){
+          await supabaseClient.from('world_bosses').update({ source_creature_key: tplKey }).eq('id', spawned.id);
+        }
+      }
     }
   }
 
@@ -6252,7 +6276,16 @@ async function addBannerPresetRow(){
 let moveCatalogCache = [];
 
 function moveOptionsHtml(kind, currentKey, emptyLabel){
-  const options = moveCatalogCache.filter(m => m.kind === kind);
+  // 0086 — 'power_or_support' is a special filter (not a real kind value)
+  // for the Mage Art combat move picker: server-side loadMageCombatMove()
+  // now accepts a support/tank-archetype move alongside kind==='power'
+  // ones (that restriction was really about excluding Control's
+  // swiftness-shave mechanic, which support/tank moves don't use
+  // either), so the dropdown needs to offer those too, not just
+  // kind==='power' rows.
+  const options = kind === 'power_or_support'
+    ? moveCatalogCache.filter(m => m.kind === 'power' || m.archetype === 'support' || m.archetype === 'tank')
+    : moveCatalogCache.filter(m => m.kind === kind);
   return `<option value="">${esc(emptyLabel)}</option>` +
     options.map(m => `<option value="${esc(m.key)}" ${m.key === currentKey ? 'selected' : ''}>${esc(m.name)} (${esc(m.key)})</option>`).join('');
 }
@@ -6287,13 +6320,18 @@ async function loadMoveCatalog(){
         ${['power', 'control', 'basic'].map(k => `<option value="${k}" ${k === m.kind ? 'selected' : ''}>${k}</option>`).join('')}
       </select>
     </td>
-    <td><input type="number" step="0.01" min="0.01" id="mcPower_${esc(m.key)}" value="${m.power}" style="max-width:90px;"></td>
+    <td>
+      <select id="mcArchetype_${esc(m.key)}" style="max-width:100px;">
+        ${['damage', 'support', 'tank'].map(a => `<option value="${a}" ${a === (m.archetype || 'damage') ? 'selected' : ''}>${a}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="number" step="0.01" min="0" id="mcPower_${esc(m.key)}" value="${m.power}" style="max-width:90px;"></td>
     <td><input type="number" min="1" id="mcShave_${esc(m.key)}" value="${m.swiftness_shave ?? ''}" style="max-width:90px;"></td>
     <td><select id="mcEffectKey_${esc(m.key)}" style="max-width:200px;">${effectKeyOptionsHtml(MOVE_EFFECT_OPTIONS, m.effect_key)}</select></td>
     <td><input type="number" step="0.01" id="mcEffectAmt_${esc(m.key)}" value="${m.effect_amount ?? ''}" style="max-width:90px;"></td>
     <td><select id="mcParticleKey_${esc(m.key)}" style="max-width:160px;">${particleKeyOptionsHtml(m.particle_key)}</select></td>
     <td><input type="checkbox" id="mcActive_${esc(m.key)}" ${m.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="11">No moves found.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="12">No moves found.</td></tr>';
 
   // The Species/Deity move pointer dropdowns below list catalog moves by
   // name — re-render them too so a rename/save here is reflected there
@@ -6323,6 +6361,7 @@ async function saveMoveCatalog(){
       name: document.getElementById('mcName_' + key).value.trim(),
       affinity: document.getElementById('mcAffinity_' + key).value || null,
       kind: document.getElementById('mcKind_' + key).value,
+      archetype: document.getElementById('mcArchetype_' + key).value || 'damage',
       power: parseFloat(document.getElementById('mcPower_' + key).value),
       swiftness_shave: shaveVal === '' ? null : parseInt(shaveVal, 10),
       effect_key: document.getElementById('mcEffectKey_' + key).value || null,
@@ -6346,6 +6385,7 @@ async function addMoveCatalogEntry(){
   const name = document.getElementById('newMoveName').value.trim();
   const role = document.getElementById('newMoveRole').value;
   const kind = document.getElementById('newMoveKind').value;
+  const archetype = document.getElementById('newMoveArchetype').value || 'damage';
   const affinity = document.getElementById('newMoveAffinity').value || null;
   const power = parseFloat(document.getElementById('newMovePower').value);
   const shaveVal = document.getElementById('newMoveShave').value;
@@ -6355,12 +6395,14 @@ async function addMoveCatalogEntry(){
 
   if(!key || /\s/.test(key)){ status.className = 'status err'; status.textContent = 'Key is required and cannot contain spaces.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
-  if(!power || power <= 0){ status.className = 'status err'; status.textContent = 'Power must be a positive number.'; return; }
+  // 0086 — Power can now be 0 for a pure support move (a heal/buff that
+  // deals no damage at all); it just can't be negative or left blank.
+  if(power === '' || isNaN(power) || power < 0){ status.className = 'status err'; status.textContent = 'Power must be 0 or a positive number (0 for a pure support move).'; return; }
   if(kind !== 'basic' && !affinity){ status.className = 'status err'; status.textContent = 'Power/Control moves need an Affinity (used by the Element Wheel).'; return; }
 
   status.className = 'status'; status.textContent = 'Adding…';
   const { error } = await supabaseClient.from('moves_catalog').insert({
-    key, name, role, kind, affinity: kind === 'basic' ? null : affinity, power,
+    key, name, role, kind, archetype, affinity: kind === 'basic' ? null : affinity, power,
     swiftness_shave: shaveVal === '' ? null : parseInt(shaveVal, 10),
     effect_key: effectKey, effect_amount: effectAmtVal === '' ? null : parseFloat(effectAmtVal),
     particle_key: particleKey,
@@ -6603,13 +6645,19 @@ async function renderCreatureMovesList(){
   if(!editingCreatureKey){ el.textContent = 'Save the creature first to assign moves.'; return; }
   const { data } = await supabaseClient.from('creature_moves').select('move_key').eq('creature_key', editingCreatureKey);
   editingCreatureMoveKeys = new Set((data || []).map(r => r.move_key));
-  const relevant = moveCatalogCache.filter(m => m.kind !== 'basic');
+  // 0086 — exclude Basic Strike itself specifically (every creature
+  // already gets it for free), not every kind==='basic' move — a
+  // support/heal move commonly uses kind:'basic' too (no power/control
+  // stat lean makes sense for a zero-damage heal), so the old
+  // kind!=='basic' filter here was silently hiding every assignable
+  // healer/support move from this checklist entirely.
+  const relevant = moveCatalogCache.filter(m => m.key !== 'basic_strike');
   if(!relevant.length){ el.innerHTML = 'No moves in the catalog yet — add some in the Moves tab first.'; return; }
   el.innerHTML = '<table><tbody>' + relevant.map(m => `
     <tr>
       <td style="width:24px;"><input type="checkbox" id="crmv_${esc(m.key)}" ${editingCreatureMoveKeys.has(m.key) ? 'checked' : ''} onchange="toggleCreatureMove('${esc(m.key)}', this.checked)"></td>
       <td>${esc(m.name)}</td>
-      <td class="dim">${esc(m.affinity || '—')} · ${esc(m.kind)} · power ${m.power}</td>
+      <td class="dim">${esc(m.affinity || '—')} · ${esc(m.kind)} · ${esc(m.archetype || 'damage')} · power ${m.power}</td>
     </tr>`).join('') + '</tbody></table>';
 }
 async function toggleCreatureMove(moveKey, checked){
@@ -6802,7 +6850,7 @@ async function loadMageArts(){
     <td><input type="text" id="maImageUrl_${esc(a.key)}" value="${esc(a.image_url || '')}" style="max-width:200px;" placeholder="https://…"></td>
     <td><input type="checkbox" id="maActive_${esc(a.key)}" ${a.active ? 'checked' : ''}></td>
     <td><input type="checkbox" id="maHeals_${esc(a.key)}" ${a.heals_on_own_affinity ? 'checked' : ''} title="Heals instead of taking damage when hit by an attack of this Art's own affinity"></td>
-    <td><select id="maMove_${esc(a.key)}" style="max-width:220px;">${moveOptionsHtml('power', moveByArt[a.key] || '', '— no combat move —')}</select></td>
+    <td><select id="maMove_${esc(a.key)}" style="max-width:220px;">${moveOptionsHtml('power_or_support', moveByArt[a.key] || '', '— no combat move —')}</select></td>
   </tr>`).join('') || '<tr><td colspan="9">No Mage Arts yet — run migration 0052.</td></tr>';
 }
 
@@ -7760,6 +7808,8 @@ const MOVE_EFFECT_OPTIONS = [
   { value: 'weaken_pct', label: 'weaken_pct - target\'s own Might cut by N% for the rest of the fight (stacks, capped 80%)' },
   { value: 'vulnerability_pct', label: 'vulnerability_pct - target takes N% more damage from everything, rest of fight' },
   { value: 'shield_flat', label: 'shield_flat - self-buff: absorbs your next N total damage taken' },
+  { value: 'heal_flat', label: 'heal_flat - (0086) heal the caster N HP, no damage dealt — set Power to 0 for a pure heal' },
+  { value: 'heal_pct', label: 'heal_pct - (0086) heal the caster N% of their own max Vitality, no damage dealt — set Power to 0 for a pure heal' },
 ];
 // Wired by circle/index.ts — any of the 8 affinity rows can use any of these.
 const CIRCLE_PATRON_EFFECT_OPTIONS = [
