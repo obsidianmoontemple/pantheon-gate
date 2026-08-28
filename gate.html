@@ -675,10 +675,16 @@ async function buyMoreMessages(){
 async function refreshBroadcasts(){
   broadcasts = [];
   if(!currentUser || !supabaseClient) return;
+  // Same fix as index.html's loadMail() — see its comment for the full
+  // explanation. Short version: RLS lets admins see every broadcast (for
+  // admin.html's management view), which was leaking into an admin's own
+  // personal mailbox here too. Add the "mine or public" filter explicitly
+  // instead of relying on RLS alone to already narrow it for this screen.
   const { data: active } = await supabaseClient
     .from('broadcasts')
     .select('id, message, gift_bonus_messages, gift_scope_type, gift_scope_id, created_at')
     .eq('active', true)
+    .or(`target_user_id.is.null,target_user_id.eq.${currentUser.id}`)
     .order('created_at', { ascending: false })
     .limit(50);
   const { data: claims } = await supabaseClient
