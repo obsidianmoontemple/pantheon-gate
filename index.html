@@ -261,6 +261,19 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
 .map-hotspot-dropdown select.picker-select{margin:0;width:100%;max-width:100%;}
 .map-hotspot-dropdown button{margin:0;width:100%;max-width:100%;white-space:nowrap;}
 
+/* Direct feedback (Petition Hall's "Petition this god" button, but
+   written generically since the same request will come up anywhere
+   else the admin's art already draws the button): "i have my own art
+   button that say whom do you seek so can we make the yellow part
+   invisible too?" — same transparent/no-box treatment as .map-hotspot,
+   just not absolutely positioned since this sits inline in a
+   .map-hotspot-dropdown's flex column alongside a real <select> rather
+   than floating on its own. Text is kept in the markup (so it's still
+   announced to screen readers and still shows if the class is removed
+   later) but rendered transparent so nothing paints over the art. */
+.btn-ghost{background:transparent!important;border:none;color:transparent;}
+.btn-ghost:hover,.btn-ghost:active,.btn-ghost:focus{background:transparent!important;color:transparent!important;}
+
 /* Small pulsing "glowing node" marker — direct feedback: "I can not seem
    to edit my map the way I want to... simply insert some glowing nodes
    in there that fit the theme" for the three plaques that have no
@@ -5588,7 +5601,7 @@ function renderPetitionPicker(){
   const pickerMarkup = optgroups
     ? hotspotDropdownMarkup(PETITION_AREAS, `
         <select class="picker-select" id="petitionDeitySelect">${optgroups}</select>
-        <button type="button" onclick="beginPetitionFromSelect()">Petition this god</button>
+        <button type="button" class="btn-ghost" onclick="beginPetitionFromSelect()">Petition this god</button>
       `)
     : '';
 
