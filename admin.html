@@ -181,6 +181,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="guide" onclick="showTab('guide')">Narrator/Guide</button>
       <button class="tab-btn" data-tab="featureaccess" onclick="showTab('featureaccess')">Feature Access</button>
       <button class="tab-btn" data-tab="customers" onclick="showTab('customers')">Customers</button>
+      <button class="tab-btn" data-tab="admins" onclick="showTab('admins')">Admins</button>
     </div>
 
     <!-- ============================== OVERVIEW ============================== -->
@@ -2485,11 +2486,33 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-customers">
       <div class="card">
         <h2>Customers</h2>
+        <p class="hint">Deactivate is reversible (blocks sign-in, keeps everything). Reset wipes gameplay progress back to a fresh start but keeps the account, email, and subscription. Delete is permanent.</p>
+        <div class="status" id="customerActionStatus"></div>
         <table id="customerTable">
           <thead>
-            <tr><th>Email</th><th>Signed up</th><th>Subscription</th><th>One-time purchases</th></tr>
+            <tr><th>Email</th><th>Signed up</th><th>Subscription</th><th>One-time purchases</th><th>Status</th><th>Actions</th></tr>
           </thead>
-          <tbody id="customerRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+          <tbody id="customerRows"><tr><td colspan="6">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============================== ADMINS ============================== -->
+    <div class="tab-content" id="tab-admins">
+      <div class="card">
+        <h2>Admins</h2>
+        <p class="hint">Add someone by email to give them full admin access — this works even before they've signed up (their account gets admin the moment they create it).</p>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0;">
+          <input type="email" id="adminAddEmail" placeholder="email@example.com" style="flex:1;min-width:220px;">
+          <input type="text" id="adminAddNote" placeholder="Note (optional — e.g. Lincoln Middle School)" style="flex:1;min-width:220px;">
+          <button onclick="addAdminEntry()">Add</button>
+        </div>
+        <div class="status" id="adminListStatus"></div>
+        <table id="adminAllowlistTable">
+          <thead>
+            <tr><th>Email</th><th>Status</th><th>Note</th><th>Added</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="adminAllowlistRows"><tr><td colspan="5">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -2725,6 +2748,7 @@ async function handleSession(session){
   loadBroadcasts();
   loadRevenue();
   loadCustomers();
+  loadAdminAllowlist();
 
   loadDeityPersonalities();
   loadCheckinCalendar();
@@ -4396,33 +4420,155 @@ async function loadRevenue(){
 
 /* ---------------- customers ---------------- */
 
+let customersCache = []; // id -> row, so the action buttons below don't need to smuggle an email through an onclick string
+
 async function loadCustomers(){
   const rows = document.getElementById('customerRows');
   const { data, error } = await supabaseClient
     .from('profiles')
-    .select('email, display_name, subscription_status, created_at, purchases(kind, amount_cents)')
+    .select('id, email, display_name, subscription_status, created_at, deactivated_at, purchases(kind, amount_cents)')
     .order('created_at', { ascending: false });
 
   if(error){
-    rows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="6">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   if(!data.length){
-    rows.innerHTML = '<tr><td colspan="4">No customers yet.</td></tr>';
+    rows.innerHTML = '<tr><td colspan="6">No customers yet.</td></tr>';
     return;
   }
 
+  customersCache = data;
   rows.innerHTML = data.map(c => {
     const oneTime = (c.purchases || []).filter(p => p.kind === 'one_time_purchase');
     const spentCents = oneTime.reduce((sum, p) => sum + (p.amount_cents || 0), 0);
     const subActive = c.subscription_status === 'active';
+    const deactivated = Boolean(c.deactivated_at);
     return `<tr>
       <td>${esc(c.email || c.display_name || '(no email on file)')}</td>
       <td>${esc(new Date(c.created_at).toLocaleDateString())}</td>
       <td><span class="pill ${subActive ? 'active' : 'none'}">${esc(c.subscription_status || 'none')}</span></td>
       <td>${oneTime.length} ($${(spentCents/100).toFixed(2)})</td>
+      <td><span class="pill ${deactivated ? 'none' : 'active'}">${deactivated ? 'Deactivated' : 'Active'}</span></td>
+      <td style="white-space:nowrap;">
+        ${deactivated
+          ? `<button class="small" onclick="reactivateCustomer('${esc(c.id)}')">Reactivate</button>`
+          : `<button class="small" onclick="deactivateCustomer('${esc(c.id)}')">Deactivate</button>`}
+        <button class="small danger" onclick="resetCustomer('${esc(c.id)}')">Reset</button>
+        <button class="small danger" onclick="deleteCustomer('${esc(c.id)}')">Delete</button>
+      </td>
     </tr>`;
   }).join('');
+}
+
+function customerLabel(id){
+  const row = customersCache.find(c => c.id === id);
+  return (row && (row.email || row.display_name)) || id;
+}
+
+async function deactivateCustomer(id){
+  if(!confirm(`Deactivate ${customerLabel(id)}? They won't be able to sign in until you reactivate them. Nothing else changes.`)) return;
+  const status = document.getElementById('customerActionStatus');
+  status.className = 'status'; status.textContent = 'Deactivating…';
+  const result = await callAdmin('customer-deactivate', { targetUserId: id });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? 'Deactivated.' : ('Failed: ' + result.error);
+  if(result.ok) loadCustomers();
+}
+
+async function reactivateCustomer(id){
+  const status = document.getElementById('customerActionStatus');
+  status.className = 'status'; status.textContent = 'Reactivating…';
+  const result = await callAdmin('customer-reactivate', { targetUserId: id });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? 'Reactivated.' : ('Failed: ' + result.error);
+  if(result.ok) loadCustomers();
+}
+
+async function resetCustomer(id){
+  const label = customerLabel(id);
+  if(!confirm(`Reset ${label} to a fresh start? This wipes their guardian, Circle membership, currencies, marks, and progress entirely — this cannot be undone. Their login, email, and subscription are untouched.`)) return;
+  if(!confirm(`Really reset ${label}? Last chance — their current guardian and all its progress will be gone for good.`)) return;
+  const status = document.getElementById('customerActionStatus');
+  status.className = 'status'; status.textContent = 'Resetting…';
+  const result = await callAdmin('customer-reset', { targetUserId: id });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? `${label} reset to a fresh start.` : ('Failed: ' + result.error);
+  if(result.ok) loadCustomers();
+}
+
+async function deleteCustomer(id){
+  const label = customerLabel(id);
+  if(!confirm(`Permanently delete ${label}? This deletes their account and every trace of their data — this cannot be undone.`)) return;
+  if(!confirm(`Really delete ${label} forever? There is no way to recover this account after this.`)) return;
+  const status = document.getElementById('customerActionStatus');
+  status.className = 'status'; status.textContent = 'Deleting…';
+  const result = await callAdmin('customer-delete', { targetUserId: id });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? `${label} deleted.` : ('Failed: ' + result.error);
+  if(result.ok) loadCustomers();
+}
+
+/* ---------------- admins ---------------- */
+
+async function loadAdminAllowlist(){
+  const rows = document.getElementById('adminAllowlistRows');
+  const [{ data: allowlist, error: allowlistError }, { data: activeAdmins }] = await Promise.all([
+    supabaseClient.from('admin_allowlist').select('email, note, added_at').order('added_at', { ascending: false }),
+    supabaseClient.from('profiles').select('email').eq('is_admin', true),
+  ]);
+
+  if(allowlistError){
+    rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(allowlistError.message) + '</td></tr>';
+    return;
+  }
+
+  const activeEmails = new Set((activeAdmins || []).map(a => (a.email || '').toLowerCase()));
+  if(!allowlist.length){
+    rows.innerHTML = '<tr><td colspan="5">No admins added yet — you\'re working from whatever was set up directly in the database.</td></tr>';
+    return;
+  }
+
+  rows.innerHTML = allowlist.map(a => {
+    const isActive = activeEmails.has((a.email || '').toLowerCase());
+    return `<tr>
+      <td>${esc(a.email)}</td>
+      <td><span class="pill ${isActive ? 'active' : 'none'}">${isActive ? 'Active admin' : 'Pending signup'}</span></td>
+      <td>${esc(a.note || '')}</td>
+      <td>${esc(new Date(a.added_at).toLocaleDateString())}</td>
+      <td><button class="small danger" onclick="removeAdminEntry('${esc(a.email)}')">Remove</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function addAdminEntry(){
+  const emailInput = document.getElementById('adminAddEmail');
+  const noteInput = document.getElementById('adminAddNote');
+  const email = emailInput.value.trim();
+  const status = document.getElementById('adminListStatus');
+  if(!email || !email.includes('@')){ status.className = 'status err'; status.textContent = 'Enter a valid email.'; return; }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const result = await callAdmin('add-admin', { email, note: noteInput.value.trim() });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok
+    ? (result.grantedNow ? `${email} is now an admin.` : `${email} added — will become an admin the moment they sign up.`)
+    : ('Failed: ' + result.error);
+  if(result.ok){
+    emailInput.value = '';
+    noteInput.value = '';
+    loadAdminAllowlist();
+  }
+}
+
+async function removeAdminEntry(email){
+  if(!confirm(`Remove admin access for ${email}?`)) return;
+  const status = document.getElementById('adminListStatus');
+  status.className = 'status'; status.textContent = 'Removing…';
+  const result = await callAdmin('remove-admin', { email });
+  status.className = result.ok ? 'status ok' : 'status err';
+  status.textContent = result.ok ? `${email} removed.` : ('Failed: ' + result.error);
+  if(result.ok) loadAdminAllowlist();
 }
 
 /* =====================================================================
