@@ -3188,16 +3188,6 @@ const DEFAULT_SHOP_AREAS_ADMIN = [
   { id: 'backToMap',      label: 'Back to the Map',  left: 3,  top: 88, width: 18, height: 8  },
 ];
 
-const DEFAULT_CRAFT_AREAS_ADMIN = [
-  { id: 'catalogPicker', label: 'Craft an item',        left: 3,  top: 10, width: 44, height: 20 },
-  { id: 'mageGearPicker',label: 'Craft Mage gear',      left: 52, top: 10, width: 44, height: 20 },
-  { id: 'reagentPicker', label: 'Buy a reagent',        left: 3,  top: 34, width: 44, height: 18 },
-  { id: 'potionPicker',  label: 'Buy or brew a potion', left: 52, top: 34, width: 44, height: 18 },
-  { id: 'itemsPicker',   label: 'Your Items',           left: 3,  top: 56, width: 44, height: 20 },
-  { id: 'petitionCraft', label: 'Craft a petition credit', left: 52, top: 56, width: 44, height: 12 },
-  { id: 'backToMap',     label: 'Back to the Map',      left: 3,  top: 88, width: 18, height: 8  },
-];
-
 // SCREEN_REGISTRY (0052) — every screen the hotspot editor below can edit.
 // Adding a new screen to this generalized editor is just a new entry here
 // (id/label list + which site_backgrounds page_key supplies its canvas
@@ -3216,20 +3206,6 @@ const DEFAULT_CRAFT_AREAS_ADMIN = [
 // ('guardianPage', 'mageHome') are unaffected — still set from the Site
 // backgrounds card above, just as a normal card background now, not a
 // full-bleed canvas.
-const DEFAULT_CIRCLEHOME_AREAS_ADMIN = [
-  { id: 'chestActions',   label: 'Chest & Devotion',  left: 3,  top: 10, width: 44, height: 22 },
-  { id: 'shopPicker',     label: 'Circle Shop',       left: 52, top: 10, width: 44, height: 20 },
-  { id: 'rosterManage',   label: 'Manage a member',   left: 3,  top: 34, width: 44, height: 20 },
-  { id: 'requestsManage', label: 'Requests & invites', left: 52, top: 34, width: 44, height: 20 },
-  { id: 'inviteSearch',   label: 'Invite a player',   left: 3,  top: 56, width: 44, height: 26 },
-  { id: 'yourAltar',      label: 'Your Altar',        left: 52, top: 58, width: 21, height: 8  },
-  { id: 'messages',       label: 'Messages',          left: 75, top: 58, width: 21, height: 8  },
-  { id: 'dragonsLair',    label: "Dragon's Lair",     left: 52, top: 68, width: 21, height: 8  },
-  { id: 'invasions',      label: 'Invasions',         left: 75, top: 68, width: 21, height: 8  },
-  { id: 'territoryMap',   label: 'Territory Map',     left: 52, top: 78, width: 21, height: 8  },
-  { id: 'backToMap',      label: 'Back to the Map',   left: 3,  top: 88, width: 18, height: 8  },
-];
-
 const DEFAULT_CIRCLEBROWSE_AREAS_ADMIN = [
   { id: 'circlePicker', label: 'Browse Circles',  left: 3,  top: 10, width: 60, height: 46 },
   { id: 'foundCircle',  label: 'Found a Circle',  left: 66, top: 10, width: 31, height: 10 },
@@ -3264,15 +3240,6 @@ const DEFAULT_TERRITORYMAP_AREAS_ADMIN = [
   { id: 'backToCircle', label: 'Back to your Circle', left: 3, top: 88, width: 24, height: 8  },
 ];
 
-const DEFAULT_PROFILE_AREAS_ADMIN = [
-  { id: 'hallOfAncestors', label: 'Hall of Ancestors',      left: 3,  top: 8,  width: 44, height: 34 },
-  { id: 'passwordBox',     label: 'Set / change password',  left: 52, top: 8,  width: 44, height: 30 },
-  { id: 'openShop',        label: 'Open the Shop',          left: 3,  top: 76, width: 21, height: 8  },
-  { id: 'openCredits',     label: 'Game Credits',           left: 26, top: 76, width: 21, height: 8  },
-  { id: 'signOut',         label: 'Sign out',                left: 52, top: 76, width: 21, height: 8  },
-  { id: 'backToMap',       label: 'Back to the Map',        left: 75, top: 76, width: 21, height: 8  },
-];
-
 const DEFAULT_CAMPAIGNBROWSE_AREAS_ADMIN = [
   { id: 'encounterPicker', label: 'Chapters & Encounters', left: 3, top: 14, width: 60, height: 60 },
   { id: 'backToMap',       label: 'Back to the Map',       left: 3, top: 88, width: 18, height: 8  },
@@ -3303,16 +3270,20 @@ const SCREEN_REGISTRY = {
   guardianHome: { label: 'Guardian Page (Familiar/Mage)',   bgKey: 'guardianPage', bgFallback: '', defaultAreas: DEFAULT_GUARDIANHOME_AREAS_ADMIN },
   backpack:     { label: 'Backpack (5 tabs)',               bgKey: 'backpack',    bgFallback: '', defaultAreas: DEFAULT_BACKPACK_AREAS_ADMIN },
   shop:         { label: 'Shop',                            bgKey: 'shop',        bgFallback: '', defaultAreas: DEFAULT_SHOP_AREAS_ADMIN },
-  craft:        { label: 'Shard Crafting',                  bgKey: 'craft',       bgFallback: '', defaultAreas: DEFAULT_CRAFT_AREAS_ADMIN },
-  circleHome:   { label: 'Circle Home',                     bgKey: 'circle',      bgFallback: '', defaultAreas: DEFAULT_CIRCLEHOME_AREAS_ADMIN },
   circleBrowse: { label: 'Circle Browse (list & ledger)',   bgKey: 'circle',      bgFallback: '', defaultAreas: DEFAULT_CIRCLEBROWSE_AREAS_ADMIN },
   circleMessages: { label: 'Circle Messages',               bgKey: 'circle',      bgFallback: '', defaultAreas: DEFAULT_CIRCLEMESSAGES_AREAS_ADMIN },
   circleAltar:  { label: 'Circle Altar',                    bgKey: 'circleAltar', bgFallback: '', defaultAreas: DEFAULT_CIRCLEALTAR_AREAS_ADMIN },
   personalAltar: { label: 'Personal Altar',                 bgKey: 'personalAltar', bgFallback: '', defaultAreas: DEFAULT_PERSONALALTAR_AREAS_ADMIN },
   territoryMap: { label: 'Territory Map',                   bgKey: 'territoryMap', bgFallback: '', defaultAreas: DEFAULT_TERRITORYMAP_AREAS_ADMIN },
-  profile:      { label: 'Profile',                         bgKey: 'profile',      bgFallback: '', defaultAreas: DEFAULT_PROFILE_AREAS_ADMIN },
   campaignBrowse: { label: 'The Divine Realms (Campaign)',  bgKey: 'campaign',     bgFallback: '', defaultAreas: DEFAULT_CAMPAIGNBROWSE_AREAS_ADMIN },
 };
+// Shard Crafting, Circle Home, and Profile were reverted to their
+// original plain-card layouts (direct feedback: "the circle home
+// crafting and profile area need to go back to how they were ... now
+// they are all chopped up and look horrible") and no longer have
+// admin-positionable hotspots, so their SCREEN_REGISTRY entries were
+// removed along with index.html's DEFAULT_CRAFT_AREAS/
+// DEFAULT_CIRCLEHOME_AREAS/DEFAULT_PROFILE_AREAS.
 let currentHotspotScreen = 'map';
 
 let hotspotState = [];   // mutable working copy the editor drags/resizes
