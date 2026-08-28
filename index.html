@@ -1072,6 +1072,12 @@ let mageView = null;          // null | {step:'home'} | {step:'gear'} — creati
 let pickedMageArt = null;
 let mageNameDraft = '';
 let mageActionStatus = '';    // scratch status text for Train/Duel/gear actions
+// Mage Duel interactivity (0083, Phase 2 of "make the Mage's own Duel
+// interactive") — null until doDuelMage() opens/resumes one. Holds the
+// live state of one mage_duels row: null | { battleId, round, mageHp,
+// mageMax, monsterHp, monsterMax, mageAffinity, monsterAffinity, log,
+// finished, won, ...reward fields once finished }.
+let mageDuelView = null;
 let mageGearOwned = [];       // this mage's mage_gear_items, reloaded each time the gear screen opens
 
 // The Narrator/Guide (0055) — an in-fiction walkthrough for new players.
@@ -1135,6 +1141,11 @@ let altarTickTimer = null;    // periodic re-render so countdowns stay live
 let titheAmountDraft = '';
 
 let dragonStatus = null;      // dragon-status response, while circleView.step === 'dragon'
+// Real move selection (final queued phase of "no real battle schematics
+// for mages or familiars") — the guardian's real, auto-built move list
+// for the attack picker, loaded once per visit via circle/index.ts's
+// "dragon-moves" action. null until loaded, [] if the fetch failed.
+let dragonMoves = null;
 
 let invasionStatus = null;    // invasion-status response, while circleView.step === 'invasions'
 let invasionCircleNames = {}; // { circleId: name }, enriched client-side so reports read naturally
@@ -1294,7 +1305,7 @@ async function boot(){
       petitionView = null; combatView = null; craftView = null; redeemView = null;
       expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
       profileView = null; shrineView = null; mailView = null; backpackView = null;
-      checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
+      checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
       shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
       profilePasswordOpen = false;
       renderLoginScreen();
@@ -1622,6 +1633,7 @@ function render(){
   if(guardian && campaignView){ renderCampaign(); return; }
   if(guardian && shopView){ renderShop(); return; }
   if(guardian && guardianHomeView){ renderGuardianHome(); return; }
+  if(guardian && mageDuelView){ renderMageDuelScreen(); return; }
   if(guardian && mageView){ renderMageGear(); return; }
   if(guardian && guideView){ renderGuide(); return; }
   if(guardian && narratorChatView){ renderNarratorChat(); return; }
@@ -2520,66 +2532,133 @@ async function doTrainMage(){
   if(data.levelsGained > 0) celebrate({ count: 14, distance: 44, duration: 850, color: '#e6c777', size: 18, sprite: 'particle-fx/fx_burst.png' });
 }
 
+// 0083, Phase 2 of "make the Mage's own Duel interactive" — opens (or
+// resumes) a real, live round-by-round fight instead of resolving the
+// whole thing instantly server-side. Energy/cooldown are both charged by
+// the server at duel-start now (see mage/index.ts's comment on why),
+// so a failed start here never costs anything.
 async function doDuelMage(){
   setMageActionStatus('Stepping into the ring…');
-  const data = await mageFetch('duel');
+  const data = await mageFetch('duel-start');
   if(!data.ok){ setMageActionStatus(mageErrorMsg(data, 'Could not duel right now.'), false); return; }
-  // 0069 — duel is a real multi-round fight now (was a one-shot coin
-  // flip with mageScore/npcScore and no HP at all). current_hp moved
-  // for real either way (win or lose), so both loadMage() (base row)
-  // and loadMageStatus() (regen-inclusive display number) refresh here.
-  await Promise.all([loadMage(), loadMageStatus()]);
-  // Energy (0071) — spent on the attempt itself, win or lose. Patch the
-  // locally-held guardian row immediately, same reasoning as Energy in
-  // startBattle() above (Mage Duel draws from the same shared pool).
   if(guardian && typeof data.energyRemaining === 'number'){
     guardian.energy_current = data.energyRemaining;
     guardian.energy_updated_at = new Date().toISOString();
   }
-  const roundsFought = data.rounds ? data.rounds.length : 0;
-  const hpNote = `${data.mageHpRemaining} / ${data.mageMaxHp} HP left.`;
-  // Element Wheel (0071) — "yes, add it to Mage duels." Naming both
-  // sides' elements is the simplest way to actually show it's live,
-  // rather than leaving the wheel's effect invisible inside the damage
-  // math the way it always has been in every other fight screen.
-  const elementNote = data.monsterAffinity
-    ? ` Foe's element: ${esc(data.monsterAffinity)}${data.mageAffinity ? `, yours: ${esc(data.mageAffinity)}` : ''}.`
-    : '';
-  if(!data.won){
-    render();
-    setMageActionStatus(`Beaten back after ${roundsFought} round${roundsFought === 1 ? '' : 's'} — ${hpNote} No reward, but no other penalty either. Heal up or wait it out.${elementNote}`, false);
-    playMageDuelRoundParticles(data.rounds);
-    return;
-  }
-  let msg = `Victory in ${roundsFought} round${roundsFought === 1 ? '' : 's'}! ${hpNote} +${data.xpGained} XP, +${data.shardsGained} God Shards.${elementNote}`;
-  if(data.levelsGained > 0) msg += ` Leveled up to ${data.level}!`;
-  if(data.reagentWon) msg += ` Found: ${data.reagentWon.name}.`;
-  if(data.reagentWon) await loadMageReagentsOwned();
+  mageDuelView = {
+    battleId: data.battleId, round: data.round || 0,
+    mageHp: data.mageHpRemaining, mageMax: data.mageMaxHp,
+    monsterHp: data.monsterHpRemaining, monsterMax: data.monsterMaxHp,
+    mageAffinity: data.mageAffinity, monsterAffinity: data.monsterAffinity,
+    log: data.log || [], finished: false, won: null,
+  };
   render();
-  setMageActionStatus(msg, true);
-  playMageDuelRoundParticles(data.rounds);
-  celebrate({ count: 18, distance: 50, duration: 900, color: '#e6c777', size: 20, sprite: 'particle-fx/fx_starburst.png' });
 }
 
-// 0070 — the Mage's duel resolves the whole multi-round fight in one
-// call, same "no live round-by-round screen" shape as PvP — so, like
-// playPvpRoundParticles(), this replays it as a staggered particle
-// sequence instead of one instant burst. No move system here either
-// (a flat stat-roll exchange, see mage/index.ts's duel action), so
-// every round gets the same generic hit look — crit gets a starburst,
-// a normal landed hit gets a plain impact. Anchored to #app via
-// celebrate() rather than a specific wrap element since this screen has
-// no per-combatant HP-bar DOM the way Campaign/Gauntlet do.
-function playMageDuelRoundParticles(rounds){
-  if(!rounds) return;
-  let delay = 0;
-  rounds.forEach(r => {
-    setTimeout(() => {
-      if(r.mageCrit) celebrate({ count: 6, distance: 36, duration: 600, color: '#e6c777', size: 26, sprite: 'particle-fx/fx_starburst.png' });
-      else celebrate({ count: 4, distance: 28, duration: 550, color: '#c8a24a', size: 22, sprite: 'particle-fx/fx_impact.png' });
-    }, delay);
-    delay += 220;
-  });
+// Resolves exactly one round via mage/index.ts's "duel-act" and updates
+// the live battle screen — the same "one HTTP call per round, redraw,
+// wait for the next click" shape combat/index.ts's actMove() uses for
+// Gauntlet/Campaign, just without the extra beat-by-beat DOM animation
+// (a Mage Duel has only ever had one hit per side per round, so a plain
+// re-render reads clearly without needing that).
+async function doMageDuelAct(){
+  const btn = document.getElementById('mageDuelAttackBtn');
+  if(btn) btn.disabled = true;
+  setMageActionStatus('Exchanging blows…');
+  const data = await mageFetch('duel-act', { battleId: mageDuelView.battleId });
+  if(!data.ok){ setMageActionStatus(data.error || 'Could not continue the duel.', false); if(btn) btn.disabled = false; return; }
+
+  mageDuelView.round = data.round;
+  mageDuelView.mageHp = data.mageHpRemaining;
+  mageDuelView.monsterHp = Math.max(0, data.monsterHpRemaining);
+  mageDuelView.log = [...mageDuelView.log, data.event];
+
+  if(data.finished){
+    mageDuelView.finished = true;
+    mageDuelView.won = data.won;
+    if(data.won){
+      Object.assign(mageDuelView, {
+        xpGained: data.xpGained, shardsGained: data.shardsGained, level: data.level,
+        levelsGained: data.levelsGained, reagentWon: data.reagentWon,
+      });
+      if(data.reagentWon) await loadMageReagentsOwned();
+    }
+    await Promise.all([loadMage(), loadMageStatus()]);
+  }
+
+  render();
+  if(data.event.mageCrit) celebrate({ count: 6, distance: 36, duration: 600, color: '#e6c777', size: 26, sprite: 'particle-fx/fx_starburst.png' });
+  else celebrate({ count: 4, distance: 28, duration: 550, color: '#c8a24a', size: 22, sprite: 'particle-fx/fx_impact.png' });
+  if(data.finished && data.won && data.levelsGained > 0){
+    celebrate({ count: 18, distance: 50, duration: 900, color: '#e6c777', size: 20, sprite: 'particle-fx/fx_starburst.png' });
+  }
+}
+
+function closeMageDuel(){
+  mageDuelView = null;
+  render();
+}
+
+function renderMageDuelScreen(){
+  const app = document.getElementById('app');
+  const v = mageDuelView;
+  const mPct = v.mageMax > 0 ? Math.max(0, Math.round((v.mageHp / v.mageMax) * 100)) : 0;
+  const nPct = v.monsterMax > 0 ? Math.max(0, Math.round((v.monsterHp / v.monsterMax) * 100)) : 0;
+  const mageArt = mageArtFor(mage.art_key);
+
+  const logHtml = v.log.slice().reverse().map((r, i) => {
+    const roundNum = v.log.length - i;
+    const lines = [`<div class="entry${r.mageCrit ? ' crit' : ''}">Round ${roundNum}: you strike for ${r.mageDamage} damage${r.mageCrit ? ' (critical!)' : ''}.</div>`];
+    if(r.mageHealed){
+      lines.push(`<div class="entry">Round ${roundNum}: your foe's attack heals you for ${r.mageHealed} instead (counter-affinity)!</div>`);
+    } else if(r.monsterDamage){
+      lines.push(`<div class="entry">Round ${roundNum}: your foe strikes back for ${r.monsterDamage} damage.</div>`);
+    }
+    return lines.join('');
+  }).join('');
+
+  const elementNote = v.monsterAffinity
+    ? `Foe's element: ${esc(v.monsterAffinity)}${v.mageAffinity ? `, yours: ${esc(v.mageAffinity)}` : ''}.`
+    : '';
+
+  const footer = v.finished
+    ? `
+      <div class="status ${v.won ? 'ok' : 'err'}">${v.won
+        ? `Victory in ${v.round} round${v.round === 1 ? '' : 's'}! +${v.xpGained} XP, +${v.shardsGained} God Shards.${v.levelsGained > 0 ? ` Leveled up to ${v.level}!` : ''}${v.reagentWon ? ` Found: ${esc(v.reagentWon.name)}.` : ''}`
+        : `Beaten back after ${v.round} round${v.round === 1 ? '' : 's'}. No reward, but no other penalty either — heal up or wait it out.`
+      }</div>
+      <button style="display:block;margin:14px auto 0;" onclick="closeMageDuel()">Continue</button>
+    `
+    : `
+      <div class="status" id="mageActionStatus"></div>
+      <button id="mageDuelAttackBtn" onclick="doMageDuelAct()">Attack</button>
+    `;
+
+  app.innerHTML = `
+    <div class="card"${bgAttr('mageHome')}>
+      <h2 style="text-align:center;">${esc(mage.name)} vs. a wild foe</h2>
+      <p class="hint" style="text-align:center;">${elementNote}</p>
+      <div class="battle-arena">
+        <div class="battle-side">
+          ${opponentImgFor(MAGE_ART_IMAGES[mage.art_key], mageArt ? mageArt.affinity : null, 110)}
+          <div class="hp-wrap">
+            <div class="hp-row"><span class="hp-name">${esc(mage.name)}</span><span class="hp-name">${v.mageHp} / ${v.mageMax}</span></div>
+            <div class="hp-bar-track"><div class="hp-bar-fill mage-vit${mPct <= 25 ? ' low' : ''}" style="width:${mPct}%;"></div></div>
+          </div>
+        </div>
+        <div class="battle-vs">VS</div>
+        <div class="battle-side">
+          ${opponentImgFor(null, v.monsterAffinity, 110)}
+          <div class="hp-wrap">
+            <div class="hp-row"><span class="hp-name">Foe</span><span class="hp-name">${v.monsterHp} / ${v.monsterMax}</span></div>
+            <div class="hp-bar-track"><div class="hp-bar-fill opponent" style="width:${nPct}%;"></div></div>
+          </div>
+        </div>
+      </div>
+      ${footer}
+      <div class="battle-log">${logHtml || '<div class="entry">The duel has not yet begun its first round.</div>'}</div>
+    </div>
+  `;
 }
 
 async function doSpendMagePoint(statKey){
@@ -3365,7 +3444,7 @@ async function confirmReleaseGuardian(){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
   shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
   render();
 }
@@ -3396,7 +3475,7 @@ async function doRestoreGuardian(retiredId){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
   shopView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
   profilePasswordOpen = false;
   await afterLogin();
@@ -3915,12 +3994,34 @@ function renderPromo(){
    auto-respawn here. */
 
 let worldBossStatus = null; // {active, boss:{...}, cooldownEndsAt, leaderboard:[...]} | {active:false} | null (not yet loaded)
+// Real move-selection (final queued phase of "no real battle schematics
+// for mages or familiars") — the guardian's real, auto-built move list
+// for the attack picker, loaded once per visit via world-boss/index.ts's
+// "moves" action. null until loaded, [] if the fetch failed.
+let worldBossMoves = null;
 
 function openWorldBoss(){
   worldBossView = { step: 'home' };
   worldBossStatus = null;
+  worldBossMoves = null;
   render();
   refreshWorldBossStatus();
+  loadWorldBossMoves();
+}
+
+async function loadWorldBossMoves(){
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/world-boss', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'moves' })
+    });
+    const data = await resp.json();
+    worldBossMoves = data.ok ? data.moves : [];
+  }catch(e){
+    worldBossMoves = [];
+  }
+  if(worldBossView) render();
 }
 
 function backFromWorldBoss(){
@@ -3951,12 +4052,17 @@ function setWorldBossStatusMsg(text, ok){
 }
 
 async function doAttackWorldBoss(){
+  // Real move selection (final queued phase) — the picker in
+  // renderWorldBoss() writes its choice into this select; default to
+  // index 0 (Basic Strike, always present) if it's missing for any reason.
+  const moveSelect = document.getElementById('worldBossMoveSelect');
+  const moveIndex = moveSelect ? parseInt(moveSelect.value, 10) : 0;
   setWorldBossStatusMsg('Striking…');
   try{
     const resp = await fetch(FUNCTIONS_URL + '/world-boss', {
       method: 'POST',
       headers: await petitionHeaders(),
-      body: JSON.stringify({ action: 'attack' })
+      body: JSON.stringify({ action: 'attack', moveIndex })
     });
     const data = await resp.json();
     if(!data.ok){ setWorldBossStatusMsg(data.error || 'Could not land that attack.', false); await refreshWorldBossStatus(); return; }
@@ -3978,46 +4084,82 @@ async function doAttackWorldBoss(){
     }
     const yourHpNote = typeof data.guardianHp === 'number' ? ` Your Guardian: ${data.guardianHp}/${data.guardianHpMax} HP.` : '';
 
+    // Real move selection (final queued phase) — build up what actually
+    // happened this exchange from the pieces the server now returns
+    // (moveUsed, guardianDamage, mageDamage/mageName, stunnedBoss),
+    // instead of one flat "Hit for X" line. "Repelled" now only means
+    // the GUARDIAN's own swing fizzled — the Mage's hit (if any) still
+    // shows up separately below it.
+    const bits = [];
     if(data.repelled){
-      // Direct feedback: "it needs to retaliate." Same shape/messaging as
-      // renderCircleDragon's attack handler — the boss's counter-swing
-      // met or beat your vitality, so this swing dealt nothing.
-      setWorldBossStatusMsg(`Repelled! The boss hit back for ${data.damageTaken}${data.bossCrit ? ' (critical!)' : ''} before your strike landed — no damage dealt this time.${yourHpNote}`, false);
-    }else if(data.reflectHeal){
-      // Counter-affinity healing (0079) — your attack shared the boss's own
-      // affinity, so it healed instead of taking damage. Distinct branch so
-      // this never falls into the "Hit for" wording below with no `damage`
-      // field to show (that boss took none this swing, on purpose).
-      setWorldBossStatusMsg(`${esc(data.bossName || 'The boss')} shares your affinity and healed ${data.healedAmount} instead of taking damage — still took ${data.damageTaken}${data.bossCrit ? ' (critical!)' : ''} in return. ${data.hpRemaining.toLocaleString()}/${data.hpTotal.toLocaleString()} HP left.${yourHpNote}`, false);
-    }else if(data.defeated){
+      bits.push(`Repelled! The boss hit back for ${data.damageTaken}${data.bossCrit ? ' (critical!)' : ''} before your ${esc(data.moveUsed)} landed.`);
+    }else{
+      bits.push(`Your ${esc(data.moveUsed)} hit for ${data.guardianDamage}${data.crit ? ' (critical!)' : ''}.`);
+    }
+    if(data.mageDamage > 0){
+      bits.push(`${esc(data.mageName || 'Your Mage')}'s ${esc(data.mageMoveUsed || 'strike')} hit for ${data.mageDamage}${data.mageCrit ? ' (critical!)' : ''}.`);
+    }
+    if(data.stunnedBoss){
+      bits.push('The boss was stunned — no counterattack this time!');
+    }else if(!data.repelled){
+      bits.push(`Took ${data.damageTaken}${data.bossCrit ? ' (critical!)' : ''} in return.`);
+    }
+
+    if(data.reflectHeal){
+      // Counter-affinity healing (0079) — part or all of this exchange's
+      // damage shared the boss's own affinity, healing it instead.
+      bits.push(`${esc(data.bossName || 'The boss')} shares an affinity used against it and healed ${data.reflectHeal} instead.`);
+    }
+
+    if(data.defeated){
       const rewardBits = [];
       if(data.yourEssence) rewardBits.push(`${data.yourEssence} Essence`);
       if(data.yourTokens) rewardBits.push(`${data.yourTokens} God Token${data.yourTokens === 1 ? '' : 's'}`);
       setWorldBossStatusMsg(
-        `${esc(data.bossName)} falls! You dealt ${data.damage}${data.crit ? ' (critical!)' : ''} and took ${data.damageTaken} in return — ${data.yourTotalDamage} total damage${rewardBits.length ? (', earning ' + rewardBits.join(' and ') + '.') : '.'}${yourHpNote}`,
+        `${esc(data.bossName)} falls! ${bits.join(' ')} ${data.yourTotalDamage} total damage${rewardBits.length ? (', earning ' + rewardBits.join(' and ') + '.') : '.'}${yourHpNote}`,
         true
       );
       await loadGuardian();
     }else{
-      setWorldBossStatusMsg(`Hit for ${data.damage}${data.crit ? ' (critical!)' : ''} — took ${data.damageTaken} in return. ${data.hpRemaining.toLocaleString()}/${data.hpTotal.toLocaleString()} HP left.${yourHpNote}`, true);
+      setWorldBossStatusMsg(`${bits.join(' ')} ${data.hpRemaining.toLocaleString()}/${data.hpTotal.toLocaleString()} HP left.${yourHpNote}`, !data.repelled);
     }
     // refreshWorldBossStatus() re-renders #app before this returns — so
     // celebrate() (which appends particles into #app) has to fire AFTER
     // that render, not before, or the innerHTML swap wipes the particles
-    // mid-animation. World Boss has no move system to hang a per-move
-    // particle on (flat single-swing fight, confirmed out of scope back
-    // in the 0063 moves-catalog migration), so this is a generic
-    // celebratory burst — bigger on the kill, smaller on a landed hit,
-    // none on a repel since nothing actually landed.
+    // mid-animation. Real move-selection landed the damage number but not
+    // a full per-move particle system here (still a single exchange, not
+    // a live round-by-round screen) — this stays a generic celebratory
+    // burst, bigger on the kill, smaller on any landed hit (guardian's or
+    // just the Mage's), none if NEITHER landed.
+    const anyDamageLanded = data.guardianDamage > 0 || data.mageDamage > 0;
     await refreshWorldBossStatus();
     if(data.defeated){
       celebrate({ count: 16, distance: 46, duration: 800, color: data.crit ? '#e6c777' : '#c8a24a', size: 22, sprite: data.crit ? 'particle-fx/fx_starburst.png' : 'particle-fx/fx_impact.png' });
-    }else if(!data.repelled){
+    }else if(anyDamageLanded){
       celebrate({ count: 6, distance: 34, duration: 600, color: data.crit ? '#e6c777' : '#c8a24a', size: 20, sprite: data.crit ? 'particle-fx/fx_starburst.png' : 'particle-fx/fx_impact.png' });
     }
   }catch(e){
     setWorldBossStatusMsg('Could not reach the relay: ' + e.message, false);
   }
+}
+
+// Real move selection (final queued phase of "no real battle schematics
+// for mages or familiars") — a real picker into the guardian's own move
+// list instead of one "Tap to attack" auto-swing. Falls back to a plain
+// tap (defaulting to move index 0, Basic Strike, always present) if the
+// moves fetch is still in flight or came back empty for any reason, so
+// the fight never gets blocked by this being new.
+function worldBossAttackPickerHtml(){
+  if(!worldBossMoves || !worldBossMoves.length){
+    return `<p class="hint tap-action" onclick="doAttackWorldBoss()">Tap to attack.</p>`;
+  }
+  const options = worldBossMoves.map((m, i) => `<option value="${i}">${esc(m.label)}${m.affinity ? ' (' + esc(m.affinity) + ')' : ''}</option>`).join('');
+  return `
+    <div style="display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin:8px 0;">
+      <select id="worldBossMoveSelect">${options}</select>
+      <button onclick="doAttackWorldBoss()">Attack</button>
+    </div>
+  `;
 }
 
 function renderWorldBoss(){
@@ -4070,7 +4212,7 @@ function renderWorldBoss(){
             ? '<p class="hint">Defeated — rewards have already been paid out to every attacker.</p>'
             : onCooldown
               ? `<p class="hint">Recovering (${formatRemaining(cooldownMs)})</p>`
-              : `<p class="hint tap-action" onclick="doAttackWorldBoss()">Tap to attack.</p>`
+              : worldBossAttackPickerHtml()
           }
           <div class="status" id="worldBossActionStatus"></div>
           ${energyBarHtml()}
@@ -4498,7 +4640,7 @@ function returnToMapHub(){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
   shopView = null;
   render();
 }
@@ -6763,8 +6905,16 @@ async function openCircleDragon(){
   if(!myCircle || !myCircle.circle) return;
   circleView = { step: 'dragon' };
   dragonStatus = null;
+  dragonMoves = null;
   render();
   await refreshDragonStatus();
+  loadDragonMoves();
+}
+
+async function loadDragonMoves(){
+  const data = await circleFetch('dragon-moves');
+  dragonMoves = data.ok ? data.moves : [];
+  if(circleView && circleView.step === 'dragon') render();
 }
 
 async function refreshDragonStatus(){
@@ -6785,44 +6935,85 @@ function setDragonActionStatus(text, ok){
   el.textContent = text;
 }
 
+// Real move selection (final queued phase) — renderCircleDragon()'s
+// picker writes its choice into this select; default to index 0 (Basic
+// Strike, always present) if it's missing for any reason.
 async function doDragonAttack(){
+  const moveSelect = document.getElementById('dragonMoveSelect');
+  const moveIndex = moveSelect ? parseInt(moveSelect.value, 10) : 0;
   setDragonActionStatus('The blow lands…');
-  const data = await circleFetch('dragon-attack');
+  const data = await circleFetch('dragon-attack', { moveIndex });
   if(!data.ok){ setDragonActionStatus(data.error || 'Could not attack.', false); await refreshDragonStatus(); return; }
 
   // Guardian HP (0076) — the dragon's counter-swing now leaves a real,
   // persistent mark; loadGuardian() below refreshes the stored value,
   // this note just surfaces the number the attack itself just returned.
   const yourHpNote = typeof data.guardianHp === 'number' ? ` Your Guardian: ${data.guardianHp}/${data.guardianHpMax} HP.` : '';
+
+  // Build up what actually happened this exchange from the pieces the
+  // server now returns (moveUsed, guardianDamage, mageDamage/mageName,
+  // stunnedDragon), same shape as doAttackWorldBoss()'s identical
+  // rebuild. "Repelled" now only means the GUARDIAN's own swing fizzled
+  // — the Mage's hit (if any) still shows up separately.
+  const bits = [];
   if(data.repelled){
-    setDragonActionStatus(`Repelled! The dragon hit back for ${data.damageTaken}${data.dragonCrit ? ' (critical!)' : ''} before your strike landed — no damage dealt this time.${yourHpNote}`, false);
-  }else if(data.reflectHeal){
-    // Counter-affinity healing (0079) — your attack shared the dragon's own
-    // affinity, so it healed instead of taking damage. Distinct branch, same
-    // reasoning as doAttackWorldBoss()'s identical addition.
-    setDragonActionStatus(`The dragon shares your affinity and healed ${data.healedAmount} instead of taking damage — still hit back for ${data.damageTaken}${data.dragonCrit ? ' (critical!)' : ''}. ${data.hpRemaining}/${data.hpTotal} HP left.${yourHpNote}`, false);
-  }else if(data.defeated){
-    const bits = [`${esc(data.dragonName)} falls!`, `You dealt ${data.damage}${data.crit ? ' (critical!)' : ''} and took ${data.damageTaken} in return.`, `The Circle gained ${data.rewardDevotion} Devotion and ${data.rewardRank} rank.`];
+    bits.push(`Repelled! The dragon hit back for ${data.damageTaken}${data.dragonCrit ? ' (critical!)' : ''} before your ${esc(data.moveUsed)} landed.`);
+  }else{
+    bits.push(`Your ${esc(data.moveUsed)} hit for ${data.guardianDamage}${data.crit ? ' (critical!)' : ''}.`);
+  }
+  if(data.mageDamage > 0){
+    bits.push(`${esc(data.mageName || 'Your Mage')}'s ${esc(data.mageMoveUsed || 'strike')} hit for ${data.mageDamage}${data.mageCrit ? ' (critical!)' : ''}.`);
+  }
+  if(data.stunnedDragon){
+    bits.push('The dragon was stunned — no counterattack this time!');
+  }else if(!data.repelled){
+    bits.push(`Took ${data.damageTaken}${data.dragonCrit ? ' (critical!)' : ''} in return.`);
+  }
+  if(data.reflectHeal){
+    bits.push(`The dragon shares an affinity used against it and healed ${data.healedAmount} instead.`);
+  }
+
+  if(data.defeated){
+    bits.unshift(`${esc(data.dragonName)} falls!`);
+    bits.push(`The Circle gained ${data.rewardDevotion} Devotion and ${data.rewardRank} rank.`);
     if(data.yourShare) bits.push(`You personally earned ${data.yourShare} Essence.`);
     if(data.decorationWon) bits.push('A new Altar decoration was won!');
     if(yourHpNote) bits.push(yourHpNote.trim());
     setDragonActionStatus(bits.join(' '), true);
   }else{
-    setDragonActionStatus(`Hit for ${data.damage}${data.crit ? ' (critical!)' : ''} — took ${data.damageTaken} in return. ${data.hpRemaining}/${data.hpTotal} HP left.${yourHpNote}`, true);
+    setDragonActionStatus(`${bits.join(' ')} ${data.hpRemaining}/${data.hpTotal} HP left.${yourHpNote}`, !data.repelled);
   }
   await loadGuardian();
   // refreshDragonStatus() re-renders #app — celebrate() has to fire
   // after that (see doAttackWorldBoss()'s identical comment) so the
-  // particles don't get wiped mid-animation by the innerHTML swap.
-  // Circle Dragon has no move system either (0063's stated scope), so
-  // this is the same generic hit/kill burst World Boss got, no
-  // per-move admin customization here.
+  // particles don't get wiped mid-animation by the innerHTML swap. Still
+  // a single exchange (not a live round-by-round screen), so this stays
+  // a generic hit/kill burst — fires on any landed damage, guardian's or
+  // just the Mage's.
+  const anyDamageLanded = data.guardianDamage > 0 || data.mageDamage > 0;
   await refreshDragonStatus();
   if(data.defeated){
     celebrate({ count: 16, distance: 46, duration: 800, color: data.crit ? '#e6c777' : '#c8a24a', size: 22, sprite: data.crit ? 'particle-fx/fx_starburst.png' : 'particle-fx/fx_impact.png' });
-  }else if(!data.repelled){
+  }else if(anyDamageLanded){
     celebrate({ count: 6, distance: 34, duration: 600, color: data.crit ? '#e6c777' : '#c8a24a', size: 20, sprite: data.crit ? 'particle-fx/fx_starburst.png' : 'particle-fx/fx_impact.png' });
   }
+}
+
+// Same picker-or-fallback shape as worldBossAttackPickerHtml() — a real
+// choice from the guardian's own move list when it's loaded, a plain tap
+// (move index 0, Basic Strike) if the fetch is still in flight or came
+// back empty.
+function dragonAttackPickerHtml(){
+  if(!dragonMoves || !dragonMoves.length){
+    return `<button onclick="doDragonAttack()">Attack</button>`;
+  }
+  const options = dragonMoves.map((m, i) => `<option value="${i}">${esc(m.label)}${m.affinity ? ' (' + esc(m.affinity) + ')' : ''}</option>`).join('');
+  return `
+    <div style="display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin:8px 0;">
+      <select id="dragonMoveSelect">${options}</select>
+      <button onclick="doDragonAttack()">Attack</button>
+    </div>
+  `;
 }
 
 function renderCircleDragon(){
@@ -6850,7 +7041,7 @@ function renderCircleDragon(){
         <div class="hp-row"><span class="hp-name">HP</span><span class="hp-name">${fight.hp_remaining} / ${fight.hp_total}</span></div>
         <div class="hp-bar-track"><div class="hp-bar-fill opponent" style="width:${pct}%;"></div></div>
         <p class="hint" style="text-align:center;">Window closes in ${remaining}.</p>
-        <button onclick="doDragonAttack()">Attack</button>
+        ${dragonAttackPickerHtml()}
       `;
     }else if(dragonStatus.usedThisPhase){
       mainBlock = `<p class="hint" style="text-align:center;">Your Circle has already used this moon phase's dragon window. Try again next phase.</p>`;
@@ -6858,7 +7049,7 @@ function renderCircleDragon(){
       mainBlock = `
         <h2 style="text-align:center;">${esc(nextDragon.name)}</h2>
         <p class="hint" style="text-align:center;">${nextDragon.hp_pool} HP · no window open yet — the first attack opens one.</p>
-        <button onclick="doDragonAttack()">Attack</button>
+        ${dragonAttackPickerHtml()}
       `;
     }
   }
@@ -7925,25 +8116,35 @@ function playPvpRoundParticles(rounds){
 // status-effect system (poison/weaken/vulnerability/shields/dodge/crit/
 // lifesteal), same as a Gauntlet fight — this renders that round-by-round
 // log the same way renderBattleScreen()'s does, just with 'a'/'b' actors
-// instead of 'guardian'/'opponent'.
+// instead of 'guardian'/'opponent'. PvP Mage participation (Phase 2)
+// added two more actors, 'mage_a'/'mage_b' — a side's Mage striking the
+// OTHER guardian once per round, same shape as combat/index.ts's 'mage'
+// actor for Gauntlet/Campaign. A Mage never takes damage or a status
+// effect here (Phase 2 scope, see pvp/index.ts's applyMageStrike
+// comment), so it only ever needs the plain "used a move" line below —
+// verb conjugation still keys off which SIDE it's on ('a' = Opponent,
+// 'b' = You), not the Mage's own name.
 function pvpVerb(subject, thirdPerson, secondPerson){
   return subject === 'You' ? secondPerson : thirdPerson;
 }
 function pvpDuelLogHtml(rounds){
   return (rounds || []).map(e => {
-    const who = e.actor === 'a' ? 'Opponent' : 'You';
-    const defender = e.actor === 'a' ? 'You' : 'Opponent';
+    const isMage = e.actor === 'mage_a' || e.actor === 'mage_b';
+    const side = isMage ? (e.actor === 'mage_a' ? 'a' : 'b') : e.actor;
+    const sideLabel = side === 'a' ? 'Opponent' : 'You';
+    const who = isMage ? esc(e.mageName || (sideLabel + '’s Mage')) : sideLabel;
+    const defender = side === 'a' ? 'You' : 'Opponent';
     if(e.move === undefined && e.burnTick !== undefined){
-      return `<div class="entry burntick">Round ${e.round}: ${who} ${pvpVerb(who, 'takes', 'take')} ${e.burnTick} burn damage.</div>`;
+      return `<div class="entry burntick">Round ${e.round}: ${who} ${pvpVerb(sideLabel, 'takes', 'take')} ${e.burnTick} burn damage.</div>`;
     }
     if(e.move === undefined && e.poisonTick !== undefined){
-      return `<div class="entry poisontick">Round ${e.round}: ${who} ${pvpVerb(who, 'takes', 'take')} ${e.poisonTick} poison damage.</div>`;
+      return `<div class="entry poisontick">Round ${e.round}: ${who} ${pvpVerb(sideLabel, 'takes', 'take')} ${e.poisonTick} poison damage.</div>`;
     }
     if(e.move === undefined && e.stunned){
-      return `<div class="entry stunskip">Round ${e.round}: ${who} ${pvpVerb(who, 'is', 'are')} stunned and cannot act!</div>`;
+      return `<div class="entry stunskip">Round ${e.round}: ${who} ${pvpVerb(sideLabel, 'is', 'are')} stunned and cannot act!</div>`;
     }
     if(e.dodged){
-      return `<div class="entry dodgeskip">Round ${e.round}: ${who} ${pvpVerb(who, 'attacks', 'attack')} — ${defender} ${pvpVerb(defender, 'dodges', 'dodge')}!</div>`;
+      return `<div class="entry dodgeskip">Round ${e.round}: ${who} ${pvpVerb(sideLabel, 'attacks', 'attack')} — ${defender} ${pvpVerb(defender, 'dodges', 'dodge')}!</div>`;
     }
     const tag = e.crit ? ' (critical!)' : (e.control ? ' (swiftness shaved)' : '');
     const extra = (e.healed ? ` (+${e.healed} lifesteal)` : '') + (e.stunned ? ' (stunned!)' : '') + (e.burn ? ' (burning)' : '') +
