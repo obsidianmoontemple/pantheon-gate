@@ -2026,6 +2026,21 @@ const DEFAULT_KEYOFNIGHT_AREAS = [
 ];
 let KEYOFNIGHT_AREAS = DEFAULT_KEYOFNIGHT_AREAS.slice();
 
+// The Temple of the Gods (Shrine) — first of the "art MUST supersede the
+// current layouts" conversions beyond Tier 1's fixed-content screens.
+// Was a scrolling per-pantheon list of every unlocked deity (one row per
+// god, a Chat link on each); same treatment as Petition Hall/Key of
+// Night above — one dropdown, grouped by pantheon via <optgroup>,
+// replaces the whole list. No action on the dropdown entry itself (a
+// real <select>+button lives in the box instead, see
+// hotspotDropdownMarkup()); backToMap keeps its own action like every
+// other plain hotspot.
+const DEFAULT_SHRINE_AREAS = [
+  { id: 'deityPicker', label: 'Choose a god to visit', left: 30, top: 48, width: 40, height: 18, kind: 'dropdown' },
+  { id: 'backToMap',   label: 'Back to the Map',       left: 3,  top: 88, width: 18, height: 8,  action: backFromShrine },
+];
+let SHRINE_AREAS = DEFAULT_SHRINE_AREAS.slice();
+
 // Generic loader shared by every screen registered in admin.html's Screen
 // Hotspots editor — id/label/action come from that screen's own DEFAULT_*
 // array (a click handler can't live in a database row), only
@@ -2052,6 +2067,7 @@ async function loadMapHotspots(){
   CHECKIN_AREAS = await loadHotspotOverrides('checkin', DEFAULT_CHECKIN_AREAS);
   PETITION_AREAS = await loadHotspotOverrides('oracle', DEFAULT_PETITION_AREAS);
   KEYOFNIGHT_AREAS = await loadHotspotOverrides('keyOfNight', DEFAULT_KEYOFNIGHT_AREAS);
+  SHRINE_AREAS = await loadHotspotOverrides('shrine', DEFAULT_SHRINE_AREAS);
 }
 
 // Shared by every full-bleed screen (map hub, World Boss, Chained Gods,
@@ -3063,14 +3079,24 @@ function featureGateStatus(featureKey){
   return { open: met, label: gate.label, message: gate.lockedMessage || "This isn't open to you yet." };
 }
 
+// Converted to the full-bleed hub pattern (art MUST supersede the old
+// card layout, per direct feedback) — no hotspot array here since the
+// only action is "back," which stays a plain floating link exactly like
+// Check-in's own .hub-loose-back rather than something the hotspot
+// editor needs to reposition.
 function renderFeatureLock(){
+  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const v = featureLockView;
   app.innerHTML = `
-    <div class="card"${bgAttr('guide')}>
-      <h2 style="text-align:center;">${esc(v.label || 'Not yet')}</h2>
-      <p class="hint" style="text-align:center;">${esc(v.message)}</p>
-      <button class="secondary" onclick="backFromFeatureLock()">Back to the map</button>
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('guide')}>
+        <div class="hub-overlay">
+          <h2 style="margin:0 0 6px;">${esc(v.label || 'Not yet')}</h2>
+          <p class="hint" style="margin:0;">${esc(v.message)}</p>
+        </div>
+        <button type="button" class="hub-loose-back" onclick="backFromFeatureLock()">‹ Back to the Map</button>
+      </div>
     </div>
   `;
 }
@@ -3523,18 +3549,31 @@ function backFromCredits(){
   render();
 }
 
+// Converted to the full-bleed hub pattern along with the rest of Tier 1
+// — art MUST supersede the old card layout. Long credits text can run
+// past the overlay's own max-height:80vh, which is fine: .hub-overlay
+// already scrolls internally rather than growing past the art (same
+// safety the old check-in calendar list relied on before it was removed
+// entirely — this content is admin-authored and expected to be a
+// reasonable length, not a live-growing feed, so keeping the scroll
+// here rather than dropping the content is the right call).
 function renderCredits(){
+  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const content = creditsSettings ? (creditsSettings.content || '').trim() : '';
   app.innerHTML = `
-    <div class="card"${bgAttr('profile', 'text-align:center;')}>
-      <h2>Game Credits</h2>
-      ${creditsSettings
-        ? (content
-            ? `<p class="hint" style="white-space:pre-wrap;text-align:left;">${esc(content)}</p>`
-            : '<p class="hint">Nothing here yet.</p>')
-        : '<p class="status">Loading…</p>'}
-      <button class="secondary" style="margin-top:14px;" onclick="backFromCredits()">Back to Profile</button>
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('profile')}>
+        <div class="hub-overlay">
+          <h2 style="margin:0 0 6px;">Game Credits</h2>
+          ${creditsSettings
+            ? (content
+                ? `<p class="hint" style="white-space:pre-wrap;text-align:left;margin:0;">${esc(content)}</p>`
+                : '<p class="hint" style="margin:0;">Nothing here yet.</p>')
+            : '<p class="status" style="margin:0;">Loading…</p>'}
+        </div>
+        <button type="button" class="hub-loose-back" onclick="backFromCredits()">‹ Back to Profile</button>
+      </div>
     </div>
   `;
 }
@@ -3664,36 +3703,54 @@ function isDeityUnlocked(pantheonId, deityId){
   });
 }
 
+// Converted from a scrolling per-pantheon deity list to a single
+// grouped dropdown, same treatment as Petition Hall/Key of Night — see
+// DEFAULT_SHRINE_AREAS above. The "blessing received / no blessing yet"
+// badge that used to sit on each row is folded into the option label
+// itself, since a <select> can't carry a separate badge element per row.
 function renderShrine(){
+  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
-  const groups = Object.keys(CATALOG).map(pid => {
+  const optgroups = Object.keys(CATALOG).map(pid => {
     const unlocked = CATALOG[pid].deities.filter(([id]) => isDeityUnlocked(pid, id));
     if(!unlocked.length) return '';
-    const rows = unlocked.map(([id, name]) => {
+    const opts = unlocked.map(([id, name]) => {
       const m = markFor(pid, id);
       const blessed = m && m.mark_type === 'full';
-      const badge = blessed ? `<span class="mark-badge full">blessing received</span>` : `<span class="mark-badge">no blessing yet</span>`;
-      return `<div class="deity-row" style="cursor:default;">
-        <span class="name">${esc(name)}</span>
-        <div style="display:flex;align-items:center;gap:8px;">
-          ${badge}
-          <a class="secondary" style="padding:4px 10px;font-size:11px;text-decoration:none;display:inline-block;" href="gate.html?pantheon=${encodeURIComponent(pid)}&deity=${encodeURIComponent(id)}">Chat</a>
-        </div>
-      </div>`;
+      return `<option value="${esc(pid)}::${esc(id)}">${esc(name)} — ${blessed ? 'blessing received' : 'no blessing yet'}</option>`;
     }).join('');
-    return `<div class="pantheon-group"><h3>${esc(CATALOG[pid].label)}</h3>${rows}</div>`;
+    return `<optgroup label="${esc(CATALOG[pid].label)}">${opts}</optgroup>`;
   }).join('');
 
+  const pickerMarkup = optgroups
+    ? hotspotDropdownMarkup(SHRINE_AREAS, `
+        <select class="picker-select" id="shrineDeitySelect">${optgroups}</select>
+        <button type="button" onclick="openShrineDeityChat()">Chat with this god</button>
+      `)
+    : '';
+
   app.innerHTML = `
-    <div class="card"${bgAttr('shrine')}>
-      <h2 style="text-align:center;">The Temple of the Gods</h2>
-      <p class="hint" style="text-align:center;">${groups
-        ? 'Every god who has granted you an audience — chat any time, and see whether their blessing has found your guardian yet.'
-        : 'No gods have granted you an audience yet. Unlock one through the Gate, or redeem a God Token at Chained Gods.'}</p>
-      ${groups}
-      <button class="secondary" style="margin-top:10px;" onclick="backFromShrine()">Back to the map</button>
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('shrine')}>
+        ${hotspotButtonsMarkup(SHRINE_AREAS, 'SHRINE_AREAS', 'shrine')}
+        ${pickerMarkup}
+        <div class="hub-overlay">
+          <button type="button" class="hub-back" onclick="backFromShrine()">‹ Back to Map</button>
+          <h2 style="text-align:center;">The Temple of the Gods</h2>
+          <p class="hint" style="text-align:center;">${optgroups
+            ? 'Every god who has granted you an audience — chat any time, and see whether their blessing has found your guardian yet.'
+            : 'No gods have granted you an audience yet. Unlock one through the Gate, or redeem a God Token at Chained Gods.'}</p>
+        </div>
+      </div>
     </div>
   `;
+}
+
+function openShrineDeityChat(){
+  const sel = document.getElementById('shrineDeitySelect');
+  if(!sel || !sel.value) return;
+  const [pantheonId, deityId] = sel.value.split('::');
+  window.location.href = 'gate.html?pantheon=' + encodeURIComponent(pantheonId) + '&deity=' + encodeURIComponent(deityId);
 }
 
 /* ---------------- mail (Map hub's "Mail" AND "Promo" hotspots) ----------------
@@ -5899,20 +5956,35 @@ function renderCircle(){
   if(circleView.step === 'territory') return renderTerritoryMap();
 }
 
+// Same hub conversion as renderFeatureLock() above — one info panel, one
+// loose back link, no hotspot array (nothing else on this screen to
+// reposition).
 function renderCircleLocked(){
+  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   app.innerHTML = `
-    <div class="card"${bgAttr('circle')}>
-      <h2 style="text-align:center;">Your Circle</h2>
-      <p class="hint" style="text-align:center;">Circles need a permanent account — claim this Seeker with an email first (see the card below), then come back.</p>
-      <button class="secondary" onclick="backToGuardianHomeFromCircle()">Back to the map</button>
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('circle')}>
+        <div class="hub-overlay">
+          <h2 style="margin:0 0 6px;">Your Circle</h2>
+          <p class="hint" style="margin:0;">Circles need a permanent account — claim this Seeker with an email first (see the card below), then come back.</p>
+        </div>
+        <button type="button" class="hub-loose-back" onclick="backToGuardianHomeFromCircle()">‹ Back to the Map</button>
+      </div>
     </div>
   `;
 }
 
 function renderCircleLoading(){
+  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
-  app.innerHTML = `<div class="card"><p class="status">Reading the roll of Circles…</p></div>`;
+  app.innerHTML = `
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('circle')}>
+        <div class="hub-overlay"><p class="status" style="margin:0;">Reading the roll of Circles…</p></div>
+      </div>
+    </div>
+  `;
 }
 
 function renderCircleBrowse(){
@@ -8474,13 +8546,19 @@ function renderPvpShop(){
   `;
 }
 
+// Same hub conversion as renderFeatureLock()/renderCircleLocked() above.
 function renderPvpLocked(){
+  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   app.innerHTML = `
-    <div class="card"${bgAttr('arena')}>
-      <h2 style="text-align:center;">The Arena</h2>
-      <p class="hint" style="text-align:center;">Duels need a permanent account — claim this Seeker with an email first (see the card on your guardian's page), then come back.</p>
-      <button class="secondary" onclick="backFromPvp()">Back to the map</button>
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('arena')}>
+        <div class="hub-overlay">
+          <h2 style="margin:0 0 6px;">The Arena</h2>
+          <p class="hint" style="margin:0;">Duels need a permanent account — claim this Seeker with an email first (see the card on your guardian's page), then come back.</p>
+        </div>
+        <button type="button" class="hub-loose-back" onclick="backFromPvp()">‹ Back to the Map</button>
+      </div>
     </div>
   `;
 }
