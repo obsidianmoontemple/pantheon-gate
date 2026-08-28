@@ -4991,8 +4991,12 @@ function renderBattleScreen(){
   ).join('');
   const logHtml = v.log.slice().reverse().map(entry => {
     const lines = entry.events.map(e => {
-      const who = e.actor === 'guardian' ? esc(guardian.name) : esc(v.opponentName);
-      const defender = e.actor === 'guardian' ? esc(v.opponentName) : esc(guardian.name);
+      // 0082 — a Mage's own hit is a third actor, always striking the
+      // opponent (it's never the one taking damage in these fights yet),
+      // so it reuses the guardian's "defender" side but needs its own
+      // name instead of falling into the opponent bucket by default.
+      const who = e.actor === 'mage' ? esc(e.mageName || (mage ? mage.name : 'Your Mage')) : e.actor === 'guardian' ? esc(guardian.name) : esc(v.opponentName);
+      const defender = e.actor === 'opponent' ? esc(guardian.name) : esc(v.opponentName);
       if(e.move === undefined && e.burnTick !== undefined){
         return `<div class="entry burntick">Round ${entry.round}: ${who} takes ${e.burnTick} burn damage.</div>`;
       }
@@ -5305,8 +5309,10 @@ async function actMove(moveIndex){
         await sleep(550);
         continue;
       }
-      // A landed move: actor deals damage to the other side.
-      const targetIsOpponent = ev.actor === 'guardian';
+      // A landed move: actor deals damage to the other side. A Mage's
+      // hit (0082) always targets the opponent too — it's never itself
+      // the target in these fights yet, same as the Guardian.
+      const targetIsOpponent = ev.actor === 'guardian' || ev.actor === 'mage';
       if(targetIsOpponent) oHp = Math.max(0, oHp - ev.damage); else gHp = Math.max(0, gHp - ev.damage);
       animateHit(
         targetIsOpponent ? 'opponent' : 'guardian', ev.damage, ev.crit, ev.control,
