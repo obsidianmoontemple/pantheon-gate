@@ -4087,8 +4087,8 @@ async function doAttackWorldBoss(){
     const data = await resp.json();
     if(!data.ok){ setWorldBossStatusMsg(data.error || 'Could not land that attack.', false); await refreshWorldBossStatus(); return; }
 
-    // Energy (0071) — spent on every successful attempt (repelled, hit,
-    // or kill alike). Patch the locally-held guardian row immediately —
+    // Energy (0071) — spent on every successful attempt (hit, guardian
+    // defeat, or kill alike). Patch the locally-held guardian row immediately —
     // loadGuardian() below only runs on the kill branch, so this is the
     // one place that keeps the Energy bar accurate on every outcome.
     if(guardian && typeof data.energyRemaining === 'number'){
@@ -4107,15 +4107,13 @@ async function doAttackWorldBoss(){
     // Real move selection (final queued phase) — build up what actually
     // happened this exchange from the pieces the server now returns
     // (moveUsed, guardianDamage, mageDamage/mageName, stunnedBoss),
-    // instead of one flat "Hit for X" line. "Repelled" now only means
-    // the GUARDIAN's own swing fizzled — the Mage's hit (if any) still
-    // shows up separately below it.
+    // instead of one flat "Hit for X" line. 0088 — this is now a real
+    // live battle: every swing lands for real on both sides (no more
+    // "Repelled!" voided exchange), and only a genuine defeat
+    // (guardianDefeated below) costs you anything beyond the exchange
+    // itself.
     const bits = [];
-    if(data.repelled){
-      bits.push(`Repelled! The boss hit back for ${data.damageTaken}${data.bossCrit ? ' (critical!)' : ''} before your ${esc(data.moveUsed)} landed.`);
-    }else{
-      bits.push(`Your ${esc(data.moveUsed)} hit for ${data.guardianDamage}${data.crit ? ' (critical!)' : ''}.`);
-    }
+    bits.push(`Your ${esc(data.moveUsed)} hit for ${data.guardianDamage}${data.crit ? ' (critical!)' : ''}.`);
     if(data.mageDamage > 0){
       bits.push(`${esc(data.mageName || 'Your Mage')}'s ${esc(data.mageMoveUsed || 'strike')} hit for ${data.mageDamage}${data.mageCrit ? ' (critical!)' : ''}.`);
     }
@@ -4126,7 +4124,7 @@ async function doAttackWorldBoss(){
       // including a support move: it chose to mend itself this exchange
       // instead of swinging back.
       bits.push(`${esc(data.bossName || 'The boss')} uses ${esc(data.bossMoveUsed || 'a move')} to heal ${data.bossHealed} instead of striking back.`);
-    }else if(!data.repelled){
+    }else{
       bits.push(`Took ${data.damageTaken}${data.bossCrit ? ' (critical!)' : ''} in return.`);
     }
 
@@ -4134,6 +4132,15 @@ async function doAttackWorldBoss(){
       // Counter-affinity healing (0079) — part or all of this exchange's
       // damage shared the boss's own affinity, healing it instead.
       bits.push(`${esc(data.bossName || 'The boss')} shares an affinity used against it and healed ${data.reflectHeal} instead.`);
+    }
+
+    if(data.guardianDefeated){
+      // 0088 — a real defeat: the counter-swing actually dropped the
+      // guardian to 0. It's restored to full immediately (so this never
+      // weakens Gauntlet/Campaign/PvP) — the cooldown wait is the only
+      // real cost, shown here the moment it's known.
+      const defeatCooldownMs = data.cooldownEndsAt ? (new Date(data.cooldownEndsAt) - new Date()) : 0;
+      bits.push(`Your Guardian was defeated! It's been restored to full — you can challenge ${esc(data.bossName || 'the boss')} again${defeatCooldownMs > 0 ? ' in ' + formatRemaining(defeatCooldownMs) : ' shortly'}.`);
     }
 
     if(data.defeated){
@@ -4146,7 +4153,15 @@ async function doAttackWorldBoss(){
       );
       await loadGuardian();
     }else{
-      setWorldBossStatusMsg(`${bits.join(' ')} ${data.hpRemaining.toLocaleString()}/${data.hpTotal.toLocaleString()} HP left.${yourHpNote}`, !data.repelled);
+      setWorldBossStatusMsg(`${bits.join(' ')} ${data.hpRemaining.toLocaleString()}/${data.hpTotal.toLocaleString()} HP left.${yourHpNote}`, !data.guardianDefeated);
+      if(data.guardianDefeated){
+        // The server just reset this guardian's persistent HP back to
+        // full (0088 — the cooldown is the only real cost of a defeat),
+        // but the local patch above still holds the honest real-time 0
+        // used for yourHpNote. Resync now so other screens don't show a
+        // stale 0 until the next unrelated refresh.
+        await loadGuardian();
+      }
     }
     // refreshWorldBossStatus() re-renders #app before this returns — so
     // celebrate() (which appends particles into #app) has to fire AFTER
@@ -6986,14 +7001,12 @@ async function doDragonAttack(){
   // Build up what actually happened this exchange from the pieces the
   // server now returns (moveUsed, guardianDamage, mageDamage/mageName,
   // stunnedDragon), same shape as doAttackWorldBoss()'s identical
-  // rebuild. "Repelled" now only means the GUARDIAN's own swing fizzled
-  // — the Mage's hit (if any) still shows up separately.
+  // rebuild. 0088 — this is now a real live battle: every swing lands
+  // for real on both sides (no more "Repelled!" voided exchange), and
+  // only a genuine defeat (guardianDefeated below) costs you anything
+  // beyond the exchange itself.
   const bits = [];
-  if(data.repelled){
-    bits.push(`Repelled! The dragon hit back for ${data.damageTaken}${data.dragonCrit ? ' (critical!)' : ''} before your ${esc(data.moveUsed)} landed.`);
-  }else{
-    bits.push(`Your ${esc(data.moveUsed)} hit for ${data.guardianDamage}${data.crit ? ' (critical!)' : ''}.`);
-  }
+  bits.push(`Your ${esc(data.moveUsed)} hit for ${data.guardianDamage}${data.crit ? ' (critical!)' : ''}.`);
   if(data.mageDamage > 0){
     bits.push(`${esc(data.mageName || 'Your Mage')}'s ${esc(data.mageMoveUsed || 'strike')} hit for ${data.mageDamage}${data.mageCrit ? ' (critical!)' : ''}.`);
   }
@@ -7004,11 +7017,20 @@ async function doDragonAttack(){
     // support move: it chose to mend itself (or the Circle's shared pool)
     // this exchange instead of striking back.
     bits.push(`${esc(data.dragonMoveUsed || 'The dragon')} mends instead, healing ${data.dragonHealed}.`);
-  }else if(!data.repelled){
+  }else{
     bits.push(`Took ${data.damageTaken}${data.dragonCrit ? ' (critical!)' : ''} in return.`);
   }
   if(data.reflectHeal){
     bits.push(`The dragon shares an affinity used against it and healed ${data.healedAmount} instead.`);
+  }
+
+  if(data.guardianDefeated){
+    // 0088 — a real defeat: the dragon's counter-swing actually dropped
+    // the guardian to 0. It's restored to full immediately (so this
+    // never weakens Gauntlet/Campaign/PvP) — the cooldown wait is the
+    // only real cost, shown here the moment it's known.
+    const defeatCooldownMs = data.cooldownEndsAt ? (new Date(data.cooldownEndsAt) - new Date()) : 0;
+    bits.push(`Your Guardian was defeated! It's been restored to full — you can strike again${defeatCooldownMs > 0 ? ' in ' + formatRemaining(defeatCooldownMs) : ' shortly'}.`);
   }
 
   if(data.defeated){
@@ -7019,7 +7041,7 @@ async function doDragonAttack(){
     if(yourHpNote) bits.push(yourHpNote.trim());
     setDragonActionStatus(bits.join(' '), true);
   }else{
-    setDragonActionStatus(`${bits.join(' ')} ${data.hpRemaining}/${data.hpTotal} HP left.${yourHpNote}`, !data.repelled);
+    setDragonActionStatus(`${bits.join(' ')} ${data.hpRemaining}/${data.hpTotal} HP left.${yourHpNote}`, !data.guardianDefeated);
   }
   await loadGuardian();
   // refreshDragonStatus() re-renders #app — celebrate() has to fire
@@ -7071,6 +7093,12 @@ function renderCircleDragon(){
   }else{
     const fight = dragonStatus.activeFight;
     const nextDragon = dragonStatus.nextDragon;
+    // 0088 — real defeats now carry a real cooldown (mirrors World
+    // Boss's identical cooldownEndsAt/onCooldown pattern); dragon-status
+    // didn't report this at all before 0088, so there was nothing to
+    // show here previously.
+    const cooldownMs = dragonStatus.cooldownEndsAt ? (new Date(dragonStatus.cooldownEndsAt) - new Date()) : 0;
+    const onCooldown = cooldownMs > 0;
     if(fight){
       const pct = Math.max(0, Math.round((fight.hp_remaining / fight.hp_total) * 100));
       const remaining = formatRemaining(new Date(fight.closes_at) - new Date());
@@ -7079,7 +7107,7 @@ function renderCircleDragon(){
         <div class="hp-row"><span class="hp-name">HP</span><span class="hp-name">${fight.hp_remaining} / ${fight.hp_total}</span></div>
         <div class="hp-bar-track"><div class="hp-bar-fill opponent" style="width:${pct}%;"></div></div>
         <p class="hint" style="text-align:center;">Window closes in ${remaining}.</p>
-        ${dragonAttackPickerHtml()}
+        ${onCooldown ? `<p class="hint">Recovering (${formatRemaining(cooldownMs)})</p>` : dragonAttackPickerHtml()}
       `;
     }else if(dragonStatus.usedThisPhase){
       mainBlock = `<p class="hint" style="text-align:center;">Your Circle has already used this moon phase's dragon window. Try again next phase.</p>`;
@@ -7087,7 +7115,7 @@ function renderCircleDragon(){
       mainBlock = `
         <h2 style="text-align:center;">${esc(nextDragon.name)}</h2>
         <p class="hint" style="text-align:center;">${nextDragon.vitality} HP · no window open yet — the first attack opens one.</p>
-        ${dragonAttackPickerHtml()}
+        ${onCooldown ? `<p class="hint">Recovering (${formatRemaining(cooldownMs)})</p>` : dragonAttackPickerHtml()}
       `;
     }
   }
