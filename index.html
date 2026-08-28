@@ -617,6 +617,7 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .battle-log .entry.poisontick{color:#6fae4a;font-style:italic;}
 .battle-log .entry.stunskip{color:var(--moon);font-style:italic;}
 .battle-log .entry.dodgeskip{color:#cfd6e0;font-style:italic;}
+.battle-log .entry.heal{color:#6fae4a;}
 
 .affinity-glow{border-radius:50%;filter:drop-shadow(0 0 26px var(--glow-color, transparent));}
 
@@ -4120,6 +4121,11 @@ async function doAttackWorldBoss(){
     }
     if(data.stunnedBoss){
       bits.push('The boss was stunned — no counterattack this time!');
+    }else if(data.bossHealed){
+      // 0086/0087 — the boss can now be assigned a real moveset,
+      // including a support move: it chose to mend itself this exchange
+      // instead of swinging back.
+      bits.push(`${esc(data.bossName || 'The boss')} uses ${esc(data.bossMoveUsed || 'a move')} to heal ${data.bossHealed} instead of striking back.`);
     }else if(!data.repelled){
       bits.push(`Took ${data.damageTaken}${data.bossCrit ? ' (critical!)' : ''} in return.`);
     }
@@ -5169,6 +5175,14 @@ function renderBattleScreen(){
       }
       if(e.dodged){
         return `<div class="entry dodgeskip">Round ${entry.round}: ${who} attacks — ${defender} dodges!</div>`;
+      }
+      if(e.support){
+        // Pure support/heal move (0086) — no damage/wheel/crit resolution
+        // happened at all, so the old "N damage (+N lifesteal)" phrasing
+        // would be nonsensical here ("0 damage" for a move that never
+        // targeted anyone). Give it its own honest line instead.
+        const healText = e.healed ? ` and heals for ${e.healed} HP` : '';
+        return `<div class="entry heal">Round ${entry.round}: ${who} used ${esc(e.move)}${healText}.</div>`;
       }
       const tag = e.crit ? ' (critical!)' : (e.control ? ' (swiftness shaved)' : '');
       const extra = (e.healed ? ` (+${e.healed} lifesteal)` : '') + (e.stunned ? ' (stunned!)' : '') + (e.burn ? ' (burning)' : '') +
@@ -6985,6 +6999,11 @@ async function doDragonAttack(){
   }
   if(data.stunnedDragon){
     bits.push('The dragon was stunned — no counterattack this time!');
+  }else if(data.dragonHealed){
+    // 0086 — the dragon can now be assigned a real moveset, including a
+    // support move: it chose to mend itself (or the Circle's shared pool)
+    // this exchange instead of striking back.
+    bits.push(`${esc(data.dragonMoveUsed || 'The dragon')} mends instead, healing ${data.dragonHealed}.`);
   }else if(!data.repelled){
     bits.push(`Took ${data.damageTaken}${data.dragonCrit ? ' (critical!)' : ''} in return.`);
   }
@@ -8164,6 +8183,12 @@ function pvpDuelLogHtml(rounds){
     }
     if(e.dodged){
       return `<div class="entry dodgeskip">Round ${e.round}: ${who} ${pvpVerb(sideLabel, 'attacks', 'attack')} — ${defender} ${pvpVerb(defender, 'dodges', 'dodge')}!</div>`;
+    }
+    if(e.support){
+      // Pure support/heal move (0086) — see the matching branch in
+      // renderBattleScreen(); same reasoning applies to PvP duels.
+      const healText = e.healed ? ` and ${pvpVerb(sideLabel, 'heals', 'heal')} for ${e.healed} HP` : '';
+      return `<div class="entry heal">Round ${e.round}: ${who} used ${esc(e.move)}${healText}.</div>`;
     }
     const tag = e.crit ? ' (critical!)' : (e.control ? ' (swiftness shaved)' : '');
     const extra = (e.healed ? ` (+${e.healed} lifesteal)` : '') + (e.stunned ? ' (stunned!)' : '') + (e.burn ? ' (burning)' : '') +
