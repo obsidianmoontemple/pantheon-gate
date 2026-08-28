@@ -16,6 +16,17 @@
   --gold-bright:#e6c777;
   --ember:#a1462a;
   --line:#3a3346;
+  /* Direct feedback: "none of the bad guys seem to show a hp guage
+     during fights" — root cause was this variable. It's referenced all
+     over (control-hit effects, the opponent HP bar's gradient, moon-
+     phase-flavored highlights) but was never actually defined here, so
+     every declaration using it with no fallback — most importantly
+     .hp-bar-fill.opponent's background gradient — was invalid and
+     rendered as fully transparent: the enemy's HP bar track was there,
+     just with an invisible fill. A soft lunar silver-blue, distinct
+     from --gold/--ember/--amethyst, fitting the game's moon-phase
+     theming (Key of Night, "tonight's phase"). */
+  --moon:#b9c6e6;
 }
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;background:var(--ink);color:var(--parchment);font-family:'EB Garamond',serif;}
@@ -2200,56 +2211,21 @@ const DEFAULT_SHOP_AREAS = [
 ];
 let SHOP_AREAS = DEFAULT_SHOP_AREAS.slice();
 
-// Shard Crafting — five independent catalogs on one screen (Catalog,
-// Mage Gear, Reagents, Potions, Your Items), same "no tabs, everything
-// visible at once" shape as Shop, so it reuses the same multi-dropdown
-// hotspotDropdownMarkup(areas, html, id) mechanism. Every catalog keeps
-// the "show everything, disable what you can't afford/use" convention.
-// Potions can be bought AND/OR crafted per row, so each potion can
-// contribute up to two separate options (value "buy::key"/"craft::key")
-// rather than needing a second action button a <select> can't offer.
-// "Craft a petition credit" is a single fixed item, not a catalog, so it
-// stays its own hotspot rather than a dropdown of one.
-const DEFAULT_CRAFT_AREAS = [
-  { id: 'catalogPicker', label: 'Craft an item',        left: 3,  top: 10, width: 44, height: 20, kind: 'dropdown' },
-  { id: 'mageGearPicker',label: 'Craft Mage gear',      left: 52, top: 10, width: 44, height: 20, kind: 'dropdown' },
-  { id: 'reagentPicker', label: 'Buy a reagent',        left: 3,  top: 34, width: 44, height: 18, kind: 'dropdown' },
-  { id: 'potionPicker',  label: 'Buy or brew a potion', left: 52, top: 34, width: 44, height: 18, kind: 'dropdown' },
-  { id: 'itemsPicker',   label: 'Your Items',           left: 3,  top: 56, width: 44, height: 20, kind: 'dropdown' },
-  { id: 'petitionCraft', label: 'Craft a petition credit', left: 52, top: 56, width: 44, height: 12, action: doCraftPetition },
-  { id: 'backToMap',     label: 'Back to the Map',      left: 3,  top: 88, width: 18, height: 8,  action: backFromCraft },
-];
-let CRAFT_AREAS = DEFAULT_CRAFT_AREAS.slice();
+// Shard Crafting reverted to its original plain-card layout — direct
+// feedback: "the circle home crafting and profile area need to go back
+// to how they were ... now they are all chopped up and look horrible."
+// No DEFAULT_CRAFT_AREAS/CRAFT_AREAS here any more; renderCraft() below
+// is back to real onclick buttons per catalog row and no hotspot array.
+// admin.html's craft SCREEN_REGISTRY entry was removed to match.
 
-// Circle Home — a mini hub in its own right (roster, chest, shop, and
-// five destination screens), so its five main destinations become
-// hotspots, same as PvP Home's three; rare/administrative actions
-// (Redesign banner, Leave, Disband) stay inline overlay buttons instead
-// of hotspots. Roster/Requests both fold their available actions
-// straight into each row's option value (e.g. "promote::userId::role",
-// "kick::userId") since a member or request can have more than one
-// possible action — same "encode the action in the option value" trick
-// Shop's Subscriptions and Craft's Potions use — so one dropdown +
-// confirm handles the lot without a second button a <select> can't
-// offer. Invite search keeps the locked live-search exception. Chest &
-// Devotion isn't a catalog at all, just a fixed pair of amount inputs +
-// three buttons, so its box holds that widget directly, same "the box
-// holds whatever this screen's one interactive thing is" reasoning as
-// Petition Challenge's textarea.
-const DEFAULT_CIRCLEHOME_AREAS = [
-  { id: 'chestActions',   label: 'Chest & Devotion',  left: 3,  top: 10, width: 44, height: 22, kind: 'dropdown' },
-  { id: 'shopPicker',     label: 'Circle Shop',       left: 52, top: 10, width: 44, height: 20, kind: 'dropdown' },
-  { id: 'rosterManage',   label: 'Manage a member',   left: 3,  top: 34, width: 44, height: 20, kind: 'dropdown' },
-  { id: 'requestsManage', label: 'Requests & invites', left: 52, top: 34, width: 44, height: 20, kind: 'dropdown' },
-  { id: 'inviteSearch',   label: 'Invite a player',   left: 3,  top: 56, width: 44, height: 26, kind: 'dropdown' },
-  { id: 'yourAltar',      label: 'Your Altar',        left: 52, top: 58, width: 21, height: 8,  action: openMyCircleAltar },
-  { id: 'messages',       label: 'Messages',          left: 75, top: 58, width: 21, height: 8,  action: openCircleMessages },
-  { id: 'dragonsLair',    label: "Dragon's Lair",     left: 52, top: 68, width: 21, height: 8,  action: openCircleDragon },
-  { id: 'invasions',      label: 'Invasions',         left: 75, top: 68, width: 21, height: 8,  action: openCircleInvasions },
-  { id: 'territoryMap',   label: 'Territory Map',     left: 52, top: 78, width: 21, height: 8,  action: openTerritoryMap },
-  { id: 'backToMap',      label: 'Back to the Map',   left: 3,  top: 88, width: 18, height: 8,  action: backToGuardianHomeFromCircle },
-];
-let CIRCLEHOME_AREAS = DEFAULT_CIRCLEHOME_AREAS.slice();
+// Circle Home reverted to its original plain-card layout — direct
+// feedback: "the circle home crafting and profile area need to go back
+// to how they were ... now they are all chopped up and look horrible."
+// (see also renderCraft()/renderProfile() below, reverted the same way)
+// — so there's no DEFAULT_CIRCLEHOME_AREAS/CIRCLEHOME_AREAS here any
+// more; renderCircleHome() is back to real onclick buttons and no
+// hotspot array. admin.html's circleHome SCREEN_REGISTRY entry was
+// removed to match.
 
 // Circle Browse — the scrolling list of circles (with per-row Visit
 // altar/Request to join/Invade buttons) is exactly the kind of scrolling
@@ -2334,29 +2310,16 @@ const DEFAULT_TERRITORYMAP_AREAS = [
 ];
 let TERRITORYMAP_AREAS = DEFAULT_TERRITORYMAP_AREAS.slice();
 
-// Profile — the Hall of Ancestors' scrolling list of retired familiars
-// (each with its own "Bring back" button) is exactly the kind of
-// scrolling catalog the conversion targets, so it becomes one dropdown
-// + a single Confirm button calling the existing doRestoreGuardian()
-// unchanged. It and the password-change form each get their own hotspot
-// box since both are this screen's toggle-open widgets — same "the box
-// holds whatever this screen's one interactive thing is" reasoning used
-// throughout, just extended to cover a box whose content itself
-// switches between a "click to open" button and the real form depending
-// on hallOfAncestorsOpen/profilePasswordOpen. Frequent single-destination
-// nav (Shop, Game Credits, Sign out, Back to the map) becomes hotspot
-// buttons, same as every other hub screen's nav; the rare, destructive
-// Release familiar flow stays an inline overlay button+confirm, same
-// "rare/admin actions stay inline" reasoning as Circle Home's Disband.
-const DEFAULT_PROFILE_AREAS = [
-  { id: 'hallOfAncestors', label: 'Hall of Ancestors',      left: 3,  top: 8,  width: 44, height: 34, kind: 'dropdown' },
-  { id: 'passwordBox',     label: 'Set / change password',  left: 52, top: 8,  width: 44, height: 30, kind: 'dropdown' },
-  { id: 'openShop',        label: 'Open the Shop',          left: 3,  top: 76, width: 21, height: 8,  action: openShop },
-  { id: 'openCredits',     label: 'Game Credits',           left: 26, top: 76, width: 21, height: 8,  action: openCredits },
-  { id: 'signOut',         label: 'Sign out',                left: 52, top: 76, width: 21, height: 8,  action: signOutOfGate },
-  { id: 'backToMap',       label: 'Back to the Map',        left: 75, top: 76, width: 21, height: 8,  action: backFromProfile },
-];
-let PROFILE_AREAS = DEFAULT_PROFILE_AREAS.slice();
+// Profile reverted to its original plain-card layout — direct feedback:
+// "the circle home crafting and profile area need to go back to how
+// they were ... now they are all chopped up and look horrible." No
+// DEFAULT_PROFILE_AREAS/PROFILE_AREAS here any more; renderProfile()
+// below is back to the toggle-open Hall of Ancestors/password blocks
+// and real onclick buttons, no hotspot array. admin.html's profile
+// SCREEN_REGISTRY entry was removed to match. (renderCredits() just
+// below is unrelated — reached from Profile's "Game Credits" button,
+// but Credits itself is a much simpler screen with nothing "chopped
+// up" about it, so it stays on the hub pattern.)
 
 // Campaign Browse — the nested chapter→encounter list (each chapter a
 // scrolling group of encounter rows with their own Fight/Choose button)
@@ -2370,10 +2333,6 @@ const DEFAULT_CAMPAIGNBROWSE_AREAS = [
   { id: 'backToMap',       label: 'Back to the Map',       left: 3, top: 88, width: 18, height: 8,  action: backFromCampaign },
 ];
 let CAMPAIGNBROWSE_AREAS = DEFAULT_CAMPAIGNBROWSE_AREAS.slice();
-
-function openMyCircleAltar(){
-  if(myCircle && myCircle.circle) openCircleAltar(myCircle.circle.id);
-}
 
 function showBackpackCraftTab(){ switchBackpackTab('craft'); }
 function showBackpackMageGearTab(){ switchBackpackTab('magegear'); }
@@ -2508,14 +2467,11 @@ async function loadMapHotspots(){
   GUARDIANHOME_AREAS = await loadHotspotOverrides('guardianHome', DEFAULT_GUARDIANHOME_AREAS);
   BACKPACK_AREAS = await loadHotspotOverrides('backpack', DEFAULT_BACKPACK_AREAS);
   SHOP_AREAS = await loadHotspotOverrides('shop', DEFAULT_SHOP_AREAS);
-  CRAFT_AREAS = await loadHotspotOverrides('craft', DEFAULT_CRAFT_AREAS);
-  CIRCLEHOME_AREAS = await loadHotspotOverrides('circleHome', DEFAULT_CIRCLEHOME_AREAS);
   CIRCLEBROWSE_AREAS = await loadHotspotOverrides('circleBrowse', DEFAULT_CIRCLEBROWSE_AREAS);
   CIRCLEMESSAGES_AREAS = await loadHotspotOverrides('circleMessages', DEFAULT_CIRCLEMESSAGES_AREAS);
   CIRCLEALTAR_AREAS = await loadHotspotOverrides('circleAltar', DEFAULT_CIRCLEALTAR_AREAS);
   PERSONALALTAR_AREAS = await loadHotspotOverrides('personalAltar', DEFAULT_PERSONALALTAR_AREAS);
   TERRITORYMAP_AREAS = await loadHotspotOverrides('territoryMap', DEFAULT_TERRITORYMAP_AREAS);
-  PROFILE_AREAS = await loadHotspotOverrides('profile', DEFAULT_PROFILE_AREAS);
   CAMPAIGNBROWSE_AREAS = await loadHotspotOverrides('campaignBrowse', DEFAULT_CAMPAIGNBROWSE_AREAS);
 }
 
@@ -3922,14 +3878,12 @@ function profileMessagesRemainingLabel(){
 }
 
 function renderProfile(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const fullMarkCount = marks.filter(m => m.mark_type === 'full').length;
   // Release-and-rehatch (0043) — the one place a player can start over
   // with a new familiar. Destructive but not silent: retire_guardian()
   // archives the current one into retired_guardians (see the Hall of
-  // Ancestors below) before it's actually deleted. Rare/destructive, so
-  // it stays an inline overlay button+confirm rather than a hotspot.
+  // Ancestors below) before it's actually deleted.
   const releaseBlock = profileReleaseConfirm
     ? `<div class="status err" style="margin-top:14px;">
         <p style="margin:0 0 8px;">This releases ${esc(guardian.name)} for good — its marks, items, and Circle membership go with it. It's kept in your Hall of Ancestors, but you can't get it back as your active familiar. Hatch a new one right after.</p>
@@ -3937,35 +3891,26 @@ function renderProfile(){
         <button onclick="confirmReleaseGuardian()">Yes, release ${esc(guardian.name)}</button>
       </div>`
     : `<button class="secondary" style="margin-top:14px;display:block;margin-left:auto;margin-right:auto;" onclick="startReleaseGuardian()">Release your familiar…</button>`;
-
-  // Hall of Ancestors — a toggle-open box: closed shows the original
-  // "open" button, open shows one dropdown of retired familiars (name,
-  // species, stage, full marks, retired date all folded into the option
-  // label) plus a single "Bring back" Confirm button, replacing what
-  // used to be a per-row button in a scrolling list.
-  const hallOpts = (hallOfAncestors || []).map(g =>
-    `<option value="${esc(g.id)}">${esc(g.name)} (${esc(g.species)}, ${esc(STAGE_LABEL[g.stage] || g.stage || 'egg')}) — ${g.full_marks_count} full mark${g.full_marks_count === 1 ? '' : 's'}, retired ${new Date(g.retired_at).toLocaleDateString()}</option>`
-  ).join('');
-  const hallMarkup = hotspotDropdownMarkup(PROFILE_AREAS, hallOfAncestorsOpen ? `
-      <p class="hint" style="margin:0 0 6px;">Bring one back as your active familiar — your current one is archived here in its place.</p>
-      ${hallOfAncestors === null
-        ? '<p class="hint">Loading…</p>'
-        : (hallOpts
-            ? `<select class="picker-select" id="hallSelect">${hallOpts}</select>
-               <button type="button" onclick="confirmSelectedAncestor()">Bring back</button>`
-            : '<p class="hint">No familiars retired yet.</p>')}
-    ` : `<button type="button" onclick="openHallOfAncestors()">Hall of Ancestors</button>`, 'hallOfAncestors');
-
-  // Password box — same toggle-open shape, holding the form fields
-  // directly when open (the box IS the one interactive widget here).
-  const passwordMarkup = hotspotDropdownMarkup(PROFILE_AREAS, profilePasswordOpen ? `
-      <p class="hint" style="margin:0 0 6px;">Works no matter how you originally signed in — this just adds (or replaces) a password so you can sign in with one next time.</p>
-      <input type="password" id="newPassword" placeholder="New password (min 6 characters)">
-      <input type="password" id="newPasswordConfirm" placeholder="Confirm new password">
-      <button onclick="savePassword()">Save password</button>
-      <button class="secondary" onclick="closePasswordForm()">Cancel</button>
-      <div class="status" id="passwordStatus"></div>
-    ` : `<button type="button" onclick="openPasswordForm()">Set / change password</button>`, 'passwordBox');
+  const hallBlock = hallOfAncestorsOpen
+    ? `<div class="pantheon-group" style="margin-top:10px;text-align:left;">
+        <h3>Hall of Ancestors</h3>
+        <p class="hint" style="margin-top:-4px;">Bring one back as your active familiar any time — your current one is archived here in its place, so you can switch back and forth as you like.</p>
+        ${hallOfAncestors === null ? '<p class="hint">Loading…</p>' : (hallOfAncestors.length
+          ? hallOfAncestors.map(g => `<div class="deity-row"><span class="name">${esc(g.name)} <span style="opacity:0.6;">(${esc(g.species)}, ${esc(STAGE_LABEL[g.stage] || g.stage || 'egg')})</span></span><div style="display:flex;align-items:center;gap:8px;"><span style="opacity:0.6;font-size:12px;">${g.full_marks_count} full mark${g.full_marks_count === 1 ? '' : 's'} · retired ${new Date(g.retired_at).toLocaleDateString()}</span><button class="secondary" style="padding:4px 10px;font-size:11px;" onclick="doRestoreGuardian('${g.id}')">Bring back</button></div></div>`).join('')
+          : '<p class="hint">No familiars retired yet.</p>')}
+      </div>`
+    : `<button class="secondary" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto;" onclick="openHallOfAncestors()">Hall of Ancestors</button>`;
+  const passwordBlock = profilePasswordOpen
+    ? `<div class="pantheon-group" style="margin-top:10px;text-align:left;">
+        <h3>Set / change password</h3>
+        <p class="hint" style="margin-top:-4px;">Works no matter how you originally signed in — this just adds (or replaces) a password so you can sign in with one next time.</p>
+        <input type="password" id="newPassword" placeholder="New password (min 6 characters)">
+        <input type="password" id="newPasswordConfirm" placeholder="Confirm new password">
+        <button onclick="savePassword()">Save password</button>
+        <button class="secondary" onclick="closePasswordForm()">Cancel</button>
+        <div class="status" id="passwordStatus"></div>
+      </div>`
+    : `<button class="secondary" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto;" onclick="openPasswordForm()">Set / change password</button>`;
   // Redesign, direct feedback: "redo the profile to show more about the
   // mage with a small notation of their familiar it should have picture
   // username user id and a get help button." The Mage is now the hero
@@ -4020,57 +3965,52 @@ function renderProfile(){
   `;
 
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('profile')}>
-        ${hotspotButtonsMarkup(PROFILE_AREAS, 'PROFILE_AREAS', 'profile')}
-        ${hallMarkup}
-        ${passwordMarkup}
-        <div class="hub-overlay">
-          <div class="essence-row" style="background:rgba(0,0,0,0.25);border-radius:8px;padding:8px 14px;">
-            <span class="essence-label">Power Rating</span>
-            <span class="essence-value" style="font-size:22px;">${personalPowerRating()}</span>
-          </div>
-
-          ${heroBlock}
-
-          <div class="essence-row" style="margin-top:14px;">
-            <span class="essence-label">Essence</span>
-            <span class="essence-value">${guardian.essence || 0}</span>
-          </div>
-
-          ${guardianHpBarHtml()}
-
-          <div class="stat-grid">
-            <div class="stat-tile"><div class="num">${guardian.favor || 0}</div><div class="label">Favor</div></div>
-            <div class="stat-tile"><div class="num">${guardian.god_shards || 0}</div><div class="label">God Shards</div></div>
-            <div class="stat-tile"><div class="num">${guardian.god_tokens || 0}</div><div class="label">God Tokens</div></div>
-            <div class="stat-tile"><div class="num">${guardian.key_of_night || 0}</div><div class="label">Key of Night</div></div>
-          </div>
-
-          <p class="marks-note">${marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.'}</p>
-
-          <div class="essence-row" style="margin-top:18px;">
-            <span class="essence-label">Deity messages</span>
-            <span class="essence-value" style="font-size:16px;">${esc(profileMessagesRemainingLabel())}</span>
-          </div>
-
-          <h3 style="margin-top:18px;">Account</h3>
-          <p class="hint" style="margin-top:-6px;">Player: ${esc((profileMessageStatus && profileMessageStatus.displayName) || session.user.email || 'Unknown')}</p>
-          <p class="hint">Account ID: <span style="user-select:all;">${esc(session.user.id)}</span> <span style="opacity:0.7;">(have this handy if you email support)</span></p>
-          <a href="mailto:silverstag212007@gmail.com?subject=${encodeURIComponent('Pantheon Gate help — ' + session.user.id)}"
-            style="display:block;width:fit-content;margin:10px auto 0;background:transparent;border:1px solid var(--gold);color:var(--gold-bright);padding:12px 26px;font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;text-decoration:none;">Get Help</a>
-
-          ${releaseBlock}
-        </div>
+    <div class="card"${bgAttr('profile', 'text-align:center;')}>
+      <div class="essence-row" style="background:rgba(0,0,0,0.25);border-radius:8px;padding:8px 14px;">
+        <span class="essence-label">Power Rating</span>
+        <span class="essence-value" style="font-size:22px;">${personalPowerRating()}</span>
       </div>
+
+      ${heroBlock}
+
+      <div class="essence-row" style="margin-top:14px;">
+        <span class="essence-label">Essence</span>
+        <span class="essence-value">${guardian.essence || 0}</span>
+      </div>
+
+      ${guardianHpBarHtml()}
+
+      <div class="stat-grid">
+        <div class="stat-tile"><div class="num">${guardian.favor || 0}</div><div class="label">Favor</div></div>
+        <div class="stat-tile"><div class="num">${guardian.god_shards || 0}</div><div class="label">God Shards</div></div>
+        <div class="stat-tile"><div class="num">${guardian.god_tokens || 0}</div><div class="label">God Tokens</div></div>
+        <div class="stat-tile"><div class="num">${guardian.key_of_night || 0}</div><div class="label">Key of Night</div></div>
+      </div>
+
+      <p class="marks-note">${marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.'}</p>
+
+      <div class="essence-row" style="margin-top:18px;">
+        <span class="essence-label">Deity messages</span>
+        <span class="essence-value" style="font-size:16px;">${esc(profileMessagesRemainingLabel())}</span>
+      </div>
+      <button class="secondary" style="margin-top:6px;" onclick="openShop()">Open the Shop</button>
+
+      <button class="secondary" style="margin-top:14px;display:block;margin-left:auto;margin-right:auto;" onclick="backFromProfile()">Back to the map</button>
+      <button class="secondary" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto;" onclick="signOutOfGate()">Sign out</button>
+      ${hallBlock}
+      ${passwordBlock}
+      ${releaseBlock}
+    </div>
+
+    <div class="card"${bgAttr('profile')}>
+      <h2>Account</h2>
+      <p class="hint" style="margin-top:-6px;">Player: ${esc((profileMessageStatus && profileMessageStatus.displayName) || session.user.email || 'Unknown')}</p>
+      <p class="hint">Account ID: <span style="user-select:all;">${esc(session.user.id)}</span> <span style="opacity:0.7;">(have this handy if you email support)</span></p>
+      <a href="mailto:silverstag212007@gmail.com?subject=${encodeURIComponent('Pantheon Gate help — ' + session.user.id)}"
+        style="display:block;width:fit-content;margin:10px auto 0;background:transparent;border:1px solid var(--gold);color:var(--gold-bright);padding:12px 26px;font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;text-decoration:none;">Get Help</a>
+      <button class="secondary" style="margin-top:14px;display:block;margin-left:auto;margin-right:auto;" onclick="openCredits()">Game Credits</button>
     </div>
   `;
-}
-
-function confirmSelectedAncestor(){
-  const sel = document.getElementById('hallSelect');
-  if(!sel || !sel.value) return;
-  doRestoreGuardian(sel.value);
 }
 
 async function signOutOfGate(){
@@ -6951,7 +6891,6 @@ function setCircleHomeStatus(text, ok){
 }
 
 function renderCircleHome(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const c = myCircle.circle;
   const myRole = myCircle.myRole;
@@ -6960,77 +6899,55 @@ function renderCircleHome(){
   const roster = myCircle.roster || [];
   const filledSlots = new Set(roster.map(m => m.role));
 
-  // Read-only roster text (name/role/power) — the actionable subset
-  // (who a leader can promote/demote/kick) lives in the rosterManage
-  // dropdown below instead, same "list stays readable text, its actions
-  // move to the picker" split as Circle Invasions' History.
   const rosterRows = roster.map(m => {
     const g = m.guardians || {};
     const isSelf = m.user_id === (session && session.user && session.user.id);
+    let actions = '';
+    if(isLeader && !isSelf){
+      if(m.role === 'initiate'){
+        actions = `<button class="secondary" onclick="doPromote('${m.user_id}','magus')">Promote to Magus</button>
+          <button class="secondary" onclick="doKick('${m.user_id}')">Kick</button>`;
+      }else if(m.role === 'magus'){
+        const slotBtns = ['high_priest','high_priestess'].filter(r => !filledSlots.has(r))
+          .map(r => `<button class="secondary" onclick="doPromote('${m.user_id}','${r}')">Make ${roleLabel(r)}</button>`).join('');
+        actions = `${slotBtns}<button class="secondary" onclick="doDemote('${m.user_id}')">Demote</button>
+          <button class="secondary" onclick="doKick('${m.user_id}')">Kick</button>`;
+      }else{
+        actions = `<button class="secondary" onclick="doDemote('${m.user_id}')">Demote</button>`;
+      }
+    }
     return `<div class="roster-row">
       <div>
         <div class="rname">${esc(g.name || 'Unnamed')} <span class="role-badge ${m.role}">${roleLabel(m.role)}</span>${isSelf ? ' <em style="color:var(--parchment-dim);font-size:11px;">(you)</em>' : ''}</div>
         <div class="cblurb">Power: ${m.power || 0}</div>
       </div>
+      <div class="ractions">${actions}</div>
     </div>`;
   }).join('');
 
-  // Roster management — each eligible member contributes one option per
-  // available action ("promote::userId::role", "demote::userId",
-  // "kick::userId"), since a Magus can have up to three possible actions
-  // at once. Empty (no options) when the viewer isn't a leader.
-  const rosterOpts = isLeader ? roster.flatMap(m => {
-    const isSelf = m.user_id === (session && session.user && session.user.id);
-    if(isSelf) return [];
-    const g = m.guardians || {};
-    const name = esc(g.name || 'Unnamed');
-    const opts = [];
-    if(m.role === 'initiate'){
-      opts.push(`<option value="promote::${esc(m.user_id)}::magus">${name} (Initiate) — Promote to Magus</option>`);
-      opts.push(`<option value="kick::${esc(m.user_id)}">${name} (Initiate) — Kick</option>`);
-    }else if(m.role === 'magus'){
-      ['high_priest', 'high_priestess'].filter(r => !filledSlots.has(r)).forEach(r => {
-        opts.push(`<option value="promote::${esc(m.user_id)}::${r}">${name} (Magus) — Make ${roleLabel(r)}</option>`);
-      });
-      opts.push(`<option value="demote::${esc(m.user_id)}">${name} (Magus) — Demote</option>`);
-      opts.push(`<option value="kick::${esc(m.user_id)}">${name} (Magus) — Kick</option>`);
-    }else{
-      opts.push(`<option value="demote::${esc(m.user_id)}">${name} (${roleLabel(m.role)}) — Demote</option>`);
-    }
-    return opts;
-  }).join('') : '';
-  const rosterManageMarkup = rosterOpts
-    ? hotspotDropdownMarkup(CIRCLEHOME_AREAS, `
-        <select class="picker-select" id="circleRosterActionSelect">${rosterOpts}</select>
-        <button type="button" onclick="confirmSelectedRosterAction()">Confirm</button>
-      `, 'rosterManage')
-    : '';
+  let requestsBlock = '';
+  if(isOfficer){
+    const reqs = myCircle.pendingRequests || [];
+    const reqRows = reqs.length ? reqs.map(r => `
+      <div class="request-row">
+        <span>${esc(r.guardianName)} — ${r.direction === 'request' ? 'wants to join' : 'invited, awaiting reply'}</span>
+        <div class="ractions">
+          ${r.direction === 'request'
+            ? `<button class="secondary" onclick="doRespondRequest('${r.id}','approve')">Approve</button>
+               <button class="secondary" onclick="doRespondRequest('${r.id}','decline')">Decline</button>`
+            : `<button class="secondary" onclick="doCancelRequest('${r.id}')">Cancel invite</button>`}
+        </div>
+      </div>
+    `).join('') : '<p class="hint">Nothing pending.</p>';
 
-  // Requests & invites — same "encode the action in the value" trick,
-  // one dropdown for both a join request's Approve/Decline and an
-  // outgoing invite's Cancel. Officer-only, same as before.
-  const requestOpts = isOfficer ? (myCircle.pendingRequests || []).flatMap(r => {
-    const name = esc(r.guardianName);
-    return r.direction === 'request'
-      ? [`<option value="approve::${esc(r.id)}">${name} — wants to join — Approve</option>`,
-         `<option value="decline::${esc(r.id)}">${name} — wants to join — Decline</option>`]
-      : [`<option value="cancelInvite::${esc(r.id)}">${name} — invited, awaiting reply — Cancel invite</option>`];
-  }).join('') : '';
-  const requestsManageMarkup = requestOpts
-    ? hotspotDropdownMarkup(CIRCLEHOME_AREAS, `
-        <select class="picker-select" id="circleRequestActionSelect">${requestOpts}</select>
-        <button type="button" onclick="confirmSelectedRequestAction()">Confirm</button>
-      `, 'requestsManage')
-    : '';
-
-  // Invite a player — the locked live-search exception, same shape as
-  // PvP Browse/Shop's deity search. Officer-only.
-  const inviteSearchMarkup = isOfficer
-    ? hotspotDropdownMarkup(CIRCLEHOME_AREAS, `
-        <input type="text" id="inviteSearchInput" placeholder="Search by guardian name…" oninput="onInviteSearchInput()">
-        <div id="inviteResultsBox" style="max-height:20vh;overflow-y:auto;width:100%;">${renderInviteResults()}</div>
-      `, 'inviteSearch')
-    : '';
+    requestsBlock = `
+      <h2 style="margin-top:26px;">Pending requests &amp; invites</h2>
+      ${reqRows}
+      <h2 style="margin-top:26px;">Invite a player</h2>
+      <input type="text" id="inviteSearchInput" placeholder="Search by guardian name…" oninput="onInviteSearchInput()">
+      <div id="inviteResultsBox">${renderInviteResults()}</div>
+    `;
+  }
 
   const patron = myCircle.patron;
   const patronLine = patron
@@ -7052,90 +6969,68 @@ function renderCircleHome(){
     territoryLine += `<p class="hint" style="color:var(--gold-bright);">You control the captured altar${controlledCircles.length === 1 ? '' : 's'} of ${controlledCircles.map(c => esc(c.name)).join(', ')} — their patron blessing pays out to you too.</p>`;
   }
 
-  // Circle Shop.
-  const shopOpts = circleShopItems.map(item => {
-    const affordable = c.devotion_balance >= item.cost_devotion;
-    return `<option value="${esc(item.key)}"${affordable ? '' : ' disabled'}>${esc(item.name)} — ${item.cost_devotion} Devotion${affordable ? '' : ' (not enough Devotion)'}</option>`;
-  }).join('');
-  const shopPickerMarkup = shopOpts
-    ? hotspotDropdownMarkup(CIRCLEHOME_AREAS, `
-        <select class="picker-select" id="circleShopSelect">${shopOpts}</select>
-        <button type="button" onclick="buySelectedCircleShopItem()">Buy</button>
-      `, 'shopPicker')
-    : '';
-
-  // Chest & Devotion — not a catalog, just a fixed pair of amount inputs
-  // plus three buttons, so the box holds that widget directly.
-  const chestActionsMarkup = hotspotDropdownMarkup(CIRCLEHOME_AREAS, `
-    <p class="ccount" style="text-align:center;margin:0 0 6px;">Chest: ${c.chest_essence} Essence · Devotion: ${c.devotion_balance}</p>
-    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;align-items:center;">
-      <input type="text" inputmode="numeric" id="chestAmountInput" placeholder="Amount" value="${esc(chestAmountDraft)}" oninput="onChestAmountInput()" style="width:110px;margin:0;">
-      <button class="secondary" onclick="doDepositChest()">Deposit</button>
-      ${isOfficer ? '<button class="secondary" onclick="doWithdrawChest()">Withdraw</button>' : ''}
+  const shopRows = circleShopItems.map(item => `
+    <div class="roster-row">
+      <div>
+        <div class="rname">${esc(item.name)}</div>
+        <div class="cblurb">${esc(item.description)} — ${item.cost_devotion} Devotion</div>
+      </div>
+      <div class="ractions"><button class="secondary" ${c.devotion_balance < item.cost_devotion ? 'disabled' : ''} onclick="doShopBuy('${esc(item.key)}')">Buy</button></div>
     </div>
-    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;align-items:center;margin-top:8px;">
-      <input type="text" inputmode="numeric" id="titheAmountInput" placeholder="Amount" value="${esc(titheAmountDraft)}" oninput="onTitheAmountInput()" style="width:110px;margin:0;">
-      <button class="secondary" onclick="doTithe()">Tithe for Devotion</button>
-    </div>
-    <div class="status" id="chestStatus"></div>
-  `, 'chestActions');
+  `).join('');
 
+  const circleHomeBg = bgAttr('circle');
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('circle')}>
-        ${hotspotButtonsMarkup(CIRCLEHOME_AREAS, 'CIRCLEHOME_AREAS', 'circle')}
-        ${chestActionsMarkup}
-        ${shopPickerMarkup}
-        ${rosterManageMarkup}
-        ${requestsManageMarkup}
-        ${inviteSearchMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backToGuardianHomeFromCircle()">‹ Back to the Map</button>
-          ${renderCircleBanner(c.banner_shape, c.banner_primary, c.banner_secondary, c.banner_preset_key, 140)}
-          <h2 style="text-align:center;">${esc(c.name)}</h2>
-          <p class="hint" style="text-align:center;">${esc(c.blurb || 'No blurb yet.')}</p>
-          <p class="ccount" style="text-align:center;">${roster.length}/${c.member_cap} members · Circle rank ${c.rank_score} · Circle Power ${myCircle.circlePower || 0}</p>
-          <div class="role-badge ${myRole}" style="margin-top:6px;">Your rank: ${roleLabel(myRole)}</div>
-          ${patronLine}
-          ${territoryLine}
-          <div class="status" id="circleHomeStatus"></div>
+    <div class="card"${bgAttr('circle', 'text-align:center;')}>
+      ${renderCircleBanner(c.banner_shape, c.banner_primary, c.banner_secondary, c.banner_preset_key, 140)}
+      <h2>${esc(c.name)}</h2>
+      <p class="hint">${esc(c.blurb || 'No blurb yet.')}</p>
+      <p class="ccount" style="text-align:center;">${roster.length}/${c.member_cap} members · Circle rank ${c.rank_score} · Circle Power ${myCircle.circlePower || 0}</p>
+      <div class="role-badge ${myRole}" style="margin-top:6px;">Your rank: ${roleLabel(myRole)}</div>
+      ${patronLine}
+      ${territoryLine}
+    </div>
 
-          <h3 style="margin-top:14px;">Roster</h3>
-          ${rosterRows}
+    <div class="card"${circleHomeBg}>
+      <h2>The Chest &amp; Devotion</h2>
+      <p class="hint">The Chest holds pooled Essence any member can deposit and officers can withdraw. Tithing burns your own Essence for good, but mints Devotion for the Circle Shop below.</p>
+      <p class="ccount" style="text-align:center;">Chest: ${c.chest_essence} Essence · Devotion: ${c.devotion_balance}</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;align-items:center;margin-top:10px;">
+        <input type="text" inputmode="numeric" id="chestAmountInput" placeholder="Amount" value="${esc(chestAmountDraft)}" oninput="onChestAmountInput()" style="width:110px;margin:0;">
+        <button class="secondary" onclick="doDepositChest()">Deposit</button>
+        ${isOfficer ? '<button class="secondary" onclick="doWithdrawChest()">Withdraw</button>' : ''}
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;align-items:center;margin-top:10px;">
+        <input type="text" inputmode="numeric" id="titheAmountInput" placeholder="Amount" value="${esc(titheAmountDraft)}" oninput="onTitheAmountInput()" style="width:110px;margin:0;">
+        <button class="secondary" onclick="doTithe()">Tithe for Devotion</button>
+      </div>
+      <div class="status" id="chestStatus"></div>
+    </div>
 
-          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:16px;">
-            ${isLeader ? '<button class="secondary" onclick="openEditBanner()">Redesign banner</button>' : ''}
-            <button class="secondary" onclick="doLeaveCircle()">Leave Circle</button>
-            ${isLeader ? '<button class="secondary" onclick="doDisbandCircle()">Disband Circle</button>' : ''}
-          </div>
-        </div>
+    <div class="card"${circleHomeBg}>
+      <h2>The Circle Shop</h2>
+      <p class="hint">Spends the Circle's shared Devotion — anyone can buy, the blessing lands on your own guardian.</p>
+      ${shopRows || '<p class="hint">Nothing in stock yet.</p>'}
+    </div>
+
+    <div class="card"${circleHomeBg}>
+      <h2>Roster</h2>
+      ${rosterRows}
+      ${requestsBlock}
+      <div class="status" id="circleHomeStatus"></div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:16px;">
+        <button class="secondary" onclick="openCircleAltar(myCircle.circle.id)">Your Altar</button>
+        <button class="secondary" onclick="openCircleMessages()">Messages</button>
+        <button class="secondary" onclick="openCircleDragon()">Dragon's Lair</button>
+        <button class="secondary" onclick="openCircleInvasions()">Invasions</button>
+        <button class="secondary" onclick="openTerritoryMap()">Territory Map</button>
+        ${isLeader ? '<button class="secondary" onclick="openEditBanner()">Redesign banner</button>' : ''}
+        <button class="secondary" onclick="doLeaveCircle()">Leave Circle</button>
+        ${isLeader ? '<button class="secondary" onclick="doDisbandCircle()">Disband Circle</button>' : ''}
+        <button class="secondary" onclick="backToGuardianHomeFromCircle()">Back to the map</button>
       </div>
     </div>
   `;
-}
-
-function confirmSelectedRosterAction(){
-  const sel = document.getElementById('circleRosterActionSelect');
-  if(!sel || !sel.value) return;
-  const [action, userId, role] = sel.value.split('::');
-  if(action === 'promote') doPromote(userId, role);
-  else if(action === 'demote') doDemote(userId);
-  else if(action === 'kick') doKick(userId);
-}
-
-function confirmSelectedRequestAction(){
-  const sel = document.getElementById('circleRequestActionSelect');
-  if(!sel || !sel.value) return;
-  const [action, requestId] = sel.value.split('::');
-  if(action === 'approve') doRespondRequest(requestId, 'approve');
-  else if(action === 'decline') doRespondRequest(requestId, 'decline');
-  else if(action === 'cancelInvite') doCancelRequest(requestId);
-}
-
-function buySelectedCircleShopItem(){
-  const sel = document.getElementById('circleShopSelect');
-  if(!sel || !sel.value) return;
-  doShopBuy(sel.value);
 }
 
 function renderInviteResults(){
@@ -8831,156 +8726,128 @@ async function doUseItem(itemId, battleId){
 }
 
 function renderCraft(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
 
-  const catalogOpts = craftCatalog.map(item => {
+  const catalogRows = craftCatalog.map(item => {
     const affordable = (guardian.god_shards || 0) >= item.shard_cost;
     const typeNote = item.item_type === 'stat_boost' ? `+${item.stat_amount} ${item.stat_key}`
       : item.item_type === 'consumable' && item.consumable_effect === 'stat_buff' ? `+${item.consumable_amount} ${item.stat_key} for ${item.consumable_duration_minutes}m`
       : item.item_type === 'consumable' && item.consumable_effect === 'cure_status' ? 'Cures poison/weaken/vulnerable mid-fight'
       : item.item_type === 'consumable' ? 'Consumable' : 'Cosmetic';
-    const label = `${item.name} — ${typeNote} — ${item.shard_cost} Shards${affordable ? '' : ' (not enough Shards)'}`;
-    return `<option value="${esc(item.key)}"${affordable ? '' : ' disabled'}>${esc(label)}</option>`;
-  }).join('');
-  const catalogPickerMarkup = catalogOpts
-    ? hotspotDropdownMarkup(CRAFT_AREAS, `
-        <select class="picker-select" id="craftCatalogSelect">${catalogOpts}</select>
-        <button type="button" onclick="craftSelectedCatalogItem()">Craft</button>
-      `, 'catalogPicker')
-    : '';
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(item.name)}</div><div class="cblurb">${esc(item.description || '')} — ${esc(typeNote)} — ${item.shard_cost} Shards</div></div>
+      <div class="ractions"><button class="secondary" ${affordable ? '' : 'disabled'} onclick="doCraftItem('${esc(item.key)}')">Craft</button></div>
+    </div>`;
+  }).join('') || '<p class="hint">Nothing craftable yet — check back later.</p>';
 
-  // cure_status only means anything against an active battle's status
-  // columns, so it isn't offered here — the battle screen surfaces it
-  // instead (0080, direct follow-up "cures... mid-fight").
-  const itemsOpts = craftInventory.map(it => {
+  const inventoryRows = craftInventory.map(it => {
     const catalogItem = craftCatalog.find(c => c.key === it.item_key);
     const name = catalogItem ? catalogItem.name : it.item_key;
     const type = catalogItem ? catalogItem.item_type : '';
+    // cure_status only means anything against an active battle's status
+    // columns, so it isn't offered here — the battle screen surfaces it
+    // instead (0080, direct follow-up "cures... mid-fight").
     const isCureItem = catalogItem && catalogItem.consumable_effect === 'cure_status';
     const statusLabel = it.consumed_at ? (type === 'consumable' ? 'Used' : 'Applied') : (isCureItem ? 'Held — use during a fight' : 'Held');
     const canUse = type === 'consumable' && !it.consumed_at && !isCureItem;
-    return `<option value="${esc(it.id)}"${canUse ? '' : ' disabled'}>${esc(name)} — ${statusLabel}</option>`;
-  }).join('');
-  const itemsPickerMarkup = itemsOpts
-    ? hotspotDropdownMarkup(CRAFT_AREAS, `
-        <select class="picker-select" id="craftItemsSelect">${itemsOpts}</select>
-        <button type="button" onclick="useSelectedCraftItem()">Use</button>
-      `, 'itemsPicker')
-    : '';
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(name)}</div><div class="cblurb">${statusLabel}</div></div>
+      ${canUse ? `<div class="ractions"><button class="secondary" onclick="doUseItem('${esc(it.id)}')">Use</button></div>` : ''}
+    </div>`;
+  }).join('') || '<p class="hint">Nothing crafted yet.</p>';
 
   // Mage Gear folded in here (0068) — direct feedback: "crafting revamp
-  // to include the mage." Only populated once a Mage exists;
-  // doCraftMageGearFromCraft() is the same call renderMageGear() used to
-  // make directly, just updating this screen's own status line instead.
-  const mageGearOpts = mage ? mageGearCatalog.map(item => {
-    const affordable = (guardian.god_shards || 0) >= item.shard_cost;
-    const label = `${item.name} — ${item.slot}, +${item.stat_amount} ${item.stat_key} — ${item.shard_cost} Shards${affordable ? '' : ' (not enough Shards)'}`;
-    return `<option value="${esc(item.key)}"${affordable ? '' : ' disabled'}>${esc(label)}</option>`;
-  }).join('') : '';
-  const mageGearPickerMarkup = mageGearOpts
-    ? hotspotDropdownMarkup(CRAFT_AREAS, `
-        <select class="picker-select" id="craftMageGearSelect">${mageGearOpts}</select>
-        <button type="button" onclick="craftSelectedMageGear()">Craft</button>
-      `, 'mageGearPicker')
-    : '';
+  // to include the mage." The backend for this already existed
+  // (mage/index.ts's craft-gear action, same God Shards currency as
+  // everything else on this screen) — it just lived on its own separate
+  // screen inside the Mage tab instead of alongside every other craftable
+  // thing. Only shown once a Mage exists; doCraftMageGearFromCraft() is
+  // the same call renderMageGear() used to make directly, just updating
+  // this screen's own status line instead of the Mage tab's.
+  const mageGearSection = mage ? (() => {
+    const mageCatalogRows = mageGearCatalog.map(item => {
+      const affordable = (guardian.god_shards || 0) >= item.shard_cost;
+      return `<div class="roster-row">
+        <div><div class="rname">${esc(item.name)}</div><div class="cblurb">${esc(item.description || '')} — ${esc(item.slot)}, +${item.stat_amount} ${esc(item.stat_key)} — ${item.shard_cost} Shards</div></div>
+        <div class="ractions"><button class="secondary" ${affordable ? '' : 'disabled'} onclick="doCraftMageGearFromCraft('${esc(item.key)}')">Craft</button></div>
+      </div>`;
+    }).join('') || '<p class="hint">No gear catalog set up yet.</p>';
+    return `<div class="card"${bgAttr('craft')}>
+      <h2>${esc(mage.name)}'s Gear</h2>
+      ${mageCatalogRows}
+      <p class="hint" style="margin-top:10px;">Equip what you craft from the Mage tab on the Guardian Page.</p>
+    </div>`;
+  })() : '';
 
   // 0069 — reagents (buy only — no direct "craft a reagent" action
-  // exists, they only come from Duels or a straight Shard purchase).
-  const reagentOpts = mage ? mageReagentCatalog.map(r => {
-    const owned = reagentQty(r.key);
-    const buyable = !!r.shard_cost;
-    const affordable = buyable && (guardian.god_shards || 0) >= r.shard_cost;
-    const label = `${r.name}${owned ? ' (have ' + owned + ')' : ''} — ${buyable ? r.shard_cost + ' Shards' + (affordable ? '' : ' (not enough Shards)') : 'Duel drop only'}`;
-    return `<option value="${esc(r.key)}"${(buyable && affordable) ? '' : ' disabled'}>${esc(label)}</option>`;
-  }).join('') : '';
-  const reagentPickerMarkup = reagentOpts
-    ? hotspotDropdownMarkup(CRAFT_AREAS, `
-        <select class="picker-select" id="craftReagentSelect">${reagentOpts}</select>
-        <button type="button" onclick="buySelectedReagent()">Buy</button>
-      `, 'reagentPicker')
-    : '';
+  // exists, they only come from Duels or a straight Shard purchase) and
+  // potions (buy AND/OR craft, per potion — "two paths to the same
+  // item," confirmed). A potion's Craft button is only shown when it
+  // actually has recipe rows (mage_potion_recipes); Buy only shows when
+  // shard_cost is set. A potion with neither is retired/display-only.
+  const mageAlchemySection = mage ? (() => {
+    const reagentRows = mageReagentCatalog.map(r => {
+      const owned = reagentQty(r.key);
+      const affordable = r.shard_cost && (guardian.god_shards || 0) >= r.shard_cost;
+      return `<div class="roster-row">
+        <div><div class="rname">${esc(r.name)} ${owned ? '(have ' + owned + ')' : ''}</div><div class="cblurb">${esc(r.description || '')}</div></div>
+        <div class="ractions">${r.shard_cost ? `<button class="secondary" ${affordable ? '' : 'disabled'} onclick="doBuyReagentFromCraft('${esc(r.key)}')">Buy — ${r.shard_cost}</button>` : '<span class="hint">Duel drop only</span>'}</div>
+      </div>`;
+    }).join('') || '<p class="hint">No reagents set up yet.</p>';
 
-  // Potions (buy AND/OR craft, per potion — "two paths to the same item,"
-  // confirmed) — each potion contributes up to two separate options
-  // ("buy::key"/"craft::key") since a <select> can only trigger one
-  // action per pick, same "encode the action in the option value"
-  // convention Shop's Subscriptions/Packs dropdowns use.
-  const potionOpts = mage ? magePotionCatalog.flatMap(p => {
-    const owned = potionQty(p.key);
-    const recipe = magePotionRecipes.filter(r => r.potion_key === p.key);
-    const craftable = recipe.length > 0;
-    const canCraft = craftable && recipe.every(r => reagentQty(r.reagent_key) >= r.quantity_required);
-    const affordable = p.shard_cost && (guardian.god_shards || 0) >= p.shard_cost;
-    const baseLabel = `${p.name}${owned ? ' (have ' + owned + ')' : ''}`;
-    const opts = [];
-    if(p.shard_cost){
-      opts.push(`<option value="buy::${esc(p.key)}"${affordable ? '' : ' disabled'}>${esc(baseLabel)} — Buy (${p.shard_cost} Shards)${affordable ? '' : ' — not enough Shards'}</option>`);
-    }
-    if(craftable){
-      opts.push(`<option value="craft::${esc(p.key)}"${canCraft ? '' : ' disabled'}>${esc(baseLabel)} — Brew${canCraft ? '' : ' — missing reagents'}</option>`);
-    }
-    return opts;
-  }).join('') : '';
-  const potionPickerMarkup = potionOpts
-    ? hotspotDropdownMarkup(CRAFT_AREAS, `
-        <select class="picker-select" id="craftPotionSelect">${potionOpts}</select>
-        <button type="button" onclick="buyOrBrewSelectedPotion()">Confirm</button>
-      `, 'potionPicker')
-    : '';
-
-  app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('craft')}>
-        ${hotspotButtonsMarkup(CRAFT_AREAS, 'CRAFT_AREAS', 'craft')}
-        ${catalogPickerMarkup}
-        ${mageGearPickerMarkup}
-        ${reagentPickerMarkup}
-        ${potionPickerMarkup}
-        ${itemsPickerMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromCraft()">‹ Back to Map</button>
-          <h2 style="text-align:center;">Shard Crafting</h2>
-          <p class="hint" style="text-align:center;">Turn God Shards into a permanent stat boost, a cosmetic, or a consumable — or bank a bonus petition credit that bypasses the one-per-moon-phase gate. The same Shards also buy Mage gear.</p>
-          <div class="essence-row"><span class="essence-label">God Shards</span><span class="essence-value">${guardian.god_shards || 0}</span></div>
-          <div class="status" id="craftStatus"></div>
-          <p class="hint">You currently hold <strong>${guardian.bonus_petition_credits || 0}</strong> bonus petition credit${guardian.bonus_petition_credits === 1 ? '' : 's'}.</p>
+    const potionRows = magePotionCatalog.map(p => {
+      const owned = potionQty(p.key);
+      const recipe = magePotionRecipes.filter(r => r.potion_key === p.key);
+      const craftable = recipe.length > 0;
+      const canCraft = craftable && recipe.every(r => reagentQty(r.reagent_key) >= r.quantity_required);
+      const recipeNote = craftable ? 'Needs ' + recipe.map(r => `${r.quantity_required}× ${esc(reagentName(r.reagent_key))}`).join(', ') : '';
+      const affordable = p.shard_cost && (guardian.god_shards || 0) >= p.shard_cost;
+      const effectNote = p.effect_type === 'heal' ? `Heals ${p.heal_amount} HP` : `+${p.buff_amount} ${p.buff_stat_key} for ${p.buff_duration_minutes}m`;
+      return `<div class="roster-row">
+        <div><div class="rname">${esc(p.name)} ${owned ? '(have ' + owned + ')' : ''}</div><div class="cblurb">${esc(effectNote)}${recipeNote ? ' — ' + recipeNote : ''}</div></div>
+        <div class="ractions">
+          ${p.shard_cost ? `<button class="secondary" ${affordable ? '' : 'disabled'} onclick="doBuyPotionFromCraft('${esc(p.key)}')">Buy — ${p.shard_cost}</button>` : ''}
+          ${craftable ? `<button class="secondary" ${canCraft ? '' : 'disabled'} onclick="doCraftPotionFromCraft('${esc(p.key)}')">Brew</button>` : ''}
         </div>
-      </div>
+      </div>`;
+    }).join('') || '<p class="hint">No potions set up yet.</p>';
+
+    return `<div class="card"${bgAttr('craft')}>
+      <h2>${esc(mage.name)}'s Alchemy</h2>
+      <h3 style="margin-top:0;">Reagents</h3>
+      ${reagentRows}
+      <h3>Potions</h3>
+      ${potionRows}
+      <p class="hint" style="margin-top:10px;">Use a brewed or bought potion from the Mage tab on the Guardian Page.</p>
+    </div>`;
+  })() : '';
+
+  const craftBg = bgAttr('craft');
+  app.innerHTML = `
+    <div class="card"${bgAttr('craft', 'text-align:center;')}>
+      <h2>Shard Crafting</h2>
+      <p class="hint">Turn God Shards into a permanent stat boost, a cosmetic, or a consumable — or bank a bonus petition credit that bypasses the one-per-moon-phase gate. The same Shards also buy Mage gear below.</p>
+      <div class="essence-row"><span class="essence-label">God Shards</span><span class="essence-value">${guardian.god_shards || 0}</span></div>
+      <div class="status" id="craftStatus"></div>
+    </div>
+    <div class="card"${craftBg}>
+      <h2>Catalog</h2>
+      ${catalogRows}
+    </div>
+    ${mageGearSection}
+    ${mageAlchemySection}
+    <div class="card"${craftBg}>
+      <h2>Bonus Petition Credit</h2>
+      <p class="hint">Costs a set number of Shards, decided by the gods — if you can't afford it, the attempt will tell you the price.</p>
+      <p class="hint">You currently hold <strong>${guardian.bonus_petition_credits || 0}</strong> bonus credit${guardian.bonus_petition_credits === 1 ? '' : 's'}.</p>
+      <button class="secondary" ${(guardian.god_shards || 0) > 0 ? '' : 'disabled'} onclick="doCraftPetition()">Craft a petition credit</button>
+    </div>
+    <div class="card"${craftBg}>
+      <h2>Your Items</h2>
+      ${inventoryRows}
+      <button class="secondary" style="margin-top:14px;" onclick="backFromCraft()">Back to the map</button>
     </div>
   `;
-}
-
-function craftSelectedCatalogItem(){
-  const sel = document.getElementById('craftCatalogSelect');
-  if(!sel || !sel.value) return;
-  doCraftItem(sel.value);
-}
-
-function useSelectedCraftItem(){
-  const sel = document.getElementById('craftItemsSelect');
-  if(!sel || !sel.value) return;
-  doUseItem(sel.value);
-}
-
-function craftSelectedMageGear(){
-  const sel = document.getElementById('craftMageGearSelect');
-  if(!sel || !sel.value) return;
-  doCraftMageGearFromCraft(sel.value);
-}
-
-function buySelectedReagent(){
-  const sel = document.getElementById('craftReagentSelect');
-  if(!sel || !sel.value) return;
-  doBuyReagentFromCraft(sel.value);
-}
-
-function buyOrBrewSelectedPotion(){
-  const sel = document.getElementById('craftPotionSelect');
-  if(!sel || !sel.value) return;
-  const [action, key] = sel.value.split('::');
-  if(action === 'buy') doBuyPotionFromCraft(key);
-  else if(action === 'craft') doCraftPotionFromCraft(key);
 }
 
 /* ---------------- Chained Gods redemption (God Tokens + Key of Night) ----------------
