@@ -5561,21 +5561,20 @@ function renderPetition(){
   if(petitionView.step === 'verdict') return renderPetitionVerdict();
 }
 
+// Direct feedback: "the choose who to petition card ... needs to
+// disappear" — same "get rid of the damn overlay" treatment already
+// given to the Chained Gods hub (see renderRedeem()): the boxed
+// .hub-overlay panel is gone entirely, replaced with plain floating
+// .hub-loose-back/.hub-loose-status text with no panel behind either.
+// The picker dropdown itself (already its own admin-positioned hotspot
+// box, unaffected by this) is the only thing that needs to be on
+// screen — the art is the interface now, same as Chained Gods.
 function renderPetitionPicker(){
   const app = document.getElementById('app');
   document.body.classList.add('hub-active');
-  const phaseLine = currentPhase
-    ? `<p class="phase-note">Tonight's phase: <strong>${esc(currentPhase.phase)}</strong> — one petition per phase, whichever god you choose.</p>`
-    : '';
   // Not-for-sale deities/pantheons stay fully hidden here too — a secret
   // deity marked for_sale=false shouldn't be free XP-earning content just
   // because it's reachable through Petition Hall instead of the Shop.
-  // Rewritten from a per-pantheon deity-row list to a single dropdown
-  // (0068) — see the select.picker-select comment above — then again
-  // (same 0068) from a plain centered dropdown into a hub-box screen
-  // with the dropdown positioned as its own admin-draggable hotspot, so
-  // it can be moved to sit against custom art the same way every other
-  // hub screen's buttons already can.
   const optgroups = Object.keys(CATALOG).filter(pid => shopPantheonForSale(pid)).map(pid => {
     const opts = CATALOG[pid].deities.filter(([id]) => shopDeityForSale(id)).map(([id, name]) => {
       const m = markFor(pid, id);
@@ -5598,14 +5597,8 @@ function renderPetitionPicker(){
       <div class="hub-box"${bgAttrPlain('oracle')}>
         ${hotspotButtonsMarkup(PETITION_AREAS, 'PETITION_AREAS', 'oracle')}
         ${pickerMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backToGuardianHome()">‹ Back to Map</button>
-          <h2 style="text-align:center;">Choose who to petition</h2>
-          <p class="hint" style="text-align:center;">Every honest answer earns something. A god you've already earned a partial mark from can still be petitioned again for the full mark.</p>
-          ${phaseLine}
-          <div id="pickerStatus" class="status"></div>
-          ${optgroups ? '' : '<p class="hint" style="text-align:center;">No gods are open for petition right now — check back soon.</p>'}
-        </div>
+        <button type="button" class="hub-loose-back" onclick="backToGuardianHome()">‹ Back to Map</button>
+        <div id="pickerStatus" class="hub-loose-status">${optgroups ? '' : 'No gods are open for petition right now — check back soon.'}</div>
       </div>
     </div>
   `;
@@ -5620,7 +5613,10 @@ function beginPetitionFromSelect(){
 
 async function beginPetition(pantheonId, deityId){
   const status = document.getElementById('pickerStatus');
-  if(status){ status.className = 'status'; status.textContent = 'The Gate listens…'; }
+  // hub-loose-status, not the boxed .status — pickerStatus floats loose
+  // over the art now that renderPetitionPicker() dropped the overlay
+  // card entirely (see that function's comment).
+  if(status){ status.className = 'hub-loose-status'; status.textContent = 'The Gate listens…'; }
 
   try{
     const resp = await fetch(FUNCTIONS_URL + '/petition', {
@@ -5630,7 +5626,7 @@ async function beginPetition(pantheonId, deityId){
     });
     const data = await resp.json();
     if(!data.ok){
-      if(status){ status.className = 'status err'; status.textContent = data.error || 'Could not open a trial.'; }
+      if(status){ status.className = 'hub-loose-status err'; status.textContent = data.error || 'Could not open a trial.'; }
       return;
     }
     petitionView = {
