@@ -125,6 +125,37 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 .hotspot-controls .field{margin-bottom:0;}
 .hotspot-controls input[type=range]{max-width:180px;width:180px;}
 .hotspot-readout{font-family:'SF Mono',Consolas,monospace;font-size:11px;color:var(--parchment-dim);margin-top:12px;line-height:1.7;max-height:160px;overflow-y:auto;border:1px solid var(--line);border-radius:3px;padding:10px 12px;}
+
+/* ---- Territory Zones editor (0090) ---- */
+/* Same drag/resize canvas as the Map Hotspots editor above, but zones are
+   admin-CREATABLE/DELETABLE (map_hotspots' registry is a fixed set,
+   repositionable only) — see zonePointerDown()/addZoneBox()/deleteZoneBox()
+   below. Reuses .hotspot-canvas for the frame itself; only the box/resize/
+   delete-button styling gets its own class since a zone box also carries a
+   name label and a remove control the hotspot boxes never needed. */
+.zone-box{
+  position:absolute;box-sizing:border-box;
+  border:2px dashed var(--gold-bright);
+  background:rgba(230,199,119,var(--hotspot-alpha,0.35));
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:0.02em;color:#fff;
+  text-shadow:0 1px 3px rgba(0,0,0,0.9);
+  cursor:move;user-select:none;padding:2px;overflow:hidden;
+}
+.zone-box.active{border-color:#fff;border-style:solid;z-index:5;}
+.zone-box .zone-name-input{
+  position:relative;z-index:2;width:88%;max-width:none;font-size:10.5px;text-align:center;
+  background:rgba(10,8,16,0.55);color:#fff;border:1px solid rgba(255,255,255,0.4);margin:2px auto;padding:2px 4px;
+}
+.zone-resize{
+  position:absolute;right:-7px;bottom:-7px;width:15px;height:15px;
+  background:var(--gold-bright);border:1px solid var(--ink);border-radius:2px;cursor:nwse-resize;
+}
+.zone-delete{
+  position:absolute;left:-7px;top:-7px;width:16px;height:16px;line-height:14px;
+  background:var(--ember);color:#fff;border:1px solid var(--ink);border-radius:50%;cursor:pointer;
+  font-size:11px;text-align:center;padding:0;
+}
 </style>
 </head>
 <body>
@@ -182,6 +213,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="featureaccess" onclick="showTab('featureaccess')">Feature Access</button>
       <button class="tab-btn" data-tab="customers" onclick="showTab('customers')">Customers</button>
       <button class="tab-btn" data-tab="admins" onclick="showTab('admins')">Admins</button>
+      <button class="tab-btn" data-tab="invasionsettings" onclick="showTab('invasionsettings')">Invasion Settings</button>
+      <button class="tab-btn" data-tab="territoryzones" onclick="showTab('territoryzones')">Territory Zones</button>
     </div>
 
     <!-- ============================== OVERVIEW ============================== -->
@@ -2517,6 +2550,67 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
     </div>
 
+    <!-- ============================== INVASION SETTINGS ============================== -->
+    <div class="tab-content" id="tab-invasionsettings">
+      <div class="card">
+        <h2>Circle Invasion Settings (0090)</h2>
+        <p class="hint">"Circle invasion stuff should be admin controlled as well." Every number that used to be a fixed constant in the code — what it costs to declare, the rank floor to be allowed to, how long a fight stays open, how long a shield lasts after being hit, how long a brand-new Circle is protected, how much of the loser's chest is taken and how it's split, and how much rank moves — is a live settings row now. Changes apply to the next invasion declared or resolved; anything already in flight keeps whatever was true when it started.</p>
+        <h3>Declaring an invasion</h3>
+        <div class="form-row">
+          <div class="field"><label>Cost (Devotion)</label><input type="number" min="0" id="invCostDevotion" style="max-width:130px;"></div>
+          <div class="field"><label>Min rank score required</label><input type="number" min="0" id="invMinRankScore" style="max-width:160px;"></div>
+          <div class="field"><label>Window (hours)</label><input type="number" min="0" step="0.1" id="invWindowHours" style="max-width:130px;"></div>
+          <div class="field"><label>New-Circle grace period (hours)</label><input type="number" min="0" step="0.1" id="invGraceHours" style="max-width:180px;"></div>
+        </div>
+        <h3>After a fight resolves</h3>
+        <div class="form-row">
+          <div class="field"><label>Defender shield (hours)</label><input type="number" min="0" step="0.1" id="invShieldHours" style="max-width:160px;"></div>
+          <div class="field"><label>Rank swung, winner ← loser</label><input type="number" min="0" id="invRankSwing" style="max-width:170px;"></div>
+          <div class="field"><label>Loser's chest taken (%)</label><input type="number" min="0" max="100" step="1" id="invChestCutPct" style="max-width:160px;"></div>
+          <div class="field"><label>Of that, split to active committers (%)</label><input type="number" min="0" max="100" step="1" id="invPersonalSharePct" style="max-width:220px;"></div>
+        </div>
+        <h3>Power contribution</h3>
+        <div class="form-row">
+          <div class="field"><label>Passive weight (non-committed members, %)</label><input type="number" min="0" max="100" step="1" id="invPassiveWeightPct" style="max-width:240px;"></div>
+        </div>
+        <h3>Zone Territories (0090)</h3>
+        <p class="hint">Claiming a currently-unclaimed zone is a plain purchase, not a fight — its own (typically cheaper) cost rather than the invade price above.</p>
+        <div class="form-row">
+          <div class="field"><label>Zone claim cost (Devotion)</label><input type="number" min="0" id="invZoneClaimCost" style="max-width:180px;"></div>
+        </div>
+        <div class="save-bar">
+          <button id="saveInvasionSettingsBtn">Save changes</button>
+          <div class="status" id="invasionSettingsStatus"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================== TERRITORY ZONES ============================== -->
+    <div class="tab-content" id="tab-territoryzones">
+      <div class="card">
+        <h2>Territory Zones map (0090)</h2>
+        <p class="hint">"We want a territory map as well... assign each circle a map color and fill in zones as they are taken." This is a plain in-game map — no GPS, no real-world location — a fixed set of regions you draw here that any Circle can claim or fight over, completely separate from the altar-roster tiles on the existing Territory Map. Set the background image on the Backgrounds &amp; Hotspots tab (page "Territory Map — Zones background"); draw regions here the same way you drag/resize hotspots, except you can also add and remove them. Each region fills with whichever Circle's own banner color currently controls it once players start claiming.</p>
+
+        <div class="hotspot-controls">
+          <div class="field">
+            <label>Box visibility</label>
+            <input type="range" id="zoneAlpha" min="5" max="90" value="35">
+          </div>
+          <button class="secondary" id="addZoneBtn" type="button">Add a new zone</button>
+          <button class="secondary" id="resetZonesBtn" type="button">Reload from saved</button>
+        </div>
+
+        <div class="hotspot-canvas" id="zoneCanvas"></div>
+
+        <div class="save-bar">
+          <button id="saveZonesBtn">Save zones</button>
+          <div class="status" id="zoneStatus"></div>
+        </div>
+
+        <div class="hotspot-readout" id="zoneReadout"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -2749,6 +2843,8 @@ async function handleSession(session){
   loadRevenue();
   loadCustomers();
   loadAdminAllowlist();
+  loadInvasionSettingsAdmin();
+  loadZonesEditor();
 
   loadDeityPersonalities();
   loadCheckinCalendar();
@@ -2832,6 +2928,7 @@ const PAGE_KEYS = [
   { key: 'circle', label: 'The Circle' },
   { key: 'circleAltar', label: "A Circle's Altar" },
   { key: 'circleInvasions', label: 'Circle Invasions' },
+  { key: 'territoryMap', label: 'Territory Map — Zones background' },
   { key: 'gauntlet', label: 'The Gauntlet' },
   { key: 'arena', label: 'The Arena (PvP)' },
   { key: 'craft', label: 'Crafting' },
@@ -3136,6 +3233,223 @@ async function saveMapHotspots(){
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Players will see the new positions next time they load this screen.';
 }
 
+/* ---------------- Territory Zones editor (0090) ----------------
+   Same drag/resize canvas as the Map Hotspots editor above, but zones are
+   admin-CREATABLE/DELETABLE — map_hotspots' registry is a fixed set
+   (repositionable only); territory_zones is a table you actually add rows
+   to and remove rows from here. A new box gets a client-side-only tempId
+   until Save inserts it for real and this reloads with its actual id;
+   deleting a box just drops it from the working copy — the row itself
+   isn't gone until Save runs the matching delete. Each zone's name is an
+   editable text field right on its box (there's no separate id/label
+   split the way hotspots have, since a zone's whole identity IS its
+   admin-given name). */
+let zoneState = [];       // [{id, tempId, name, left, top, width, height, controlled_by, controllerName}]
+let zoneDrag = null;      // {mode:'move'|'resize', key, startX, startY, startLeft, startTop, startWidth, startHeight, canvasW, canvasH}
+let zoneTempCounter = 0;
+let deletedZoneIds = [];  // real (already-saved) ids removed since the last load — deleted from the DB on Save
+
+function zoneKey(z){ return z.id || z.tempId; }
+
+async function loadZonesEditor(){
+  const status = document.getElementById('zoneStatus');
+  if(!status) return; // this tab's markup isn't on the page (e.g. mid-deploy) — nothing to fill in
+  deletedZoneIds = [];
+
+  const [{ data, error }, { data: circleRows }, { data: bgRow }] = await Promise.all([
+    supabaseClient.from('territory_zones').select('id, name, left_pct, top_pct, width_pct, height_pct, controlled_by').order('created_at'),
+    supabaseClient.from('circles').select('id, name'),
+    supabaseClient.from('site_backgrounds').select('background_url').eq('page_key', 'territoryMap').maybeSingle()
+  ]);
+  if(error){
+    status.className = 'status err';
+    status.textContent = 'Could not load: ' + error.message;
+    zoneState = [];
+  }else{
+    const circleNameById = {};
+    (circleRows || []).forEach(c => { circleNameById[c.id] = c.name; });
+    zoneState = (data || []).map(z => ({
+      id: z.id, tempId: null,
+      name: z.name,
+      left: z.left_pct, top: z.top_pct, width: z.width_pct, height: z.height_pct,
+      controlled_by: z.controlled_by,
+      controllerName: z.controlled_by ? (circleNameById[z.controlled_by] || 'a Circle') : null,
+    }));
+    status.className = 'status';
+    status.textContent = '';
+  }
+
+  const canvas = document.getElementById('zoneCanvas');
+  const bgUrl = bgRow && bgRow.background_url;
+  canvas.style.backgroundImage = bgUrl ? `url('${bgUrl}')` : 'none';
+
+  renderZoneCanvas();
+}
+
+function renderZoneCanvas(){
+  const canvas = document.getElementById('zoneCanvas');
+  canvas.innerHTML = zoneState.map(z => {
+    const key = zoneKey(z);
+    const controlNote = z.controlled_by ? `Held by ${esc(z.controllerName)}` : 'Unclaimed';
+    return `
+      <div class="zone-box" data-key="${esc(key)}" style="left:${z.left}%;top:${z.top}%;width:${z.width}%;height:${z.height}%;">
+        <button class="zone-delete" type="button" data-key="${esc(key)}" title="Remove this zone">&times;</button>
+        <input class="zone-name-input" data-key="${esc(key)}" value="${esc(z.name)}" placeholder="Zone name">
+        <div style="font-size:9px;opacity:0.85;">${controlNote}</div>
+        <div class="zone-resize" data-key="${esc(key)}"></div>
+      </div>
+    `;
+  }).join('');
+  updateZoneReadout();
+}
+
+function updateZoneReadout(){
+  const el = document.getElementById('zoneReadout');
+  if(!el) return;
+  el.innerHTML = zoneState.map(z =>
+    `${esc(z.name || '(unnamed)')}: left ${z.left.toFixed(1)}%, top ${z.top.toFixed(1)}%, width ${z.width.toFixed(1)}%, height ${z.height.toFixed(1)}%${z.controlled_by ? ' — held by ' + esc(z.controllerName) : ' — unclaimed'}`
+  ).join('<br>');
+}
+
+function addZoneBox(){
+  zoneTempCounter += 1;
+  zoneState.push({
+    id: null, tempId: 'new-' + zoneTempCounter,
+    name: 'New Region', left: 40, top: 40, width: 18, height: 14,
+    controlled_by: null, controllerName: null,
+  });
+  renderZoneCanvas();
+}
+
+function deleteZoneBox(key){
+  const z = zoneState.find(z => zoneKey(z) === key);
+  if(!z) return;
+  if(!confirm(`Remove "${z.name}" from the map? This only changes the editor here — click Save zones afterward to make it permanent.`)) return;
+  if(z.id) deletedZoneIds.push(z.id);
+  zoneState = zoneState.filter(z => zoneKey(z) !== key);
+  renderZoneCanvas();
+}
+
+function zonePointerDown(e){
+  const deleteTarget = e.target.closest('.zone-delete');
+  if(deleteTarget){
+    e.stopPropagation();
+    deleteZoneBox(deleteTarget.getAttribute('data-key'));
+    return;
+  }
+  if(e.target.closest('.zone-name-input')) return; // let the text field take focus/typing normally
+  const resizeTarget = e.target.closest('.zone-resize');
+  const boxTarget = e.target.closest('.zone-box');
+  if(!resizeTarget && !boxTarget) return;
+  const key = (resizeTarget || boxTarget).getAttribute('data-key');
+  const state = zoneState.find(z => zoneKey(z) === key);
+  if(!state) return;
+  const canvas = document.getElementById('zoneCanvas');
+  const rect = canvas.getBoundingClientRect();
+
+  document.querySelectorAll('.zone-box').forEach(b => b.classList.remove('active'));
+  const boxEl = canvas.querySelector(`.zone-box[data-key="${CSS.escape(key)}"]`);
+  if(boxEl) boxEl.classList.add('active');
+
+  if(resizeTarget){
+    e.stopPropagation();
+    zoneDrag = { mode: 'resize', key, startX: e.clientX, startY: e.clientY, startWidth: state.width, startHeight: state.height, canvasW: rect.width, canvasH: rect.height };
+  }else{
+    zoneDrag = { mode: 'move', key, startX: e.clientX, startY: e.clientY, startLeft: state.left, startTop: state.top, canvasW: rect.width, canvasH: rect.height };
+  }
+  e.preventDefault();
+}
+
+function zonePointerMove(e){
+  if(!zoneDrag) return;
+  const state = zoneState.find(z => zoneKey(z) === zoneDrag.key);
+  if(!state) return;
+  const dxPct = ((e.clientX - zoneDrag.startX) / zoneDrag.canvasW) * 100;
+  const dyPct = ((e.clientY - zoneDrag.startY) / zoneDrag.canvasH) * 100;
+
+  if(zoneDrag.mode === 'move'){
+    state.left = Math.max(0, Math.min(100 - state.width, zoneDrag.startLeft + dxPct));
+    state.top = Math.max(0, Math.min(100 - state.height, zoneDrag.startTop + dyPct));
+  }else{
+    state.width = Math.max(2, Math.min(100 - state.left, zoneDrag.startWidth + dxPct));
+    state.height = Math.max(2, Math.min(100 - state.top, zoneDrag.startHeight + dyPct));
+  }
+
+  const canvas = document.getElementById('zoneCanvas');
+  const boxEl = canvas.querySelector(`.zone-box[data-key="${CSS.escape(state.id || state.tempId)}"]`);
+  if(boxEl){
+    boxEl.style.left = state.left + '%';
+    boxEl.style.top = state.top + '%';
+    boxEl.style.width = state.width + '%';
+    boxEl.style.height = state.height + '%';
+  }
+  updateZoneReadout();
+}
+
+function zonePointerUp(){
+  zoneDrag = null;
+}
+
+function zoneNameInputHandler(e){
+  const input = e.target.closest('.zone-name-input');
+  if(!input) return;
+  const key = input.getAttribute('data-key');
+  const state = zoneState.find(z => zoneKey(z) === key);
+  if(state) state.name = input.value;
+  updateZoneReadout();
+}
+
+async function saveZones(){
+  const status = document.getElementById('zoneStatus');
+  if(zoneState.some(z => !z.name || !z.name.trim())){
+    status.className = 'status err';
+    status.textContent = 'Every zone needs a name.';
+    return;
+  }
+  status.className = 'status';
+  status.textContent = 'Saving…';
+
+  if(deletedZoneIds.length){
+    const { error: delError } = await supabaseClient.from('territory_zones').delete().in('id', deletedZoneIds);
+    if(delError){
+      status.className = 'status err';
+      status.textContent = 'Failed removing zones: ' + delError.message;
+      return;
+    }
+  }
+
+  const existing = zoneState.filter(z => z.id);
+  const fresh = zoneState.filter(z => !z.id);
+
+  if(existing.length){
+    const { error: updError } = await supabaseClient.from('territory_zones').upsert(existing.map(z => ({
+      id: z.id, name: z.name.trim(), left_pct: z.left, top_pct: z.top, width_pct: z.width, height_pct: z.height,
+    })), { onConflict: 'id' });
+    if(updError){
+      status.className = 'status err';
+      status.textContent = 'Failed: ' + updError.message;
+      return;
+    }
+  }
+
+  if(fresh.length){
+    const { error: insError } = await supabaseClient.from('territory_zones').insert(fresh.map(z => ({
+      name: z.name.trim(), left_pct: z.left, top_pct: z.top, width_pct: z.width, height_pct: z.height,
+    })));
+    if(insError){
+      status.className = 'status err';
+      status.textContent = 'Failed adding new zones: ' + insError.message;
+      return;
+    }
+  }
+
+  status.className = 'status ok';
+  status.textContent = 'Saved. Reloading…';
+  await loadZonesEditor();
+  status.className = 'status ok';
+  status.textContent = 'Saved. Players will see the new regions next time they open the Territory Map.';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('savePricingBtn').addEventListener('click', async () => {
     const status = document.getElementById('pricingStatus');
@@ -3279,6 +3593,21 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('resetHotspotsBtn').addEventListener('click', resetHotspotsToDefaults);
   document.getElementById('saveHotspotsBtn').addEventListener('click', saveMapHotspots);
+
+  document.getElementById('saveInvasionSettingsBtn').addEventListener('click', saveInvasionSettingsAdmin);
+
+  document.getElementById('zoneCanvas').addEventListener('pointerdown', zonePointerDown);
+  document.getElementById('zoneCanvas').addEventListener('input', zoneNameInputHandler);
+  document.addEventListener('pointermove', zonePointerMove);
+  document.addEventListener('pointerup', zonePointerUp);
+  document.getElementById('zoneAlpha').addEventListener('input', (e) => {
+    document.getElementById('zoneCanvas').style.setProperty('--hotspot-alpha', (e.target.value / 100).toFixed(2));
+  });
+  document.getElementById('addZoneBtn').addEventListener('click', addZoneBox);
+  document.getElementById('resetZonesBtn').addEventListener('click', () => {
+    if(confirm('Discard unsaved changes and reload the last-saved zones?')) loadZonesEditor();
+  });
+  document.getElementById('saveZonesBtn').addEventListener('click', saveZones);
 
   document.getElementById('saveGauntletBtn').addEventListener('click', saveGauntletOpponents);
   document.getElementById('addGauntletBtn').addEventListener('click', addGauntletOpponent);
@@ -5522,6 +5851,78 @@ async function saveStaminaSettings(){
   }).eq('id', 1);
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Existing balances are unaffected — new caps/costs apply the next time each is checked.';
+}
+
+// Circle Invasion Settings (0090) — same "id=1 singleton settings row"
+// shape as stamina_settings above; the `circle` edge function reads this
+// directly (loadInvasionSettings()) so a change here applies to the very
+// next invasion declared or resolved. Percent fields (chest cut, personal
+// share, passive weight) are stored 0-1 in the DB but shown/edited here as
+// plain 0-100 numbers, same convention this admin page uses everywhere
+// else money or a fraction is user-facing.
+async function loadInvasionSettingsAdmin(){
+  const { data, error } = await supabaseClient.from('circle_invasion_settings').select('*').eq('id', 1).maybeSingle();
+  const status = document.getElementById('invasionSettingsStatus');
+  if(!status) return; // this tab's markup isn't on the page (e.g. mid-deploy) — nothing to fill in
+  if(error || !data){
+    status.textContent = 'Could not load: ' + (error?.message || 'no row found');
+    return;
+  }
+  document.getElementById('invCostDevotion').value = data.cost_devotion;
+  document.getElementById('invMinRankScore').value = data.min_rank_score;
+  document.getElementById('invWindowHours').value = data.window_hours;
+  document.getElementById('invGraceHours').value = data.grace_hours;
+  document.getElementById('invShieldHours').value = data.shield_hours;
+  document.getElementById('invRankSwing').value = data.rank_swing;
+  document.getElementById('invChestCutPct').value = Math.round(data.chest_cut_pct * 100);
+  document.getElementById('invPersonalSharePct').value = Math.round(data.personal_share_pct * 100);
+  document.getElementById('invPassiveWeightPct').value = Math.round(data.passive_weight * 100);
+  document.getElementById('invZoneClaimCost').value = data.zone_claim_cost_devotion;
+}
+
+async function saveInvasionSettingsAdmin(){
+  const status = document.getElementById('invasionSettingsStatus');
+  const vInt = id => parseInt(document.getElementById(id).value, 10);
+  const vFloat = id => parseFloat(document.getElementById(id).value);
+  const costDevotion = vInt('invCostDevotion');
+  const minRankScore = vInt('invMinRankScore');
+  const windowHours = vFloat('invWindowHours');
+  const graceHours = vFloat('invGraceHours');
+  const shieldHours = vFloat('invShieldHours');
+  const rankSwing = vInt('invRankSwing');
+  const chestCutPct = vFloat('invChestCutPct');
+  const personalSharePct = vFloat('invPersonalSharePct');
+  const passiveWeightPct = vFloat('invPassiveWeightPct');
+  const zoneClaimCost = vInt('invZoneClaimCost');
+
+  const allValues = [costDevotion, minRankScore, windowHours, graceHours, shieldHours, rankSwing, chestCutPct, personalSharePct, passiveWeightPct, zoneClaimCost];
+  if(allValues.some(n => isNaN(n) || n < 0)){
+    status.className = 'status err';
+    status.textContent = 'Every field must be a non-negative number.';
+    return;
+  }
+  if(windowHours <= 0){
+    status.className = 'status err';
+    status.textContent = 'Window (hours) must be greater than 0.';
+    return;
+  }
+  if([chestCutPct, personalSharePct, passiveWeightPct].some(n => n > 100)){
+    status.className = 'status err';
+    status.textContent = 'Percent fields must be between 0 and 100.';
+    return;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('circle_invasion_settings').update({
+    cost_devotion: costDevotion, min_rank_score: minRankScore, window_hours: windowHours,
+    grace_hours: graceHours, shield_hours: shieldHours, rank_swing: rankSwing,
+    chest_cut_pct: chestCutPct / 100, personal_share_pct: personalSharePct / 100, passive_weight: passiveWeightPct / 100,
+    zone_claim_cost_devotion: zoneClaimCost,
+    updated_at: new Date().toISOString()
+  }).eq('id', 1);
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies to the next invasion declared or resolved — anything already in flight keeps its old numbers.';
 }
 
 /* =====================================================================
