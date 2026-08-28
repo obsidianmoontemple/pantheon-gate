@@ -651,6 +651,39 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .territory-tile .tname{font-family:'Cinzel',serif;font-size:12.5px;color:var(--parchment);margin-top:8px;}
 .territory-tile .tcontrol{font-size:10.5px;color:var(--parchment-dim);font-style:italic;margin-top:3px;}
 .territory-tile button{margin-top:10px;padding:6px 10px;font-size:10px;}
+
+/* Zone Territories map (0090) — a SEPARATE, admin-placed set of fixed map
+   regions any Circle can contest, decoupled from the altar-roster grid
+   above (see circle_invasion_settings/territory_zones). Direct feedback:
+   "create a map with many regions and each circle will claim a
+   region/altar and color it... A separate fixed set of map territories" —
+   plain in-game map, no GPS/real-world location involved. Zones are
+   admin-placed (admin.html's Territory Zones editor) at percentage
+   coordinates over a background image (site_backgrounds 'territoryMap'),
+   same positioning shape as the Map Hotspots editor; a zone is colored by
+   whichever Circle's own banner_primary currently controls it, or a
+   neutral dashed look while unclaimed. */
+.zonemap-canvas{
+  position:relative;overflow:hidden;
+  width:min(100%, calc(70vh * 1408 / 768));
+  aspect-ratio:1408/768;
+  background:#0a0810 center/cover no-repeat;
+  border:1px solid var(--line);border-radius:4px;
+  margin:16px auto;
+}
+.zonemap-zone{
+  position:absolute;box-sizing:border-box;
+  border:2px solid rgba(255,255,255,0.45);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  text-align:center;padding:4px;overflow:hidden;
+  background-image:linear-gradient(rgba(0,0,0,0.2),rgba(0,0,0,0.45));
+  background-color:rgba(90,90,100,0.55);
+}
+.zonemap-zone.unclaimed{border-style:dashed;}
+.zonemap-zone.mine{border-color:var(--gold-bright);}
+.zonemap-zone .zname{font-family:'Cinzel',serif;font-size:11px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.9);}
+.zonemap-zone .zcontrol{font-size:9.5px;color:#fff;opacity:0.9;font-style:italic;text-shadow:0 1px 3px rgba(0,0,0,0.9);}
+.zonemap-zone button{margin-top:2px;padding:4px 8px;font-size:9.5px;}
 .shape-pick-row{display:flex;gap:14px;justify-content:center;margin-bottom:22px;flex-wrap:wrap;}
 .shape-pick{cursor:pointer;text-align:center;padding:10px;border:1px solid var(--line);border-radius:4px;width:80px;transition:border-color .15s;}
 .shape-pick:hover{border-color:var(--gold);}
@@ -1119,7 +1152,13 @@ let circleStatus = '';    // scratch status text for the browse/home views
 let inviteResults = [];
 let bannerIdCounter = 0;
 const FOUNDING_COST_ESSENCE = 500; // must match the `circle` edge function's constant
-const INVASION_COST_DEVOTION = 300; // must match the `circle` edge function's constant
+// Circle invasion economics moved to an admin-editable settings row (0090,
+// circle_invasion_settings) instead of fixed constants — these two readers
+// pull the live, publicly-readable values (see loadInvasionSettingsPublic()
+// below), falling back to the same numbers the server itself defaults to
+// only until that first load resolves.
+function invasionCostDevotion(){ return invasionSettings ? invasionSettings.cost_devotion : 300; }
+function zoneClaimCostDevotion(){ return invasionSettings ? invasionSettings.zone_claim_cost_devotion : 150; }
 const CIRCLE_ACCENTS = ['#c8a24a','#e6c777','#a1462a','#6a5a8a','#3f7fa6','#7a9457','#8a8a94','#c9c9dd'];
 let circleDraft = {
   name: '', blurb: '', memberCap: 25, leaderTitle: 'high_priest',
@@ -1195,6 +1234,11 @@ let mailClaimedIds = new Set(); // broadcast ids this user has already claimed
 // last write" formula the server itself uses, so the bar shown here
 // never drifts from what the next action would actually charge.
 let staminaSettings = null;
+// circle_invasion_settings (0090) — publicly readable (RLS select_all), so
+// this is loaded the same lazy way as staminaSettings above: once at boot,
+// read by invasionCostDevotion()/zoneClaimCostDevotion() wherever the old
+// hardcoded INVASION_COST_DEVOTION constant used to be inlined.
+let invasionSettings = null;
 let backpackView = null;   // null | {step:'home'} — top-level aggregator over every inventory in the game (Map hub's "Backpack" hotspot)
 // "Backpack consolidation ... it will need a few different tabs" — was a
 // single screen with three stacked read-only cards (Craft items, Arena
@@ -1336,6 +1380,7 @@ async function afterLogin(){
   await loadGuardian();
   await loadMage();
   loadStaminaSettings().catch(e => console.error('stamina settings load failed', e));
+  loadInvasionSettingsPublic().catch(e => console.error('invasion settings load failed', e));
   if(guardian) await loadMarks();
   loadMoonPhase().catch(e => console.error('moon phase load failed', e));
   // For-sale flags need to be known site-wide, not just inside the Shop —
@@ -1503,6 +1548,16 @@ async function loadStaminaSettings(){
   const { data, error } = await supabaseClient.from('stamina_settings').select('*').eq('id', 1).maybeSingle();
   if(error || !data){ console.error('stamina settings load failed', error); return; }
   staminaSettings = data;
+}
+
+// Same "id=1 singleton, publicly readable" shape as loadStaminaSettings()
+// above — see circle_invasion_settings (0090). Called alongside it from
+// afterLogin() so invasionCostDevotion()/zoneClaimCostDevotion() have a
+// live value by the time any Circle screen can be opened.
+async function loadInvasionSettingsPublic(){
+  const { data, error } = await supabaseClient.from('circle_invasion_settings').select('*').eq('id', 1).maybeSingle();
+  if(error || !data){ console.error('invasion settings load failed', error); return; }
+  invasionSettings = data;
 }
 
 // Display-only regen preview — mirrors guardianRegenedEnergy()/the
@@ -5816,7 +5871,7 @@ function renderCircleBrowse(){
         <div class="ractions">
           <button class="secondary" onclick="openCircleAltar('${esc(c.id)}')">Visit altar</button>
           <button class="secondary" onclick="requestJoinCircle('${esc(c.id)}')">Request to join</button>
-          ${(isOfficer && c.id !== myCircleId) ? `<button class="secondary" onclick="doDeclareInvasion('${esc(c.id)}')">Invade — ${INVASION_COST_DEVOTION} Devotion</button>` : ''}
+          ${(isOfficer && c.id !== myCircleId) ? `<button class="secondary" onclick="doDeclareInvasion('${esc(c.id)}')">Invade — ${invasionCostDevotion()} Devotion</button>` : ''}
         </div>
       </div>
     `).join('')
@@ -7245,27 +7300,61 @@ function renderCircleInvasions(){
   `;
 }
 
-/* ---------------- Territory Map (0051) ----------------
+/* ---------------- Territory Map (0051, extended 0090) ----------------
    Risk-style overview: every Circle as a tile, colored/flagged by
    whichever Circle CURRENTLY controls its altar — the whole point per
    your note: "a actual territory map with colored highlights showing who
    is in charge where... marked by their circles flag." Scouting is just
    reading this (and the existing Browse Circles list); battling and
-   defending are the invasion commit window already built above. */
+   defending are the invasion commit window already built above.
 
-let territoryMap = null; // {territories:[...]} | null (not yet loaded)
+   0090 adds a SECOND, separate section on this same screen: a real map
+   of admin-placed Zone Territories (territory_zones), each one a fixed
+   region any Circle can claim or invade — completely decoupled from the
+   altar tiles above (claiming/losing a zone never touches
+   altar_controlled_by, and vice versa). Both concepts read from the same
+   territory-map fetch, which now returns `zones` alongside `territories`. */
+
+let territoryMap = null; // {territories:[...], zones:[...]} | null (not yet loaded)
 
 async function openTerritoryMap(){
   circleView = { step: 'territory' };
   territoryMap = null;
   render();
   const data = await circleFetch('territory-map');
-  territoryMap = data.ok ? data : { territories: [] };
+  territoryMap = data.ok ? data : { territories: [], zones: [] };
   if(circleView && circleView.step === 'territory') render();
 }
 
 function backFromTerritoryMap(){
   circleView = { step: 'home' };
+  render();
+}
+
+// Re-reads the map without resetting to the "Charting the realms…"
+// loading state — used after a zone claim/invasion so the map updates in
+// place instead of flashing blank.
+async function refreshTerritoryMap(){
+  const data = await circleFetch('territory-map');
+  if(data.ok) territoryMap = data;
+  if(circleView && circleView.step === 'territory') render();
+}
+
+async function doZoneClaim(zoneId){
+  circleStatus = 'Claiming the region…';
+  render();
+  const data = await circleFetch('zone-claim', { zoneId });
+  circleStatus = data.ok ? 'Zone claimed for your Circle.' : (data.error || 'Could not claim that zone.');
+  if(data.ok){ await loadMyCircle(); await refreshTerritoryMap(); }
+  render();
+}
+
+async function doZoneInvade(zoneId){
+  circleStatus = 'Declaring invasion…';
+  render();
+  const data = await circleFetch('zone-invade', { zoneId });
+  circleStatus = data.ok ? "Invasion declared for that region — check your Circle's Invasions panel." : (data.error || 'Could not declare invasion.');
+  if(data.ok) await loadMyCircle();
   render();
 }
 
@@ -7301,10 +7390,33 @@ function renderTerritoryMap(){
         <div class="tname">${esc(t.name)}</div>
         <div class="tcontrol">${controlLine}</div>
         <div class="tcontrol">Rank ${t.rank_score}</div>
-        ${canInvade ? `<button class="secondary" onclick="doDeclareInvasion('${esc(t.id)}')">Invade — ${INVASION_COST_DEVOTION} Devotion</button>` : ''}
+        ${canInvade ? `<button class="secondary" onclick="doDeclareInvasion('${esc(t.id)}')">Invade — ${invasionCostDevotion()} Devotion</button>` : ''}
       </div>
     `;
   }).join('') || '<p class="hint">No Circles founded yet.</p>';
+
+  const zoneMapBg = siteBackgrounds['territoryMap'];
+  const zoneBoxes = (territoryMap.zones || []).map(z => {
+    const isUnclaimed = !z.controlled_by;
+    const isMine = z.controlled_by === myCircleId;
+    const controlLine = isUnclaimed ? 'Unclaimed' : (isMine ? 'Yours' : `Held by ${esc(z.controller ? z.controller.name : 'another Circle')}`);
+    const fillColor = isUnclaimed ? '' : `background-color:${esc((z.controller && z.controller.banner_primary) || '#5a5a64')};`;
+    let actionBtn = '';
+    if(isOfficer && myCircleId){
+      if(isUnclaimed){
+        actionBtn = `<button class="secondary" onclick="doZoneClaim('${esc(z.id)}')">Claim — ${zoneClaimCostDevotion()} Devotion</button>`;
+      }else if(!isMine){
+        actionBtn = `<button class="secondary" onclick="doZoneInvade('${esc(z.id)}')">Invade — ${invasionCostDevotion()} Devotion</button>`;
+      }
+    }
+    return `
+      <div class="zonemap-zone ${isUnclaimed ? 'unclaimed' : ''} ${isMine ? 'mine' : ''}" style="left:${z.left_pct}%;top:${z.top_pct}%;width:${z.width_pct}%;height:${z.height_pct}%;${fillColor}">
+        <div class="zname">${esc(z.name)}</div>
+        <div class="zcontrol">${controlLine}</div>
+        ${actionBtn}
+      </div>
+    `;
+  }).join('');
 
   app.innerHTML = `
     <div class="card"${bgAttr('circleInvasions', 'text-align:center;')}>
@@ -7313,8 +7425,14 @@ function renderTerritoryMap(){
     </div>
     <div class="card"${bgAttr('circleInvasions')}>
       <div class="territory-grid">${tiles}</div>
-      <div class="status" id="territoryActionStatus"></div>
       <button class="secondary" style="margin-top:14px;" onclick="backFromTerritoryMap()">Back to your Circle</button>
+    </div>
+    <div class="card"${bgAttr('circleInvasions', 'text-align:center;')}>
+      <h2>Zone Territories</h2>
+      <p class="hint">A separate set of contested regions, unrelated to whose altar is whose. An unclaimed region can be bought outright; a held one has to be taken by force. Only an officer can claim or invade on your Circle's behalf.</p>
+      <div class="zonemap-canvas" style="${zoneMapBg ? `background-image:url('${esc(zoneMapBg)}');` : ''}">${zoneBoxes}</div>
+      ${!(territoryMap.zones || []).length ? '<p class="hint">No regions have been placed on the map yet.</p>' : ''}
+      <div class="status" id="territoryActionStatus">${circleStatus ? esc(circleStatus) : ''}</div>
     </div>
   `;
 }
