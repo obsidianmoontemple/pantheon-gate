@@ -3128,12 +3128,6 @@ const DEFAULT_CIRCLEINVASIONS_AREAS_ADMIN = [
   { id: 'backToCircle',  label: 'Back to your Circle',       left: 3,  top: 88, width: 22, height: 8  },
 ];
 
-const DEFAULT_LOADOUT_AREAS_ADMIN = [
-  { id: 'markPicker', label: 'Choose your loadout', left: 22, top: 16, width: 56, height: 50 },
-  { id: 'begin',      label: 'Begin the trial',     left: 30, top: 70, width: 40, height: 8  },
-  { id: 'backToMap',  label: 'Back',                left: 3,  top: 88, width: 18, height: 8  },
-];
-
 const DEFAULT_MAGEGEAR_AREAS_ADMIN = [
   { id: 'reservePicker', label: 'Choose gear to equip', left: 26, top: 30, width: 48, height: 26 },
   { id: 'shardCrafting', label: 'Shard Crafting',        left: 3,  top: 76, width: 30, height: 8  },
@@ -3238,7 +3232,6 @@ const SCREEN_REGISTRY = {
   pvpBrowse:    { label: 'PvP — Find an Opponent',        bgKey: 'arena',       bgFallback: '', defaultAreas: DEFAULT_PVPBROWSE_AREAS_ADMIN },
   pvpShop:      { label: 'PvP — Arena Store',              bgKey: 'arena',       bgFallback: '', defaultAreas: DEFAULT_PVPSHOP_AREAS_ADMIN },
   circleInvasions: { label: 'Circle — Invasions',           bgKey: 'circleInvasions', bgFallback: '', defaultAreas: DEFAULT_CIRCLEINVASIONS_AREAS_ADMIN },
-  loadout:      { label: 'Combat — Loadout Picker',         bgKey: 'combat',      bgFallback: '', defaultAreas: DEFAULT_LOADOUT_AREAS_ADMIN },
   mageGear:     { label: 'Mage Gear',                       bgKey: 'mageHome',    bgFallback: '', defaultAreas: DEFAULT_MAGEGEAR_AREAS_ADMIN },
   guide:        { label: 'The Guide (walkthrough)',         bgKey: 'guide',       bgFallback: '', defaultAreas: DEFAULT_GUIDE_AREAS_ADMIN },
   pvpHome:      { label: 'PvP — Arena Home',                bgKey: 'arena',       bgFallback: '', defaultAreas: DEFAULT_PVPHOME_AREAS_ADMIN },
@@ -3274,6 +3267,11 @@ const SCREEN_REGISTRY = {
 // set up the proper hotspotting") — their gauntlet/campaignBrowse
 // entries and DEFAULT_GAUNTLET_AREAS_ADMIN/
 // DEFAULT_CAMPAIGNBROWSE_AREAS_ADMIN were removed to match.
+// The Loadout Picker (the shared next screen after EITHER Gauntlet or
+// Campaign) was reverted too, one screen further down the same flow —
+// user report: "both Gauntlet and Campaign are down, it gets locked up
+// behind card when you select a fight." Its loadout entry and
+// DEFAULT_LOADOUT_AREAS_ADMIN were removed to match.
 let currentHotspotScreen = 'map';
 
 let hotspotState = [];   // mutable working copy the editor drags/resizes
