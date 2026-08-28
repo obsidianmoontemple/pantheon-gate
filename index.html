@@ -1237,6 +1237,19 @@ let expeditionStatus = null;   // this guardian's current trip, if any — null 
 
 let personalAltarView = null; // null | {step:'altar'} — top-level, NOT circle-scoped; a solo mirror of circleView's altar step
 let palData = null;           // full personal-altar 'view' response
+
+// Server Chat (0092) — a brand-new sitewide/global chat, reached from its
+// own Map Hub hotspot, NOT circle-scoped (a solo/global mirror of
+// circleView's 'messages' step — see renderCircleMessages() for the
+// pattern this borrows). Posting is gated server-side by
+// server_chat_messages' RLS (email-verified accounts only); guest/
+// anonymous sessions can still open the screen and read the feed, they
+// just get a plain explanation instead of a composer — see
+// renderServerChat().
+let serverChatView = null;       // null | {step:'chat'}
+let serverChatMessages = [];
+let serverChatDraft = '';
+let serverChatPollTimer = null;
 let palPickerPlot = null;     // plot_index currently showing the plant/decorate picker, or null
 let palPickerTab = 'plant';   // 'plant' | 'decorate'
 let palTickTimer = null;      // periodic re-render so countdowns stay live, same convention as altarTickTimer
@@ -1380,7 +1393,7 @@ async function boot(){
       expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
       profileView = null; shrineView = null; mailView = null; backpackView = null;
       checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
-      shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
+      shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false; serverChatView = null;
       profilePasswordOpen = false;
       renderLoginScreen();
     }
@@ -1707,6 +1720,7 @@ function render(){
   if(!circleView || circleView.step !== 'messages') stopMessagesPolling();
   if(!circleView || circleView.step !== 'altar') stopAltarTicking();
   if(!personalAltarView) stopPersonalAltarTicking();
+  if(!serverChatView) stopServerChatPolling();
   if(guardian && petitionView){ renderPetition(); return; }
   if(guardian && combatView){ renderCombat(); return; }
   if(guardian && craftView){ renderCraft(); return; }
@@ -1715,6 +1729,7 @@ function render(){
   if(guardian && pvpView){ renderPvpArena(); return; }
   if(guardian && circleView){ renderCircle(); return; }
   if(guardian && personalAltarView){ renderPersonalAltar(); return; }
+  if(guardian && serverChatView){ renderServerChat(); return; }
   // Checked ahead of profileView (not just an alternative to it) so
   // opening Credits from the Profile screen actually shows the Credits
   // screen instead of Profile winning the check first; backFromCredits()
@@ -1993,6 +2008,12 @@ const DEFAULT_MAP_AREAS = [
   // starting-guess position, right next to Guide; drag into place once
   // there's art to line up against.
   { id: 'milestones',    label: "Ganymede's Guidance", left: 42, top: 68, width: 10, height: 16, action: openMilestoneRoadmap, glow: true },
+  // Server Chat (0092) — direct feedback: "we need a server chat,"
+  // clarified into a brand-new sitewide/global chat reached from here.
+  // Another starting-guess position, same "no illustrated plaque yet"
+  // treatment as Guide/Milestones/World Boss/Your Altar above; drag into
+  // place once there's art to line up against.
+  { id: 'serverChat',    label: 'Server Chat',        left: 52, top: 68, width: 10, height: 16, action: openServerChat, glow: true },
   // The small "X" already illustrated on the map art — direct feedback:
   // "there is a small X button on my main map and I want it to be hooked
   // to a back to login button." No glow (the art already draws the eye to
@@ -2090,15 +2111,16 @@ const DEFAULT_MAIL_AREAS = [
 ];
 let MAIL_AREAS = DEFAULT_MAIL_AREAS.slice();
 
-// The Gauntlet tier ladder — locked tiers stay visible (13-point update
-// item 1: "show full gauntlet so we know what's coming") but render as
-// disabled options with their lock reason inline, rather than a
-// clickable-vs-greyed .tier-row list.
-const DEFAULT_GAUNTLET_AREAS = [
-  { id: 'tierPicker', label: 'Choose a trial',  left: 28, top: 40, width: 44, height: 20, kind: 'dropdown' },
-  { id: 'backToMap',  label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8,  action: cancelCombat },
-];
-let GAUNTLET_AREAS = DEFAULT_GAUNTLET_AREAS.slice();
+// Gauntlet reverted to its original plain .card ladder list — user
+// wasn't sure whether hotspotting was ever properly set up for it
+// ("gauntlet too... or you never set up the proper hotspotting"). Same
+// structural risk as Expedition/Petition Challenge: the tier-select
+// dropdown + "Enter" button was the ONLY way to start a fight, and it
+// lived in a single invisible .map-hotspot-dropdown box that only shows
+// up correctly once an admin has painted matching art — so there's no
+// DEFAULT_GAUNTLET_AREAS/GAUNTLET_AREAS here any more; renderProvingPicker()
+// is back to a real clickable .tier-row list. admin.html's gauntlet
+// SCREEN_REGISTRY entry was removed to match.
 
 // PvP: Find an Opponent — one of the three screens with live as-you-type
 // search (locked decision: these keep a text box + results instead of
@@ -2143,29 +2165,14 @@ const DEFAULT_PVPHOME_AREAS = [
 ];
 let PVPHOME_AREAS = DEFAULT_PVPHOME_AREAS.slice();
 
-// Guardian Page — the locked decision on tab strips: Familiar/Mage
-// become hotspot buttons that swap the overlay's content in place,
-// replacing the old visible .tab-strip entirely (same art-only-behind-
-// invisible-buttons treatment as everything else, with the usual
-// labeled-fallback safety net when no art's been set yet). Both tabs
-// share one background (bgKey 'guardianPage') since switching tabs
-// swaps content, not art. Bond/Train/Duel/Manage Gear stay inline
-// overlay buttons, same as every other content-dense sub-hub screen
-// (Shrine, World Boss) that doesn't hotspot-ify every single button.
-// "potionPicker" only renders content on the Mage tab (see
-// mageAlchemyPotionOptions()) — the Familiar tab just leaves that box
-// empty, same "not every hotspot has to be filled every render" pattern
-// used wherever a dropdown box is conditional on data.
-const DEFAULT_GUARDIANHOME_AREAS = [
-  { id: 'familiarTab',  label: 'Familiar',      left: 8,  top: 6,  width: 30, height: 8,  action: showFamiliarTab },
-  { id: 'mageTab',      label: 'Mage',          left: 42, top: 6,  width: 30, height: 8,  action: showMageTab },
-  { id: 'potionPicker', label: 'Use a potion',  left: 26, top: 62, width: 48, height: 20, kind: 'dropdown' },
-  { id: 'backToMap',    label: 'Back to the Map', left: 3, top: 88, width: 18, height: 8,  action: returnToMapHub },
-];
-let GUARDIANHOME_AREAS = DEFAULT_GUARDIANHOME_AREAS.slice();
-
-function showFamiliarTab(){ switchGuardianTab('familiar'); }
-function showMageTab(){ switchGuardianTab('mage'); }
+// Guardian Page reverted to its original tabbed .card layout — direct
+// feedback: "guardian page needs fixing as well" (same complaint, and
+// same treatment, as Circle Home/Craft/Profile just above: "chopped up
+// and look horrible"). So there's no DEFAULT_GUARDIANHOME_AREAS/
+// GUARDIANHOME_AREAS here any more; renderGuardianFamiliarTab()/
+// renderGuardianMageTab() are back to guardianTabStrip() + real onclick
+// buttons and no hotspot array. admin.html's guardianHome
+// SCREEN_REGISTRY entry was removed to match.
 
 // Backpack — same tab-strip-becomes-hotspots treatment as the Guardian
 // Page, just five tabs instead of two, all sharing one background (bgKey
@@ -2321,18 +2328,17 @@ let TERRITORYMAP_AREAS = DEFAULT_TERRITORYMAP_AREAS.slice();
 // but Credits itself is a much simpler screen with nothing "chopped
 // up" about it, so it stays on the hub pattern.)
 
-// Campaign Browse — the nested chapter→encounter list (each chapter a
-// scrolling group of encounter rows with their own Fight/Choose button)
-// collapses into one dropdown with an <optgroup> per unlocked chapter,
-// using the same "encode the action in the option value" trick as
-// everywhere else: "combat::key::name" (selectCampaignEncounter() needs
-// both the key and display name) or "choice::key" for a narrative
-// encounter. One Confirm button dispatches either way.
-const DEFAULT_CAMPAIGNBROWSE_AREAS = [
-  { id: 'encounterPicker', label: 'Chapters & Encounters', left: 3, top: 14, width: 60, height: 60, kind: 'dropdown' },
-  { id: 'backToMap',       label: 'Back to the Map',       left: 3, top: 88, width: 18, height: 8,  action: backFromCampaign },
-];
-let CAMPAIGNBROWSE_AREAS = DEFAULT_CAMPAIGNBROWSE_AREAS.slice();
+// Campaign Browse reverted to its original plain .card chapter/encounter
+// list — direct feedback: "campaign either that or you never set up the
+// proper hotspotting." Same structural risk as Gauntlet/Expedition/
+// Petition Challenge: the chapter+encounter dropdown and its "Go" button
+// were the ONLY way to actually start any encounter, and they lived in a
+// single invisible .map-hotspot-dropdown box dependent on admin-painted
+// art. So there's no DEFAULT_CAMPAIGNBROWSE_AREAS/CAMPAIGNBROWSE_AREAS
+// here any more; renderCampaignBrowse() is back to real per-encounter
+// Fight/Choose buttons grouped by chapter. renderCampaignChoice() (the
+// narrative sub-screen) is untouched — it was never hotspot-dependent.
+// admin.html's campaignBrowse SCREEN_REGISTRY entry was removed to match.
 
 function showBackpackCraftTab(){ switchBackpackTab('craft'); }
 function showBackpackMageGearTab(){ switchBackpackTab('magegear'); }
@@ -2354,18 +2360,18 @@ const DEFAULT_CIRCLEINVASIONS_AREAS = [
 ];
 let CIRCLEINVASIONS_AREAS = DEFAULT_CIRCLEINVASIONS_AREAS.slice();
 
-// Expeditions — the artifact catalog's per-fragment "Send" buttons become
-// one dropdown (every unowned fragment across every incomplete artifact,
-// labeled "Artifact name — Fragment N", disabled with the blocking reason
-// folded in when a trip is already underway or the daily cap is hit —
-// same "show everything, disable what you can't use" convention as the
-// Gauntlet ladder). Each artifact's name/progress/description stays
-// read-only text in the overlay, same as PvP Shop's "Owned" list.
-const DEFAULT_EXPEDITION_AREAS = [
-  { id: 'fragmentPicker', label: 'Choose a fragment to pursue', left: 26, top: 20, width: 48, height: 22, kind: 'dropdown' },
-  { id: 'backToMap',      label: 'Back to the Map',              left: 3,  top: 88, width: 18, height: 8,  action: backFromExpedition },
-];
-let EXPEDITION_AREAS = DEFAULT_EXPEDITION_AREAS.slice();
+// Expeditions reverted to plain visible .card layout — direct feedback:
+// "expedition page needs fixed." The hub version above moved every
+// artifact's per-fragment "Send" action into a single invisible
+// .map-hotspot-dropdown box floating on admin-painted art; without that
+// art positioned to match, there was no visible way to actually start a
+// new expedition (the read-only artifact rows and the already-underway
+// travel/answer flow were the only things visible) — a real functional
+// regression, not just a look-and-feel complaint. So there's no
+// DEFAULT_EXPEDITION_AREAS/EXPEDITION_AREAS here any more;
+// renderExpedition() is back to real per-fragment "Send for Fragment N"
+// buttons inline on each artifact row. admin.html's expedition
+// SCREEN_REGISTRY entry was removed to match.
 
 // Loadout Picker — this is the one catalog in the whole conversion pass
 // that's a genuine multi-select (pick UP TO FIVE full marks, not one),
@@ -2412,19 +2418,12 @@ const DEFAULT_GUIDE_AREAS = [
 ];
 let GUIDE_AREAS = DEFAULT_GUIDE_AREAS.slice();
 
-// Petition Challenge — the hint reveal, the free-text answer, and the
-// submit button are one tightly-coupled interaction (the hint button's
-// own label/disabled state depends on the hint already shown right next
-// to it), so they all live inside the single positioned box together,
-// same "the box just holds this screen's one interactive widget"
-// reasoning as the PvP search screens — just a textarea instead of a
-// <select> or a search input this time. "Withdraw" is a separate bulk
-// action (leave the trial entirely) so it stays its own hotspot.
-const DEFAULT_PETITIONCHALLENGE_AREAS = [
-  { id: 'challengeBox', label: 'Answer the trial', left: 18, top: 20, width: 64, height: 54, kind: 'dropdown' },
-  { id: 'withdraw',     label: 'Withdraw',          left: 3,  top: 88, width: 30, height: 8,  action: abandonPetition },
-];
-let PETITIONCHALLENGE_AREAS = DEFAULT_PETITIONCHALLENGE_AREAS.slice();
+// Petition Challenge reverted to a plain visible .card — direct
+// feedback: "oracle when petitioned gets stuck with overlay card and
+// only option to withdraw" (see renderPetitionChallenge() below for the
+// root-cause explanation). No DEFAULT_PETITIONCHALLENGE_AREAS/
+// PETITIONCHALLENGE_AREAS here any more; admin.html's petitionChallenge
+// SCREEN_REGISTRY entry was removed to match.
 
 // Generic loader shared by every screen registered in admin.html's Screen
 // Hotspots editor — id/label/action come from that screen's own DEFAULT_*
@@ -2454,17 +2453,13 @@ async function loadMapHotspots(){
   KEYOFNIGHT_AREAS = await loadHotspotOverrides('keyOfNight', DEFAULT_KEYOFNIGHT_AREAS);
   SHRINE_AREAS = await loadHotspotOverrides('shrine', DEFAULT_SHRINE_AREAS);
   MAIL_AREAS = await loadHotspotOverrides('mail', DEFAULT_MAIL_AREAS);
-  GAUNTLET_AREAS = await loadHotspotOverrides('gauntlet', DEFAULT_GAUNTLET_AREAS);
   PVPBROWSE_AREAS = await loadHotspotOverrides('pvpBrowse', DEFAULT_PVPBROWSE_AREAS);
   PVPSHOP_AREAS = await loadHotspotOverrides('pvpShop', DEFAULT_PVPSHOP_AREAS);
   CIRCLEINVASIONS_AREAS = await loadHotspotOverrides('circleInvasions', DEFAULT_CIRCLEINVASIONS_AREAS);
-  EXPEDITION_AREAS = await loadHotspotOverrides('expedition', DEFAULT_EXPEDITION_AREAS);
   LOADOUT_AREAS = await loadHotspotOverrides('loadout', DEFAULT_LOADOUT_AREAS);
   MAGEGEAR_AREAS = await loadHotspotOverrides('mageGear', DEFAULT_MAGEGEAR_AREAS);
   GUIDE_AREAS = await loadHotspotOverrides('guide', DEFAULT_GUIDE_AREAS);
-  PETITIONCHALLENGE_AREAS = await loadHotspotOverrides('petitionChallenge', DEFAULT_PETITIONCHALLENGE_AREAS);
   PVPHOME_AREAS = await loadHotspotOverrides('pvpHome', DEFAULT_PVPHOME_AREAS);
-  GUARDIANHOME_AREAS = await loadHotspotOverrides('guardianHome', DEFAULT_GUARDIANHOME_AREAS);
   BACKPACK_AREAS = await loadHotspotOverrides('backpack', DEFAULT_BACKPACK_AREAS);
   SHOP_AREAS = await loadHotspotOverrides('shop', DEFAULT_SHOP_AREAS);
   CIRCLEBROWSE_AREAS = await loadHotspotOverrides('circleBrowse', DEFAULT_CIRCLEBROWSE_AREAS);
@@ -2472,7 +2467,6 @@ async function loadMapHotspots(){
   CIRCLEALTAR_AREAS = await loadHotspotOverrides('circleAltar', DEFAULT_CIRCLEALTAR_AREAS);
   PERSONALALTAR_AREAS = await loadHotspotOverrides('personalAltar', DEFAULT_PERSONALALTAR_AREAS);
   TERRITORYMAP_AREAS = await loadHotspotOverrides('territoryMap', DEFAULT_TERRITORYMAP_AREAS);
-  CAMPAIGNBROWSE_AREAS = await loadHotspotOverrides('campaignBrowse', DEFAULT_CAMPAIGNBROWSE_AREAS);
 }
 
 // Shared by every full-bleed screen (map hub, World Boss, Chained Gods,
@@ -2651,7 +2645,6 @@ function renderGuardianHome(){
 }
 
 function renderGuardianFamiliarTab(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const evolved = (guardian.stage === 'ascendant' || guardian.stage === 'sovereign') && guardian.dominant_affinity;
   const glowColor = evolved ? (AFFINITY_COLORS[guardian.dominant_affinity] || 'transparent') : 'transparent';
@@ -2667,70 +2660,66 @@ function renderGuardianFamiliarTab(){
   const bondReady = bondSecondsLeft <= 0;
 
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('guardianPage')}>
-        ${hotspotButtonsMarkup(GUARDIANHOME_AREAS, 'GUARDIANHOME_AREAS', 'guardianPage')}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="returnToMapHub()">‹ Back to the Map</button>
-          <div class="split-panel">
-            <div class="split-art">${art}</div>
-            <div class="split-info">
-              <div class="stage-badge">${esc(STAGE_LABEL[guardian.stage] || guardian.stage)}</div>
-              <h2 style="margin:4px 0;">${esc(guardian.name)}</h2>
-              <div class="species-line">${esc(speciesLabel)}${guardian.dominant_affinity ? ' · ' + esc(guardian.dominant_affinity) + '-touched' : ''}</div>
+    <div class="card"${bgAttr('guardianPage', 'text-align:center;')}>
+      ${guardianTabStrip()}
+      <div class="split-panel">
+        <div class="split-art">${art}</div>
+        <div class="split-info">
+          <div class="stage-badge">${esc(STAGE_LABEL[guardian.stage] || guardian.stage)}</div>
+          <h2 style="margin:4px 0;">${esc(guardian.name)}</h2>
+          <div class="species-line">${esc(speciesLabel)}${guardian.dominant_affinity ? ' · ' + esc(guardian.dominant_affinity) + '-touched' : ''}</div>
 
-              <div class="bond-row${bondReady ? ' tap-action' : ''}"${bondReady ? ' onclick="doTendBond()"' : ''}>
-                <span class="bond-label">Bond</span>
-                <span class="bond-value">${guardian.bond}</span>
-                <span class="hint" style="margin:0;">${bondReady ? '— tap to spend time together' : '— resting (' + Math.ceil(bondSecondsLeft / 60) + 'm)'}</span>
-              </div>
-              <div class="status" id="bondStatus"></div>
+          <div class="bond-row${bondReady ? ' tap-action' : ''}"${bondReady ? ' onclick="doTendBond()"' : ''}>
+            <span class="bond-label">Bond</span>
+            <span class="bond-value">${guardian.bond}</span>
+            <span class="hint" style="margin:0;">${bondReady ? '— tap to spend time together' : '— resting (' + Math.ceil(bondSecondsLeft / 60) + 'm)'}</span>
+          </div>
+          <div class="status" id="bondStatus"></div>
 
-              <div class="essence-row">
-                <span class="essence-label">Essence</span>
-                <span class="essence-value">${guardian.essence || 0}</span>
-              </div>
-
-              ${guardianHpBarHtml()}
-              ${(() => { const b = guardianActiveBuff(); return b ? `<p class="hint">+${b.amount} ${esc(b.statKey)} buff active until ${new Date(b.expiresAt).toLocaleTimeString()}.</p>` : ''; })()}
-              ${energyBarHtml()}
-            </div>
+          <div class="essence-row">
+            <span class="essence-label">Essence</span>
+            <span class="essence-value">${guardian.essence || 0}</span>
           </div>
 
-          <div class="stat-grid">
-            <div class="stat-tile"><div class="num">${guardian.favor || 0}</div><div class="label">Favor</div></div>
-            <div class="stat-tile"><div class="num">${guardian.god_shards || 0}</div><div class="label">God Shards</div></div>
-            <div class="stat-tile"><div class="num">${guardian.god_tokens || 0}</div><div class="label">God Tokens</div></div>
-            <div class="stat-tile"><div class="num">${guardian.key_of_night || 0}</div><div class="label">Key of Night</div></div>
-          </div>
-
-          <div class="stat-grid">
-            <div class="stat-tile"><div class="num">${guardian.vitality}</div><div class="label">Vitality</div></div>
-            <div class="stat-tile"><div class="num">${guardian.might}</div><div class="label">Might</div></div>
-            <div class="stat-tile"><div class="num">${guardian.ward}</div><div class="label">Ward</div></div>
-            <div class="stat-tile"><div class="num">${guardian.swiftness}</div><div class="label">Swiftness</div></div>
-            <div class="stat-tile"><div class="num">${guardian.cunning}</div><div class="label">Cunning</div></div>
-            <div class="stat-tile"><div class="num">${Math.round(guardianPowerRating(guardian))}</div><div class="label">Power</div></div>
-          </div>
-
-          <p class="marks-note">${guardian.stage === 'egg'
-            ? 'Still an egg. It hatches the moment a god marks it for the first time.'
-            : (marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.')}</p>
-
-          ${guardian.stage !== 'egg' ? `
-            <div class="status" id="guardianTrainStatus"></div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">
-              <button onclick="doTrainGuardian()">Train</button>
-            </div>
-          ` : ''}
+          ${guardianHpBarHtml()}
+          ${(() => { const b = guardianActiveBuff(); return b ? `<p class="hint">+${b.amount} ${esc(b.statKey)} buff active until ${new Date(b.expiresAt).toLocaleTimeString()}.</p>` : ''; })()}
+          ${energyBarHtml()}
         </div>
       </div>
+
+      <div class="stat-grid">
+        <div class="stat-tile"><div class="num">${guardian.favor || 0}</div><div class="label">Favor</div></div>
+        <div class="stat-tile"><div class="num">${guardian.god_shards || 0}</div><div class="label">God Shards</div></div>
+        <div class="stat-tile"><div class="num">${guardian.god_tokens || 0}</div><div class="label">God Tokens</div></div>
+        <div class="stat-tile"><div class="num">${guardian.key_of_night || 0}</div><div class="label">Key of Night</div></div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-tile"><div class="num">${guardian.vitality}</div><div class="label">Vitality</div></div>
+        <div class="stat-tile"><div class="num">${guardian.might}</div><div class="label">Might</div></div>
+        <div class="stat-tile"><div class="num">${guardian.ward}</div><div class="label">Ward</div></div>
+        <div class="stat-tile"><div class="num">${guardian.swiftness}</div><div class="label">Swiftness</div></div>
+        <div class="stat-tile"><div class="num">${guardian.cunning}</div><div class="label">Cunning</div></div>
+        <div class="stat-tile"><div class="num">${Math.round(guardianPowerRating(guardian))}</div><div class="label">Power</div></div>
+      </div>
+
+      <p class="marks-note">${guardian.stage === 'egg'
+        ? 'Still an egg. It hatches the moment a god marks it for the first time.'
+        : (marks.length ? marks.length + ' mark' + (marks.length === 1 ? '' : 's') + ' held, ' + fullMarkCount + ' of them full.' : 'No marks yet.')}</p>
+
+      ${guardian.stage !== 'egg' ? `
+        <div class="status" id="guardianTrainStatus"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">
+          <button onclick="doTrainGuardian()">Train</button>
+        </div>
+      ` : ''}
     </div>
+
+    <button class="secondary" style="display:block;margin:18px auto 0;" onclick="returnToMapHub()">Back to the Map</button>
   `;
 }
 
 function renderGuardianMageTab(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const mageArt = mageArtFor(mage.art_key);
   const mageStats = mageEffectiveStats();
@@ -2758,69 +2747,84 @@ function renderGuardianMageTab(){
     return cat ? cat.name : null;
   }).filter(Boolean);
 
-  const potionOpts = mageAlchemyPotionOptions();
-  const potionPickerMarkup = potionOpts
-    ? hotspotDropdownMarkup(GUARDIANHOME_AREAS, `
-        <select class="picker-select" id="potionSelect">${potionOpts}</select>
-        <button type="button" onclick="useSelectedPotion()">Use</button>
-      `)
-    : '';
-
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('guardianPage')}>
-        ${hotspotButtonsMarkup(GUARDIANHOME_AREAS, 'GUARDIANHOME_AREAS', 'guardianPage')}
-        ${potionPickerMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="returnToMapHub()">‹ Back to the Map</button>
-          <div class="split-panel">
-            <div class="split-art">${opponentImgFor(MAGE_ART_IMAGES[mage.art_key], mageArt ? mageArt.affinity : null, 280)}</div>
-            <div class="split-info">
-              <h2 style="margin:4px 0;">${esc(mage.name)}</h2>
-              <div class="species-line">${mageArt ? esc(mageArt.label) : esc(mage.art_key)}${mageArt && mageArt.affinity ? ' · ' + esc(mageArt.affinity) + '-touched' : ''}</div>
+    <div class="card"${bgAttr('mageHome', 'text-align:center;')}>
+      ${guardianTabStrip()}
+      <div class="split-panel">
+        <div class="split-art">${opponentImgFor(MAGE_ART_IMAGES[mage.art_key], mageArt ? mageArt.affinity : null, 280)}</div>
+        <div class="split-info">
+          <h2 style="margin:4px 0;">${esc(mage.name)}</h2>
+          <div class="species-line">${mageArt ? esc(mageArt.label) : esc(mage.art_key)}${mageArt && mageArt.affinity ? ' · ' + esc(mageArt.affinity) + '-touched' : ''}</div>
 
-              <div class="essence-row">
-                <span class="essence-label">Level ${mage.level}</span>
-                <span class="essence-value">${mage.xp} / ${xpNeeded} XP</span>
-              </div>
-              <div class="hp-bar-track"><div class="hp-bar-fill" style="width:${xpPct}%;"></div></div>
-              ${mage.upgrade_points > 0 ? `<p class="hint">${mage.upgrade_points} upgrade point${mage.upgrade_points === 1 ? '' : 's'} to spend — see Manage Gear.</p>` : ''}
-
-              <div class="essence-row">
-                <span class="essence-label">HP</span>
-                <span class="essence-value">${hpCurrent} / ${hpMax}</span>
-              </div>
-              <div class="hp-bar-track"><div class="hp-bar-fill mage-vit${hpPct <= 25 ? ' low' : ''}" style="width:${hpPct}%;"></div></div>
-              ${buff ? `<p class="hint">+${buff.amount} ${esc(buff.statKey)} buff active.</p>` : ''}
-
-              ${energyBarHtml()}
-            </div>
+          <div class="essence-row">
+            <span class="essence-label">Level ${mage.level}</span>
+            <span class="essence-value">${mage.xp} / ${xpNeeded} XP</span>
           </div>
+          <div class="hp-bar-track"><div class="hp-bar-fill" style="width:${xpPct}%;"></div></div>
+          ${mage.upgrade_points > 0 ? `<p class="hint">${mage.upgrade_points} upgrade point${mage.upgrade_points === 1 ? '' : 's'} to spend — see Manage Gear.</p>` : ''}
 
-          <div class="stat-grid">
-            <div class="stat-tile"><div class="num">${mageStats.vitality}</div><div class="label">Vitality</div></div>
-            <div class="stat-tile"><div class="num">${mageStats.might}</div><div class="label">Might</div></div>
-            <div class="stat-tile"><div class="num">${mageStats.ward}</div><div class="label">Ward</div></div>
-            <div class="stat-tile"><div class="num">${mageStats.swiftness}</div><div class="label">Swiftness</div></div>
-            <div class="stat-tile"><div class="num">${mageStats.cunning}</div><div class="label">Cunning</div></div>
-            <div class="stat-tile"><div class="num">${Math.round(magePowerRating(mage, mageStats))}</div><div class="label">Power</div></div>
+          <div class="essence-row">
+            <span class="essence-label">HP</span>
+            <span class="essence-value">${hpCurrent} / ${hpMax}</span>
           </div>
+          <div class="hp-bar-track"><div class="hp-bar-fill mage-vit${hpPct <= 25 ? ' low' : ''}" style="width:${hpPct}%;"></div></div>
+          ${buff ? `<p class="hint">+${buff.amount} ${esc(buff.statKey)} buff active.</p>` : ''}
 
-          <p class="marks-note">${equippedNames.length ? 'Wearing: ' + equippedNames.map(n => esc(n)).join(', ') : 'Nothing equipped yet.'}</p>
-          <div class="status" id="mageActionStatus"></div>
-
-          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">
-            <button onclick="doTrainMage()">Train</button>
-            <button onclick="doDuelMage()">Duel</button>
-            <button class="secondary" onclick="openMageGear()">Manage Gear</button>
-          </div>
-
-          <h3 style="margin-top:14px;">Alchemy</h3>
-          <p class="hint">Reagents: ${mageAlchemyReagentLine()}</p>
-          ${potionOpts ? '' : '<p class="hint">No potions in reserve — brew or buy some in Shard Crafting.</p>'}
-          <button class="secondary" style="margin-top:10px;" onclick="openCraft()">Buy / Craft in Shard Crafting</button>
+          ${energyBarHtml()}
         </div>
       </div>
+
+      <div class="stat-grid">
+        <div class="stat-tile"><div class="num">${mageStats.vitality}</div><div class="label">Vitality</div></div>
+        <div class="stat-tile"><div class="num">${mageStats.might}</div><div class="label">Might</div></div>
+        <div class="stat-tile"><div class="num">${mageStats.ward}</div><div class="label">Ward</div></div>
+        <div class="stat-tile"><div class="num">${mageStats.swiftness}</div><div class="label">Swiftness</div></div>
+        <div class="stat-tile"><div class="num">${mageStats.cunning}</div><div class="label">Cunning</div></div>
+        <div class="stat-tile"><div class="num">${Math.round(magePowerRating(mage, mageStats))}</div><div class="label">Power</div></div>
+      </div>
+
+      <p class="marks-note">${equippedNames.length ? 'Wearing: ' + equippedNames.map(n => esc(n)).join(', ') : 'Nothing equipped yet.'}</p>
+      <div class="status" id="mageActionStatus"></div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">
+        <button onclick="doTrainMage()">Train</button>
+        <button onclick="doDuelMage()">Duel</button>
+        <button class="secondary" onclick="openMageGear()">Manage Gear</button>
+      </div>
+    </div>
+
+    ${mageAlchemyCardMarkup()}
+
+    <button class="secondary" style="display:block;margin:18px auto 0;" onclick="returnToMapHub()">Back to the Map</button>
+  `;
+}
+
+// Reverted from the hub/dropdown pattern back to a plain card with real
+// per-row "Use" buttons (direct feedback on Circle Home/Craft/Profile:
+// "chopped up and look horrible" — same complaint applies to a dropdown
+// standing in for a simple list here). NOTE: this is a NEW helper, not a
+// restoration of the old single-owner mageAlchemySectionMarkup() —
+// mageAlchemyReagentLine()/mageAlchemyPotionOptions() below are still
+// shared with Backpack's Alchemy tab, which stays on the hub pattern and
+// was never reported as broken, so those two helpers are left alone and
+// this card just reuses mageAlchemyReagentLine() for its reagent tally.
+function mageAlchemyCardMarkup(){
+  const potionRows = magePotionsOwned.filter(p => p.quantity > 0).map(p => {
+    const cat = magePotionCatalog.find(c => c.key === p.potion_key);
+    const name = cat ? cat.name : p.potion_key;
+    const effectNote = cat ? (cat.effect_type === 'heal' ? `Heals ${cat.heal_amount} HP` : `+${cat.buff_amount} ${cat.buff_stat_key} for ${cat.buff_duration_minutes}m`) : '';
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(name)} ×${p.quantity}</div><div class="cblurb">${esc(effectNote)}</div></div>
+      <div class="ractions"><button class="secondary" onclick="doUsePotionFromMageHome('${esc(p.potion_key)}')">Use</button></div>
+    </div>`;
+  }).join('') || '<p class="hint">No potions in reserve — brew or buy some in Shard Crafting.</p>';
+
+  return `
+    <div class="card"${bgAttr('mageHome')}>
+      <h2>Alchemy</h2>
+      <p class="hint">Reagents: ${mageAlchemyReagentLine()}</p>
+      ${potionRows}
+      <button class="secondary" style="margin-top:10px;" onclick="openCraft()">Buy / Craft in Shard Crafting</button>
     </div>
   `;
 }
@@ -4090,7 +4094,7 @@ async function confirmReleaseGuardian(){
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
   checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
-  shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
+  shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false; serverChatView = null;
   render();
 }
 
@@ -4121,7 +4125,7 @@ async function doRestoreGuardian(retiredId){
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
   checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
-  shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false;
+  shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false; serverChatView = null;
   profilePasswordOpen = false;
   await afterLogin();
   celebrate();
@@ -5327,58 +5331,44 @@ function renderCampaign(){
 }
 
 function renderCampaignBrowse(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   if(!campaignData){
     app.innerHTML = `<div class="card"${bgAttr('campaign', 'text-align:center;')}><h2>The Divine Realms</h2><p class="hint">Loading…</p></div>`;
     return;
   }
   // Locked chapters are fully hidden, not just greyed out — clear/level
-  // up to reveal the next one. Each unlocked chapter becomes one
-  // <optgroup>, each encounter one option encoding its action:
-  // "combat::key::name" or "choice::key".
-  const chapterGroups = campaignData.chapters.filter(c => c.unlocked).map(c => {
-    const opts = c.encounters.map(e => {
+  // up to reveal the next one.
+  const chapters = campaignData.chapters.filter(c => c.unlocked).map(c => {
+    const rows = c.encounters.map(e => {
       const icon = e.encounterType === 'combat' ? '⚔️' : '📜';
-      const statusNote = e.cleared ? `cleared ×${e.clearCount}` : 'new';
+      const statusBadge = e.cleared ? `<span class="mark-badge full">cleared ×${e.clearCount}</span>` : `<span class="mark-badge">new</span>`;
       const xpNote = e.cleared ? `+${e.replayXpReward} XP replay` : `+${e.xpReward} XP`;
-      const value = e.encounterType === 'combat'
-        ? `combat::${esc(e.key)}::${esc(e.name)}`
-        : `choice::${esc(e.key)}`;
-      const label = `${icon} ${e.name}${e.encounterType === 'combat' && e.creatureName ? ' — ' + e.creatureName : ''} (${statusNote}, ${xpNote}${e.hasReward && !e.cleared ? ' + a reward' : ''})`;
-      return `<option value="${value}">${esc(label)}</option>`;
-    }).join('') || `<option value="" disabled>Nothing here yet.</option>`;
-    return `<optgroup label="${esc(c.name)}">${opts}</optgroup>`;
-  }).join('');
+      const actionLabel = e.encounterType === 'combat' ? 'Fight' : 'Choose';
+      const onclick = e.encounterType === 'combat'
+        ? `selectCampaignEncounter('${esc(e.key)}','${esc(e.name)}')`
+        : `openCampaignChoice('${esc(e.key)}')`;
+      return `<div class="roster-row">
+        <div><div class="rname">${icon} ${esc(e.name)}${e.encounterType === 'combat' && e.creatureName ? ' — ' + esc(e.creatureName) : ''}</div>
+        <div class="cblurb">${esc(e.description || '')} — ${esc(xpNote)}${e.hasReward && !e.cleared ? ' + a reward' : ''}</div></div>
+        <div class="ractions">${statusBadge}<button class="secondary" onclick="${onclick}">${actionLabel}</button></div>
+      </div>`;
+    }).join('') || '<p class="hint">Nothing here yet.</p>';
+    return `<div class="pantheon-group"><h3>${esc(c.name)}</h3><p class="hint" style="margin:-4px 0 8px;">${esc(c.description || '')}</p>${rows}</div>`;
+  }).join('') || '<p class="hint">No chapters yet — check back soon.</p>';
 
-  const encounterPickerMarkup = hotspotDropdownMarkup(CAMPAIGNBROWSE_AREAS, chapterGroups ? `
-      <select class="picker-select" id="campaignEncounterSelect">${chapterGroups}</select>
-      <button type="button" onclick="confirmSelectedCampaignEncounter()">Go</button>
-    ` : '<p class="hint">No chapters yet — check back soon.</p>', 'encounterPicker');
-
+  const campaignBg = bgAttr('campaign', 'text-align:center;');
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('campaign')}>
-        ${hotspotButtonsMarkup(CAMPAIGNBROWSE_AREAS, 'CAMPAIGNBROWSE_AREAS', 'campaign')}
-        ${encounterPickerMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromCampaign()">‹ Back to the Map</button>
-          <h2 style="text-align:center;">The Divine Realms</h2>
-          <div class="essence-row"><span class="essence-label">Level</span><span class="essence-value">${campaignData.level}</span></div>
-          <p class="hint" style="text-align:center;">${campaignData.xp} XP earned</p>
-          ${campaignMsg ? `<p class="status ok" style="display:block;">${esc(campaignMsg)}</p>` : ''}
-        </div>
-      </div>
+    <div class="card"${campaignBg}>
+      <h2>The Divine Realms</h2>
+      <div class="essence-row"><span class="essence-label">Level</span><span class="essence-value">${campaignData.level}</span></div>
+      <p class="hint">${campaignData.xp} XP earned</p>
+      ${campaignMsg ? `<p class="status ok" style="display:block;">${esc(campaignMsg)}</p>` : ''}
+    </div>
+    <div class="card"${bgAttr('campaign')}>
+      ${chapters}
+      <button class="secondary" style="margin-top:10px;" onclick="backFromCampaign()">Back to the map</button>
     </div>
   `;
-}
-
-function confirmSelectedCampaignEncounter(){
-  const sel = document.getElementById('campaignEncounterSelect');
-  if(!sel || !sel.value) return;
-  const [action, key, name] = sel.value.split('::');
-  if(action === 'combat') selectCampaignEncounter(key, name);
-  else if(action === 'choice') openCampaignChoice(key);
 }
 
 function selectCampaignEncounter(encounterKey, encounterName){
@@ -5491,7 +5481,7 @@ function returnToMapHub(){
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
   checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
-  shopView = null;
+  shopView = null; serverChatView = null;
   render();
 }
 
@@ -5597,34 +5587,37 @@ async function beginPetition(pantheonId, deityId){
   }
 }
 
+// Reverted to a plain visible card — direct feedback: "oracle when
+// petitioned gets stuck with overlay card and only option to withdraw."
+// Root cause: the hub version above split this screen in two — the
+// header/withdraw button lived in the readable .hub-overlay panel, but
+// the actual challenge text/hint/textarea/submit button lived in a
+// SEPARATE invisible .map-hotspot-dropdown box meant to sit on
+// admin-painted art. Without that art in place (or even with it, if the
+// admin never positioned a matching panel), the interactive part of the
+// trial was invisible, leaving only the overlay card's header and
+// Withdraw button visibly usable — exactly the reported symptom. So
+// there's no DEFAULT_PETITIONCHALLENGE_AREAS/PETITIONCHALLENGE_AREAS
+// here any more; everything lives back in one real, always-visible
+// .card. renderPetitionPicker()/renderPetitionVerdict() are untouched —
+// only the mid-trial challenge screen was reported broken.
 function renderPetitionChallenge(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const v = petitionView;
   const hintBlock = v.hint
     ? `<p class="hint" id="hintBox" style="font-style:italic;">"${esc(v.hint)}"</p>`
     : `<div id="hintBox"></div>`;
-
-  const pickerMarkup = hotspotDropdownMarkup(PETITIONCHALLENGE_AREAS, `
-    <p class="challenge-text">"${esc(v.challenge)}"</p>
-    ${hintBlock}
-    <button class="secondary" id="hintBtn" style="margin-bottom:10px;" ${v.hint ? 'disabled' : ''} onclick="getPetitionHint()">${v.hint ? 'Hint revealed' : 'Ask for a hint'}</button>
-    <textarea id="answerBox" placeholder="Answer as your guardian's keeper…" oninput="onAnswerInput()">${esc(answerDraft)}</textarea>
-    <button id="answerBtn" ${answerDraft.trim().length < 2 ? 'disabled' : ''} onclick="submitPetitionAnswer()">Offer your answer</button>
-    <div class="status" id="answerStatus"></div>
-  `);
-
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('oracle')}>
-        ${hotspotButtonsMarkup(PETITIONCHALLENGE_AREAS, 'PETITIONCHALLENGE_AREAS', 'oracle')}
-        ${pickerMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="abandonPetition()">‹ Withdraw — choose a different god instead</button>
-          <h2 style="text-align:center;">${esc(v.deityName)} sets a trial</h2>
-          <p class="hint" style="text-align:center;">Write whatever answer feels honest to your guardian's keeper — there's no wrong format. Any genuine attempt earns at least a partial mark; a real show of understanding, courage, or wit earns the full one.</p>
-        </div>
-      </div>
+    <div class="card"${bgAttr('oracle')}>
+      <h2 style="text-align:center;">${esc(v.deityName)} sets a trial</h2>
+      <p class="hint" style="text-align:center;">Write whatever answer feels honest to your guardian's keeper — there's no wrong format. Any genuine attempt earns at least a partial mark; a real show of understanding, courage, or wit earns the full one.</p>
+      <p class="challenge-text">"${esc(v.challenge)}"</p>
+      ${hintBlock}
+      <button class="secondary" id="hintBtn" style="margin-bottom:10px;" ${v.hint ? 'disabled' : ''} onclick="getPetitionHint()">${v.hint ? 'Hint revealed' : 'Ask for a hint'}</button>
+      <textarea id="answerBox" placeholder="Answer as your guardian's keeper…" oninput="onAnswerInput()">${esc(answerDraft)}</textarea>
+      <button id="answerBtn" ${answerDraft.trim().length < 2 ? 'disabled' : ''} onclick="submitPetitionAnswer()">Offer your answer</button>
+      <div class="status" id="answerStatus"></div>
+      <button class="secondary" style="margin-top:10px;" onclick="abandonPetition()">Withdraw — choose a different god instead</button>
     </div>
   `;
 }
@@ -5787,6 +5780,127 @@ async function finishPetition(){
   render();
 }
 
+/* ---------------- server chat (0092) ----------------
+   A sitewide/global chat, reached from its own Map Hub hotspot — NOT
+   circle-scoped. Same "no edge function, RLS does the gating" approach
+   as circle messaging (see openCircleMessages()/refreshFeedMessages()
+   above), just without a circle_id filter and with sender_name stamped
+   server-side by a trigger instead of resolved client-side via a roster
+   map (there's no fixed roster to resolve names against in a sitewide
+   chat — see 0092's migration comment). Deliberately built as real
+   inline elements inside the visible .hub-overlay panel rather than an
+   invisible .map-hotspot-dropdown box — three separate screens
+   (Petition Challenge, Expedition, Gauntlet/Campaign) just got reverted
+   specifically because that pattern leaves a screen's one essential
+   control invisible whenever admin art hasn't been painted to match, so
+   a brand-new feature isn't starting out with the same risk. */
+
+async function openServerChat(){
+  serverChatView = { step: 'chat' };
+  serverChatDraft = '';
+  render();
+  await refreshServerChatMessages();
+  startServerChatPolling();
+}
+
+function backFromServerChat(){
+  stopServerChatPolling();
+  returnToMapHub();
+}
+
+function startServerChatPolling(){
+  stopServerChatPolling();
+  serverChatPollTimer = setInterval(() => {
+    if(!serverChatView){ stopServerChatPolling(); return; }
+    refreshServerChatMessages();
+  }, 5000);
+}
+function stopServerChatPolling(){
+  if(serverChatPollTimer){ clearInterval(serverChatPollTimer); serverChatPollTimer = null; }
+}
+
+async function refreshServerChatMessages(){
+  const { data, error } = await supabaseClient
+    .from('server_chat_messages')
+    .select('id, sender_id, sender_name, content, created_at')
+    .order('created_at', { ascending: true })
+    .limit(200);
+  if(error){ console.error('server chat load failed', error); return; }
+  serverChatMessages = data || [];
+  if(serverChatView) renderServerChat();
+}
+
+function onServerChatInput(){
+  const el = document.getElementById('serverChatInput');
+  serverChatDraft = el ? el.value : '';
+}
+
+function setServerChatStatus(text, ok){
+  const el = document.getElementById('serverChatStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
+async function sendServerChatMessage(){
+  const text = (serverChatDraft || '').trim();
+  if(!text) return;
+  if(session.user.is_anonymous){
+    setServerChatStatus('Sign up with an email to post in Server Chat.', false);
+    return;
+  }
+  // sender_name is intentionally omitted here — 0092's before-insert
+  // trigger stamps it server-side from the poster's own guardian, so
+  // there's nothing for the client to get wrong (or spoof).
+  const { error } = await supabaseClient.from('server_chat_messages').insert({
+    sender_id: session.user.id,
+    content: text
+  });
+  if(error){ setServerChatStatus(error.message, false); return; }
+
+  serverChatDraft = '';
+  const box = document.getElementById('serverChatInput');
+  if(box) box.value = '';
+  await refreshServerChatMessages();
+}
+
+function renderServerChat(){
+  document.body.classList.add('hub-active');
+  const app = document.getElementById('app');
+  const me = session.user.id;
+
+  const rows = serverChatMessages.map(m => `
+    <div class="msg-row ${m.sender_id === me ? 'mine' : ''}">
+      <div class="msg-meta">${esc(m.sender_name || 'A Keeper')} · ${new Date(m.created_at).toLocaleString()}</div>
+      <div class="msg-body">${esc(m.content)}</div>
+    </div>
+  `).join('') || '<p class="hint">No messages yet — say hello.</p>';
+
+  const composer = session.user.is_anonymous
+    ? '<p class="hint">Sign up with an email (see your Profile) to post in Server Chat — you can still read along as a guest.</p>'
+    : `
+      <div style="display:flex;gap:10px;align-items:center;width:100%;">
+        <input type="text" id="serverChatInput" maxlength="500" placeholder="Say something to everyone…" value="${esc(serverChatDraft)}" oninput="onServerChatInput()" onkeydown="if(event.key==='Enter') sendServerChatMessage();" style="margin:0;flex:1;">
+        <button onclick="sendServerChatMessage()">Send</button>
+      </div>
+    `;
+
+  app.innerHTML = `
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('serverChat')}>
+        <div class="hub-overlay">
+          <button type="button" class="hub-back" onclick="backFromServerChat()">‹ Back to the Map</button>
+          <h2 style="text-align:center;">Server Chat</h2>
+          <p class="hint" style="text-align:center;">Everyone on the server, one room. Be decent to each other.</p>
+          <div class="msg-list" style="max-height:40vh;overflow-y:auto;">${rows}</div>
+          <div class="status" id="serverChatStatus"></div>
+          ${composer}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 /* ---------------- combat (the Proving) ---------------- */
 
 /* Admin-editable roster (gauntlet_opponents) — display only, same as
@@ -5835,49 +5949,37 @@ function renderCombat(){
   if(combatView.step === 'result') return renderBattleResult();
 }
 
-// Converted from a clickable-vs-greyed .tier-row list to a dropdown —
-// same "show every tier, disable the locked ones with their reason
-// inline" behavior, just via <option disabled> instead of a CSS class.
 function renderProvingPicker(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
-  const opts = PROVING_TIERS.map(t => {
+  // 13-point update item 1: "show full gauntlet so we know what's
+  // coming, adding lvl requirements" — the full ladder renders now,
+  // locked tiers greyed out (.tier-row.locked) instead of hidden
+  // entirely, each explaining exactly why it's still closed. A tier can
+  // be locked for either (or both) of two independent reasons: the
+  // sequential tier-ladder gate (clear the frontier first) and the newer
+  // Guardian Level floor (campaign_level) — see combat/index.ts's
+  // "start" action for the matching server-side enforcement.
+  const rows = PROVING_TIERS.length ? PROVING_TIERS.map(t => {
     const requiredLevel = t.required_level ?? 1;
     const tierLocked = t.tier > guardian.proving_rank;
     const levelLocked = (guardian.campaign_level ?? 1) < requiredLevel;
     const locked = tierLocked || levelLocked;
     const reason = tierLocked ? 'Locked — clear the trial before it first' : `Requires Guardian Level ${requiredLevel}`;
-    const label = `Tier ${t.tier} — ${t.name}${locked ? ' (' + reason + ')' : ' — ' + t.affinity + '-touched'}`;
-    return `<option value="${esc(t.key)}"${locked ? ' disabled' : ''}>${esc(label)}</option>`;
-  }).join('');
-
-  const pickerMarkup = PROVING_TIERS.length
-    ? hotspotDropdownMarkup(GAUNTLET_AREAS, `
-        <select class="picker-select" id="gauntletTierSelect">${opts}</select>
-        <button type="button" onclick="beginSelectedGauntletTier()">Enter the Gauntlet</button>
-      `)
-    : '';
+    const clickAttr = locked ? '' : ` onclick="selectOpponent('${esc(t.key)}')"`;
+    return `<div class="tier-row${locked ? ' locked' : ''}"${clickAttr}>
+      <span style="display:flex;align-items:center;gap:8px;">${shopThumb(t.image_url)}<span class="tname">Tier ${t.tier} — ${esc(t.name)}</span></span>
+      <span class="taff">${locked ? esc(reason) : esc(t.affinity) + '-touched'}</span>
+    </div>`;
+  }).join('') : '<p class="hint">Loading the trial grounds…</p>';
 
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('gauntlet')}>
-        ${hotspotButtonsMarkup(GAUNTLET_AREAS, 'GAUNTLET_AREAS', 'gauntlet')}
-        ${pickerMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="cancelCombat()">‹ Back to Map</button>
-          <h2 style="text-align:center;">The Gauntlet</h2>
-          <p class="hint" style="text-align:center;">Fixed trial grounds, always open, no moon required. Clear one to open the next. Wins and losses both pay Essence.</p>
-          ${PROVING_TIERS.length ? '' : '<p class="hint" style="text-align:center;">Loading the trial grounds…</p>'}
-        </div>
-      </div>
+    <div class="card"${bgAttr('gauntlet')}>
+      <h2 style="text-align:center;">The Gauntlet</h2>
+      <p class="hint" style="text-align:center;">Fixed trial grounds, always open, no moon required. Clear one to open the next. Wins and losses both pay Essence.</p>
+      ${rows}
+      <button class="secondary" style="margin-top:10px;" onclick="cancelCombat()">Back to the map</button>
     </div>
   `;
-}
-
-function beginSelectedGauntletTier(){
-  const sel = document.getElementById('gauntletTierSelect');
-  if(!sel || !sel.value) return;
-  selectOpponent(sel.value);
 }
 
 function selectOpponent(key){
@@ -8429,17 +8531,10 @@ async function doAnswerExpedition(choiceIndex){
 }
 
 function renderExpedition(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
 
   if(!expeditionCatalog){
-    app.innerHTML = `
-      <div class="hub-screen">
-        <div class="hub-box"${bgAttrPlain('expeditions')}>
-          <div class="hub-overlay"><h2>Expeditions</h2><p class="hint">Loading…</p></div>
-        </div>
-      </div>
-    `;
+    app.innerHTML = `<div class="card"${bgAttr('expeditions', 'text-align:center;')}><h2>Expeditions</h2><p class="hint">Loading…</p></div>`;
     return;
   }
 
@@ -8447,101 +8542,74 @@ function renderExpedition(){
     const r = expeditionView.result;
     const correctText = (r.choices || [])[r.correctIndex] ?? '';
     app.innerHTML = `
-      <div class="hub-screen">
-        <div class="hub-box"${bgAttrPlain('expeditions')}>
-          <div class="hub-overlay">
-            <h2>${r.correct ? 'Found it!' : 'Not quite'}</h2>
-            <p class="hint">${esc(r.regionName || '')}</p>
-            <p>${r.correct ? 'Correct — the fragment is yours.' : `The correct answer was: <strong>${esc(correctText)}</strong>`}</p>
-            <p class="hint">${esc(r.funFact || '')}</p>
-            ${r.artifactCompleted ? `<p class="status ok" style="display:block;">Artifact complete — a deity has taken notice of you. Check your pantheon list.</p>` : ''}
-            <div class="status" id="expeditionMsg"></div>
-            <button class="secondary" onclick="backFromExpeditionResult()">Continue</button>
-          </div>
-        </div>
+      <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+        <h2>${r.correct ? 'Found it!' : 'Not quite'}</h2>
+        <p class="hint">${esc(r.regionName || '')}</p>
+        <p>${r.correct ? 'Correct — the fragment is yours.' : `The correct answer was: <strong>${esc(correctText)}</strong>`}</p>
+        <p class="hint">${esc(r.funFact || '')}</p>
+        ${r.artifactCompleted ? `<p class="status ok" style="display:block;">Artifact complete — a deity has taken notice of you. Check your pantheon list.</p>` : ''}
+        <div class="status" id="expeditionMsg"></div>
+        <button class="secondary" onclick="backFromExpeditionResult()">Continue</button>
       </div>
     `;
     return;
   }
 
-  let travelBlock = '';
+  let travelCard = '';
   if(expeditionStatus && !expeditionStatus.ready){
     const readyDate = new Date(expeditionStatus.readyAt);
-    travelBlock = `
-      <h3 style="margin-top:14px;">Away exploring</h3>
-      <p class="hint">Your guardian is traveling. It'll be ready to report back at ${readyDate.toLocaleString()}.</p>
-      <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
-    `;
+    travelCard = `
+      <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+        <h2>Away exploring</h2>
+        <p class="hint">Your guardian is traveling. It'll be ready to report back at ${readyDate.toLocaleString()}.</p>
+        <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
+      </div>`;
   } else if(expeditionStatus && expeditionStatus.ready){
     const choices = expeditionStatus.choices || [];
-    travelBlock = `
-      <h3 style="margin-top:14px;">${esc(expeditionStatus.regionName || 'Your guardian has arrived')}</h3>
-      <p>${esc(expeditionStatus.clueText || '')}</p>
-      <div style="display:flex;flex-direction:column;gap:8px;max-width:420px;margin:10px auto 0;">
-        ${choices.map((c, i) => `<button class="secondary" onclick="doAnswerExpedition(${i})">${esc(c)}</button>`).join('')}
-      </div>
-    `;
+    travelCard = `
+      <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+        <h2>${esc(expeditionStatus.regionName || 'Your guardian has arrived')}</h2>
+        <p>${esc(expeditionStatus.clueText || '')}</p>
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:420px;margin:10px auto 0;">
+          ${choices.map((c, i) => `<button class="secondary" onclick="doAnswerExpedition(${i})">${esc(c)}</button>`).join('')}
+        </div>
+      </div>`;
   }
 
   const hasActiveTrip = !!expeditionStatus;
   const capReached = expeditionCatalog.expeditionsRemainingToday <= 0;
   const capNote = `${expeditionCatalog.expeditionsRemainingToday} of ${expeditionCatalog.expeditionsPerDay} expeditions left today.`;
-  const blockedReason = hasActiveTrip ? ' — guardian is away' : capReached ? ' — daily limit reached' : '';
 
-  const fragmentOpts = [];
-  const artifactList = expeditionCatalog.artifacts || [];
-  const artifactRows = artifactList.map(a => {
+  const artifactCards = (expeditionCatalog.artifacts || []).map(a => {
     const owned = new Set(a.fragmentsOwned || []);
     const complete = owned.size >= a.total_fragments;
-    if(!complete){
-      Array.from({ length: a.total_fragments }, (_, i) => i + 1).forEach(idx => {
-        if(owned.has(idx)) return;
-        const label = `${a.name} — Fragment ${idx}${blockedReason}`;
-        fragmentOpts.push(`<option value="${esc(a.key)}::${idx}"${blockedReason ? ' disabled' : ''}>${esc(label)}</option>`);
-      });
-    }
+    const fragmentButtons = Array.from({ length: a.total_fragments }, (_, i) => i + 1).map(idx => {
+      if(owned.has(idx)) return `<span style="display:inline-block;padding:4px 10px;border-radius:12px;background:rgba(255,255,255,0.08);margin:2px;">Fragment ${idx} ✓</span>`;
+      const disabled = hasActiveTrip || capReached;
+      return `<button class="secondary" style="margin:2px;" ${disabled ? 'disabled' : ''} onclick="doStartExpedition('${esc(a.key)}', ${idx})">Send for Fragment ${idx}</button>`;
+    }).join(' ');
     const statusLabel = complete ? (a.deityAlreadyUnlocked ? 'Unlocked' : 'Complete!') : `${owned.size}/${a.total_fragments} fragments`;
     return `<div class="roster-row">
       <div><div class="rname">${esc(a.name)} — ${esc(statusLabel)}</div>
       <div class="cblurb">${esc(a.description || '')}</div></div>
+      <div class="ractions" style="flex-wrap:wrap;">${complete ? '' : fragmentButtons}</div>
     </div>`;
   }).join('') || '<p class="hint">No expeditions are available right now — check back later.</p>';
 
-  const pickerMarkup = fragmentOpts.length
-    ? hotspotDropdownMarkup(EXPEDITION_AREAS, `
-        <select class="picker-select" id="expeditionFragmentSelect">${fragmentOpts.join('')}</select>
-        <button type="button" onclick="beginSelectedExpedition()">Send</button>
-      `)
-    : '';
-
-  const allComplete = artifactList.length && !fragmentOpts.length && !hasActiveTrip && !capReached;
-
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('expeditions')}>
-        ${hotspotButtonsMarkup(EXPEDITION_AREAS, 'EXPEDITION_AREAS', 'expeditions')}
-        ${pickerMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromExpedition()">‹ Back to Map</button>
-          <h2 style="text-align:center;">Expeditions</h2>
-          <p class="hint" style="text-align:center;">Send your guardian to real places in search of ancient artifact fragments. Answer honestly, learn something true either way, and reassemble a full set to draw a deity's attention.</p>
-          <p class="hint" style="text-align:center;">${capNote}</p>
-          <div class="status" id="expeditionMsg"></div>
-          ${travelBlock}
-          <h3 style="margin-top:14px;">Artifacts</h3>
-          ${artifactRows}
-          ${allComplete ? '<p class="hint">All artifacts complete — well done.</p>' : ''}
-        </div>
-      </div>
+    <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+      <h2>Expeditions</h2>
+      <p class="hint">Send your guardian to real places in search of ancient artifact fragments. Answer honestly, learn something true either way, and reassemble a full set to draw a deity's attention.</p>
+      <p class="hint">${capNote}</p>
+      <div class="status" id="expeditionMsg"></div>
+    </div>
+    ${travelCard}
+    <div class="card"${bgAttr('expeditions')}>
+      <h2>Artifacts</h2>
+      ${artifactCards}
+      <button class="secondary" style="margin-top:14px;" onclick="backFromExpedition()">Back to the map</button>
     </div>
   `;
-}
-
-function beginSelectedExpedition(){
-  const sel = document.getElementById('expeditionFragmentSelect');
-  if(!sel || !sel.value) return;
-  const [artifactKey, fragmentIndex] = sel.value.split('::');
-  doStartExpedition(artifactKey, Number(fragmentIndex));
 }
 
 async function loadCraftCatalog(){
