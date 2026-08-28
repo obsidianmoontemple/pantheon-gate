@@ -1127,11 +1127,11 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>Mage Arts — creation picker</h2>
-        <p class="hint">The premade Art list a player picks from when creating their Mage (0052). Every Art grants the same flat +10% duel-score baseline, plus a further +15% lean toward one specific stat drawn from its own flavor (fire/war -&gt; might, storm/shadow -&gt; swiftness, death/light -&gt; cunning, sea/earth -&gt; vitality — hardcoded in the mage edge function's ART_STAT_LEAN, not editable from here). Sort order controls left-to-right position on the Mage creation screen.</p>
+        <p class="hint">The premade Art list a player picks from when creating their Mage (0052). Every Art grants the same flat +10% duel-score baseline, plus a further +15% lean toward one specific stat drawn from its own flavor (fire/war -&gt; might, storm/shadow -&gt; swiftness, death/light -&gt; cunning, sea/earth -&gt; vitality — hardcoded in the mage edge function's ART_STAT_LEAN, not editable from here). Sort order controls left-to-right position on the Mage creation screen. Combat move (0082) is the real action that Art's Mage now takes once per round in Gauntlet/Campaign fights, alongside the Guardian — direct feedback: "there is no real battle schematics for mages... which i have asked for." Restricted to Power-kind moves from the shared move catalog; leave it "— no combat move —" and that Art's Mage simply doesn't act in these fights (same as before this feature).</p>
         <div class="scroll-table" style="max-height:420px;">
           <table>
-            <thead><tr><th>Key</th><th>Label</th><th>Blurb</th><th>Affinity</th><th>Sort</th><th>Image URL</th><th>Active</th><th>Heals on own affinity</th></tr></thead>
-            <tbody id="mageArtsRows"><tr><td colspan="8">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Label</th><th>Blurb</th><th>Affinity</th><th>Sort</th><th>Image URL</th><th>Active</th><th>Heals on own affinity</th><th>Combat move</th></tr></thead>
+            <tbody id="mageArtsRows"><tr><td colspan="9">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -6786,6 +6786,13 @@ async function loadMageArts(){
   const affSel = document.getElementById('newMageArtAffinity');
   if(affSel && !affSel.options.length) affSel.innerHTML = AFFINITIES.map(a => `<option value="${a}">${a}</option>`).join('');
   if(error){ rows.innerHTML = '<tr><td colspan="7">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  // Combat move (0082) — a separate pointer table (mage_moves), one
+  // extra query, joined here by art_key. Only slot 0 is shown/editable —
+  // Phase 1 only ever plays one move per Art.
+  const { data: moveRows, error: moveError } = await supabaseClient.from('mage_moves').select('art_key, move_key').eq('slot', 0);
+  if(moveError) console.error('mage_moves load failed', moveError);
+  const moveByArt = {};
+  (moveRows || []).forEach(m => { moveByArt[m.art_key] = m.move_key; });
   rows.innerHTML = (data || []).map(a => `<tr data-key="${esc(a.key)}">
     <td class="dim">${esc(a.key)}</td>
     <td><input type="text" id="maLabel_${esc(a.key)}" value="${esc(a.label)}" style="max-width:140px;"></td>
@@ -6795,7 +6802,8 @@ async function loadMageArts(){
     <td><input type="text" id="maImageUrl_${esc(a.key)}" value="${esc(a.image_url || '')}" style="max-width:200px;" placeholder="https://…"></td>
     <td><input type="checkbox" id="maActive_${esc(a.key)}" ${a.active ? 'checked' : ''}></td>
     <td><input type="checkbox" id="maHeals_${esc(a.key)}" ${a.heals_on_own_affinity ? 'checked' : ''} title="Heals instead of taking damage when hit by an attack of this Art's own affinity"></td>
-  </tr>`).join('') || '<tr><td colspan="8">No Mage Arts yet — run migration 0052.</td></tr>';
+    <td><select id="maMove_${esc(a.key)}" style="max-width:220px;">${moveOptionsHtml('power', moveByArt[a.key] || '', '— no combat move —')}</select></td>
+  </tr>`).join('') || '<tr><td colspan="9">No Mage Arts yet — run migration 0052.</td></tr>';
 }
 
 async function saveMageArts(){
@@ -6815,11 +6823,26 @@ async function saveMageArts(){
       updated_at: new Date().toISOString()
     };
   });
+  const moveByArt = {};
+  Array.from(trs).forEach(tr => {
+    const key = tr.getAttribute('data-key');
+    moveByArt[key] = document.getElementById('maMove_' + key).value || null;
+  });
   status.className = 'status'; status.textContent = 'Saving…';
   const { error } = await supabaseClient.from('mage_arts').upsert(rows, { onConflict: 'key' });
-  status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Players see the new Arts next time they load the page.';
-  if(!error) loadMageArts();
+  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+  // Combat move save (0082) — delete-then-insert per Art rather than an
+  // upsert, since the primary key includes move_key: an upsert can't
+  // clear out a PREVIOUSLY selected move if the admin switched to a
+  // different one (both rows would just coexist under different PKs).
+  const artKeys = Object.keys(moveByArt);
+  const { error: deleteError } = await supabaseClient.from('mage_moves').delete().in('art_key', artKeys).eq('slot', 0);
+  if(deleteError){ status.className = 'status err'; status.textContent = 'Saved Arts, but failed to update combat moves: ' + deleteError.message; loadMageArts(); return; }
+  const toInsert = artKeys.filter(k => moveByArt[k]).map(k => ({ art_key: k, move_key: moveByArt[k], slot: 0 }));
+  const { error: insertError } = toInsert.length ? await supabaseClient.from('mage_moves').insert(toInsert) : { error: null };
+  status.className = insertError ? 'status err' : 'status ok';
+  status.textContent = insertError ? ('Saved Arts, but failed to update combat moves: ' + insertError.message) : 'Saved. Players see the new Arts (and combat moves) next time they load the page.';
+  loadMageArts();
 }
 
 async function addMageArt(){
