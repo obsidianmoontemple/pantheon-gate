@@ -1705,8 +1705,19 @@ function render(){
   if(guardian && worldBossView){ renderWorldBoss(); return; }
   if(guardian && campaignView){ renderCampaign(); return; }
   if(guardian && shopView){ renderShop(); return; }
-  if(guardian && guardianHomeView){ renderGuardianHome(); return; }
+  // Checked ahead of guardianHomeView for the same reason creditsView is
+  // checked ahead of profileView above: doDuelMage() (called from the
+  // Guardian Page's Mage tab) sets mageDuelView but deliberately leaves
+  // guardianHomeView alone, so closeMageDuel() can drop straight back
+  // into the same tab the duel was started from. With this check second,
+  // that left guardianHomeView permanently winning the very next
+  // render() and the duel screen never appeared at all — clicking Duel
+  // looked like nothing happened. Bug, not a design choice; fixed here
+  // rather than by clearing guardianHomeView in doDuelMage(), which
+  // would have "fixed" the duel screen at the cost of dropping the
+  // player on the Map Hub instead of back on their Mage tab afterward.
   if(guardian && mageDuelView){ renderMageDuelScreen(); return; }
+  if(guardian && guardianHomeView){ renderGuardianHome(); return; }
   if(guardian && mageView){ renderMageGear(); return; }
   if(guardian && guideView){ renderGuide(); return; }
   if(guardian && narratorChatView){ renderNarratorChat(); return; }
