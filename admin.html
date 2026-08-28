@@ -215,6 +215,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="admins" onclick="showTab('admins')">Admins</button>
       <button class="tab-btn" data-tab="invasionsettings" onclick="showTab('invasionsettings')">Invasion Settings</button>
       <button class="tab-btn" data-tab="territoryzones" onclick="showTab('territoryzones')">Territory Zones</button>
+      <button class="tab-btn" data-tab="credits" onclick="showTab('credits')">Credits</button>
     </div>
 
     <!-- ============================== OVERVIEW ============================== -->
@@ -2611,6 +2612,22 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
     </div>
 
+    <!-- ============================== CREDITS ============================== -->
+    <div class="tab-content" id="tab-credits">
+      <div class="card">
+        <h2>Game Credits</h2>
+        <p class="hint">Shown to players from Profile → "Game Credits". Plain text — whatever line breaks you type here are exactly what players see, so lay it out (art, music, fonts, testers, whoever else needs a line) the way you want it to read.</p>
+        <div class="field" style="max-width:none;">
+          <label>Credits text</label>
+          <textarea id="creditsContent" rows="16" style="max-width:none;width:100%;" placeholder="e.g.&#10;Art — Jane Doe&#10;Music — John Smith&#10;Built with Supabase and a lot of coffee"></textarea>
+        </div>
+        <div class="save-bar">
+          <button id="saveCreditsBtn">Save credits</button>
+          <div class="status" id="creditsStatus"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -2845,6 +2862,7 @@ async function handleSession(session){
   loadAdminAllowlist();
   loadInvasionSettingsAdmin();
   loadZonesEditor();
+  loadCreditsAdmin();
 
   loadDeityPersonalities();
   loadCheckinCalendar();
@@ -3024,7 +3042,10 @@ const DEFAULT_MAP_AREAS_ADMIN = [
   // separate." Both now live together on the Guardian Page screen,
   // opened from the 'guardianPage' hotspot above.
   { id: 'guide',         label: 'Ask Ganymede',                        left: 32,   top: 68,   width: 10,   height: 16 },
-  { id: 'milestones',    label: "Ganymede's Guidance",                 left: 42,   top: 68,   width: 10,   height: 16 }
+  { id: 'milestones',    label: "Ganymede's Guidance",                 left: 42,   top: 68,   width: 10,   height: 16 },
+  // The small "X" already drawn on the map art, hooked up to sign-out —
+  // drag this box onto the actual X once you can see where it sits.
+  { id: 'signOut',       label: 'Sign Out (the map\'s X)',              left: 2,    top: 2,    width: 6,    height: 5  }
 ];
 const DEFAULT_MAP_BG = "https://static.wixstatic.com/media/d6c75e_11a7f28595a041d49639dce6f72788d7~mv2.jpg";
 
@@ -3608,6 +3629,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if(confirm('Discard unsaved changes and reload the last-saved zones?')) loadZonesEditor();
   });
   document.getElementById('saveZonesBtn').addEventListener('click', saveZones);
+
+  document.getElementById('saveCreditsBtn').addEventListener('click', saveCreditsAdmin);
 
   document.getElementById('saveGauntletBtn').addEventListener('click', saveGauntletOpponents);
   document.getElementById('addGauntletBtn').addEventListener('click', addGauntletOpponent);
@@ -5923,6 +5946,32 @@ async function saveInvasionSettingsAdmin(){
   }).eq('id', 1);
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies to the next invasion declared or resolved — anything already in flight keeps its old numbers.';
+}
+
+// Game Credits — same "id=1 singleton settings row" shape as the two
+// above, just one plain text field. Publicly readable, so index.html's
+// Game Credits screen reads it directly with no edge-function action.
+async function loadCreditsAdmin(){
+  const { data, error } = await supabaseClient.from('credits_settings').select('*').eq('id', 1).maybeSingle();
+  const status = document.getElementById('creditsStatus');
+  if(!status) return; // this tab's markup isn't on the page (e.g. mid-deploy) — nothing to fill in
+  if(error || !data){
+    status.textContent = 'Could not load: ' + (error?.message || 'no row found');
+    return;
+  }
+  document.getElementById('creditsContent').value = data.content || '';
+}
+
+async function saveCreditsAdmin(){
+  const status = document.getElementById('creditsStatus');
+  const content = document.getElementById('creditsContent').value;
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('credits_settings').update({
+    content, updated_at: new Date().toISOString()
+  }).eq('id', 1);
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Players will see it next time they open Game Credits.';
 }
 
 /* =====================================================================
