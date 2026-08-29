@@ -8714,18 +8714,29 @@ function renderTerritoryMap(){
       </div>
     `, 'zoneCanvas', 'territoryMap');
 
+  // Direct (screenshot) feedback: even after each box self-labeled
+  // (above), the old .hub-overlay "card" was still fixed-position,
+  // centered, and z-index:6 — sitting squarely where the two now-z-
+  // index:7 boxes (top:10%-80%) overlap it, so the boxes drew on top of
+  // it and sliced its own title/text apart ("Territory Map" rendering as
+  // "Territori", the hint paragraph cut mid-sentence). The panel had
+  // nothing left worth that cost: its "Back to your Circle" button
+  // duplicated the real backToCircle hotspot (left:3,top:88 in
+  // TERRITORYMAP_AREAS — already rendered by hotspotButtonsMarkup below,
+  // with its own fallback styling since this screen has no art), and its
+  // title/hint duplicated what each box now says about itself. Dropped
+  // the panel entirely — same "get rid of the damn overlay" fix already
+  // used on Chained Gods/Check-in — and kept only the one genuinely
+  // live bit (the claim/invade result message) as loose floating text
+  // with no panel behind it, so there's nothing left to collide with
+  // either box.
   app.innerHTML = `
     <div class="hub-screen">
       <div class="hub-box"${bgAttrPlain('territoryMap')}>
         ${hotspotButtonsMarkup(TERRITORYMAP_AREAS, 'TERRITORYMAP_AREAS', 'territoryMap')}
         ${circleTilesMarkup}
         ${zoneCanvasMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromTerritoryMap()">‹ Back to your Circle</button>
-          <h2 style="text-align:center;">Territory Map</h2>
-          <p class="hint" style="text-align:center;">Two separate systems, side by side (each labeled below): Circle Altars — a captured altar's flag flies for the Circle that took it, win a defense to take it back — and Contested Regions, a separate set of admin-placed zones an officer can claim or invade on your Circle's behalf.</p>
-          <div class="status" id="territoryActionStatus">${circleStatus ? esc(circleStatus) : ''}</div>
-        </div>
+        <div id="territoryActionStatus" class="hub-loose-status">${circleStatus ? esc(circleStatus) : ''}</div>
       </div>
     </div>
   `;
