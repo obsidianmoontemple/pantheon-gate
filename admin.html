@@ -132,7 +132,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
    repositionable only) — see zonePointerDown()/addZoneBox()/deleteZoneBox()
    below. Reuses .hotspot-canvas for the frame itself; only the box/resize/
    delete-button styling gets its own class since a zone box also carries a
-   name label and a remove control the hotspot boxes never needed. */
+   name label and a remove control the hotspot boxes never needed.
+   The Circle Altars tab (0095, further below) is a sibling editor of this
+   exact same shape, targeting territory_altars instead of territory_zones
+   — see its own "Circle Altars / Territory Altars editor" comment. */
 .zone-box{
   position:absolute;box-sizing:border-box;
   border:2px dashed var(--gold-bright);
@@ -152,6 +155,35 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
   background:var(--gold-bright);border:1px solid var(--ink);border-radius:2px;cursor:nwse-resize;
 }
 .zone-delete{
+  position:absolute;left:-7px;top:-7px;width:16px;height:16px;line-height:14px;
+  background:var(--ember);color:#fff;border:1px solid var(--ink);border-radius:50%;cursor:pointer;
+  font-size:11px;text-align:center;padding:0;
+}
+
+/* ---- Circle Altars / Territory Altars editor (0095) ---- */
+/* Exact copy of the Territory Zones editor styling immediately above,
+   under its own class names (not reused verbatim) so the two editors'
+   event handlers — each scoped to querySelector() calls within their own
+   #zoneCanvas / #altarCanvas — never risk matching each other's boxes. */
+.altar-box{
+  position:absolute;box-sizing:border-box;
+  border:2px dashed var(--gold-bright);
+  background:rgba(230,199,119,var(--hotspot-alpha,0.35));
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:0.02em;color:#fff;
+  text-shadow:0 1px 3px rgba(0,0,0,0.9);
+  cursor:move;user-select:none;padding:2px;overflow:hidden;
+}
+.altar-box.active{border-color:#fff;border-style:solid;z-index:5;}
+.altar-box .altar-name-input{
+  position:relative;z-index:2;width:88%;max-width:none;font-size:10.5px;text-align:center;
+  background:rgba(10,8,16,0.55);color:#fff;border:1px solid rgba(255,255,255,0.4);margin:2px auto;padding:2px 4px;
+}
+.altar-resize{
+  position:absolute;right:-7px;bottom:-7px;width:15px;height:15px;
+  background:var(--gold-bright);border:1px solid var(--ink);border-radius:2px;cursor:nwse-resize;
+}
+.altar-delete{
   position:absolute;left:-7px;top:-7px;width:16px;height:16px;line-height:14px;
   background:var(--ember);color:#fff;border:1px solid var(--ink);border-radius:50%;cursor:pointer;
   font-size:11px;text-align:center;padding:0;
@@ -215,6 +247,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="admins" onclick="showTab('admins')">Admins</button>
       <button class="tab-btn" data-tab="invasionsettings" onclick="showTab('invasionsettings')">Invasion Settings</button>
       <button class="tab-btn" data-tab="territoryzones" onclick="showTab('territoryzones')">Territory Zones</button>
+      <button class="tab-btn" data-tab="territoryaltars" onclick="showTab('territoryaltars')">Circle Altars</button>
       <button class="tab-btn" data-tab="credits" onclick="showTab('credits')">Credits</button>
     </div>
 
@@ -2578,6 +2611,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <p class="hint">Claiming a currently-unclaimed zone is a plain purchase, not a fight — its own (typically cheaper) cost rather than the invade price above.</p>
         <div class="form-row">
           <div class="field"><label>Zone claim cost (Devotion)</label><input type="number" min="0" id="invZoneClaimCost" style="max-width:180px;"></div>
+          <div class="field"><label>Altar plot claim cost (Devotion)</label><input type="number" min="0" id="invAltarClaimCost" style="max-width:180px;"></div>
+          <div class="field"><label>Alliance join cost (Devotion)</label><input type="number" min="0" id="invAllianceCost" style="max-width:180px;"></div>
         </div>
         <div class="save-bar">
           <button id="saveInvasionSettingsBtn">Save changes</button>
@@ -2609,6 +2644,32 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         </div>
 
         <div class="hotspot-readout" id="zoneReadout"></div>
+      </div>
+    </div>
+
+    <!-- ============================== CIRCLE ALTARS (TERRITORY ALTARS) ============================== -->
+    <div class="tab-content" id="tab-territoryaltars">
+      <div class="card">
+        <h2>Circle Altars — Territory Altar Plots (0095)</h2>
+        <p class="hint">Replaces the old "every Circle automatically has its own altar" mechanic. This is a fixed, admin-placed set of altar plots on the SAME Territory Map background as Territory Zones above — a Circle has no presence here at all until it buys a specific plot (Devotion, see the cost field on the Invasion Settings tab), and its banner + name only then appears at that exact spot. A purchased plot can be invaded away just like a Zone; no plot means nothing to redirect — the Circle simply keeps its own Patron Bonus. Draw regions here the same way you drag/resize Territory Zones, and add/remove them the same way too. Once every plot on this map is claimed, plot-less Circles can request a "war treaty" alliance onto a held plot instead (player-driven — request/approve/decline/leave/kick, no editor needed here) — its own Devotion cost is the field right below Altar plot claim cost on the Invasion Settings tab.</p>
+
+        <div class="hotspot-controls">
+          <div class="field">
+            <label>Box visibility</label>
+            <input type="range" id="altarAlpha" min="5" max="90" value="35">
+          </div>
+          <button class="secondary" id="addAltarBtn" type="button">Add a new altar plot</button>
+          <button class="secondary" id="resetAltarsBtn" type="button">Reload from saved</button>
+        </div>
+
+        <div class="hotspot-canvas" id="altarCanvas"></div>
+
+        <div class="save-bar">
+          <button id="saveAltarsBtn">Save altar plots</button>
+          <div class="status" id="altarStatus"></div>
+        </div>
+
+        <div class="hotspot-readout" id="altarReadout"></div>
       </div>
     </div>
 
@@ -2862,6 +2923,7 @@ async function handleSession(session){
   loadAdminAllowlist();
   loadInvasionSettingsAdmin();
   loadZonesEditor();
+  loadAltarsEditor();
   loadCreditsAdmin();
 
   loadDeityPersonalities();
@@ -3159,11 +3221,16 @@ const DEFAULT_SHOP_AREAS_ADMIN = [
 // renderCircleBrowse() in index.html. No admin-positionable hotspots
 // for it anymore.
 
+// 'peerPicker'/'composer' removed — those two are no longer positioned
+// hotspots at all (see index.html's renderCircleMessages()): direct
+// feedback that Circle Messages' composer was unusable ("you cant type
+// on" it) traced back to it being one of these admin-positioned boxes,
+// so it's now a real inline element inside the screen's always-visible
+// panel instead, same as Server Chat's composer. Nothing left here for
+// an admin to position for either of those two.
 const DEFAULT_CIRCLEMESSAGES_AREAS_ADMIN = [
   { id: 'tabFeed',    label: 'Circle Chat',       left: 3,  top: 6,  width: 30, height: 8  },
   { id: 'tabDm',      label: 'Direct Messages',   left: 35, top: 6,  width: 30, height: 8  },
-  { id: 'peerPicker', label: 'Whisper to',        left: 3,  top: 16, width: 44, height: 22 },
-  { id: 'composer',   label: 'Say something',     left: 3,  top: 70, width: 94, height: 16 },
   { id: 'backToCircleHome', label: 'Back to your Circle', left: 3, top: 88, width: 24, height: 8 },
 ];
 
@@ -3575,6 +3642,230 @@ async function saveZones(){
   status.textContent = 'Saved. Players will see the new regions next time they open the Territory Map.';
 }
 
+/* ---------------- Circle Altars / Territory Altars editor (0095) ----------------
+   Same drag/resize/add/delete canvas as the Territory Zones editor above,
+   under its own state and its own #altarCanvas — see the class-name
+   comment on .altar-box in the <style> block for why this isn't just a
+   reuse of the zone editor's functions. purchased_by additionally shows
+   who ORIGINALLY bought a plot, separate from controlled_by (who holds it
+   right now) — the two only differ once a plot's been invaded away. */
+let altarState = [];       // [{id, tempId, name, left, top, width, height, purchased_by, purchasedName, controlled_by, controllerName}]
+let altarDrag = null;      // {mode:'move'|'resize', key, startX, startY, startLeft, startTop, startWidth, startHeight, canvasW, canvasH}
+let altarTempCounter = 0;
+let deletedAltarIds = [];  // real (already-saved) ids removed since the last load — deleted from the DB on Save
+
+function altarKey(a){ return a.id || a.tempId; }
+
+async function loadAltarsEditor(){
+  const status = document.getElementById('altarStatus');
+  if(!status) return; // this tab's markup isn't on the page (e.g. mid-deploy) — nothing to fill in
+  deletedAltarIds = [];
+
+  const [{ data, error }, { data: circleRows }, { data: bgRow }] = await Promise.all([
+    supabaseClient.from('territory_altars').select('id, name, left_pct, top_pct, width_pct, height_pct, purchased_by, controlled_by').order('created_at'),
+    supabaseClient.from('circles').select('id, name'),
+    supabaseClient.from('site_backgrounds').select('background_url').eq('page_key', 'territoryMap').maybeSingle()
+  ]);
+  if(error){
+    status.className = 'status err';
+    status.textContent = 'Could not load: ' + error.message;
+    altarState = [];
+  }else{
+    const circleNameById = {};
+    (circleRows || []).forEach(c => { circleNameById[c.id] = c.name; });
+    altarState = (data || []).map(a => ({
+      id: a.id, tempId: null,
+      name: a.name,
+      left: a.left_pct, top: a.top_pct, width: a.width_pct, height: a.height_pct,
+      purchased_by: a.purchased_by,
+      purchasedName: a.purchased_by ? (circleNameById[a.purchased_by] || 'a Circle') : null,
+      controlled_by: a.controlled_by,
+      controllerName: a.controlled_by ? (circleNameById[a.controlled_by] || 'a Circle') : null,
+    }));
+    status.className = 'status';
+    status.textContent = '';
+  }
+
+  const canvas = document.getElementById('altarCanvas');
+  const bgUrl = bgRow && bgRow.background_url;
+  canvas.style.backgroundImage = bgUrl ? `url('${bgUrl}')` : 'none';
+
+  renderAltarCanvas();
+}
+
+function renderAltarCanvas(){
+  const canvas = document.getElementById('altarCanvas');
+  canvas.innerHTML = altarState.map(a => {
+    const key = altarKey(a);
+    let controlNote = 'Unclaimed';
+    if(a.controlled_by){
+      controlNote = (a.purchased_by === a.controlled_by)
+        ? `Held by ${esc(a.controllerName)}`
+        : `Held by ${esc(a.controllerName)} (bought by ${esc(a.purchasedName)})`;
+    }
+    return `
+      <div class="altar-box" data-key="${esc(key)}" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;">
+        <button class="altar-delete" type="button" data-key="${esc(key)}" title="Remove this altar plot">&times;</button>
+        <input class="altar-name-input" data-key="${esc(key)}" value="${esc(a.name)}" placeholder="Plot name">
+        <div style="font-size:9px;opacity:0.85;">${controlNote}</div>
+        <div class="altar-resize" data-key="${esc(key)}"></div>
+      </div>
+    `;
+  }).join('');
+  updateAltarReadout();
+}
+
+function updateAltarReadout(){
+  const el = document.getElementById('altarReadout');
+  if(!el) return;
+  el.innerHTML = altarState.map(a => {
+    let controlNote = 'unclaimed';
+    if(a.controlled_by){
+      controlNote = (a.purchased_by === a.controlled_by) ? `held by ${esc(a.controllerName)}` : `held by ${esc(a.controllerName)}, bought by ${esc(a.purchasedName)}`;
+    }
+    return `${esc(a.name || '(unnamed)')}: left ${a.left.toFixed(1)}%, top ${a.top.toFixed(1)}%, width ${a.width.toFixed(1)}%, height ${a.height.toFixed(1)}% — ${controlNote}`;
+  }).join('<br>');
+}
+
+function addAltarBox(){
+  altarTempCounter += 1;
+  altarState.push({
+    id: null, tempId: 'new-' + altarTempCounter,
+    name: 'New Altar', left: 40, top: 40, width: 14, height: 12,
+    purchased_by: null, purchasedName: null, controlled_by: null, controllerName: null,
+  });
+  renderAltarCanvas();
+}
+
+function deleteAltarBox(key){
+  const a = altarState.find(a => altarKey(a) === key);
+  if(!a) return;
+  if(!confirm(`Remove "${a.name}" from the map? This only changes the editor here — click Save altar plots afterward to make it permanent.`)) return;
+  if(a.id) deletedAltarIds.push(a.id);
+  altarState = altarState.filter(a => altarKey(a) !== key);
+  renderAltarCanvas();
+}
+
+function altarPointerDown(e){
+  const deleteTarget = e.target.closest('.altar-delete');
+  if(deleteTarget){
+    e.stopPropagation();
+    deleteAltarBox(deleteTarget.getAttribute('data-key'));
+    return;
+  }
+  if(e.target.closest('.altar-name-input')) return; // let the text field take focus/typing normally
+  const resizeTarget = e.target.closest('.altar-resize');
+  const boxTarget = e.target.closest('.altar-box');
+  if(!resizeTarget && !boxTarget) return;
+  const key = (resizeTarget || boxTarget).getAttribute('data-key');
+  const state = altarState.find(a => altarKey(a) === key);
+  if(!state) return;
+  const canvas = document.getElementById('altarCanvas');
+  const rect = canvas.getBoundingClientRect();
+
+  document.querySelectorAll('.altar-box').forEach(b => b.classList.remove('active'));
+  const boxEl = canvas.querySelector(`.altar-box[data-key="${CSS.escape(key)}"]`);
+  if(boxEl) boxEl.classList.add('active');
+
+  if(resizeTarget){
+    e.stopPropagation();
+    altarDrag = { mode: 'resize', key, startX: e.clientX, startY: e.clientY, startWidth: state.width, startHeight: state.height, canvasW: rect.width, canvasH: rect.height };
+  }else{
+    altarDrag = { mode: 'move', key, startX: e.clientX, startY: e.clientY, startLeft: state.left, startTop: state.top, canvasW: rect.width, canvasH: rect.height };
+  }
+  e.preventDefault();
+}
+
+function altarPointerMove(e){
+  if(!altarDrag) return;
+  const state = altarState.find(a => altarKey(a) === altarDrag.key);
+  if(!state) return;
+  const dxPct = ((e.clientX - altarDrag.startX) / altarDrag.canvasW) * 100;
+  const dyPct = ((e.clientY - altarDrag.startY) / altarDrag.canvasH) * 100;
+
+  if(altarDrag.mode === 'move'){
+    state.left = Math.max(0, Math.min(100 - state.width, altarDrag.startLeft + dxPct));
+    state.top = Math.max(0, Math.min(100 - state.height, altarDrag.startTop + dyPct));
+  }else{
+    state.width = Math.max(2, Math.min(100 - state.left, altarDrag.startWidth + dxPct));
+    state.height = Math.max(2, Math.min(100 - state.top, altarDrag.startHeight + dyPct));
+  }
+
+  const canvas = document.getElementById('altarCanvas');
+  const boxEl = canvas.querySelector(`.altar-box[data-key="${CSS.escape(state.id || state.tempId)}"]`);
+  if(boxEl){
+    boxEl.style.left = state.left + '%';
+    boxEl.style.top = state.top + '%';
+    boxEl.style.width = state.width + '%';
+    boxEl.style.height = state.height + '%';
+  }
+  updateAltarReadout();
+}
+
+function altarPointerUp(){
+  altarDrag = null;
+}
+
+function altarNameInputHandler(e){
+  const input = e.target.closest('.altar-name-input');
+  if(!input) return;
+  const key = input.getAttribute('data-key');
+  const state = altarState.find(a => altarKey(a) === key);
+  if(state) state.name = input.value;
+  updateAltarReadout();
+}
+
+async function saveAltars(){
+  const status = document.getElementById('altarStatus');
+  if(altarState.some(a => !a.name || !a.name.trim())){
+    status.className = 'status err';
+    status.textContent = 'Every altar plot needs a name.';
+    return;
+  }
+  status.className = 'status';
+  status.textContent = 'Saving…';
+
+  if(deletedAltarIds.length){
+    const { error: delError } = await supabaseClient.from('territory_altars').delete().in('id', deletedAltarIds);
+    if(delError){
+      status.className = 'status err';
+      status.textContent = 'Failed removing altar plots: ' + delError.message;
+      return;
+    }
+  }
+
+  const existing = altarState.filter(a => a.id);
+  const fresh = altarState.filter(a => !a.id);
+
+  if(existing.length){
+    const { error: updError } = await supabaseClient.from('territory_altars').upsert(existing.map(a => ({
+      id: a.id, name: a.name.trim(), left_pct: a.left, top_pct: a.top, width_pct: a.width, height_pct: a.height,
+    })), { onConflict: 'id' });
+    if(updError){
+      status.className = 'status err';
+      status.textContent = 'Failed: ' + updError.message;
+      return;
+    }
+  }
+
+  if(fresh.length){
+    const { error: insError } = await supabaseClient.from('territory_altars').insert(fresh.map(a => ({
+      name: a.name.trim(), left_pct: a.left, top_pct: a.top, width_pct: a.width, height_pct: a.height,
+    })));
+    if(insError){
+      status.className = 'status err';
+      status.textContent = 'Failed adding new altar plots: ' + insError.message;
+      return;
+    }
+  }
+
+  status.className = 'status ok';
+  status.textContent = 'Saved. Reloading…';
+  await loadAltarsEditor();
+  status.className = 'status ok';
+  status.textContent = 'Saved. Players will see the new altar plots next time they open the Territory Map.';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('savePricingBtn').addEventListener('click', async () => {
     const status = document.getElementById('pricingStatus');
@@ -3733,6 +4024,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if(confirm('Discard unsaved changes and reload the last-saved zones?')) loadZonesEditor();
   });
   document.getElementById('saveZonesBtn').addEventListener('click', saveZones);
+
+  document.getElementById('altarCanvas').addEventListener('pointerdown', altarPointerDown);
+  document.getElementById('altarCanvas').addEventListener('input', altarNameInputHandler);
+  document.addEventListener('pointermove', altarPointerMove);
+  document.addEventListener('pointerup', altarPointerUp);
+  document.getElementById('altarAlpha').addEventListener('input', (e) => {
+    document.getElementById('altarCanvas').style.setProperty('--hotspot-alpha', (e.target.value / 100).toFixed(2));
+  });
+  document.getElementById('addAltarBtn').addEventListener('click', addAltarBox);
+  document.getElementById('resetAltarsBtn').addEventListener('click', () => {
+    if(confirm('Discard unsaved changes and reload the last-saved altar plots?')) loadAltarsEditor();
+  });
+  document.getElementById('saveAltarsBtn').addEventListener('click', saveAltars);
 
   document.getElementById('saveCreditsBtn').addEventListener('click', saveCreditsAdmin);
 
@@ -6005,6 +6309,8 @@ async function loadInvasionSettingsAdmin(){
   document.getElementById('invPersonalSharePct').value = Math.round(data.personal_share_pct * 100);
   document.getElementById('invPassiveWeightPct').value = Math.round(data.passive_weight * 100);
   document.getElementById('invZoneClaimCost').value = data.zone_claim_cost_devotion;
+  document.getElementById('invAltarClaimCost').value = data.altar_claim_cost_devotion;
+  document.getElementById('invAllianceCost').value = data.alliance_cost_devotion;
 }
 
 async function saveInvasionSettingsAdmin(){
@@ -6021,8 +6327,10 @@ async function saveInvasionSettingsAdmin(){
   const personalSharePct = vFloat('invPersonalSharePct');
   const passiveWeightPct = vFloat('invPassiveWeightPct');
   const zoneClaimCost = vInt('invZoneClaimCost');
+  const altarClaimCost = vInt('invAltarClaimCost');
+  const allianceCost = vInt('invAllianceCost');
 
-  const allValues = [costDevotion, minRankScore, windowHours, graceHours, shieldHours, rankSwing, chestCutPct, personalSharePct, passiveWeightPct, zoneClaimCost];
+  const allValues = [costDevotion, minRankScore, windowHours, graceHours, shieldHours, rankSwing, chestCutPct, personalSharePct, passiveWeightPct, zoneClaimCost, altarClaimCost, allianceCost];
   if(allValues.some(n => isNaN(n) || n < 0)){
     status.className = 'status err';
     status.textContent = 'Every field must be a non-negative number.';
@@ -6045,7 +6353,7 @@ async function saveInvasionSettingsAdmin(){
     cost_devotion: costDevotion, min_rank_score: minRankScore, window_hours: windowHours,
     grace_hours: graceHours, shield_hours: shieldHours, rank_swing: rankSwing,
     chest_cut_pct: chestCutPct / 100, personal_share_pct: personalSharePct / 100, passive_weight: passiveWeightPct / 100,
-    zone_claim_cost_devotion: zoneClaimCost,
+    zone_claim_cost_devotion: zoneClaimCost, altar_claim_cost_devotion: altarClaimCost, alliance_cost_devotion: allianceCost,
     updated_at: new Date().toISOString()
   }).eq('id', 1);
   status.className = error ? 'status err' : 'status ok';
