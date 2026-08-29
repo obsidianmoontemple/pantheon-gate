@@ -15,6 +15,18 @@
   --gold:#c8a24a;
   --gold-bright:#e6c777;
   --ember:#a1462a;
+  /* Direct feedback: "anywhere you use a fast red response in fighting
+     ... the red print is very hard to read." --ember (#a1462a, a muted
+     brick red) is roughly 2.4:1 contrast against --ink — well under the
+     4.5:1 usually needed for legible text — and was also flashing by in
+     well under a second (see the dmgFloat keyframes and the combat
+     pacing sleeps below). This brighter, more saturated red is for
+     combat feedback TEXT specifically (damage numbers, burn-tick log
+     entries) where it actually has to be read in a hurry; --ember itself
+     is left alone everywhere else (HP bar gradient, territory-captured
+     border, status.err, tab-blip) since those aren't what was reported
+     as hard to read. */
+  --ember-bright:#ff6b4a;
   --line:#3a3346;
   /* Direct feedback: "none of the bad guys seem to show a hp guage
      during fights" — root cause was this variable. It's referenced all
@@ -237,8 +249,31 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
   aspect-ratio:1408/768;
   background:url('https://static.wixstatic.com/media/d6c75e_11a7f28595a041d49639dce6f72788d7~mv2.jpg') center/cover no-repeat;
 }
+/* Root-cause fix for this session's whole run of "card coverage" lockout
+   bugs — direct feedback: "pages not working due it seems to card
+   coverage on campaign, gauntlet, backpack, circle, arena..." and then,
+   once several screens got reverted to plain cards instead of actually
+   fixed, "why cant we just make it accessable both with and without art."
+   The real bug was never "invisible without art" per se — .map-hotspot
+   already had a visible fallback (see .map-hotspot-fallback below) and
+   .map-hotspot-dropdown's <select>+button were always real, opaque,
+   visible controls. The actual defect: neither had an explicit z-index,
+   so they defaulted into the SAME stacking layer as everything else
+   under .hub-box, while .hub-overlay — the floating "card" holding a
+   screen's read-only text — sits at z-index:6. Per normal CSS stacking
+   rules, that explicit z-index always paints .hub-overlay ON TOP of a
+   z-index:auto sibling wherever the two overlap, regardless of whether
+   real art has been painted. .hub-overlay is position:fixed and grows
+   up to max-height:80vh, so any screen with enough read-only content
+   (a guestbook, a catalog, recent history) grows tall/wide enough to
+   physically cover a hotspot positioned in the same region — literally
+   a card covering the control. Explicit z-index here, higher than
+   .hub-overlay's 6, fixes it universally and permanently for every
+   hotspot-based screen (already painted or not, current or future) —
+   the control now always paints above the overlay card, so there's
+   nothing left that depends on art being present to be clickable. */
 .map-hotspot{
-  position:absolute;background:transparent;border:none;padding:0;margin:0;cursor:pointer;
+  position:absolute;z-index:7;background:transparent;border:none;padding:0;margin:0;cursor:pointer;
   -webkit-tap-highlight-color:transparent;
 }
 /* The global button/button:hover rules above (background:var(--gold) /
@@ -275,10 +310,23 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
    gone, turned into dropdowns that I can move to wherever I want from
    the hotspot manager I already have." */
 .map-hotspot-dropdown{
-  position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  position:absolute;z-index:7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
 }
 .map-hotspot-dropdown select.picker-select{margin:0;width:100%;max-width:100%;}
 .map-hotspot-dropdown button{margin:0;width:100%;max-width:100%;white-space:nowrap;}
+
+/* Visible fallback for a dropdown-kind hotspot with no art set yet —
+   the dropdown-flavored sibling of .map-hotspot-fallback above. Without
+   this, a not-yet-painted screen's picker was still technically visible
+   post-z-index-fix, but as a bare floating <select>+button with no
+   container — functional, but easy to miss as a page element rather
+   than a control. Matches .map-hotspot-fallback's dashed-border/dark-
+   panel treatment so both hotspot flavors read the same way pre-art. */
+.map-hotspot-dropdown.map-hotspot-dropdown-fallback{
+  background:rgba(10,8,16,0.6);
+  border:1px dashed rgba(230,199,119,0.55);
+  border-radius:6px;padding:8px;
+}
 
 /* Direct feedback (Petition Hall's "Petition this god" button, but
    written generically since the same request will come up anywhere
@@ -593,19 +641,28 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .battle-sprite-mage{opacity:0.92;filter:drop-shadow(0 0 10px rgba(200,162,74,0.15));}
 @media (max-width:520px){.battle-arena{gap:6px;} .battle-sprite{height:70px;} .battle-sprite-mage{display:none;}}
 .hp-wrap{position:relative;}
-.hp-wrap.flash-hit{animation:hitFlash 0.45s ease;}
+/* Direct feedback: the hit-flash + damage-number combo read as "a fast
+   red response ... very hard to read." Slowed both down and softened the
+   flash (brightness spike 2 -> 1.6) so a hit registers as a clear beat
+   instead of a strobe; the combat event pacing (the sleep() calls in
+   actMove's event loop, below in the JS) was widened to match so the
+   next event doesn't fire before this one has actually been readable. */
+.hp-wrap.flash-hit{animation:hitFlash 0.6s ease;}
 .hp-wrap.control-hit .hp-bar-track{box-shadow:0 0 0 1px var(--moon);}
-@keyframes hitFlash{ 0%{filter:brightness(1);} 25%{filter:brightness(2) saturate(1.5);transform:translateX(-2px);} 50%{transform:translateX(2px);} 100%{filter:brightness(1);transform:translateX(0);} }
-.dmg-float{position:absolute;right:4px;top:-6px;font-family:'Cinzel',serif;font-size:15px;color:var(--ember);pointer-events:none;animation:dmgFloat 0.9s ease forwards;text-shadow:0 1px 3px rgba(0,0,0,0.6);}
-.dmg-float.crit{color:var(--gold-bright);font-size:18px;}
+@keyframes hitFlash{ 0%{filter:brightness(1);} 25%{filter:brightness(1.6) saturate(1.4);transform:translateX(-2px);} 50%{transform:translateX(2px);} 100%{filter:brightness(1);transform:translateX(0);} }
+.dmg-float{position:absolute;right:4px;top:-6px;font-family:'Cinzel',serif;font-size:16px;font-weight:700;color:var(--ember-bright);pointer-events:none;animation:dmgFloat 1.6s ease forwards;text-shadow:0 1px 3px rgba(0,0,0,0.75);}
+.dmg-float.crit{color:var(--gold-bright);font-size:19px;}
 .dmg-float.control{color:var(--moon);font-size:13px;}
 .dmg-float.heal{color:#7fbf6a;}
-.dmg-float.burntick{color:var(--ember);font-size:13px;}
+.dmg-float.burntick{color:var(--ember-bright);font-size:14px;}
 .dmg-float.poisontick{color:#6fae4a;font-size:13px;}
 .dmg-float.stunlabel{left:4px;right:auto;color:var(--moon);font-size:12px;letter-spacing:0.06em;text-transform:uppercase;}
 .dmg-float.dodgelabel{left:4px;right:auto;color:#cfd6e0;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;}
 .dmg-float.shieldlabel{color:#7ea8c4;font-size:13px;}
-@keyframes dmgFloat{ 0%{opacity:1;transform:translateY(0);} 100%{opacity:0;transform:translateY(-28px);} }
+/* Held at full opacity through the middle of the animation instead of
+   fading immediately, so there's an actual readable window before it
+   drifts up and away. */
+@keyframes dmgFloat{ 0%{opacity:1;transform:translateY(0);} 55%{opacity:1;transform:translateY(-14px);} 100%{opacity:0;transform:translateY(-32px);} }
 
 /* Particle bursts — real sprite art (CC0, Kenney's Particle Pack), not
    plain CSS shapes. Each sprite is a grayscale glow/smoke/spark texture
@@ -645,7 +702,7 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .battle-log{max-height:150px;overflow-y:auto;border-top:1px solid var(--line);margin-top:16px;padding-top:12px;font-size:13px;color:var(--parchment-dim);text-align:left;}
 .battle-log .entry{margin-bottom:5px;}
 .battle-log .crit{color:var(--gold-bright);}
-.battle-log .entry.burntick{color:var(--ember);font-style:italic;}
+.battle-log .entry.burntick{color:var(--ember-bright);font-style:italic;}
 .battle-log .entry.poisontick{color:#6fae4a;font-style:italic;}
 .battle-log .entry.stunskip{color:var(--moon);font-style:italic;}
 .battle-log .entry.dodgeskip{color:#cfd6e0;font-style:italic;}
@@ -1198,6 +1255,16 @@ let circleDraft = {
 };
 let circleShopItems = [];   // circle_shop_items, public catalog — loaded once and cached
 let chestAmountDraft = '';
+// 0093 — Circle Item Chest. Unlike circleShopItems (a static public
+// catalog), this is real mutable inventory, so it's reloaded every time
+// Circle Home opens/refreshes rather than cached. depositCategory picks
+// which of the four deposit forms is showing; depositQty/depositKey back
+// the reagent/potion/decoration deposit pickers (guardian_item/mage_gear
+// deposits pick a specific owned instance directly from its own list,
+// no separate key/qty state needed).
+let circleItemChest = [];
+let chestDepositCategory = 'guardian_item'; // 'guardian_item' | 'mage_gear' | 'reagent' | 'potion' | 'decoration'
+let chestDepositQtyDraft = '';
 let messagesTab = 'feed'; // 'feed' | 'dm'
 let dmPeerId = null;
 let feedMessages = [];
@@ -1453,6 +1520,67 @@ async function loadCircleShopItems(){
   const { data, error } = await supabaseClient.from('circle_shop_items').select('*').eq('active', true).order('cost_devotion');
   if(error){ console.error('circle shop load failed', error); return; }
   circleShopItems = data || [];
+}
+
+// Real inventory, not a static catalog — reloaded every time, not cached.
+// Also loads whichever of the depositor's own inventory arrays the
+// deposit pickers need but might not already have (Circle Home is
+// reachable without ever having opened Backpack/Shard Crafting/Personal
+// Altar first).
+async function loadCircleItemChest(){
+  if(!myCircle || !myCircle.circle) { circleItemChest = []; return; }
+  const { data, error } = await supabaseClient
+    .from('circle_item_chest')
+    .select('id, category, item_key, quantity, deposited_by, deposited_at')
+    .eq('circle_id', myCircle.circle.id)
+    .order('deposited_at', { ascending: false });
+  if(error){ console.error('circle item chest load failed', error); circleItemChest = []; return; }
+  circleItemChest = data || [];
+  const loaders = [loadCraftInventory(), loadCraftCatalog(), loadPersonalAltarDecorationCatalog()];
+  if(mage){
+    loaders.push(loadMageGearOwned(), loadMageGearCatalog(), loadMageReagentsOwned(), loadMageReagentCatalog(), loadMagePotionsOwned(), loadMagePotionCatalog());
+  }
+  if(guardian) loaders.push(loadPersonalAltarUnlocksForChest());
+  await Promise.all(loaders);
+}
+
+// Personal Altar's own screen loads palData.unlocks (full altar state) —
+// Circle Home just needs the unlock list, so this is a lighter direct
+// query instead of routing through personalAltarFetch('view').
+let personalAltarUnlocksForChest = [];
+async function loadPersonalAltarUnlocksForChest(){
+  const { data, error } = await supabaseClient
+    .from('personal_altar_unlocks')
+    .select('decoration_key')
+    .eq('guardian_id', guardian.id);
+  if(error){ console.error('personal altar unlocks load failed', error); return; }
+  personalAltarUnlocksForChest = data || [];
+}
+
+// Public catalog, cache-once — same shape as craftCatalog/mageGearCatalog
+// above. Only needed for display names on the Circle Item Chest's
+// decoration rows (Personal Altar's own screen loads its own copy via
+// personalAltarFetch('view') instead).
+let personalAltarDecorationCatalog = [];
+async function loadPersonalAltarDecorationCatalog(){
+  if(personalAltarDecorationCatalog.length) return;
+  const { data, error } = await supabaseClient.from('personal_altar_decoration_catalog').select('*');
+  if(error){ console.error('personal altar decoration catalog load failed', error); return; }
+  personalAltarDecorationCatalog = data || [];
+}
+
+// Best-effort name lookup across whichever catalog matches this chest
+// row's category, falling back to the raw item_key if that catalog
+// hasn't loaded (should be rare — loadCircleItemChest() loads all of
+// them up front) or the key is unrecognized.
+function chestItemName(category, itemKey){
+  const catalog = category === 'guardian_item' ? craftCatalog
+    : category === 'mage_gear' ? mageGearCatalog
+    : category === 'reagent' ? mageReagentCatalog
+    : category === 'potion' ? magePotionCatalog
+    : personalAltarDecorationCatalog;
+  const row = catalog.find(r => r.key === itemKey);
+  return row ? row.name : itemKey;
 }
 
 // ---------------- login (real accounts only — no more anonymous play) ----------------
@@ -2558,10 +2686,19 @@ function hotspotButtonsMarkup(areas, arrayName, pageKey){
 // has several; omitted, it falls back to the first dropdown-kind area
 // found, unchanged behavior for every single-dropdown screen already
 // using this helper.
-function hotspotDropdownMarkup(areas, innerHtml, id){
+//
+// `pageKey` (optional, 4th arg — same convention hotspotButtonsMarkup()
+// already used) applies the same "no art yet" visible fallback treatment
+// as .map-hotspot-fallback: a dashed-border panel instead of a bare
+// floating <select>+button. This is cosmetic only now — the real "why
+// doesn't this work without art" bug was the missing z-index on
+// .map-hotspot-dropdown itself (see that class's CSS comment), which is
+// fixed unconditionally regardless of whether pageKey is passed.
+function hotspotDropdownMarkup(areas, innerHtml, id, pageKey){
   const a = id ? areas.find(x => x.kind === 'dropdown' && x.id === id) : areas.find(x => x.kind === 'dropdown');
   if(!a) return '';
-  return `<div class="map-hotspot-dropdown" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;">${innerHtml}</div>`;
+  const fallback = pageKey ? !siteBackgrounds[pageKey] : false;
+  return `<div class="map-hotspot-dropdown${fallback ? ' map-hotspot-dropdown-fallback' : ''}" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;">${innerHtml}</div>`;
 }
 
 // Currency & Energy HUD (13-point update item 6) — see the .map-hub-stats
@@ -4366,7 +4503,7 @@ function renderMail(){
     ? hotspotDropdownMarkup(MAIL_AREAS, `
         <select class="picker-select" id="mailLetterSelect">${opts}</select>
         <button type="button" onclick="claimSelectedMail()">Claim / Mark read</button>
-      `)
+      `, null, 'mail')
     : '';
 
   app.innerHTML = `
@@ -5151,7 +5288,7 @@ function renderShopBrowse(){
   const subsPickerMarkup = hotspotDropdownMarkup(SHOP_AREAS, `
     <select class="picker-select" id="shopSubsSelect">${subsOpts}</select>
     <button type="button" onclick="shopBuySelectedSubscription()">Subscribe</button>
-  `, 'subsPicker');
+  `, 'subsPicker', 'shop');
 
   // Packs & items — the fixed message pack folded in alongside store
   // items, one dropdown.
@@ -5162,7 +5299,7 @@ function renderShopBrowse(){
   const packsPickerMarkup = hotspotDropdownMarkup(SHOP_AREAS, `
     <select class="picker-select" id="shopPacksSelect">${packsOpts}</select>
     <button type="button" onclick="shopBuySelectedPack()">Buy</button>
-  `, 'packsPicker');
+  `, 'packsPicker', 'shop');
 
   // Pantheons.
   const pantheonKeys = Object.keys(CATALOG).filter(pid => {
@@ -5174,7 +5311,7 @@ function renderShopBrowse(){
     ? hotspotDropdownMarkup(SHOP_AREAS, `
         <select class="picker-select" id="shopPantheonSelect">${pantheonOpts}</select>
         <button type="button" onclick="shopBuySelectedPantheon()">Buy</button>
-      `, 'pantheonPicker')
+      `, 'pantheonPicker', 'shop')
     : '';
 
   // Individual gods — the locked live-search exception, same shape as
@@ -5193,7 +5330,7 @@ function renderShopBrowse(){
   const deitySearchMarkup = hotspotDropdownMarkup(SHOP_AREAS, `
     <input type="text" id="shopDeitySearchInput" placeholder="Search by name…" value="${esc(shopDeitySearch)}" oninput="filterShopDeities(this.value)">
     <div style="max-height:26vh;overflow-y:auto;width:100%;">${deityRows}</div>
-  `, 'deitySearch');
+  `, 'deitySearch', 'shop');
 
   app.innerHTML = `
     <div class="hub-screen">
@@ -5475,11 +5612,20 @@ function renderPetitionPicker(){
     return `<optgroup label="${esc(CATALOG[pid].label)}">${opts}</optgroup>`;
   }).join('');
 
+  // The Petition button itself is deliberately invisible (.btn-ghost)
+  // ONLY once real art is painted for 'oracle' — direct feedback: "i have
+  // my own art button that say whom do you seek so can we make the
+  // yellow part invisible too?" — the admin's own art draws a button
+  // graphic there, and this invisible one sits on top of it as the real
+  // click target. Without art, there's no graphic to click, so a
+  // permanently-ghost button would leave nothing visible at all — same
+  // "accessible both with and without art" fix as the rest of this pass.
+  const oracleHasArt = !!siteBackgrounds['oracle'];
   const pickerMarkup = optgroups
     ? hotspotDropdownMarkup(PETITION_AREAS, `
         <select class="picker-select" id="petitionDeitySelect">${optgroups}</select>
-        <button type="button" class="btn-ghost" onclick="beginPetitionFromSelect()">Petition this god</button>
-      `)
+        <button type="button" class="${oracleHasArt ? 'btn-ghost' : ''}" onclick="beginPetitionFromSelect()">Petition this god</button>
+      `, null, 'oracle')
     : '';
 
   app.innerHTML = `
@@ -6235,7 +6381,7 @@ function animateHit(side, damage, crit, control, hpAfter, maxHp, affinity, parti
   num.className = 'dmg-float' + (crit ? ' crit' : '') + (control ? ' control' : '');
   num.textContent = (crit ? 'CRIT ' : '') + '-' + damage;
   wrap.appendChild(num);
-  setTimeout(() => num.remove(), 900);
+  setTimeout(() => num.remove(), 1600);
 
   if(crit){
     spawnParticles(wrap, { count: 6, color: '#e6c777', size: 46, distance: 48, duration: 750, sprite: 'particle-fx/fx_starburst.png' });
@@ -6261,7 +6407,7 @@ function animateBurnTick(side, amount, hpAfter, maxHp){
   num.className = 'dmg-float burntick';
   num.textContent = '-' + amount;
   wrap.appendChild(num);
-  setTimeout(() => num.remove(), 900);
+  setTimeout(() => num.remove(), 1600);
   spawnParticles(wrap, { count: 3, color: '#c05a34', size: 32, distance: 20, duration: 700, lift: 10, sprite: 'particle-fx/fx_ember.png' });
 }
 
@@ -6280,7 +6426,7 @@ function animatePoisonTick(side, amount, hpAfter, maxHp){
   num.className = 'dmg-float poisontick';
   num.textContent = '-' + amount;
   wrap.appendChild(num);
-  setTimeout(() => num.remove(), 900);
+  setTimeout(() => num.remove(), 1600);
   spawnParticles(wrap, { count: 3, color: '#6fae4a', size: 32, distance: 20, duration: 700, lift: 10, sprite: 'particle-fx/fx_smoke_thin.png' });
 }
 
@@ -6294,7 +6440,7 @@ function animateStunSkip(side){
   num.className = 'dmg-float stunlabel';
   num.textContent = 'STUNNED';
   wrap.appendChild(num);
-  setTimeout(() => num.remove(), 900);
+  setTimeout(() => num.remove(), 1600);
   spawnParticles(wrap, { count: 4, color: 'var(--moon)', size: 38, distance: 28, duration: 750, sprite: 'particle-fx/fx_rune.png' });
 }
 
@@ -6307,7 +6453,7 @@ function animateDodge(side){
   num.className = 'dmg-float dodgelabel';
   num.textContent = 'DODGED';
   wrap.appendChild(num);
-  setTimeout(() => num.remove(), 900);
+  setTimeout(() => num.remove(), 1600);
   spawnParticles(wrap, { count: 4, color: '#cfd6e0', size: 34, distance: 30, duration: 650, sprite: 'particle-fx/fx_streak.png' });
 }
 
@@ -6324,7 +6470,7 @@ function animateHeal(side, amount, hpAfter, maxHp){
   num.className = 'dmg-float heal';
   num.textContent = '+' + amount;
   wrap.appendChild(num);
-  setTimeout(() => num.remove(), 900);
+  setTimeout(() => num.remove(), 1600);
   spawnParticles(wrap, { count: 3, color: '#7fbf6a', size: 36, distance: 18, duration: 850, lift: 18, sprite: 'particle-fx/fx_glow_rings.png' });
 }
 
@@ -6372,26 +6518,34 @@ async function actMove(moveIndex){
     }
 
     let gHp = combatView.guardianHp, oHp = combatView.opponentHp;
+    // Direct feedback: "anywhere you use a fast red response in fighting
+    // ... needs to slow down." These sleep() calls are the actual pacing
+    // between one combat beat and the next — the damage-number/hit-flash
+    // CSS above was slowed too, but that alone didn't help if the NEXT
+    // event's animateX() call (which yanks focus by restarting flash-hit
+    // and dropping a fresh number in) was already firing underneath it.
+    // Widened roughly by half across the board so each beat actually gets
+    // read before the next one lands.
     for(const ev of data.events){
       // Burn/poison tick: no attacker, actor is simply taking its own DoT damage.
       if(ev.move === undefined && ev.burnTick !== undefined){
         if(ev.actor === 'guardian') gHp = Math.max(0, gHp - ev.burnTick); else oHp = Math.max(0, oHp - ev.burnTick);
         animateBurnTick(ev.actor, ev.burnTick, ev.actor === 'guardian' ? gHp : oHp,
           ev.actor === 'guardian' ? combatView.guardianMaxHp : combatView.opponentMaxHp);
-        await sleep(550);
+        await sleep(900);
         continue;
       }
       if(ev.move === undefined && ev.poisonTick !== undefined){
         if(ev.actor === 'guardian') gHp = Math.max(0, gHp - ev.poisonTick); else oHp = Math.max(0, oHp - ev.poisonTick);
         animatePoisonTick(ev.actor, ev.poisonTick, ev.actor === 'guardian' ? gHp : oHp,
           ev.actor === 'guardian' ? combatView.guardianMaxHp : combatView.opponentMaxHp);
-        await sleep(550);
+        await sleep(900);
         continue;
       }
       // Stunned skip: actor loses the whole turn, no damage either way.
       if(ev.move === undefined && ev.stunned){
         animateStunSkip(ev.actor);
-        await sleep(550);
+        await sleep(900);
         continue;
       }
       // A landed move that was fully dodged: no HP change on either side,
@@ -6399,7 +6553,7 @@ async function actMove(moveIndex){
       if(ev.dodged){
         const dodgerSide = ev.actor === 'guardian' ? 'opponent' : 'guardian';
         animateDodge(dodgerSide);
-        await sleep(550);
+        await sleep(900);
         continue;
       }
       // A landed move: actor deals damage to the other side. A Mage's
@@ -6413,16 +6567,16 @@ async function actMove(moveIndex){
         targetIsOpponent ? combatView.opponentMaxHp : combatView.guardianMaxHp,
         ev.affinity, ev.particleKey
       );
-      await sleep(650);
+      await sleep(1000);
 
       // Secondary effects riding this same move, layered on after the beat.
-      if(ev.stunned){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'stun'); await sleep(350); }
-      if(ev.burn){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'burn'); await sleep(350); }
-      if(ev.poison){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'poison'); await sleep(350); }
-      if(ev.weakened){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'weaken'); await sleep(350); }
-      if(ev.vulnerable){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'vulnerable'); await sleep(350); }
-      if(ev.shieldGranted){ animateStatusProc(ev.actor, 'shield'); await sleep(350); } // self-buff — badge on the caster, not the target
-      if(ev.shieldAbsorbed){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'shield'); await sleep(350); }
+      if(ev.stunned){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'stun'); await sleep(500); }
+      if(ev.burn){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'burn'); await sleep(500); }
+      if(ev.poison){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'poison'); await sleep(500); }
+      if(ev.weakened){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'weaken'); await sleep(500); }
+      if(ev.vulnerable){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'vulnerable'); await sleep(500); }
+      if(ev.shieldGranted){ animateStatusProc(ev.actor, 'shield'); await sleep(500); } // self-buff — badge on the caster, not the target
+      if(ev.shieldAbsorbed){ animateStatusProc(targetIsOpponent ? 'opponent' : 'guardian', 'shield'); await sleep(500); }
       if(ev.healed){
         if(ev.actor === 'guardian'){
           gHp = Math.min(combatView.guardianMaxHp, gHp + ev.healed);
@@ -6431,7 +6585,7 @@ async function actMove(moveIndex){
           oHp = Math.min(combatView.opponentMaxHp, oHp + ev.healed);
           animateHeal('opponent', ev.healed, oHp, combatView.opponentMaxHp);
         }
-        await sleep(400);
+        await sleep(600);
       }
     }
 
@@ -6627,6 +6781,7 @@ async function loadMyCircle(){
   myCircle = data;
   if(data.circle){
     await loadCircleShopItems();
+    await loadCircleItemChest();
     // 0093 — the moment myCircle actually resolves to a real circle is
     // also the earliest moment the Circle Chat blip (Map Hub's 'circle'
     // hotspot, and the tab strip's Circle Chat tab) can know anything —
@@ -7041,6 +7196,81 @@ function renderCircleHome(){
     </div>
   `).join('');
 
+  // Circle Item Chest (0093) — direct feedback: "circle chest can be used
+  // to store and share any item in the game." A held item is shared by
+  // moving it out of the depositor's own inventory (Guardian craft items,
+  // Mage gear, Reagents/potions, or Personal Altar decorations — see the
+  // migration's header comment for what's deliberately excluded and why),
+  // and any member — not just officers — can withdraw one, same as the
+  // Essence chest above.
+  const chestCategoryLabel = { guardian_item: 'Guardian Item', mage_gear: 'Mage Gear', reagent: 'Reagent', potion: 'Potion', decoration: 'Decoration' };
+  const chestRows = circleItemChest.map(row => {
+    const name = chestItemName(row.category, row.item_key);
+    const stackable = row.category === 'reagent' || row.category === 'potion' || row.category === 'decoration';
+    const withdrawControl = stackable && row.quantity > 1
+      ? `<input type="text" inputmode="numeric" id="chestWithdrawQty_${row.id}" placeholder="Qty" value="${row.quantity}" style="width:64px;margin:0;">
+         <button class="secondary" onclick="doChestWithdraw('${row.id}', true)">Withdraw</button>`
+      : `<button class="secondary" onclick="doChestWithdraw('${row.id}', false)">Withdraw</button>`;
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(name)}${row.quantity > 1 ? ' ×' + row.quantity : ''}</div><div class="cblurb">${chestCategoryLabel[row.category] || row.category}</div></div>
+      <div class="ractions" style="display:flex;gap:6px;align-items:center;">${withdrawControl}</div>
+    </div>`;
+  }).join('') || '<p class="hint">Nothing shared yet.</p>';
+
+  const chestDepositTabs = ['guardian_item', 'mage_gear', 'reagent', 'potion', 'decoration'];
+  const chestDepositTabsMarkup = `<div class="choice-row" style="margin-bottom:12px;flex-wrap:wrap;">
+    ${chestDepositTabs.map(cat => `<div class="choice ${chestDepositCategory === cat ? 'selected' : ''}" style="width:110px;" onclick="switchChestDepositCategory('${cat}')"><div class="label">${chestCategoryLabel[cat]}s</div></div>`).join('')}
+  </div>`;
+
+  let chestDepositListMarkup;
+  if(chestDepositCategory === 'guardian_item'){
+    const shareable = craftInventory.filter(it => !it.consumed_at);
+    chestDepositListMarkup = shareable.length ? shareable.map(it => `
+      <div class="roster-row">
+        <div><div class="rname">${esc(chestItemName('guardian_item', it.item_key))}</div></div>
+        <div class="ractions"><button class="secondary" onclick="doChestDeposit('guardian_item','${esc(it.id)}')">Share</button></div>
+      </div>
+    `).join('') : '<p class="hint">Nothing shareable in your Backpack — already-applied stat boosts and used consumables can\'t be shared.</p>';
+  }else if(chestDepositCategory === 'mage_gear'){
+    if(!mage){
+      chestDepositListMarkup = '<p class="hint">You need a Mage first.</p>';
+    }else{
+      const equippedIds = new Set([mage.equipped_weapon_id, mage.equipped_armor_id, mage.equipped_accessory_id].filter(Boolean));
+      const reserve = mageGearOwned.filter(g => !equippedIds.has(g.id));
+      chestDepositListMarkup = reserve.length ? reserve.map(g => `
+        <div class="roster-row">
+          <div><div class="rname">${esc(chestItemName('mage_gear', g.gear_key))}</div></div>
+          <div class="ractions"><button class="secondary" onclick="doChestDeposit('mage_gear','${esc(g.id)}')">Share</button></div>
+        </div>
+      `).join('') : '<p class="hint">Nothing in reserve to share — unequip a piece first.</p>';
+    }
+  }else if(chestDepositCategory === 'reagent' || chestDepositCategory === 'potion'){
+    if(!mage){
+      chestDepositListMarkup = '<p class="hint">You need a Mage first.</p>';
+    }else{
+      const keyField = chestDepositCategory === 'reagent' ? 'reagent_key' : 'potion_key';
+      const owned = (chestDepositCategory === 'reagent' ? mageReagentsOwned : magePotionsOwned).filter(r => r.quantity > 0);
+      chestDepositListMarkup = owned.length ? owned.map(r => `
+        <div class="roster-row">
+          <div><div class="rname">${esc(chestItemName(chestDepositCategory, r[keyField]))} (have ${r.quantity})</div></div>
+          <div class="ractions" style="display:flex;gap:6px;align-items:center;">
+            <input type="text" inputmode="numeric" id="chestDepositQty_${esc(r[keyField])}" placeholder="Qty" style="width:64px;margin:0;">
+            <button class="secondary" onclick="doChestDepositStack('${chestDepositCategory}','${esc(r[keyField])}')">Share</button>
+          </div>
+        </div>
+      `).join('') : '<p class="hint">Nothing to share.</p>';
+    }
+  }else{
+    // decoration — Personal Altar only; Circle Altar decorations are
+    // already shared with the whole Circle by nature.
+    chestDepositListMarkup = personalAltarUnlocksForChest.length ? personalAltarUnlocksForChest.map(u => `
+      <div class="roster-row">
+        <div><div class="rname">${esc(chestItemName('decoration', u.decoration_key))}</div></div>
+        <div class="ractions"><button class="secondary" onclick="doChestDeposit('decoration','${esc(u.decoration_key)}')">Share</button></div>
+      </div>
+    `).join('') : '<p class="hint">No Personal Altar decorations to share. (Circle Altar decorations are already shared with the whole Circle.)</p>';
+  }
+
   const circleHomeBg = bgAttr('circle');
   app.innerHTML = `
     <div class="card"${bgAttr('circle', 'text-align:center;')}>
@@ -7074,6 +7304,17 @@ function renderCircleHome(){
       <h2>The Circle Shop</h2>
       <p class="hint">Spends the Circle's shared Devotion — anyone can buy, the blessing lands on your own guardian.</p>
       ${shopRows || '<p class="hint">Nothing in stock yet.</p>'}
+    </div>
+
+    <div class="card"${circleHomeBg}>
+      <h2>Shared Items</h2>
+      <p class="hint">Share a Guardian item, Mage gear, a reagent/potion stack, or a Personal Altar decoration with your Circle — depositing gives it up for good, and any member can withdraw it.</p>
+      <h3 style="margin-top:14px;">In the Chest</h3>
+      ${chestRows}
+      <div class="status" id="chestItemStatus"></div>
+      <h3 style="margin-top:18px;">Share Something</h3>
+      ${chestDepositTabsMarkup}
+      ${chestDepositListMarkup}
     </div>
 
     <div class="card"${circleHomeBg}>
@@ -7225,6 +7466,67 @@ async function doShopBuy(itemKey){
   if(data.ok){ await loadGuardian(); await loadMyCircle(); }
 }
 
+/* ---------------- Circle Item Chest (0093) ----------------
+   Direct feedback: "circle chest can be used to store and share any
+   item in the game." Its own status line (chestItemStatus) is separate
+   from the Essence chest's (chestStatus) so a deposit/withdraw message
+   here doesn't clobber — or get clobbered by — a tithe/shop message
+   above it. */
+
+function setChestItemStatus(text, ok){
+  const el = document.getElementById('chestItemStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
+function switchChestDepositCategory(category){
+  chestDepositCategory = category;
+  render();
+}
+
+// Unique-instance categories (guardian_item, mage_gear — a specific
+// owned instance by id) and decoration (a specific owned key, always
+// quantity 1). Reagent/potion go through doChestDepositStack() below
+// instead, since those need a quantity.
+async function doChestDeposit(category, idOrKey){
+  setChestItemStatus('Sharing…');
+  const body = category === 'decoration' ? { category, itemKey: idOrKey } : { category, itemId: idOrKey };
+  const data = await circleFetch('chest-item-deposit', body);
+  if(!data.ok){ setChestItemStatus(data.error || 'Could not share that.', false); return; }
+  await loadCircleItemChest();
+  render();
+  setChestItemStatus(`Shared ${chestItemName(category, data.itemKey)} to the Circle Chest.`, true);
+}
+
+async function doChestDepositStack(category, itemKey){
+  const el = document.getElementById('chestDepositQty_' + itemKey);
+  const quantity = parseAmount(el ? el.value : '');
+  if(!quantity){ setChestItemStatus('Enter a positive whole number first.', false); return; }
+  setChestItemStatus('Sharing…');
+  const data = await circleFetch('chest-item-deposit', { category, itemKey, quantity });
+  if(!data.ok){ setChestItemStatus(data.error || 'Could not share that.', false); return; }
+  await loadCircleItemChest();
+  render();
+  setChestItemStatus(`Shared ${data.quantity} × ${chestItemName(category, data.itemKey)} to the Circle Chest.`, true);
+}
+
+async function doChestWithdraw(chestItemId, needsQty){
+  let quantity;
+  if(needsQty){
+    const el = document.getElementById('chestWithdrawQty_' + chestItemId);
+    quantity = parseAmount(el ? el.value : '');
+    if(!quantity){ setChestItemStatus('Enter a positive whole number first.', false); return; }
+  }
+  setChestItemStatus('Withdrawing…');
+  const data = await circleFetch('chest-item-withdraw', Object.assign({ chestItemId }, quantity ? { quantity } : {}));
+  if(!data.ok){ setChestItemStatus(data.error || 'Could not withdraw that.', false); return; }
+  await Promise.all([loadGuardian(), loadCircleItemChest()]);
+  render();
+  const label = chestItemName(data.category, data.itemKey);
+  setChestItemStatus(`Took ${label}${data.quantity > 1 ? ' ×' + data.quantity : ''} from the Chest.`, true);
+}
+
 /* ---------------- circle messaging (Phase 4c) ----------------
    No edge function involved here — reads and writes both go straight
    through supabaseClient, gated entirely by the circle_messages RLS
@@ -7366,7 +7668,7 @@ function renderCircleMessages(){
     ? hotspotDropdownMarkup(CIRCLEMESSAGES_AREAS, peerOpts ? `
         <select class="picker-select" id="dmPeerSelect">${peerOpts}</select>
         <button type="button" onclick="confirmSelectedDmPeer()">Whisper</button>
-      ` : '<p class="hint">No one else here yet.</p>', 'peerPicker')
+      ` : '<p class="hint">No one else here yet.</p>', 'peerPicker', 'circle')
     : '';
 
   const feedRows = feedMessages.map(m => `
@@ -7389,7 +7691,7 @@ function renderCircleMessages(){
         <input type="text" id="messageInput" maxlength="500" placeholder="Say something…" value="${esc(messageDraft)}" oninput="onMessageInput()" onkeydown="if(event.key==='Enter') sendCircleMessage();" style="margin:0;flex:1;">
         <button onclick="sendCircleMessage()">Send</button>
       </div>
-    ` : '<p class="hint">Pick someone above to message.</p>', 'composer');
+    ` : '<p class="hint">Pick someone above to message.</p>', 'composer', 'circle');
 
   app.innerHTML = `
     <div class="hub-screen">
@@ -8225,7 +8527,7 @@ function renderCircleInvasions(){
     ? hotspotDropdownMarkup(CIRCLEINVASIONS_AREAS, `
         <select class="picker-select" id="invasionSelect">${opts}</select>
         <button type="button" onclick="commitSelectedInvasion()">Commit your guardian</button>
-      `)
+      `, null, 'circleInvasions')
     : '';
 
   const historyRows = (invasionStatus.history || []).map(inv => {
@@ -8383,13 +8685,34 @@ function renderTerritoryMap(){
     `;
   }).join('');
 
+  // Direct feedback: "the region map is strange it has a second map
+  // overlayed? one says the name of a circle the other just says name
+  // region." These ARE two genuinely separate systems shown side by side
+  // (Circle altars — whoever currently holds each Circle's own altar —
+  // and Zone Territories — a separate admin-placed set of contested
+  // regions, unrelated to altar control), and the hub-overlay panel below
+  // already explained that in a hint paragraph — but that panel is a
+  // fixed-position "card" fighting the same .map-hotspot-dropdown
+  // z-index issue as every other lockout bug this session, so on a
+  // screen with no art (this one has none) the explanation could end up
+  // covered/covering rather than both being visible. Each box now labels
+  // itself inline instead of depending on the overlay text being visible
+  // at all, so the two systems are unmistakably distinct on sight.
   const circleTilesMarkup = hotspotDropdownMarkup(TERRITORYMAP_AREAS, `
-      <div class="territory-grid" style="max-height:100%;overflow-y:auto;">${tiles}</div>
-    `, 'circleTiles');
+      <div style="width:100%;">
+        <h3 style="margin:0 0 4px;text-align:center;">Circle Altars</h3>
+        <p class="hint" style="margin:0 0 8px;text-align:center;">Whoever currently holds each Circle's own altar.</p>
+        <div class="territory-grid" style="max-height:calc(100% - 50px);overflow-y:auto;">${tiles}</div>
+      </div>
+    `, 'circleTiles', 'territoryMap');
   const zoneCanvasMarkup = hotspotDropdownMarkup(TERRITORYMAP_AREAS, `
-      <div class="zonemap-canvas" style="width:100%;height:100%;${zoneMapBg ? `background-image:url('${esc(zoneMapBg)}');` : ''}">${zoneBoxes}</div>
-      ${!(territoryMap.zones || []).length ? '<p class="hint">No regions have been placed on the map yet.</p>' : ''}
-    `, 'zoneCanvas');
+      <div style="width:100%;height:100%;display:flex;flex-direction:column;">
+        <h3 style="margin:0 0 4px;text-align:center;">Contested Regions</h3>
+        <p class="hint" style="margin:0 0 8px;text-align:center;">A separate set of admin-placed regions — unrelated to whose altar is whose.</p>
+        <div class="zonemap-canvas" style="width:100%;flex:1;${zoneMapBg ? `background-image:url('${esc(zoneMapBg)}');` : ''}">${zoneBoxes}</div>
+        ${!(territoryMap.zones || []).length ? '<p class="hint">No regions have been placed on the map yet.</p>' : ''}
+      </div>
+    `, 'zoneCanvas', 'territoryMap');
 
   app.innerHTML = `
     <div class="hub-screen">
@@ -8400,7 +8723,7 @@ function renderTerritoryMap(){
         <div class="hub-overlay">
           <button type="button" class="hub-back" onclick="backFromTerritoryMap()">‹ Back to your Circle</button>
           <h2 style="text-align:center;">Territory Map</h2>
-          <p class="hint" style="text-align:center;">Every Circle's altar, and whoever currently holds it. A captured altar's flag flies for the Circle that took it — win a defense of your own to take it back. Zone Territories (below) are a separate set of contested regions, unrelated to whose altar is whose — an unclaimed region can be bought outright, a held one has to be taken by force, and only an officer can claim or invade on your Circle's behalf.</p>
+          <p class="hint" style="text-align:center;">Two separate systems, side by side (each labeled below): Circle Altars — a captured altar's flag flies for the Circle that took it, win a defense to take it back — and Contested Regions, a separate set of admin-placed zones an officer can claim or invade on your Circle's behalf.</p>
           <div class="status" id="territoryActionStatus">${circleStatus ? esc(circleStatus) : ''}</div>
         </div>
       </div>
@@ -9050,7 +9373,7 @@ function renderKeyOfNightPicker(){
     ? hotspotDropdownMarkup(KEYOFNIGHT_AREAS, `
         <select class="picker-select" id="keyOfNightSelect">${optgroups}</select>
         <button type="button" onclick="doRedeemKeyOfNightFromSelect()">Redeem</button>
-      `)
+      `, null, 'chainedGods')
     : '';
 
   app.innerHTML = `
