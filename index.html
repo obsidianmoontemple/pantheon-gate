@@ -730,28 +730,26 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .request-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:3px;margin-bottom:6px;}
 .request-row .ractions button{padding:6px 10px;font-size:10px;}
 
-/* Territory Map (0051) — every Circle as a tile, colored by whoever
-   CURRENTLY controls its altar (not always its own founder), so a
-   takeover actually reads visually instead of living only in a stat. */
-.territory-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin:16px 0;}
-.territory-tile{border:1px solid var(--line);border-radius:5px;padding:14px 10px;text-align:center;background:rgba(0,0,0,0.22);}
-.territory-tile.captured{border-color:var(--ember);box-shadow:0 0 0 1px rgba(161,70,42,0.35);}
-.territory-tile.mine{border-color:var(--gold-bright);box-shadow:0 0 0 1px rgba(230,199,119,0.35);}
-.territory-tile .tname{font-family:'Cinzel',serif;font-size:12.5px;color:var(--parchment);margin-top:8px;}
-.territory-tile .tcontrol{font-size:10.5px;color:var(--parchment-dim);font-style:italic;margin-top:3px;}
-.territory-tile button{margin-top:10px;padding:6px 10px;font-size:10px;}
+/* Territory Map (0051, replaced 0095) — Circle Altars used to render as a
+   plain auto-populated grid of every founded Circle (.territory-grid/
+   .territory-tile). That's gone: Circle Altars is now a fixed,
+   admin-placed set of plots rendered on its own canvas, same shape as
+   Zone Territories below (reuses .zonemap-canvas/.zonemap-zone — see
+   renderTerritoryMap()'s altarBoxes). No CSS of its own needed here
+   anymore. */
 
 /* Zone Territories map (0090) — a SEPARATE, admin-placed set of fixed map
-   regions any Circle can contest, decoupled from the altar-roster grid
-   above (see circle_invasion_settings/territory_zones). Direct feedback:
-   "create a map with many regions and each circle will claim a
-   region/altar and color it... A separate fixed set of map territories" —
-   plain in-game map, no GPS/real-world location involved. Zones are
-   admin-placed (admin.html's Territory Zones editor) at percentage
-   coordinates over a background image (site_backgrounds 'territoryMap'),
-   same positioning shape as the Map Hotspots editor; a zone is colored by
-   whichever Circle's own banner_primary currently controls it, or a
-   neutral dashed look while unclaimed. */
+   regions any Circle can contest (see circle_invasion_settings/
+   territory_zones). Direct feedback: "create a map with many regions and
+   each circle will claim a region/altar and color it... A separate fixed
+   set of map territories" — plain in-game map, no GPS/real-world location
+   involved. Zones are admin-placed (admin.html's Territory Zones editor)
+   at percentage coordinates over a background image (site_backgrounds
+   'territoryMap'), same positioning shape as the Map Hotspots editor; a
+   zone is colored by whichever Circle's own banner_primary currently
+   controls it, or a neutral dashed look while unclaimed. Circle Altars
+   (0095, directly below in the JS) reuses these exact same classes for
+   its own, separately-populated canvas. */
 /* Direct feedback: "with the new layout we can not see the claim buttons
    making regions unclaimable." Root cause: this box used to be the ONLY
    thing in its dropdown panel, so sizing it off its own fixed 1408:768
@@ -787,12 +785,67 @@ textarea:focus{outline:none;border-color:var(--gold);}
   text-align:center;padding:4px;overflow:hidden;
   background-image:linear-gradient(rgba(0,0,0,0.2),rgba(0,0,0,0.45));
   background-color:rgba(90,90,100,0.55);
+  /* Direct feedback (screenshot): "with the new layout we can not see
+     the claim buttons making regions unclaimable." A packed Contested
+     Regions map (screenshot showed 20+ admin-placed regions on one
+     canvas) gives most individual regions only a few dozen px in either
+     dimension — nowhere near enough room for a name + status line +
+     button all at the sizes below. Without this, overflow:hidden just
+     silently swallows whichever one runs out of room first — and since
+     the button is LAST in the stack, it was always the first thing to
+     go. container-type:size (safe here since width/height are always
+     explicit percentages, never content-derived) lets the @container
+     rules below shed the less essential text first as a region's own
+     box shrinks, so the one thing a player actually needs to click is
+     the last thing ever given up. */
+  container-type:size;
 }
 .zonemap-zone.unclaimed{border-style:dashed;}
 .zonemap-zone.mine{border-color:var(--gold-bright);}
-.zonemap-zone .zname{font-family:'Cinzel',serif;font-size:11px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.9);}
-.zonemap-zone .zcontrol{font-size:9.5px;color:#fff;opacity:0.9;font-style:italic;text-shadow:0 1px 3px rgba(0,0,0,0.9);}
-.zonemap-zone button{margin-top:2px;padding:4px 8px;font-size:9.5px;}
+.zonemap-zone .zname{font-family:'Cinzel',serif;font-size:11px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.9);line-height:1.15;}
+.zonemap-zone .zcontrol{font-size:9.5px;color:#fff;opacity:0.9;font-style:italic;text-shadow:0 1px 3px rgba(0,0,0,0.9);line-height:1.15;}
+.zonemap-zone button{margin-top:2px;padding:4px 8px;font-size:9.5px;white-space:nowrap;}
+/* Circle Altars (0095) puts a small banner icon inside this same box
+   (Zone Territories never has one) — capped small by default and shed
+   even earlier than the status line under the same container queries
+   below, since a purchased plot's icon is the least essential thing here
+   next to its name and its claim/invade button. */
+.zonemap-zone .circle-banner{width:22px !important;height:24px !important;flex-shrink:0;}
+/* War treaties (0096) — allied Circles' UNLABELED flags (direct feedback:
+   "add their flag unlabeled to the region they are joining"), smaller
+   still than the holder's own banner and the first thing shed of all,
+   since a plot can carry several. */
+.zonemap-allies{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;flex-shrink:0;}
+.zonemap-allies .ally-flag .circle-banner{width:14px !important;height:15px !important;}
+/* Smallest regions first lose the ally flags, then the holder's own
+   banner icon, then their status line ("Unclaimed"/who holds it), then
+   their name, always keeping the claim/invade/ally button visible — see
+   the container-type comment above. */
+@container (max-height: 74px){
+  .zonemap-allies{display:none;}
+}
+@container (max-height: 64px){
+  .zonemap-zone .circle-banner{display:none;}
+}
+/* A held, invadable plot a Circle is also eligible to ally onto shows TWO
+   buttons stacked — the Ally button (supplementary; Invade already covers
+   the same "take this ground" outcome) is the first of the two given up
+   as room runs out, before either ever gets clipped. */
+@container (max-height: 84px){
+  .zonemap-zone .ally-btn{display:none;}
+}
+@container (max-height: 50px){
+  .zonemap-zone{gap:1px;padding:2px;}
+  .zonemap-zone .zcontrol{display:none;}
+  .zonemap-zone button{margin-top:1px;padding:2px 5px;font-size:8px;}
+}
+@container (max-height: 32px){
+  .zonemap-zone .zname{display:none;}
+}
+@container (max-width: 58px){
+  .zonemap-zone .zname{font-size:9px;}
+  .zonemap-zone button{font-size:7.5px;padding:2px 4px;}
+}
 .shape-pick-row{display:flex;gap:14px;justify-content:center;margin-bottom:22px;flex-wrap:wrap;}
 .shape-pick{cursor:pointer;text-align:center;padding:10px;border:1px solid var(--line);border-radius:4px;width:80px;transition:border-color .15s;}
 .shape-pick:hover{border-color:var(--gold);}
@@ -1268,6 +1321,8 @@ const FOUNDING_COST_ESSENCE = 500; // must match the `circle` edge function's co
 // only until that first load resolves.
 function invasionCostDevotion(){ return invasionSettings ? invasionSettings.cost_devotion : 300; }
 function zoneClaimCostDevotion(){ return invasionSettings ? invasionSettings.zone_claim_cost_devotion : 150; }
+function altarClaimCostDevotion(){ return invasionSettings ? invasionSettings.altar_claim_cost_devotion : 150; }
+function allianceCostDevotion(){ return invasionSettings ? invasionSettings.alliance_cost_devotion : 100; }
 const CIRCLE_ACCENTS = ['#c8a24a','#e6c777','#a1462a','#6a5a8a','#3f7fa6','#7a9457','#8a8a94','#c9c9dd'];
 let circleDraft = {
   name: '', blurb: '', memberCap: 25, leaderTitle: 'high_priest',
@@ -7019,9 +7074,6 @@ function renderCircleLoading(){
 // Back. Restored verbatim from before the hotspot conversion.
 function renderCircleBrowse(){
   const app = document.getElementById('app');
-  const myRole = myCircle && myCircle.myRole;
-  const isOfficer = myRole === 'high_priest' || myRole === 'high_priestess' || myRole === 'magus';
-  const myCircleId = myCircle && myCircle.circle && myCircle.circle.id;
 
   const rows = browseCircles.length
     ? browseCircles.map(c => `
@@ -7035,7 +7087,6 @@ function renderCircleBrowse(){
         <div class="ractions">
           <button class="secondary" onclick="openCircleAltar('${esc(c.id)}')">Visit altar</button>
           <button class="secondary" onclick="requestJoinCircle('${esc(c.id)}')">Request to join</button>
-          ${(isOfficer && c.id !== myCircleId) ? `<button class="secondary" onclick="doDeclareInvasion('${esc(c.id)}')">Invade — ${invasionCostDevotion()} Devotion</button>` : ''}
         </div>
       </div>
     `).join('')
@@ -7269,9 +7320,23 @@ function renderCircleHome(){
       </div>
     `).join('') : '<p class="hint">Nothing pending.</p>';
 
+    // War treaties (0096) — alliance requests aimed at any altar plot THIS
+    // Circle currently holds, for an officer here to approve or decline.
+    const allianceReqs = myCircle.pendingAllianceRequestsToMe || [];
+    const allianceReqRows = allianceReqs.length ? allianceReqs.map(r => `
+      <div class="request-row">
+        <span>${esc(r.circleName)} wants to ally onto your ${esc(r.altarName)} altar plot</span>
+        <div class="ractions">
+          <button class="secondary" onclick="doAllianceRespond('${r.id}','approve')">Approve</button>
+          <button class="secondary" onclick="doAllianceRespond('${r.id}','decline')">Decline</button>
+        </div>
+      </div>
+    `).join('') : '';
+
     requestsBlock = `
       <h2 style="margin-top:26px;">Pending requests &amp; invites</h2>
       ${reqRows}
+      ${allianceReqRows ? `<h2 style="margin-top:26px;">Alliance requests</h2>${allianceReqRows}` : ''}
       <h2 style="margin-top:26px;">Invite a player</h2>
       <input type="text" id="inviteSearchInput" placeholder="Search by guardian name…" oninput="onInviteSearchInput()">
       <div id="inviteResultsBox">${renderInviteResults()}</div>
@@ -7283,19 +7348,45 @@ function renderCircleHome(){
     ? `<p class="hint">Patron: <strong style="color:var(--gold-bright);">${esc(deityDisplayName(patron.pantheonId, patron.deityId))}</strong> — ${patron.count} member${patron.count === 1 ? '' : 's'} carry a full mark.</p>`
     : '';
 
-  // Territory conquest (0051) — surfaces capture state so a takeover is
-  // actually visible, not just a silent DB flag: your own altar under
-  // someone else's control (patron blessing stripped this harvest), and
-  // any OTHER circles' altars you currently control (patron blessing
-  // redirected to you).
-  const controlledBy = myCircle.altarControlledBy;
-  const controlledCircles = myCircle.controlledCircles || [];
+  // Territory Altars (0095, replaces the old altar_controlled_by
+  // mechanic) — surfaces capture state so a takeover is actually visible,
+  // not just a silent DB flag: any altar plot YOUR Circle bought that
+  // someone else now holds (your own patron blessing stripped this
+  // harvest), and any plot bought by someone ELSE that your Circle
+  // currently holds (their patron blessing pays out to you too). A
+  // Circle that never bought a plot shows neither line — nothing to
+  // redirect.
+  const lostAltars = myCircle.lostAltars || [];
+  const capturedAltars = myCircle.capturedAltars || [];
   let territoryLine = '';
-  if(controlledBy){
-    territoryLine += `<p class="hint" style="color:var(--ember);">Your altar's patron blessing is currently captured by ${esc(controlledBy.name)} — win a defense to take it back.</p>`;
+  if(lostAltars.length){
+    territoryLine += `<p class="hint" style="color:var(--ember);">Your ${lostAltars.map(a => esc(a.name)).join(', ')} altar${lostAltars.length === 1 ? "'s" : "s'"} patron blessing ${lostAltars.length === 1 ? 'is' : 'are'} currently captured by ${lostAltars.map(a => esc(a.controller ? a.controller.name : 'another Circle')).join(', ')} — invade it back on the Territory Map to reclaim it.</p>`;
   }
-  if(controlledCircles.length){
-    territoryLine += `<p class="hint" style="color:var(--gold-bright);">You control the captured altar${controlledCircles.length === 1 ? '' : 's'} of ${controlledCircles.map(c => esc(c.name)).join(', ')} — their patron blessing pays out to you too.</p>`;
+  if(capturedAltars.length){
+    territoryLine += `<p class="hint" style="color:var(--gold-bright);">You control ${capturedAltars.map(a => esc(a.name)).join(', ')}, bought by ${capturedAltars.map(a => esc(a.purchaser ? a.purchaser.name : 'another Circle')).join(', ')} — their patron blessing pays out to you too.</p>`;
+  }
+
+  // War treaties (0096) — this Circle's own live alliance, if any: a
+  // pending request awaiting the plot-holder's answer, or an active
+  // alliance riding on someone else's plot. Leaving is officer-only
+  // server-side, so the button only renders for one.
+  const myAlliance = myCircle.myAllianceStatus;
+  let allianceLine = '';
+  if(myAlliance){
+    if(myAlliance.status === 'pending'){
+      allianceLine = `<p class="hint">Alliance request to ${esc(myAlliance.holderName || 'the holder')} for ${esc(myAlliance.altarName)} — awaiting their answer.${isOfficer ? ` <button class="secondary" onclick="doAllianceLeave('${esc(myAlliance.id)}')">Withdraw</button>` : ''}</p>`;
+    }else if(myAlliance.status === 'active'){
+      allianceLine = `<p class="hint" style="color:var(--gold-bright);">Allied onto ${esc(myAlliance.holderName || 'another Circle')}'s ${esc(myAlliance.altarName)} altar plot.${isOfficer ? ` <button class="secondary" onclick="doAllianceLeave('${esc(myAlliance.id)}')">Leave alliance</button>` : ''}</p>`;
+    }
+  }
+
+  // Circles currently allied onto a plot THIS Circle holds — officer-only
+  // Kick control, same pattern as the roster's own Kick button.
+  const heldAltarAllies = myCircle.heldAltarAllies || [];
+  if(heldAltarAllies.length){
+    allianceLine += heldAltarAllies.map(h => `
+      <p class="hint">Allied to your ${esc(h.altarName)} altar plot: ${h.allies.map(a => esc(a.circleName) + (isOfficer ? ` <button class="secondary" style="padding:2px 6px;font-size:10px;" onclick="doAllianceKick('${esc(a.id)}')">Kick</button>` : '')).join(', ')}</p>
+    `).join('');
   }
 
   const shopRows = circleShopItems.map(item => `
@@ -7393,6 +7484,7 @@ function renderCircleHome(){
       <div class="role-badge ${myRole}" style="margin-top:6px;">Your rank: ${roleLabel(myRole)}</div>
       ${patronLine}
       ${territoryLine}
+      ${allianceLine}
     </div>
 
     <div class="card"${circleHomeBg}>
@@ -7487,6 +7579,29 @@ async function doRespondRequest(requestId, decision){
 async function doCancelRequest(requestId){
   const data = await circleFetch('cancel-request', { requestId });
   setCircleHomeStatus(data.ok ? 'Cancelled.' : (data.error || 'Could not cancel.'), data.ok);
+  await loadMyCircle();
+}
+
+// War treaties (0096) — doAllianceRequest lives with the Territory Map
+// actions below (that's where the target altarId comes from); these three
+// answer/leave/kick actions live here instead, alongside the rest of
+// Circle Home's own request-handling, since that's where their triggering
+// UI (Alliance requests list, the alliance status line) actually renders.
+async function doAllianceRespond(allyId, decision){
+  const data = await circleFetch('alliance-respond', { allyId, decision });
+  setCircleHomeStatus(data.ok ? (decision === 'approve' ? 'Alliance approved.' : 'Alliance declined.') : (data.error || 'Could not respond.'), data.ok);
+  await loadMyCircle();
+}
+
+async function doAllianceLeave(allyId){
+  const data = await circleFetch('alliance-leave', { allyId });
+  setCircleHomeStatus(data.ok ? 'Done.' : (data.error || 'Could not leave the alliance.'), data.ok);
+  await loadMyCircle();
+}
+
+async function doAllianceKick(allyId){
+  const data = await circleFetch('alliance-kick', { allyId });
+  setCircleHomeStatus(data.ok ? 'Ally removed.' : (data.error || 'Could not remove that ally.'), data.ok);
   await loadMyCircle();
 }
 
@@ -8612,14 +8727,11 @@ function setInvasionActionStatus(text, ok){
   el.textContent = text;
 }
 
-async function doDeclareInvasion(targetCircleId){
-  circleStatus = 'Declaring invasion…';
-  render();
-  const data = await circleFetch('invasion-declare', { targetCircleId });
-  circleStatus = data.ok ? "Invasion declared — check your Circle's Invasions panel." : (data.error || 'Could not declare invasion.');
-  render();
-  if(data.ok) await loadMyCircle();
-}
+// doDeclareInvasion (bare "invade any Circle directly") is removed (0095)
+// — Circle Browse no longer has a standalone Invade button, and invading
+// now always targets a specific held Territory Altar plot (doAltarInvade,
+// see the Territory Map section below) or a held Contested Region
+// (doZoneInvade).
 
 async function doCommitInvasion(invasionId){
   const data = await circleFetch('invasion-commit', { invasionId });
@@ -8695,29 +8807,31 @@ function commitSelectedInvasion(){
   doCommitInvasion(sel.value);
 }
 
-/* ---------------- Territory Map (0051, extended 0090) ----------------
-   Risk-style overview: every Circle as a tile, colored/flagged by
-   whichever Circle CURRENTLY controls its altar — the whole point per
-   your note: "a actual territory map with colored highlights showing who
-   is in charge where... marked by their circles flag." Scouting is just
-   reading this (and the existing Browse Circles list); battling and
-   defending are the invasion commit window already built above.
+/* ---------------- Territory Map (0051, extended 0090, replaced 0095) ----------------
+   Two side-by-side, fully independent admin-placed map layers on the same
+   screen. Zone Territories (territory_zones, 0090): a fixed set of
+   regions any Circle can claim (Devotion) or invade — unrelated to Circle
+   identity at all. Circle Altars (territory_altars, 0095, REPLACES the
+   old "every founded Circle automatically has its own altar" mechanic): a
+   fixed set of plots a Circle must buy (Devotion) for its own banner+name
+   to appear at that exact spot — direct feedback: "what should be showing
+   is my background with the areas drawn into it as we discussed and a
+   smaller version of the circle banners with their names are supposed to
+   show up on the spot they purchase." A purchased plot can be invaded
+   away exactly like a Zone (confirmed: "invadable, like Contested
+   Regions"). A Circle that never bought a plot simply keeps its own
+   Patron Bonus untouched — see keepsOwnPatronBonus() server-side.
+   Both layers read from the same territory-map fetch, which returns
+   `territoryAltars` alongside `zones`. */
 
-   0090 adds a SECOND, separate section on this same screen: a real map
-   of admin-placed Zone Territories (territory_zones), each one a fixed
-   region any Circle can claim or invade — completely decoupled from the
-   altar tiles above (claiming/losing a zone never touches
-   altar_controlled_by, and vice versa). Both concepts read from the same
-   territory-map fetch, which now returns `zones` alongside `territories`. */
-
-let territoryMap = null; // {territories:[...], zones:[...]} | null (not yet loaded)
+let territoryMap = null; // {territoryAltars:[...], zones:[...]} | null (not yet loaded)
 
 async function openTerritoryMap(){
   circleView = { step: 'territory' };
   territoryMap = null;
   render();
   const data = await circleFetch('territory-map');
-  territoryMap = data.ok ? data : { territories: [], zones: [] };
+  territoryMap = data.ok ? data : { territoryAltars: [], zones: [] };
   if(circleView && circleView.step === 'territory') render();
 }
 
@@ -8753,6 +8867,38 @@ async function doZoneInvade(zoneId){
   render();
 }
 
+async function doAltarClaim(altarId){
+  circleStatus = 'Purchasing the altar plot…';
+  render();
+  const data = await circleFetch('altar-claim', { altarId });
+  circleStatus = data.ok ? 'Altar plot purchased for your Circle.' : (data.error || 'Could not purchase that plot.');
+  if(data.ok){ await loadMyCircle(); await refreshTerritoryMap(); }
+  render();
+}
+
+async function doAltarInvade(altarId){
+  circleStatus = 'Declaring invasion…';
+  render();
+  const data = await circleFetch('altar-invade', { altarId });
+  circleStatus = data.ok ? "Invasion declared for that altar plot — check your Circle's Invasions panel." : (data.error || 'Could not declare invasion.');
+  if(data.ok) await loadMyCircle();
+  render();
+}
+
+// War treaties (0096) — requesting an alliance onto someone else's held
+// plot, once every plot on the map is already claimed. Approval/decline/
+// leave/kick live with the rest of Circle Home's request-handling (see
+// doAllianceRespond/doAllianceLeave/doAllianceKick above), since that's
+// where the officer actually acts on them.
+async function doAllianceRequest(altarId){
+  circleStatus = 'Requesting an alliance…';
+  render();
+  const data = await circleFetch('alliance-request', { altarId });
+  circleStatus = data.ok ? `Alliance request sent for ${data.altarName || 'that plot'} — waiting on the holder.` : (data.error || 'Could not send the request.');
+  if(data.ok) await loadMyCircle();
+  render();
+}
+
 function renderTerritoryMap(){
   document.body.classList.add('hub-active');
   const app = document.getElementById('app');
@@ -8765,31 +8911,55 @@ function renderTerritoryMap(){
   const myRole = myCircle ? myCircle.myRole : null;
   const isOfficer = myRole === 'high_priest' || myRole === 'high_priestess' || myRole === 'magus';
 
-  const tiles = (territoryMap.territories || []).map(t => {
-    const isMine = t.id === myCircleId;
-    const isCaptured = Boolean(t.controller);
-    // The flag shown is whoever CURRENTLY controls the altar — the
-    // capturing Circle's colors when captured, the founder's own
-    // otherwise. That's the whole "colored highlights showing who's in
-    // charge where" ask.
-    const flagShape = isCaptured ? t.controller.banner_shape : t.banner_shape;
-    const flagPrimary = isCaptured ? t.controller.banner_primary : t.banner_primary;
-    const flagSecondary = isCaptured ? t.controller.banner_secondary : t.banner_secondary;
-    const flagPresetKey = isCaptured ? t.controller.banner_preset_key : t.banner_preset_key;
-    const controlLine = isCaptured
-      ? `Controlled by ${esc(t.controller.name)}`
-      : (isMine ? 'Yours' : 'Self-controlled');
-    const canInvade = isOfficer && myCircleId && !isMine && t.id !== myCircleId;
+  // Circle Altars (territory_altars, 0095) — a fixed set of admin-placed
+  // plots, drawn as boxes on the map exactly like Zone Territories below
+  // (same .zonemap-canvas/.zonemap-zone classes and container-query
+  // hardening — reused rather than duplicated, since the two are visually
+  // and structurally identical containers, just fed different data). An
+  // unclaimed plot shows no banner at all and only a Claim button; once
+  // bought, the buying Circle's own (small) banner + name appear right on
+  // that spot, per direct feedback.
+  // War treaties (0096) — an alliance request is only allowed once every
+  // plot on the map is claimed, and only for a Circle holding no plot of
+  // its own (see alliance-request server-side for the same two checks).
+  const allAltarsClaimed = (territoryMap.territoryAltars || []).length > 0 && (territoryMap.territoryAltars || []).every(a => a.controlled_by);
+  const myCircleHoldsAPlot = (territoryMap.territoryAltars || []).some(a => a.controlled_by === myCircleId);
+  const myAllianceStatus = myCircle ? myCircle.myAllianceStatus : null;
+  const canRequestAlliance = isOfficer && myCircleId && allAltarsClaimed && !myCircleHoldsAPlot && !myAllianceStatus;
+
+  const altarBoxes = (territoryMap.territoryAltars || []).map(a => {
+    const isUnclaimed = !a.controlled_by;
+    const isMine = a.controlled_by === myCircleId;
+    const controlLine = isUnclaimed ? 'Unclaimed' : (isMine ? 'Yours' : `Held by ${esc(a.controller ? a.controller.name : 'another Circle')}`);
+    const banner = (!isUnclaimed && a.controller) ? renderCircleBanner(a.controller.banner_shape, a.controller.banner_primary, a.controller.banner_secondary, a.controller.banner_preset_key, 26) : '';
+    // Allies ride the same spot as small, UNLABELED icons (direct
+    // feedback: "add their flag unlabeled to the region they are
+    // joining") — a title attribute still lets a player identify one by
+    // hovering, without putting a visible name badge on the map itself.
+    const allyIcons = (a.allies || []).length
+      ? `<div class="zonemap-allies">${a.allies.map(ally => `<span class="ally-flag" title="${esc(ally.name)}">${renderCircleBanner(ally.banner_shape, ally.banner_primary, ally.banner_secondary, ally.banner_preset_key, 16)}</span>`).join('')}</div>`
+      : '';
+    let actionBtn = '';
+    if(isOfficer && myCircleId){
+      if(isUnclaimed){
+        actionBtn = `<button class="secondary" onclick="doAltarClaim('${esc(a.id)}')">Claim — ${altarClaimCostDevotion()} Devotion</button>`;
+      }else if(!isMine){
+        actionBtn = `<button class="secondary" onclick="doAltarInvade('${esc(a.id)}')">Invade — ${invasionCostDevotion()} Devotion</button>`;
+        if(canRequestAlliance){
+          actionBtn += `<button class="secondary ally-btn" onclick="doAllianceRequest('${esc(a.id)}')">Ally — ${allianceCostDevotion()} Devotion</button>`;
+        }
+      }
+    }
     return `
-      <div class="territory-tile ${isCaptured ? 'captured' : ''} ${isMine ? 'mine' : ''}">
-        ${renderCircleBanner(flagShape, flagPrimary, flagSecondary, flagPresetKey, 46)}
-        <div class="tname">${esc(t.name)}</div>
-        <div class="tcontrol">${controlLine}</div>
-        <div class="tcontrol">Rank ${t.rank_score}</div>
-        ${canInvade ? `<button class="secondary" onclick="doDeclareInvasion('${esc(t.id)}')">Invade — ${invasionCostDevotion()} Devotion</button>` : ''}
+      <div class="zonemap-zone ${isUnclaimed ? 'unclaimed' : ''} ${isMine ? 'mine' : ''}" style="left:${a.left_pct}%;top:${a.top_pct}%;width:${a.width_pct}%;height:${a.height_pct}%;">
+        ${banner}
+        <div class="zname">${esc(a.name)}</div>
+        <div class="zcontrol">${controlLine}</div>
+        ${allyIcons}
+        ${actionBtn}
       </div>
     `;
-  }).join('') || '<p class="hint">No Circles founded yet.</p>';
+  }).join('');
 
   const zoneMapBg = siteBackgrounds['territoryMap'];
   const zoneBoxes = (territoryMap.zones || []).map(z => {
@@ -8817,21 +8987,25 @@ function renderTerritoryMap(){
   // Direct feedback: "the region map is strange it has a second map
   // overlayed? one says the name of a circle the other just says name
   // region." These ARE two genuinely separate systems shown side by side
-  // (Circle altars — whoever currently holds each Circle's own altar —
-  // and Zone Territories — a separate admin-placed set of contested
-  // regions, unrelated to altar control), and the hub-overlay panel below
-  // already explained that in a hint paragraph — but that panel is a
-  // fixed-position "card" fighting the same .map-hotspot-dropdown
-  // z-index issue as every other lockout bug this session, so on a
-  // screen with no art (this one has none) the explanation could end up
-  // covered/covering rather than both being visible. Each box now labels
-  // itself inline instead of depending on the overlay text being visible
-  // at all, so the two systems are unmistakably distinct on sight.
+  // (Circle Altars — admin-placed plots a Circle must buy for its banner
+  // to appear there — and Zone Territories — a separate admin-placed set
+  // of contested regions, unrelated to altar ownership), and the
+  // hub-overlay panel below already explained that in a hint paragraph —
+  // but that panel is a fixed-position "card" fighting the same
+  // .map-hotspot-dropdown z-index issue as every other lockout bug this
+  // session, so on a screen with no art (this one has none) the
+  // explanation could end up covered/covering rather than both being
+  // visible. Each box now labels itself inline instead of depending on
+  // the overlay text being visible at all, so the two systems are
+  // unmistakably distinct on sight. Circle Altars (0095) now renders as
+  // its own admin-drawn canvas, same shape as Contested Regions, rather
+  // than an auto-populated grid of every founded Circle.
   const circleTilesMarkup = hotspotDropdownMarkup(TERRITORYMAP_AREAS, `
-      <div style="width:100%;">
+      <div style="width:100%;height:100%;display:flex;flex-direction:column;">
         <h3 style="margin:0 0 4px;text-align:center;">Circle Altars</h3>
-        <p class="hint" style="margin:0 0 8px;text-align:center;">Whoever currently holds each Circle's own altar.</p>
-        <div class="territory-grid" style="max-height:calc(100% - 50px);overflow-y:auto;">${tiles}</div>
+        <p class="hint" style="margin:0 0 8px;text-align:center;">A fixed set of plots — a Circle must buy one for its banner and name to appear here.</p>
+        <div class="zonemap-canvas" style="width:100%;flex:1;${zoneMapBg ? `background-image:url('${esc(zoneMapBg)}');` : ''}">${altarBoxes}</div>
+        ${!(territoryMap.territoryAltars || []).length ? '<p class="hint">No altar plots have been placed on the map yet.</p>' : ''}
       </div>
     `, 'circleTiles', 'territoryMap');
   const zoneCanvasMarkup = hotspotDropdownMarkup(TERRITORYMAP_AREAS, `
