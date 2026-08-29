@@ -2195,20 +2195,13 @@ const DEFAULT_KEYOFNIGHT_AREAS = [
 ];
 let KEYOFNIGHT_AREAS = DEFAULT_KEYOFNIGHT_AREAS.slice();
 
-// The Temple of the Gods (Shrine) — first of the "art MUST supersede the
-// current layouts" conversions beyond Tier 1's fixed-content screens.
-// Was a scrolling per-pantheon list of every unlocked deity (one row per
-// god, a Chat link on each); same treatment as Petition Hall/Key of
-// Night above — one dropdown, grouped by pantheon via <optgroup>,
-// replaces the whole list. No action on the dropdown entry itself (a
-// real <select>+button lives in the box instead, see
-// hotspotDropdownMarkup()); backToMap keeps its own action like every
-// other plain hotspot.
-const DEFAULT_SHRINE_AREAS = [
-  { id: 'deityPicker', label: 'Choose a god to visit', left: 30, top: 48, width: 40, height: 18, kind: 'dropdown' },
-  { id: 'backToMap',   label: 'Back to the Map',       left: 3,  top: 88, width: 18, height: 8,  action: backFromShrine },
-];
-let SHRINE_AREAS = DEFAULT_SHRINE_AREAS.slice();
+// The Temple of the Gods (Shrine) reverted to its original scrolling
+// per-pantheon deity list — user report: "pages not working due it
+// seems to card coverage on... temple of the gods... locked us out."
+// The deity picker had been folded into an invisible admin-hotspot
+// dropdown with no matching painted art. See renderShrine() below for
+// the restored version. No DEFAULT_SHRINE_AREAS/SHRINE_AREAS here any
+// more; admin.html's shrine SCREEN_REGISTRY entry was removed to match.
 
 // Mail — same dropdown treatment: one unclaimed letter picked at a time
 // (label = date + a truncated preview, "(gift)" suffix when there's
@@ -2235,48 +2228,17 @@ let MAIL_AREAS = DEFAULT_MAIL_AREAS.slice();
 // is back to a real clickable .tier-row list. admin.html's gauntlet
 // SCREEN_REGISTRY entry was removed to match.
 
-// PvP: Find an Opponent — one of the three screens with live as-you-type
-// search (locked decision: these keep a text box + results instead of
-// being forced into a plain browsable dropdown, since a <select> can't
-// search). Reuses the exact same kind:'dropdown' box mechanism as every
-// other picker screen — hotspotDropdownMarkup() just drops arbitrary
-// markup into one positioned box, and a search input + result list fits
-// that box exactly as well as a <select> does; "dropdown" here just
-// means "the one non-hotspot interactive box on this screen."
-const DEFAULT_PVPBROWSE_AREAS = [
-  { id: 'search',    label: 'Search for an opponent', left: 26, top: 26, width: 48, height: 46, kind: 'dropdown' },
-  { id: 'backToMap', label: 'Back',                    left: 3,  top: 88, width: 18, height: 8,  action: backFromPvpSub },
-];
-let PVPBROWSE_AREAS = DEFAULT_PVPBROWSE_AREAS.slice();
-
-// PvP: Arena Store — the buy catalog becomes a dropdown (unaffordable
-// items rendered disabled, same "show everything, disable what you can't
-// use" convention as the Gauntlet ladder above); "Owned" stays a
-// read-only list folded into the overlay text since it's typically short
-// and has nothing to pick.
-const DEFAULT_PVPSHOP_AREAS = [
-  { id: 'catalogPicker', label: 'Choose an item to buy', left: 26, top: 30, width: 48, height: 30, kind: 'dropdown' },
-  { id: 'backToMap',     label: 'Back',                   left: 3,  top: 88, width: 18, height: 8,  action: backFromPvpSub },
-];
-let PVPSHOP_AREAS = DEFAULT_PVPSHOP_AREAS.slice();
-
-// PvP Home — three fixed nav destinations become hotspots, no duplicate
-// visible buttons in the overlay (same "bulk action, own hotspot, no
-// echo" convention as Mail's "Clear mailbox"/Circle Invasions' "View
-// Territory Map"). Outgoing/incoming challenges stay inline overlay
-// text with their own buttons since a player only ever has one of each
-// at a time — bounded and singular, same "equipped slots stay fixed"
-// reasoning as Mage Gear. History has nothing to pick, so it's read-only
-// text, same as every other feed/leaderboard. The just-finished duel
-// result (pvpLastMatch) is a transient single-action screen, same
-// treatment as Petition Verdict/Battle Result.
-const DEFAULT_PVPHOME_AREAS = [
-  { id: 'findOpponent', label: 'Find an opponent', left: 8,  top: 30, width: 26, height: 10, action: openPvpBrowse },
-  { id: 'leaderboard',  label: 'Leaderboard',       left: 37, top: 30, width: 26, height: 10, action: openPvpLeaderboard },
-  { id: 'arenaStore',   label: 'Arena Store',       left: 66, top: 30, width: 26, height: 10, action: openPvpShop },
-  { id: 'backToMap',    label: 'Back to the Map',   left: 3,  top: 88, width: 18, height: 8,  action: backFromPvp },
-];
-let PVPHOME_AREAS = DEFAULT_PVPHOME_AREAS.slice();
+// PvP Home/Browse/Shop (Find an Opponent, Leaderboard nav, Arena Store)
+// reverted to their original plain visible layouts — user report: "pages
+// not working due it seems to card coverage on... arena... locked us
+// out of with your cards." Their essential actions (Find an
+// opponent/Leaderboard/Arena Store nav, the buy catalog, and search)
+// had all been folded into invisible admin-hotspot buttons/dropdowns
+// with no matching painted art. See renderPvpHome()/renderPvpBrowse()/
+// renderPvpShop() below for the restored versions. No
+// DEFAULT_PVPBROWSE_AREAS/DEFAULT_PVPSHOP_AREAS/DEFAULT_PVPHOME_AREAS
+// here any more; admin.html's pvpBrowse/pvpShop/pvpHome SCREEN_REGISTRY
+// entries were removed to match.
 
 // Guardian Page reverted to its original tabbed .card layout — direct
 // feedback: "guardian page needs fixing as well" (same complaint, and
@@ -2287,27 +2249,12 @@ let PVPHOME_AREAS = DEFAULT_PVPHOME_AREAS.slice();
 // buttons and no hotspot array. admin.html's guardianHome
 // SCREEN_REGISTRY entry was removed to match.
 
-// Backpack — same tab-strip-becomes-hotspots treatment as the Guardian
-// Page, just five tabs instead of two, all sharing one background (bgKey
-// 'backpack'). The Mage-only tabs (Mage Gear/Alchemy) render as hotspots
-// unconditionally, same as Guardian Page's Mage tab — clicking one
-// without a Mage is already self-guarded by renderBackpack()'s own
-// dispatch (falls back to Craft), so there's no extra runtime check
-// needed here. All four of Craft/Mage Gear/Alchemy's unbounded catalogs
-// share the one "itemPicker" dropdown box (only one tab's content ever
-// fills it at a time); Arena and Expeditions are read-only lists with a
-// single nav-onward button, so they leave that box empty and stay plain
-// overlay text, same as PvP Shop's "Owned" list.
-const DEFAULT_BACKPACK_AREAS = [
-  { id: 'tabCraft',       label: 'Craft Items', left: 3,  top: 6,  width: 18, height: 8,  action: showBackpackCraftTab },
-  { id: 'tabMageGear',    label: 'Mage Gear',   left: 22, top: 6,  width: 18, height: 8,  action: showBackpackMageGearTab },
-  { id: 'tabAlchemy',     label: 'Alchemy',     left: 41, top: 6,  width: 18, height: 8,  action: showBackpackAlchemyTab },
-  { id: 'tabArena',       label: 'Arena',       left: 60, top: 6,  width: 16, height: 8,  action: showBackpackArenaTab },
-  { id: 'tabExpeditions', label: 'Expeditions', left: 77, top: 6,  width: 20, height: 8,  action: showBackpackExpeditionsTab },
-  { id: 'itemPicker',     label: 'Choose an item', left: 26, top: 30, width: 48, height: 34, kind: 'dropdown' },
-  { id: 'backToMap',      label: 'Back to the Map', left: 3, top: 88, width: 18, height: 8, action: backFromBackpack },
-];
-let BACKPACK_AREAS = DEFAULT_BACKPACK_AREAS.slice();
+// Backpack reverted to its original visible-.tab-strip layout — user
+// report: "pages not working due it seems to card coverage on...
+// backpack... locked us out." (see backpackTabStrip()/renderBackpack()
+// below for the full explanation). No DEFAULT_BACKPACK_AREAS/
+// BACKPACK_AREAS here any more; admin.html never had a matching
+// SCREEN_REGISTRY entry for Backpack, so there was nothing to remove there.
 
 // Shop — the screen the user's original "scrolling list" complaint most
 // literally describes, and the first screen with more than one
@@ -2347,21 +2294,10 @@ let SHOP_AREAS = DEFAULT_SHOP_AREAS.slice();
 // hotspot array. admin.html's circleHome SCREEN_REGISTRY entry was
 // removed to match.
 
-// Circle Browse — the scrolling list of circles (with per-row Visit
-// altar/Request to join/Invade buttons) is exactly the kind of scrolling
-// catalog the hotspot conversion targets, so it becomes one dropdown
-// with the same "encode the action in the option value" trick as Circle
-// Home's roster ("altar::id", "join::id", "invade::id" — a row can have
-// up to three actions depending on the viewer's role and whether it's
-// their own Circle). The Circle Ledger activity feed is a pure read-only
-// log, so per the standing judgment call it stays a plain scrollable
-// panel in the hub-overlay rather than being forced into the dropdown.
-const DEFAULT_CIRCLEBROWSE_AREAS = [
-  { id: 'circlePicker', label: 'Browse Circles',  left: 3,  top: 10, width: 60, height: 46, kind: 'dropdown' },
-  { id: 'foundCircle',  label: 'Found a Circle',  left: 66, top: 10, width: 31, height: 10, action: openCreateCircle },
-  { id: 'backToMap',    label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8,  action: backToGuardianHomeFromCircle },
-];
-let CIRCLEBROWSE_AREAS = DEFAULT_CIRCLEBROWSE_AREAS.slice();
+// Circle Browse reverted to its original plain visible list — see
+// renderCircleBrowse() below for the full explanation. No
+// DEFAULT_CIRCLEBROWSE_AREAS/CIRCLEBROWSE_AREAS here any more;
+// admin.html's circleBrowse SCREEN_REGISTRY entry was removed to match.
 
 // Circle Messages — the Circle Chat/Direct Messages tab strip becomes
 // hotspot buttons that swap content in place (rule #1), the DM peer
@@ -2382,36 +2318,14 @@ const DEFAULT_CIRCLEMESSAGES_AREAS = [
 ];
 let CIRCLEMESSAGES_AREAS = DEFAULT_CIRCLEMESSAGES_AREAS.slice();
 
-// Circle Altar & Personal Altar — the locked "spatial grids stay visual
-// overlays" decision: the 20-plot / 12-plot altar grid itself is NOT
-// turned into a dropdown, it stays the actual clickable plot grid,
-// exactly like Territory Map's tiles are meant to. It still gets a
-// kind:'dropdown' area (so hotspotButtonsMarkup() skips laying an
-// invisible click-catcher over it, and so it's admin-positionable to
-// line up with the art like everything else) — hotspotDropdownMarkup()
-// just becomes a generic "positioned box holding this screen's real
-// markup" helper here, not a literal <select> renderer. Only the
-// CATALOGS attached to the grid (which seed/decoration to plant or
-// place, and the always-open decoration shop) become real dropdowns,
-// using the same "encode the action in the option value" trick so one
-// combined Plant/Place picker and one combined Buy/Claim catalog each
-// need only a single Confirm button.
-const DEFAULT_CIRCLEALTAR_AREAS = [
-  { id: 'altarGrid',  label: 'Altar plots',           left: 4,  top: 8,  width: 58, height: 62, kind: 'dropdown' },
-  { id: 'picker',     label: 'Plant / Place picker',  left: 64, top: 8,  width: 33, height: 26, kind: 'dropdown' },
-  { id: 'catalog',    label: 'Decoration Catalog',    left: 64, top: 36, width: 33, height: 30, kind: 'dropdown' },
-  { id: 'offerBox',   label: 'Leave an Offering',     left: 64, top: 8,  width: 33, height: 16, kind: 'dropdown' },
-  { id: 'backToCircle', label: 'Back',                left: 3,  top: 88, width: 18, height: 8,  action: backFromAltar },
-];
-let CIRCLEALTAR_AREAS = DEFAULT_CIRCLEALTAR_AREAS.slice();
-
-const DEFAULT_PERSONALALTAR_AREAS = [
-  { id: 'altarGrid', label: 'Altar plots',          left: 8,  top: 10, width: 46, height: 58, kind: 'dropdown' },
-  { id: 'picker',    label: 'Plant / Place picker', left: 58, top: 10, width: 38, height: 26, kind: 'dropdown' },
-  { id: 'catalog',   label: 'Decoration Catalog',   left: 58, top: 38, width: 38, height: 34, kind: 'dropdown' },
-  { id: 'backToMap', label: 'Back',                 left: 3,  top: 88, width: 18, height: 8,  action: backFromPersonalAltar },
-];
-let PERSONALALTAR_AREAS = DEFAULT_PERSONALALTAR_AREAS.slice();
+// Circle Altar & Personal Altar reverted to their original plain-card
+// layouts — this was the worst case of the card-coverage lockout bug,
+// since even the altar grid itself (not just its picker/catalog) was
+// folded into an invisible admin-hotspot box. See
+// renderCircleAltar()/renderPersonalAltar() below for the restored
+// versions. No DEFAULT_CIRCLEALTAR_AREAS/DEFAULT_PERSONALALTAR_AREAS
+// here any more; admin.html's circleAltar/personalAltar SCREEN_REGISTRY
+// entries were removed to match.
 
 // Territory Map — the last of the locked "spatial grids stay visual
 // overlays" screens. Both the Circle-altar flag grid and the Zone
@@ -2452,12 +2366,6 @@ let TERRITORYMAP_AREAS = DEFAULT_TERRITORYMAP_AREAS.slice();
 // Fight/Choose buttons grouped by chapter. renderCampaignChoice() (the
 // narrative sub-screen) is untouched — it was never hotspot-dependent.
 // admin.html's campaignBrowse SCREEN_REGISTRY entry was removed to match.
-
-function showBackpackCraftTab(){ switchBackpackTab('craft'); }
-function showBackpackMageGearTab(){ switchBackpackTab('magegear'); }
-function showBackpackAlchemyTab(){ switchBackpackTab('alchemy'); }
-function showBackpackArenaTab(){ switchBackpackTab('arena'); }
-function showBackpackExpeditionsTab(){ switchBackpackTab('expeditions'); }
 
 // Circle Invasions — pending invasion(s) become a dropdown (label carries
 // the direction/opponent/countdown, same "fold the per-row info into the
@@ -2503,19 +2411,16 @@ let CIRCLEINVASIONS_AREAS = DEFAULT_CIRCLEINVASIONS_AREAS.slice();
 // real clickable mark checklist, both inside the one visible card.
 // admin.html's loadout SCREEN_REGISTRY entry was removed to match.
 
-// Mage Gear — "Equipped" stays three fixed, always-visible slot rows
-// (weapon/armor/accessory, each with its own Unequip button — bounded at
-// exactly three, so there's nothing to collapse into a picker); "In
-// Reserve" is the unbounded list and becomes the dropdown, same
-// name+bonus-folded-into-the-label convention as PvP Shop's catalog.
-// "Shard Crafting" stays its own hotspot as a bulk nav action, same
-// reasoning as Mail's "Clear mailbox".
-const DEFAULT_MAGEGEAR_AREAS = [
-  { id: 'reservePicker', label: 'Choose gear to equip', left: 26, top: 30, width: 48, height: 26, kind: 'dropdown' },
-  { id: 'shardCrafting', label: 'Shard Crafting',        left: 3,  top: 76, width: 30, height: 8,  action: openCraft },
-  { id: 'backToMap',     label: 'Back',                  left: 3,  top: 88, width: 18, height: 8,  action: backFromMageGear },
-];
-let MAGEGEAR_AREAS = DEFAULT_MAGEGEAR_AREAS.slice();
+// Mage Gear reverted to its original plain visible card layout — this
+// is very likely the real explanation behind "when you click craft...
+// it will show up in backpack but not in gear management": the "In
+// Reserve" equip picker had been folded into an invisible admin-hotspot
+// dropdown with no matching painted art, so a freshly-crafted item WAS
+// there in mageGearOwned (Backpack's Mage Gear tab, reading the same
+// array, showed it fine) but had no visible way to appear here. See
+// renderMageGear() below for the restored version. No
+// DEFAULT_MAGEGEAR_AREAS/MAGEGEAR_AREAS here any more; admin.html's
+// mageGear SCREEN_REGISTRY entry was removed to match.
 
 // The Guide walkthrough — three action hotspots (Back/Next/Skip) that
 // stay valid across every step since guidePrev()/guideNext() already
@@ -2565,20 +2470,11 @@ async function loadMapHotspots(){
   CHECKIN_AREAS = await loadHotspotOverrides('checkin', DEFAULT_CHECKIN_AREAS);
   PETITION_AREAS = await loadHotspotOverrides('oracle', DEFAULT_PETITION_AREAS);
   KEYOFNIGHT_AREAS = await loadHotspotOverrides('keyOfNight', DEFAULT_KEYOFNIGHT_AREAS);
-  SHRINE_AREAS = await loadHotspotOverrides('shrine', DEFAULT_SHRINE_AREAS);
   MAIL_AREAS = await loadHotspotOverrides('mail', DEFAULT_MAIL_AREAS);
-  PVPBROWSE_AREAS = await loadHotspotOverrides('pvpBrowse', DEFAULT_PVPBROWSE_AREAS);
-  PVPSHOP_AREAS = await loadHotspotOverrides('pvpShop', DEFAULT_PVPSHOP_AREAS);
   CIRCLEINVASIONS_AREAS = await loadHotspotOverrides('circleInvasions', DEFAULT_CIRCLEINVASIONS_AREAS);
-  MAGEGEAR_AREAS = await loadHotspotOverrides('mageGear', DEFAULT_MAGEGEAR_AREAS);
   GUIDE_AREAS = await loadHotspotOverrides('guide', DEFAULT_GUIDE_AREAS);
-  PVPHOME_AREAS = await loadHotspotOverrides('pvpHome', DEFAULT_PVPHOME_AREAS);
-  BACKPACK_AREAS = await loadHotspotOverrides('backpack', DEFAULT_BACKPACK_AREAS);
   SHOP_AREAS = await loadHotspotOverrides('shop', DEFAULT_SHOP_AREAS);
-  CIRCLEBROWSE_AREAS = await loadHotspotOverrides('circleBrowse', DEFAULT_CIRCLEBROWSE_AREAS);
   CIRCLEMESSAGES_AREAS = await loadHotspotOverrides('circleMessages', DEFAULT_CIRCLEMESSAGES_AREAS);
-  CIRCLEALTAR_AREAS = await loadHotspotOverrides('circleAltar', DEFAULT_CIRCLEALTAR_AREAS);
-  PERSONALALTAR_AREAS = await loadHotspotOverrides('personalAltar', DEFAULT_PERSONALALTAR_AREAS);
   TERRITORYMAP_AREAS = await loadHotspotOverrides('territoryMap', DEFAULT_TERRITORYMAP_AREAS);
 }
 
@@ -3361,16 +3257,26 @@ async function doUnequipMageGear(slot){
   setMageActionStatus('Unequipped.', true);
 }
 
+// Reverted: the "In Reserve" equip picker (and the whole Craft-here
+// section) had been folded into an invisible admin-hotspot dropdown
+// with no matching painted art — this is very likely the real cause
+// behind the user's report "when you click craft... it will show up in
+// backpack but not in gear management": the crafted gear WAS there in
+// mageGearOwned (Backpack's now-fixed Mage Gear tab reads the same
+// array and shows it fine), it just had no visible way to appear on
+// this screen. Back to a plain visible card with a real Equip button
+// per reserve item.
 function renderMageGear(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const stats = mageEffectiveStats();
 
   const spendRow = mage.upgrade_points > 0 ? `
-    <h3 style="margin-top:14px;">Spend Upgrade Points</h3>
-    <p class="hint">${mage.upgrade_points} point${mage.upgrade_points === 1 ? '' : 's'} available.</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
-      ${['vitality', 'might', 'ward', 'swiftness', 'cunning'].map(k => `<button class="secondary" onclick="doSpendMagePoint('${k}')">+1 ${k.charAt(0).toUpperCase() + k.slice(1)} (${stats[k]})</button>`).join('')}
+    <div class="card"${bgAttr('mageHome')}>
+      <h2>Spend Upgrade Points</h2>
+      <p class="hint">${mage.upgrade_points} point${mage.upgrade_points === 1 ? '' : 's'} available.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+        ${['vitality', 'might', 'ward', 'swiftness', 'cunning'].map(k => `<button class="secondary" onclick="doSpendMagePoint('${k}')">+1 ${k.charAt(0).toUpperCase() + k.slice(1)} (${stats[k]})</button>`).join('')}
+      </div>
     </div>
   ` : '';
 
@@ -3386,53 +3292,34 @@ function renderMageGear(){
 
   const equippedIds = new Set([mage.equipped_weapon_id, mage.equipped_armor_id, mage.equipped_accessory_id].filter(Boolean));
   const unequippedOwned = mageGearOwned.filter(g => !equippedIds.has(g.id));
-  const opts = unequippedOwned.map(g => {
+  const inventoryRows = unequippedOwned.map(g => {
     const cat = mageGearCatalog.find(c => c.key === g.gear_key);
-    const label = cat ? `${cat.name} — +${cat.stat_amount} ${cat.stat_key}` : g.gear_key;
-    return `<option value="${esc(g.id)}">${esc(label)}</option>`;
-  }).join('');
+    return `<div class="roster-row">
+      <div><div class="rname">${cat ? esc(cat.name) : esc(g.gear_key)}</div><div class="cblurb">${cat ? '+' + cat.stat_amount + ' ' + cat.stat_key : ''}</div></div>
+      <div class="ractions"><button class="secondary" onclick="doEquipMageGear('${g.id}')">Equip</button></div>
+    </div>`;
+  }).join('') || '<p class="hint">Nothing in reserve — craft some in Shard Crafting.</p>';
 
-  const pickerMarkup = opts
-    ? hotspotDropdownMarkup(MAGEGEAR_AREAS, `
-        <select class="picker-select" id="mageGearReserveSelect">${opts}</select>
-        <button type="button" onclick="equipSelectedMageGear()">Equip</button>
-      `)
-    : '';
-
-  // The catalog/Craft-button section used to live here as its own copy —
-  // 0068 folds it into the single Shard Crafting screen instead (which
-  // now shows both Guardian items and Mage gear, same God Shards
-  // currency both already spent), so there's one place to spend Shards
-  // instead of two disconnected ones. Direct feedback: "crafting revamp
-  // to include the mage" — the mage gear crafting backend already
-  // existed (craft-gear on mage/index.ts), what was actually missing was
-  // this: it wasn't reachable from the same screen as everything else
-  // craftable. See renderCraft().
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('mageHome')}>
-        ${hotspotButtonsMarkup(MAGEGEAR_AREAS, 'MAGEGEAR_AREAS', 'mageHome')}
-        ${pickerMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromMageGear()">‹ Back</button>
-          <h2 style="text-align:center;">${esc(mage.name)}'s Gear</h2>
-          <div class="essence-row"><span class="essence-label">God Shards</span><span class="essence-value">${(guardian && guardian.god_shards) || 0}</span></div>
-          <div class="status" id="mageActionStatus"></div>
-          ${spendRow}
-          <h3 style="margin-top:14px;">Equipped</h3>
-          ${slotRows}
-          <h3 style="margin-top:14px;">In Reserve</h3>
-          ${opts ? '' : '<p class="hint">Nothing in reserve — craft some in Shard Crafting.</p>'}
-        </div>
-      </div>
+    <div class="card"${bgAttr('mageHome', 'text-align:center;')}>
+      <h2>${esc(mage.name)}'s Gear</h2>
+      <div class="essence-row"><span class="essence-label">God Shards</span><span class="essence-value">${(guardian && guardian.god_shards) || 0}</span></div>
+      <div class="status" id="mageActionStatus"></div>
+    </div>
+    ${spendRow}
+    <div class="card"${bgAttr('mageHome')}>
+      <h2>Equipped</h2>
+      ${slotRows}
+    </div>
+    <div class="card"${bgAttr('mageHome')}>
+      <h2>In Reserve</h2>
+      ${inventoryRows}
+      <button class="secondary" style="margin-top:14px;" onclick="openCraft()">Shard Crafting</button>
+    </div>
+    <div class="card"${bgAttr('mageHome')}>
+      <button class="secondary" onclick="backFromMageGear()">Back</button>
     </div>
   `;
-}
-
-function equipSelectedMageGear(){
-  const sel = document.getElementById('mageGearReserveSelect');
-  if(!sel || !sel.value) return;
-  doEquipMageGear(sel.value);
 }
 
 /* ---------------- the Narrator/Guide (0055) ----------------
@@ -4318,54 +4205,41 @@ function isDeityUnlocked(pantheonId, deityId){
   });
 }
 
-// Converted from a scrolling per-pantheon deity list to a single
-// grouped dropdown, same treatment as Petition Hall/Key of Night — see
-// DEFAULT_SHRINE_AREAS above. The "blessing received / no blessing yet"
-// badge that used to sit on each row is folded into the option label
-// itself, since a <select> can't carry a separate badge element per row.
+// Reverted: the deity picker was folded into an invisible admin-hotspot
+// dropdown with no matching painted art — user report: "pages not
+// working due it seems to card coverage on... temple of the gods...
+// locked us out." Back to the original scrolling per-pantheon list with
+// real "Chat" links.
 function renderShrine(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
-  const optgroups = Object.keys(CATALOG).map(pid => {
+  const groups = Object.keys(CATALOG).map(pid => {
     const unlocked = CATALOG[pid].deities.filter(([id]) => isDeityUnlocked(pid, id));
     if(!unlocked.length) return '';
-    const opts = unlocked.map(([id, name]) => {
+    const rows = unlocked.map(([id, name]) => {
       const m = markFor(pid, id);
       const blessed = m && m.mark_type === 'full';
-      return `<option value="${esc(pid)}::${esc(id)}">${esc(name)} — ${blessed ? 'blessing received' : 'no blessing yet'}</option>`;
+      const badge = blessed ? `<span class="mark-badge full">blessing received</span>` : `<span class="mark-badge">no blessing yet</span>`;
+      return `<div class="deity-row" style="cursor:default;">
+        <span class="name">${esc(name)}</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${badge}
+          <a class="secondary" style="padding:4px 10px;font-size:11px;text-decoration:none;display:inline-block;" href="gate.html?pantheon=${encodeURIComponent(pid)}&deity=${encodeURIComponent(id)}">Chat</a>
+        </div>
+      </div>`;
     }).join('');
-    return `<optgroup label="${esc(CATALOG[pid].label)}">${opts}</optgroup>`;
+    return `<div class="pantheon-group"><h3>${esc(CATALOG[pid].label)}</h3>${rows}</div>`;
   }).join('');
 
-  const pickerMarkup = optgroups
-    ? hotspotDropdownMarkup(SHRINE_AREAS, `
-        <select class="picker-select" id="shrineDeitySelect">${optgroups}</select>
-        <button type="button" onclick="openShrineDeityChat()">Chat with this god</button>
-      `)
-    : '';
-
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('shrine')}>
-        ${hotspotButtonsMarkup(SHRINE_AREAS, 'SHRINE_AREAS', 'shrine')}
-        ${pickerMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromShrine()">‹ Back to Map</button>
-          <h2 style="text-align:center;">The Temple of the Gods</h2>
-          <p class="hint" style="text-align:center;">${optgroups
-            ? 'Every god who has granted you an audience — chat any time, and see whether their blessing has found your guardian yet.'
-            : 'No gods have granted you an audience yet. Unlock one through the Gate, or redeem a God Token at Chained Gods.'}</p>
-        </div>
-      </div>
+    <div class="card"${bgAttr('shrine')}>
+      <h2 style="text-align:center;">The Temple of the Gods</h2>
+      <p class="hint" style="text-align:center;">${groups
+        ? 'Every god who has granted you an audience — chat any time, and see whether their blessing has found your guardian yet.'
+        : 'No gods have granted you an audience yet. Unlock one through the Gate, or redeem a God Token at Chained Gods.'}</p>
+      ${groups}
+      <button class="secondary" style="margin-top:10px;" onclick="backFromShrine()">Back to the map</button>
     </div>
   `;
-}
-
-function openShrineDeityChat(){
-  const sel = document.getElementById('shrineDeitySelect');
-  if(!sel || !sel.value) return;
-  const [pantheonId, deityId] = sel.value.split('::');
-  window.location.href = 'gate.html?pantheon=' + encodeURIComponent(pantheonId) + '&deity=' + encodeURIComponent(deityId);
 }
 
 /* ---------------- mail (Map hub's "Mail" AND "Promo" hotspots) ----------------
@@ -4549,10 +4423,24 @@ function switchBackpackTab(tab){
   render();
 }
 
-// backpackTabStrip() (the old visible .tab-strip) is retired — Craft
-// Items/Mage Gear/Alchemy/Arena/Expeditions are now BACKPACK_AREAS
-// hotspots (see above), same "tabs become hotspots" treatment as the
-// Guardian Page.
+// Reverted from the hotspot-tabs treatment back to a real visible
+// .tab-strip — user report: "pages not working due it seems to card
+// coverage on... backpack... locked us out." The tab switcher itself
+// was BACKPACK_AREAS hotspots (fully invisible .map-hotspot buttons,
+// art-dependent), so there was no visible way to even change tabs, let
+// alone use/equip anything once you did land on one. Restored verbatim
+// from before the hotspot conversion.
+function backpackTabStrip(){
+  return `
+    <div class="tab-strip">
+      <button class="tab-btn${backpackTab === 'craft' ? ' active' : ''}" onclick="switchBackpackTab('craft')">Craft Items</button>
+      ${mage ? `<button class="tab-btn${backpackTab === 'magegear' ? ' active' : ''}" onclick="switchBackpackTab('magegear')">Mage Gear</button>` : ''}
+      ${mage ? `<button class="tab-btn${backpackTab === 'alchemy' ? ' active' : ''}" onclick="switchBackpackTab('alchemy')">Alchemy</button>` : ''}
+      <button class="tab-btn${backpackTab === 'arena' ? ' active' : ''}" onclick="switchBackpackTab('arena')">Arena</button>
+      <button class="tab-btn${backpackTab === 'expeditions' ? ' active' : ''}" onclick="switchBackpackTab('expeditions')">Expeditions</button>
+    </div>
+  `;
+}
 
 // A Mage-owning player could, in principle, be sitting on the 'magegear'
 // or 'alchemy' tab and then... there's no way to lose a Mage once
@@ -4568,59 +4456,36 @@ function renderBackpack(){
   return renderBackpackCraft();
 }
 
-// Converted to the hub pattern — usable (unconsumed consumable) items
-// become the shared "itemPicker" dropdown (same "show everything,
-// disable what you can't use" convention as the Gauntlet ladder: Held/
-// Used items still list, just disabled since there's nothing to do with
-// them), same shape as renderCraft()'s own "Your Items" section.
 function renderBackpackCraft(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
-  const opts = craftInventory.map(it => {
+  const craftRows = craftInventory.map(it => {
     const catalogItem = craftCatalog.find(c => c.key === it.item_key);
     const name = catalogItem ? catalogItem.name : it.item_key;
     const type = catalogItem ? catalogItem.item_type : '';
     const statusLabel = it.consumed_at ? (type === 'consumable' ? 'Used' : 'Applied') : 'Held';
     const canUse = type === 'consumable' && !it.consumed_at;
-    return `<option value="${esc(it.id)}"${canUse ? '' : ' disabled'}>${esc(name)} — ${statusLabel}</option>`;
-  }).join('');
-
-  const pickerMarkup = opts
-    ? hotspotDropdownMarkup(BACKPACK_AREAS, `
-        <select class="picker-select" id="backpackCraftSelect">${opts}</select>
-        <button type="button" onclick="useSelectedBackpackCraftItem()">Use</button>
-      `)
-    : '';
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(name)}</div><div class="cblurb">${statusLabel}</div></div>
+      ${canUse ? `<div class="ractions"><button class="secondary" onclick="doUseItem('${esc(it.id)}')">Use</button></div>` : ''}
+    </div>`;
+  }).join('') || '<p class="hint">No crafted items yet.</p>';
 
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('backpack')}>
-        ${hotspotButtonsMarkup(BACKPACK_AREAS, 'BACKPACK_AREAS', 'backpack')}
-        ${pickerMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromBackpack()">‹ Back to Map</button>
-          <h2 style="text-align:center;">Backpack — Craft Items</h2>
-          <div class="status" id="craftStatus"></div>
-          ${opts ? '' : '<p class="hint" style="text-align:center;">No crafted items yet.</p>'}
-          <button class="secondary" style="margin-top:10px;" onclick="openCraft()">Buy / Craft more in Shard Crafting</button>
-        </div>
-      </div>
+    <div class="card"${bgAttr('backpack', 'text-align:center;')}>
+      <h2>Backpack</h2>
+      ${backpackTabStrip()}
+      <div class="status" id="craftStatus"></div>
     </div>
+    <div class="card"${bgAttr('backpack')}>
+      <h2>Crafted Items</h2>
+      ${craftRows}
+      <button class="secondary" style="margin-top:10px;" onclick="openCraft()">Buy / Craft more in Shard Crafting</button>
+    </div>
+    <div class="card"${bgAttr('backpack')}><button class="secondary" onclick="backFromBackpack()">Back to the map</button></div>
   `;
 }
 
-function useSelectedBackpackCraftItem(){
-  const sel = document.getElementById('backpackCraftSelect');
-  if(!sel || !sel.value) return;
-  doUseItem(sel.value);
-}
-
-// Converted to the hub pattern — "In Reserve" fills the shared
-// "itemPicker" dropdown (same convention as the standalone Mage Gear
-// screen's own In Reserve list); "Equipped" stays three fixed inline
-// rows since it's bounded at exactly three, same reasoning as there.
 function renderBackpackMageGear(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const slotRows = ['weapon', 'armor', 'accessory'].map(slot => {
     const itemId = mage['equipped_' + slot + '_id'];
@@ -4633,84 +4498,48 @@ function renderBackpackMageGear(){
   }).join('');
 
   const equippedIds = new Set([mage.equipped_weapon_id, mage.equipped_armor_id, mage.equipped_accessory_id].filter(Boolean));
-  const opts = mageGearOwned.filter(g => !equippedIds.has(g.id)).map(g => {
+  const inventoryRows = mageGearOwned.filter(g => !equippedIds.has(g.id)).map(g => {
     const cat = mageGearCatalog.find(c => c.key === g.gear_key);
-    const label = cat ? `${cat.name} — +${cat.stat_amount} ${cat.stat_key}` : g.gear_key;
-    return `<option value="${esc(g.id)}">${esc(label)}</option>`;
-  }).join('');
-
-  const pickerMarkup = opts
-    ? hotspotDropdownMarkup(BACKPACK_AREAS, `
-        <select class="picker-select" id="backpackGearSelect">${opts}</select>
-        <button type="button" onclick="equipSelectedBackpackGear()">Equip</button>
-      `)
-    : '';
+    return `<div class="roster-row">
+      <div><div class="rname">${cat ? esc(cat.name) : esc(g.gear_key)}</div><div class="cblurb">${cat ? '+' + cat.stat_amount + ' ' + cat.stat_key : ''}</div></div>
+      <div class="ractions"><button class="secondary" onclick="doEquipMageGear('${g.id}')">Equip</button></div>
+    </div>`;
+  }).join('') || '<p class="hint">Nothing in reserve — craft some in Shard Crafting.</p>';
 
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('backpack')}>
-        ${hotspotButtonsMarkup(BACKPACK_AREAS, 'BACKPACK_AREAS', 'backpack')}
-        ${pickerMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromBackpack()">‹ Back to Map</button>
-          <h2 style="text-align:center;">Backpack — Mage Gear</h2>
-          <div class="status" id="mageActionStatus"></div>
-          <h3 style="margin-top:14px;">Equipped</h3>
-          ${slotRows}
-          <h3 style="margin-top:14px;">In Reserve</h3>
-          ${opts ? '' : '<p class="hint">Nothing in reserve — craft some in Shard Crafting.</p>'}
-          <button class="secondary" style="margin-top:10px;" onclick="openCraft()">Craft more in Shard Crafting</button>
-        </div>
-      </div>
+    <div class="card"${bgAttr('backpack', 'text-align:center;')}>
+      <h2>Backpack</h2>
+      ${backpackTabStrip()}
+      <div class="status" id="mageActionStatus"></div>
     </div>
+    <div class="card"${bgAttr('backpack')}><h2>Equipped</h2>${slotRows}</div>
+    <div class="card"${bgAttr('backpack')}>
+      <h2>In Reserve</h2>
+      ${inventoryRows}
+      <button class="secondary" style="margin-top:10px;" onclick="openCraft()">Craft more in Shard Crafting</button>
+    </div>
+    <div class="card"${bgAttr('backpack')}><button class="secondary" onclick="backFromBackpack()">Back to the map</button></div>
   `;
 }
 
-function equipSelectedBackpackGear(){
-  const sel = document.getElementById('backpackGearSelect');
-  if(!sel || !sel.value) return;
-  doEquipMageGear(sel.value);
-}
-
-// Converted to the hub pattern, reusing the same mageAlchemyReagentLine()/
-// mageAlchemyPotionOptions() helpers the Guardian Page's Mage tab uses —
-// Potions fills the shared "itemPicker" dropdown, Reagents stays a
-// read-only tally line.
+// Reuses mageAlchemyCardMarkup() (the same plain-card-with-real-Use-
+// buttons markup restored for the Guardian Page's Mage tab) instead of
+// the old, now-removed mageAlchemySectionMarkup() — same reagent tally +
+// potions-with-Use-buttons shape, just under its current name.
 function renderBackpackAlchemy(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
-  const potionOpts = mageAlchemyPotionOptions();
-  const pickerMarkup = potionOpts
-    ? hotspotDropdownMarkup(BACKPACK_AREAS, `
-        <select class="picker-select" id="potionSelect">${potionOpts}</select>
-        <button type="button" onclick="useSelectedPotion()">Use</button>
-      `)
-    : '';
-
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('backpack')}>
-        ${hotspotButtonsMarkup(BACKPACK_AREAS, 'BACKPACK_AREAS', 'backpack')}
-        ${pickerMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromBackpack()">‹ Back to Map</button>
-          <h2 style="text-align:center;">Backpack — Alchemy</h2>
-          <div class="status" id="mageActionStatus"></div>
-          <p class="hint">Reagents: ${mageAlchemyReagentLine()}</p>
-          ${potionOpts ? '' : '<p class="hint">No potions in reserve — brew or buy some in Shard Crafting.</p>'}
-          <button class="secondary" style="margin-top:10px;" onclick="openCraft()">Buy / Craft in Shard Crafting</button>
-        </div>
-      </div>
+    <div class="card"${bgAttr('backpack', 'text-align:center;')}>
+      <h2>Backpack</h2>
+      ${backpackTabStrip()}
+      <div class="status" id="mageActionStatus"></div>
     </div>
+    ${mageAlchemyCardMarkup()}
+    <div class="card"${bgAttr('backpack')}><button class="secondary" onclick="backFromBackpack()">Back to the map</button></div>
   `;
 }
 
-// Read-only (nothing to pick — these are already owned and Arena items
-// have no direct-use action here), so this stays plain overlay text
-// rather than filling the shared "itemPicker" box, same as PvP Shop's
-// own "Owned" list.
 function renderBackpackArena(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const arenaRows = arenaInventory.map(it => {
     const catalogItem = arenaShopCatalog.find(c => c.key === it.item_key);
@@ -4719,24 +4548,20 @@ function renderBackpackArena(){
   }).join('') || '<p class="hint">No Arena items yet.</p>';
 
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('backpack')}>
-        ${hotspotButtonsMarkup(BACKPACK_AREAS, 'BACKPACK_AREAS', 'backpack')}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromBackpack()">‹ Back to Map</button>
-          <h2 style="text-align:center;">Backpack — Arena Items</h2>
-          ${arenaRows}
-          <button class="secondary" style="margin-top:10px;" onclick="openPvpArena()">Go to the Arena</button>
-        </div>
-      </div>
+    <div class="card"${bgAttr('backpack', 'text-align:center;')}>
+      <h2>Backpack</h2>
+      ${backpackTabStrip()}
     </div>
+    <div class="card"${bgAttr('backpack')}>
+      <h2>Arena Items</h2>
+      ${arenaRows}
+      <button class="secondary" style="margin-top:10px;" onclick="openPvpArena()">Go to the Arena</button>
+    </div>
+    <div class="card"${bgAttr('backpack')}><button class="secondary" onclick="backFromBackpack()">Back to the map</button></div>
   `;
 }
 
-// Read-only (nothing to pick — see renderBackpackArena()'s comment
-// above), so plain overlay text rather than the shared dropdown box.
 function renderBackpackExpeditions(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const artifactRows = ((expeditionCatalog && expeditionCatalog.artifacts) || []).filter(a => (a.fragmentsOwned || []).length > 0).map(a => {
     const owned = new Set(a.fragmentsOwned || []);
@@ -4745,17 +4570,16 @@ function renderBackpackExpeditions(){
   }).join('') || '<p class="hint">No artifact fragments found yet.</p>';
 
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('backpack')}>
-        ${hotspotButtonsMarkup(BACKPACK_AREAS, 'BACKPACK_AREAS', 'backpack')}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromBackpack()">‹ Back to Map</button>
-          <h2 style="text-align:center;">Backpack — Artifact Fragments</h2>
-          ${artifactRows}
-          <button class="secondary" style="margin-top:10px;" onclick="openExpedition()">Go to Expeditions</button>
-        </div>
-      </div>
+    <div class="card"${bgAttr('backpack', 'text-align:center;')}>
+      <h2>Backpack</h2>
+      ${backpackTabStrip()}
     </div>
+    <div class="card"${bgAttr('backpack')}>
+      <h2>Artifact Fragments</h2>
+      ${artifactRows}
+      <button class="secondary" style="margin-top:10px;" onclick="openExpedition()">Go to Expeditions</button>
+    </div>
+    <div class="card"${bgAttr('backpack')}><button class="secondary" onclick="backFromBackpack()">Back to the map</button></div>
   `;
 }
 
@@ -6919,61 +6743,56 @@ function renderCircleLoading(){
   `;
 }
 
+// Reverted to a plain visible list — user report: "pages not working
+// due it seems to card coverage on... circle... locked us out." Both
+// "Found a Circle" and every per-row action (Visit altar/Request to
+// join/Invade) were hidden behind invisible, admin-art-dependent
+// hotspots (a plain button-kind hotspot for Found a Circle, a dropdown
+// box for everything else), leaving nothing actually clickable besides
+// Back. Restored verbatim from before the hotspot conversion.
 function renderCircleBrowse(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const myRole = myCircle && myCircle.myRole;
   const isOfficer = myRole === 'high_priest' || myRole === 'high_priestess' || myRole === 'magus';
   const myCircleId = myCircle && myCircle.circle && myCircle.circle.id;
 
-  const rowOpts = browseCircles.flatMap(c => {
-    const label = `${esc(c.name)} (${c.memberCount}/${c.member_cap}, rank ${c.rank_score})`;
-    const opts = [
-      `<option value="altar::${esc(c.id)}">${label} — Visit altar</option>`,
-      `<option value="join::${esc(c.id)}">${label} — Request to join</option>`,
-    ];
-    if(isOfficer && c.id !== myCircleId){
-      opts.push(`<option value="invade::${esc(c.id)}">${label} — Invade (${invasionCostDevotion()} Devotion)</option>`);
-    }
-    return opts;
-  }).join('');
-
-  const circlePickerMarkup = hotspotDropdownMarkup(CIRCLEBROWSE_AREAS, rowOpts ? `
-      <select class="picker-select" id="circleBrowseSelect">${rowOpts}</select>
-      <button type="button" onclick="confirmSelectedCircleBrowseAction()">Go</button>
-    ` : '<p class="hint">No Circles yet — found the first one.</p>', 'circlePicker');
+  const rows = browseCircles.length
+    ? browseCircles.map(c => `
+      <div class="circle-list-row">
+        ${renderCircleBanner(c.banner_shape, c.banner_primary, c.banner_secondary, c.banner_preset_key, 54)}
+        <div class="cinfo">
+          <div class="cname">${esc(c.name)}</div>
+          <div class="cblurb">${esc(c.blurb || 'No blurb yet.')}</div>
+          <div class="ccount">${c.memberCount}/${c.member_cap} members · rank ${c.rank_score}</div>
+        </div>
+        <div class="ractions">
+          <button class="secondary" onclick="openCircleAltar('${esc(c.id)}')">Visit altar</button>
+          <button class="secondary" onclick="requestJoinCircle('${esc(c.id)}')">Request to join</button>
+          ${(isOfficer && c.id !== myCircleId) ? `<button class="secondary" onclick="doDeclareInvasion('${esc(c.id)}')">Invade — ${invasionCostDevotion()} Devotion</button>` : ''}
+        </div>
+      </div>
+    `).join('')
+    : '<p class="hint" style="text-align:center;">No Circles yet — found the first one.</p>';
 
   const feedRows = circleActivityFeed.length
     ? circleActivityFeed.map(row => `<div class="deity-row"><span class="name">${circleActivityLine(row)}</span><span style="opacity:0.6;font-size:12px;">${new Date(row.created_at).toLocaleDateString()}</span></div>`).join('')
     : '<p class="hint">Quiet so far.</p>';
 
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('circle')}>
-        ${hotspotButtonsMarkup(CIRCLEBROWSE_AREAS, 'CIRCLEBROWSE_AREAS', 'circle')}
-        ${circlePickerMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backToGuardianHomeFromCircle()">‹ Back to the Map</button>
-          <h2 style="text-align:center;">Circles</h2>
-          <p class="hint" style="text-align:center;">Browse and request to join one, or found your own — founding costs ${FOUNDING_COST_ESSENCE} Essence. An officer can also invite you directly by your guardian's name. Circles are sorted by rank — this list doubles as the Circle leaderboard.</p>
-          ${circleStatus ? `<div class="status ${circleStatus.toLowerCase().includes('sent') ? 'ok' : 'err'}">${esc(circleStatus)}</div>` : ''}
-
-          <h3 style="margin-top:18px;">Circle Ledger</h3>
-          <p class="hint" style="margin:-4px 0 8px;">A running record of Circle activity site-wide — foundings now, invasions and takeovers as those go live.</p>
-          <div style="max-height:22vh;overflow-y:auto;">${feedRows}</div>
-        </div>
-      </div>
+    <div class="card"${bgAttr('circle')}>
+      <h2 style="text-align:center;">Circles</h2>
+      <p class="hint" style="text-align:center;">Browse and request to join one, or found your own — founding costs ${FOUNDING_COST_ESSENCE} Essence. An officer can also invite you directly by your guardian's name. Circles are sorted by rank — this list doubles as the Circle leaderboard.</p>
+      ${circleStatus ? `<div class="status ${circleStatus.toLowerCase().includes('sent') ? 'ok' : 'err'}">${esc(circleStatus)}</div>` : ''}
+      <button style="margin-bottom:18px;" onclick="openCreateCircle()">Found a Circle</button>
+      ${rows}
+      <button class="secondary" style="margin-top:14px;" onclick="backToGuardianHomeFromCircle()">Back to the map</button>
+    </div>
+    <div class="pantheon-group" style="text-align:left;">
+      <h3>Circle Ledger</h3>
+      <p class="hint" style="margin:-4px 0 8px;">A running record of Circle activity site-wide — foundings now, invasions and takeovers as those go live.</p>
+      ${feedRows}
     </div>
   `;
-}
-
-function confirmSelectedCircleBrowseAction(){
-  const sel = document.getElementById('circleBrowseSelect');
-  if(!sel || !sel.value) return;
-  const [action, circleId] = sel.value.split('::');
-  if(action === 'altar') openCircleAltar(circleId);
-  else if(action === 'join') requestJoinCircle(circleId);
-  else if(action === 'invade') doDeclareInvasion(circleId);
 }
 
 async function requestJoinCircle(circleId){
@@ -7236,7 +7055,7 @@ function renderCircleHome(){
 
     <div class="card"${circleHomeBg}>
       <h2>The Chest &amp; Devotion</h2>
-      <p class="hint">The Chest holds pooled Essence any member can deposit and officers can withdraw. Tithing burns your own Essence for good, but mints Devotion for the Circle Shop below.</p>
+      <p class="hint">The Chest holds pooled Essence any member can deposit and officers can withdraw. Tithing burns your own Essence for good, but mints Devotion for the Circle Shop below — at a rate of 5 Essence per 1 Devotion.</p>
       <p class="ccount" style="text-align:center;">Chest: ${c.chest_essence} Essence · Devotion: ${c.devotion_balance}</p>
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;align-items:center;margin-top:10px;">
         <input type="text" inputmode="numeric" id="chestAmountInput" placeholder="Amount" value="${esc(chestAmountDraft)}" oninput="onChestAmountInput()" style="width:110px;margin:0;">
@@ -7247,6 +7066,7 @@ function renderCircleHome(){
         <input type="text" inputmode="numeric" id="titheAmountInput" placeholder="Amount" value="${esc(titheAmountDraft)}" oninput="onTitheAmountInput()" style="width:110px;margin:0;">
         <button class="secondary" onclick="doTithe()">Tithe for Devotion</button>
       </div>
+      <p class="hint" style="margin-top:4px;">5 Essence = 1 Devotion. Only the Essence that converts evenly is spent.</p>
       <div class="status" id="chestStatus"></div>
     </div>
 
@@ -7390,7 +7210,12 @@ async function doTithe(){
   const amount = parseAmount(titheAmountDraft);
   if(!amount){ setChestStatus('Enter a positive whole number first.', false); return; }
   const data = await circleFetch('tithe', { amount });
-  setChestStatus(data.ok ? `Tithed ${amount} Essence — the Circle gained ${amount} Devotion.` : (data.error || 'Could not tithe.'), data.ok);
+  // Server converts at 5 Essence : 1 Devotion and only spends the Essence
+  // that divides evenly — direct feedback: "essence to devotion in the
+  // circle should not be 1-1 at all im thinking closer to 5-1." Report
+  // back exactly what the server actually spent/minted, not the raw
+  // amount typed in.
+  setChestStatus(data.ok ? `Tithed ${data.essenceSpent} Essence — the Circle gained ${data.devotionGained} Devotion.` : (data.error || 'Could not tithe.'), data.ok);
   if(data.ok){ titheAmountDraft = ''; await loadGuardian(); await loadMyCircle(); }
 }
 
@@ -7722,8 +7547,16 @@ async function doLeaveOffering(){
   await refreshAltar();
 }
 
+// Reverted: the altar grid, the plant/place picker, the decoration
+// catalog, and (for visitors) the offering box had ALL been folded into
+// invisible admin-hotspot boxes with no matching painted art — the
+// single worst case of the pattern this pass, since even the altar grid
+// itself (not just its controls) was invisible. User report: "pages not
+// working due it seems to card coverage on... Altar personal, temple of
+// the gods, circle altar and anywhere else you have locked us out."
+// Back to a plain visible card with a real grid, tabbed plant/decorate
+// picker, and catalog list.
 function renderCircleAltar(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   if(!altarData){
     app.innerHTML = `<div class="card"><p class="status">Approaching the altar…</p></div>`;
@@ -7764,95 +7597,89 @@ function renderCircleAltar(){
     return `<div class="${cls}"${plotStyle} ${clickable ? `onclick="onAltarPlotClick(${i})"` : ''}>${label}</div>`;
   }).join('');
 
-  // Plant/Place picker — only meaningful once an empty plot is selected
-  // and only for your own Circle's altar. Combines seeds and owned-but-
-  // unplaced decorations into one <select> via optgroups, using
-  // "plant::key" / "place::key" encoded values so one Confirm button
-  // handles either action.
-  let pickerMarkup = '';
+  let pickerBlock = '';
   if(isOwn && altarPickerPlot !== null){
-    const plantOpts = (altarData.seedCatalog || []).map(s =>
-      `<option value="plant::${esc(s.key)}"${c.devotion_balance < s.cost_devotion ? ' disabled' : ''}>${esc(s.name)} — ${s.cost_devotion} Devotion · grows in ${formatRemaining(s.grow_hours * 3600 * 1000)} · yields ${s.yield_devotion_min}-${s.yield_devotion_max} Devotion</option>`
-    ).join('');
+    const plantRows = (altarData.seedCatalog || []).map(s => `
+      <div class="altar-catalog-row">
+        <div style="display:flex;align-items:center;gap:8px;">${shopThumb(s.image_url)}<div><div class="aname">${esc(s.name)}</div><div class="adesc">${s.cost_devotion} Devotion · grows in ${formatRemaining(s.grow_hours * 3600 * 1000)} · yields ${s.yield_devotion_min}-${s.yield_devotion_max} Devotion</div></div></div>
+        <button class="secondary" ${c.devotion_balance < s.cost_devotion ? 'disabled' : ''} onclick="doPlantSeed('${esc(s.key)}')">Plant</button>
+      </div>
+    `).join('') || '<p class="hint">No seeds in the catalog.</p>';
+
     const ownedNotPlaced = (altarData.unlocks || []).filter(u => !placedKeys.has(u.decoration_key));
-    const decorateOpts = ownedNotPlaced.map(u => {
+    const decorateRows = ownedNotPlaced.map(u => {
       const dec = decoByKey[u.decoration_key] || {};
-      return `<option value="place::${esc(u.decoration_key)}">${esc(dec.name || u.decoration_key)}</option>`;
-    }).join('');
-    pickerMarkup = hotspotDropdownMarkup(CIRCLEALTAR_AREAS, (plantOpts || decorateOpts) ? `
-        <select class="picker-select" id="altarPickerSelect">
-          ${plantOpts ? `<optgroup label="Plant a Seed">${plantOpts}</optgroup>` : ''}
-          ${decorateOpts ? `<optgroup label="Place a Decoration">${decorateOpts}</optgroup>` : ''}
-        </select>
-        <button type="button" onclick="confirmAltarPickerAction()">Confirm</button>
-      ` : `<p class="hint">Nothing to plant or place yet.</p>`, 'picker');
+      return `<div class="altar-catalog-row">
+        <div style="display:flex;align-items:center;gap:8px;">${shopThumb(dec.image_url)}<div><div class="aname">${esc(dec.name || u.decoration_key)}</div><div class="adesc">${esc(dec.description || '')}</div></div></div>
+        <button class="secondary" onclick="doPlaceDecoration('${esc(u.decoration_key)}')">Place</button>
+      </div>`;
+    }).join('') || `<p class="hint">Nothing in your Circle's inventory yet — buy, find, or unlock a decoration below.</p>`;
+
+    pickerBlock = `
+      <div class="altar-picker">
+        <div class="choice-row" style="margin-bottom:12px;">
+          <div class="choice ${altarPickerTab === 'plant' ? 'selected' : ''}" style="width:130px;" onclick="switchAltarPickerTab('plant')"><div class="label">Plant a Seed</div></div>
+          <div class="choice ${altarPickerTab === 'decorate' ? 'selected' : ''}" style="width:130px;" onclick="switchAltarPickerTab('decorate')"><div class="label">Place a Decoration</div></div>
+        </div>
+        ${altarPickerTab === 'plant' ? plantRows : decorateRows}
+      </div>
+    `;
   }
 
-  // Decoration Catalog — always visible for your own Circle's altar,
-  // one dropdown with owned items shown disabled for browsing, "buy::key"
-  // / "claim::key" encoded for the two purchasable action types.
-  let catalogMarkup = '';
+  let catalogBlock = '';
   if(isOwn){
-    const catalogOpts = (altarData.decorationCatalog || []).map(d => {
+    const rows = (altarData.decorationCatalog || []).map(d => {
       const owned = unlockedKeys.has(d.key);
-      if(owned) return `<option value="" disabled>${esc(d.name)} — Owned</option>`;
-      if(d.source === 'buy') return `<option value="buy::${esc(d.key)}"${c.devotion_balance < d.cost_devotion ? ' disabled' : ''}>${esc(d.name)} — Buy (${d.cost_devotion} Devotion)</option>`;
-      if(d.source === 'find') return `<option value="" disabled>${esc(d.name)} — Found by harvesting</option>`;
-      return `<option value="claim::${esc(d.key)}">${esc(d.name)} — Claim</option>`;
+      let action;
+      if(owned) action = '<span class="role-badge initiate">Owned</span>';
+      else if(d.source === 'buy') action = `<button class="secondary" ${c.devotion_balance < d.cost_devotion ? 'disabled' : ''} onclick="doBuyDecoration('${esc(d.key)}')">Buy — ${d.cost_devotion} Devotion</button>`;
+      else if(d.source === 'find') action = '<span class="hint" style="margin:0;">Found by harvesting</span>';
+      else action = `<button class="secondary" onclick="doClaimUnlock('${esc(d.key)}')">Claim</button>`;
+      return `<div class="altar-catalog-row">
+        <div style="display:flex;align-items:center;gap:8px;">${shopThumb(d.image_url)}<div><div class="aname">${esc(d.name)}</div><div class="adesc">${esc(d.description)}</div></div></div>
+        <div>${action}</div>
+      </div>`;
     }).join('');
-    catalogMarkup = hotspotDropdownMarkup(CIRCLEALTAR_AREAS, catalogOpts ? `
-        <select class="picker-select" id="altarCatalogSelect">${catalogOpts}</select>
-        <button type="button" onclick="confirmAltarCatalogAction()">Go</button>
-      ` : '<p class="hint">No decorations yet.</p>', 'catalog');
+    catalogBlock = `<h2 style="margin-top:26px;">Decoration Catalog</h2>${rows}`;
   }
 
   const guestbookRows = (altarData.offerings || []).map(o => `
     <div class="roster-row"><div class="rname">${esc(o.visitorName)} left ${o.amount} Essence</div><div class="cblurb">${new Date(o.created_at).toLocaleString()}</div></div>
   `).join('') || '<p class="hint">No offerings yet — be the first to visit.</p>';
 
-  const offerBoxMarkup = !isOwn ? hotspotDropdownMarkup(CIRCLEALTAR_AREAS, `
-      <p class="hint" style="margin:0 0 6px;">Spend your own Essence — it becomes Devotion for this Circle, not yours.</p>
-      <div style="display:flex;gap:10px;justify-content:center;align-items:center;width:100%;">
-        <input type="text" inputmode="numeric" id="offerAmountInput" placeholder="Amount" value="${esc(offerAmountDraft)}" oninput="onOfferAmountInput()" style="width:110px;margin:0;">
-        <button class="secondary" onclick="doLeaveOffering()">Leave</button>
-      </div>
-    `, 'offerBox') : '';
+  const offerForm = !isOwn ? `
+    <h2 style="margin-top:26px;">Leave an Offering</h2>
+    <p class="hint">Spend your own Essence — it becomes Devotion for this Circle, not yours.</p>
+    <div style="display:flex;gap:10px;justify-content:center;align-items:center;">
+      <input type="text" inputmode="numeric" id="offerAmountInput" placeholder="Amount" value="${esc(offerAmountDraft)}" oninput="onOfferAmountInput()" style="width:110px;margin:0;">
+      <button class="secondary" onclick="doLeaveOffering()">Leave offering</button>
+    </div>
+  ` : '';
 
+  const circleAltarBg = bgAttr('circleAltar');
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('circleAltar')}>
-        ${hotspotButtonsMarkup(CIRCLEALTAR_AREAS, 'CIRCLEALTAR_AREAS', 'circleAltar')}
-        ${hotspotDropdownMarkup(CIRCLEALTAR_AREAS, `<div class="altar-grid">${gridCells}</div>`, 'altarGrid')}
-        ${pickerMarkup}
-        ${catalogMarkup}
-        ${offerBoxMarkup}
-        <div class="hub-overlay">
-          ${renderCircleBanner(c.banner_shape, c.banner_primary, c.banner_secondary, c.banner_preset_key, 90)}
-          <h2 style="text-align:center;">${esc(c.name)}'s Altar</h2>
-          <p class="ccount" style="text-align:center;">${altarData.memberCount} members · Devotion: ${c.devotion_balance}</p>
-          <div class="status" id="altarStatus"></div>
-          <h3 style="margin-top:16px;">Guestbook</h3>
-          <div style="max-height:20vh;overflow-y:auto;">${guestbookRows}</div>
-        </div>
+    <div class="card"${bgAttr('circleAltar', 'text-align:center;')}>
+      ${renderCircleBanner(c.banner_shape, c.banner_primary, c.banner_secondary, c.banner_preset_key, 120)}
+      <h2>${esc(c.name)}'s Altar</h2>
+      <p class="ccount">${altarData.memberCount} members · Devotion: ${c.devotion_balance}</p>
+    </div>
+
+    <div class="card"${circleAltarBg}>
+      <div class="altar-surface">
+        <div class="rule"></div>
+        <div class="altar-grid">${gridCells}</div>
+      </div>
+      ${pickerBlock}
+      <div class="status" id="altarStatus"></div>
+      ${catalogBlock}
+      <h2 style="margin-top:26px;">Guestbook</h2>
+      ${guestbookRows}
+      ${offerForm}
+      <div style="text-align:center;margin-top:20px;">
+        <button class="secondary" onclick="backFromAltar()">Back</button>
       </div>
     </div>
   `;
-}
-
-function confirmAltarPickerAction(){
-  const sel = document.getElementById('altarPickerSelect');
-  if(!sel || !sel.value) return;
-  const [action, key] = sel.value.split('::');
-  if(action === 'plant') doPlantSeed(key);
-  else if(action === 'place') doPlaceDecoration(key);
-}
-
-function confirmAltarCatalogAction(){
-  const sel = document.getElementById('altarCatalogSelect');
-  if(!sel || !sel.value) return;
-  const [action, key] = sel.value.split('::');
-  if(action === 'buy') doBuyDecoration(key);
-  else if(action === 'claim') doClaimUnlock(key);
 }
 
 /* =====================================================================
@@ -7975,7 +7802,6 @@ async function doPalRemoveDecoration(plotIndex){
 }
 
 function renderPersonalAltar(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   if(!palData){
     app.innerHTML = `<div class="card"><p class="status">Approaching the altar…</p></div>`;
@@ -8014,68 +7840,69 @@ function renderPersonalAltar(){
     return `<div class="${cls}"${plotStyle} ${clickable ? `onclick="onPalPlotClick(${i})"` : ''}>${label}</div>`;
   }).join('');
 
-  let pickerMarkup = '';
+  let pickerBlock = '';
   if(palPickerPlot !== null){
-    const plantOpts = (palData.seedCatalog || []).map(s =>
-      `<option value="plant::${esc(s.key)}"${palData.guardian.essence < s.cost_essence ? ' disabled' : ''}>${esc(s.name)} — ${s.cost_essence} Essence · grows in ${formatRemaining(s.grow_hours * 3600 * 1000)} · yields ${s.yield_essence_min}-${s.yield_essence_max} Essence</option>`
-    ).join('');
+    const plantRows = (palData.seedCatalog || []).map(s => `
+      <div class="altar-catalog-row">
+        <div style="display:flex;align-items:center;gap:8px;">${shopThumb(s.image_url)}<div><div class="aname">${esc(s.name)}</div><div class="adesc">${s.cost_essence} Essence · grows in ${formatRemaining(s.grow_hours * 3600 * 1000)} · yields ${s.yield_essence_min}-${s.yield_essence_max} Essence</div></div></div>
+        <button class="secondary" ${palData.guardian.essence < s.cost_essence ? 'disabled' : ''} onclick="doPalPlantSeed('${esc(s.key)}')">Plant</button>
+      </div>
+    `).join('') || '<p class="hint">No seeds in the catalog.</p>';
+
     const ownedNotPlaced = (palData.unlocks || []).filter(u => !placedKeys.has(u.decoration_key));
-    const decorateOpts = ownedNotPlaced.map(u => {
+    const decorateRows = ownedNotPlaced.map(u => {
       const dec = decoByKey[u.decoration_key] || {};
-      return `<option value="place::${esc(u.decoration_key)}">${esc(dec.name || u.decoration_key)}</option>`;
-    }).join('');
-    pickerMarkup = hotspotDropdownMarkup(PERSONALALTAR_AREAS, (plantOpts || decorateOpts) ? `
-        <select class="picker-select" id="palPickerSelect">
-          ${plantOpts ? `<optgroup label="Plant a Seed">${plantOpts}</optgroup>` : ''}
-          ${decorateOpts ? `<optgroup label="Place a Decoration">${decorateOpts}</optgroup>` : ''}
-        </select>
-        <button type="button" onclick="confirmPalPickerAction()">Confirm</button>
-      ` : `<p class="hint">Nothing to plant or place yet.</p>`, 'picker');
+      return `<div class="altar-catalog-row">
+        <div style="display:flex;align-items:center;gap:8px;">${shopThumb(dec.image_url)}<div><div class="aname">${esc(dec.name || u.decoration_key)}</div><div class="adesc">${esc(dec.description || '')}</div></div></div>
+        <button class="secondary" onclick="doPalPlaceDecoration('${esc(u.decoration_key)}')">Place</button>
+      </div>`;
+    }).join('') || `<p class="hint">Nothing in your inventory yet — buy, find, or unlock a decoration below.</p>`;
+
+    pickerBlock = `
+      <div class="altar-picker">
+        <div class="choice-row" style="margin-bottom:12px;">
+          <div class="choice ${palPickerTab === 'plant' ? 'selected' : ''}" style="width:130px;" onclick="switchPalPickerTab('plant')"><div class="label">Plant a Seed</div></div>
+          <div class="choice ${palPickerTab === 'decorate' ? 'selected' : ''}" style="width:130px;" onclick="switchPalPickerTab('decorate')"><div class="label">Place a Decoration</div></div>
+        </div>
+        ${palPickerTab === 'plant' ? plantRows : decorateRows}
+      </div>
+    `;
   }
 
-  const catalogOpts = (palData.decorationCatalog || []).map(d => {
+  const rows = (palData.decorationCatalog || []).map(d => {
     const owned = unlockedKeys.has(d.key);
-    if(owned) return `<option value="" disabled>${esc(d.name)} — Owned</option>`;
-    if(d.source === 'buy') return `<option value="buy::${esc(d.key)}"${palData.guardian.essence < d.cost_essence ? ' disabled' : ''}>${esc(d.name)} — Buy (${d.cost_essence} Essence)</option>`;
-    if(d.source === 'find') return `<option value="" disabled>${esc(d.name)} — Found by harvesting</option>`;
-    return `<option value="claim::${esc(d.key)}">${esc(d.name)} — Claim</option>`;
+    let action;
+    if(owned) action = '<span class="role-badge initiate">Owned</span>';
+    else if(d.source === 'buy') action = `<button class="secondary" ${palData.guardian.essence < d.cost_essence ? 'disabled' : ''} onclick="doPalBuyDecoration('${esc(d.key)}')">Buy — ${d.cost_essence} Essence</button>`;
+    else if(d.source === 'find') action = '<span class="hint" style="margin:0;">Found by harvesting</span>';
+    else action = `<button class="secondary" onclick="doPalClaimUnlock('${esc(d.key)}')">Claim</button>`;
+    return `<div class="altar-catalog-row">
+      <div style="display:flex;align-items:center;gap:8px;">${shopThumb(d.image_url)}<div><div class="aname">${esc(d.name)}</div><div class="adesc">${esc(d.description)}</div></div></div>
+      <div>${action}</div>
+    </div>`;
   }).join('');
-  const catalogMarkup = hotspotDropdownMarkup(PERSONALALTAR_AREAS, catalogOpts ? `
-      <select class="picker-select" id="palCatalogSelect">${catalogOpts}</select>
-      <button type="button" onclick="confirmPalCatalogAction()">Go</button>
-    ` : '<p class="hint">No decorations yet.</p>', 'catalog');
 
+  const palBg = bgAttr('personalAltar');
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('personalAltar')}>
-        ${hotspotButtonsMarkup(PERSONALALTAR_AREAS, 'PERSONALALTAR_AREAS', 'personalAltar')}
-        ${hotspotDropdownMarkup(PERSONALALTAR_AREAS, `<div class="altar-grid palt">${gridCells}</div>`, 'altarGrid')}
-        ${pickerMarkup}
-        ${catalogMarkup}
-        <div class="hub-overlay">
-          <h2 style="text-align:center;">${esc(palData.guardian.name)}'s Altar</h2>
-          <p class="ccount" style="text-align:center;">Essence: ${palData.guardian.essence}</p>
-          <div class="status" id="palStatus"></div>
-        </div>
+    <div class="card"${bgAttr('personalAltar', 'text-align:center;')}>
+      <h2>${esc(palData.guardian.name)}'s Altar</h2>
+      <p class="ccount">Essence: ${palData.guardian.essence}</p>
+    </div>
+
+    <div class="card"${palBg}>
+      <div class="altar-surface">
+        <div class="rule"></div>
+        <div class="altar-grid palt">${gridCells}</div>
+      </div>
+      ${pickerBlock}
+      <div class="status" id="palStatus"></div>
+      <h2 style="margin-top:26px;">Decoration Catalog</h2>
+      ${rows}
+      <div style="text-align:center;margin-top:20px;">
+        <button class="secondary" onclick="backFromPersonalAltar()">Back</button>
       </div>
     </div>
   `;
-}
-
-function confirmPalPickerAction(){
-  const sel = document.getElementById('palPickerSelect');
-  if(!sel || !sel.value) return;
-  const [action, key] = sel.value.split('::');
-  if(action === 'plant') doPalPlantSeed(key);
-  else if(action === 'place') doPalPlaceDecoration(key);
-}
-
-function confirmPalCatalogAction(){
-  const sel = document.getElementById('palCatalogSelect');
-  if(!sel || !sel.value) return;
-  const [action, key] = sel.value.split('::');
-  if(action === 'buy') doPalBuyDecoration(key);
-  else if(action === 'claim') doPalClaimUnlock(key);
 }
 
 /* ---------------- circle dragons (Phase 5a) ---------------- */
@@ -9515,26 +9342,21 @@ function renderPvpArena(){
   if(pvpView.step === 'shop') return renderPvpShop();
 }
 
-// Converted: the buy catalog is now a dropdown (DEFAULT_PVPSHOP_AREAS
-// above), unaffordable items shown disabled with the reason inline
-// instead of a separate disabled Buy button per row. "Owned" stays a
-// plain read-only list folded into the overlay — nothing to pick there.
+// Reverted: the buy catalog and Arena Store were hidden behind an
+// invisible admin-hotspot dropdown with no matching painted art — user
+// report: "pages not working due it seems to card coverage on... arena
+// ... locked us out." Back to a plain visible catalog list with real
+// per-row Buy buttons.
 function renderPvpShop(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
-  const opts = arenaShopCatalog.map(item => {
+  const rows = arenaShopCatalog.map(item => {
     const affordable = (guardian.favor || 0) >= item.cost_favor;
     const note = item.category === 'utility' ? `Utility${item.effect_hours ? ' · ' + item.effect_hours + 'h' : ''}` : 'Cosmetic';
-    const label = `${item.name} — ${note} — ${item.cost_favor} Favor${affordable ? '' : ' (not enough Favor)'}`;
-    return `<option value="${esc(item.key)}"${affordable ? '' : ' disabled'}>${esc(label)}</option>`;
-  }).join('');
-
-  const pickerMarkup = arenaShopCatalog.length
-    ? hotspotDropdownMarkup(PVPSHOP_AREAS, `
-        <select class="picker-select" id="pvpShopSelect">${opts}</select>
-        <button type="button" onclick="buySelectedArenaItem()">Buy</button>
-      `)
-    : '';
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(item.name)}</div><div class="cblurb">${esc(item.description || '')} — ${esc(note)} — ${item.cost_favor} Favor</div></div>
+      <div class="ractions"><button class="secondary" ${affordable ? '' : 'disabled'} onclick="doArenaBuy('${esc(item.key)}')">Buy</button></div>
+    </div>`;
+  }).join('') || '<p class="hint">The Arena Store is empty right now.</p>';
 
   const invRows = arenaInventory.map(it => {
     const catalogItem = arenaShopCatalog.find(c => c.key === it.item_key);
@@ -9545,31 +9367,25 @@ function renderPvpShop(){
   const shieldNote = guardian.pvp_shield_until && new Date(guardian.pvp_shield_until) > new Date()
     ? `<p class="hint">Warded from challenges until ${new Date(guardian.pvp_shield_until).toLocaleString()}.</p>` : '';
 
+  const arenaBg = bgAttr('arena');
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('arena')}>
-        ${hotspotButtonsMarkup(PVPSHOP_AREAS, 'PVPSHOP_AREAS', 'arena')}
-        ${pickerMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromPvpSub()">‹ Back</button>
-          <h2 style="text-align:center;">Arena Store</h2>
-          <p class="hint" style="text-align:center;">Spend Favor earned from duels on PvP utility and guardian cosmetics.</p>
-          <div class="essence-row"><span class="essence-label">Favor</span><span class="essence-value">${guardian.favor || 0}</span></div>
-          ${shieldNote}
-          <div class="status" id="pvpActionStatus"></div>
-          ${arenaShopCatalog.length ? '' : '<p class="hint" style="text-align:center;">The Arena Store is empty right now.</p>'}
-          <h3 style="margin-top:14px;">Owned</h3>
-          ${invRows}
-        </div>
-      </div>
+    <div class="card"${bgAttr('arena', 'text-align:center;')}>
+      <h2>Arena Store</h2>
+      <p class="hint">Spend Favor earned from duels on PvP utility and guardian cosmetics.</p>
+      <div class="essence-row"><span class="essence-label">Favor</span><span class="essence-value">${guardian.favor || 0}</span></div>
+      ${shieldNote}
+      <div class="status" id="pvpActionStatus"></div>
+    </div>
+    <div class="card"${arenaBg}>
+      <h2>Catalog</h2>
+      ${rows}
+    </div>
+    <div class="card"${arenaBg}>
+      <h2>Owned</h2>
+      ${invRows}
+      <button class="secondary" style="margin-top:14px;" onclick="backFromPvpSub()">Back</button>
     </div>
   `;
-}
-
-function buySelectedArenaItem(){
-  const sel = document.getElementById('pvpShopSelect');
-  if(!sel || !sel.value) return;
-  doArenaBuy(sel.value);
 }
 
 // Same hub conversion as renderFeatureLock()/renderCircleLocked() above.
@@ -9589,17 +9405,16 @@ function renderPvpLocked(){
   `;
 }
 
+// Reverted: this screen's own nav (Find an Opponent / Leaderboard /
+// Arena Store) had been folded into an invisible admin-hotspot button
+// row with no matching painted art, leaving players stuck on Home with
+// no way to reach the rest of the Arena — user report: "pages not
+// working due it seems to card coverage on... arena... locked us out."
+// Back to real, always-visible buttons.
 function renderPvpHome(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   if(!pvpStatus){
-    app.innerHTML = `
-      <div class="hub-screen">
-        <div class="hub-box"${bgAttrPlain('arena')}>
-          <div class="hub-overlay"><p class="status">Walking the arena floor…</p></div>
-        </div>
-      </div>
-    `;
+    app.innerHTML = `<div class="card"><p class="status">Walking the arena floor…</p></div>`;
     return;
   }
 
@@ -9610,17 +9425,13 @@ function renderPvpHome(){
     const yourNewPos = won ? m.winner_new_position : m.loser_new_position;
     const grantsLine = pvpGrantsLine(won ? m.winnerGrants : m.loserGrants);
     app.innerHTML = `
-      <div class="hub-screen">
-        <div class="hub-box"${bgAttrPlain('arena')}>
-          <div class="hub-overlay" id="pvpResultCard" style="position:relative;">
-            <div class="verdict-badge ${won ? 'full' : 'partial'}">${won ? 'Victory' : 'Defeat'}</div>
-            <p class="verdict-text">${won ? 'You won the duel.' : 'You lost the duel.'}</p>
-            <p class="gain-note">${m.swapped ? `Ranks swapped — you moved from #${yourOldPos} to #${yourNewPos}.` : `No change in rank — #${yourOldPos} was already correctly ordered.`}</p>
-            ${grantsLine ? `<p class="gain-note">${esc(grantsLine)}</p>` : ''}
-            <div class="battle-log">${pvpDuelLogHtml(m.rounds) || '<div class="entry">No round data.</div>'}</div>
-            <button onclick="dismissPvpMatch()">Continue</button>
-          </div>
-        </div>
+      <div class="card verdict-card" id="pvpResultCard" style="position:relative;"${bgAttr('arena')}>
+        <div class="verdict-badge ${won ? 'full' : 'partial'}">${won ? 'Victory' : 'Defeat'}</div>
+        <p class="verdict-text">${won ? 'You won the duel.' : 'You lost the duel.'}</p>
+        <p class="gain-note">${m.swapped ? `Ranks swapped — you moved from #${yourOldPos} to #${yourNewPos}.` : `No change in rank — #${yourOldPos} was already correctly ordered.`}</p>
+        ${grantsLine ? `<p class="gain-note">${esc(grantsLine)}</p>` : ''}
+        <div class="battle-log">${pvpDuelLogHtml(m.rounds) || '<div class="entry">No round data.</div>'}</div>
+        <button onclick="dismissPvpMatch()">Continue</button>
       </div>
     `;
     return;
@@ -9630,17 +9441,21 @@ function renderPvpHome(){
   const incoming = pvpStatus.incoming;
 
   const outgoingBlock = outgoing ? `
-    <h3 style="margin-top:14px;">Your Challenge</h3>
-    <p class="hint">Waiting for a response — expires if ignored.</p>
-    <button class="secondary" onclick="doPvpCancel('${esc(outgoing.id)}')">Cancel</button>
+    <div class="card"${bgAttr('arena')}>
+      <h2>Your Challenge</h2>
+      <p class="hint">Waiting for a response — expires if ignored.</p>
+      <button class="secondary" onclick="doPvpCancel('${esc(outgoing.id)}')">Cancel</button>
+    </div>
   ` : '';
 
   const incomingBlock = incoming ? `
-    <h3 style="margin-top:14px;">Incoming Challenge</h3>
-    <p class="hint">Someone has challenged you to a duel. Accepting resolves it immediately.</p>
-    <div style="display:flex;gap:10px;justify-content:center;">
-      <button onclick="doPvpRespond('${esc(incoming.id)}','accept')">Accept</button>
-      <button class="secondary" onclick="doPvpRespond('${esc(incoming.id)}','decline')">Decline</button>
+    <div class="card"${bgAttr('arena')}>
+      <h2>Incoming Challenge</h2>
+      <p class="hint">Someone has challenged you to a duel. Accepting resolves it immediately.</p>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button onclick="doPvpRespond('${esc(incoming.id)}','accept')">Accept</button>
+        <button class="secondary" onclick="doPvpRespond('${esc(incoming.id)}','decline')">Decline</button>
+      </div>
     </div>
   ` : '';
 
@@ -9653,32 +9468,29 @@ function renderPvpHome(){
   }).join('') || '<p class="hint">No duels yet.</p>';
 
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('arena')}>
-        ${hotspotButtonsMarkup(PVPHOME_AREAS, 'PVPHOME_AREAS', 'arena')}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromPvp()">‹ Back to Map</button>
-          <h2 style="text-align:center;">The Arena</h2>
-          <p class="hint" style="text-align:center;">Your ladder position: <strong style="color:var(--gold-bright);">${pvpStatus.ladderPosition ? '#' + pvpStatus.ladderPosition : 'unranked — play a duel to join the ladder'}</strong></p>
-          <p class="hint" style="text-align:center;">Favor: <strong style="color:var(--gold-bright);">${guardian.favor || 0}</strong></p>
-          ${ticketsBarHtml()}
-          <div class="status" id="pvpActionStatus"></div>
-          ${outgoingBlock}
-          ${incomingBlock}
-          <h3 style="margin-top:14px;">Recent Duels</h3>
-          ${historyRows}
-        </div>
+    <div class="card"${bgAttr('arena', 'text-align:center;')}>
+      <h2>The Arena</h2>
+      <p class="hint">Your ladder position: <strong style="color:var(--gold-bright);">${pvpStatus.ladderPosition ? '#' + pvpStatus.ladderPosition : 'unranked — play a duel to join the ladder'}</strong></p>
+      <p class="hint">Favor: <strong style="color:var(--gold-bright);">${guardian.favor || 0}</strong></p>
+      ${ticketsBarHtml()}
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <button onclick="openPvpBrowse()">Find an opponent</button>
+        <button class="secondary" onclick="openPvpLeaderboard()">Leaderboard</button>
+        <button class="secondary" onclick="openPvpShop()">Arena Store</button>
       </div>
+      <div class="status" id="pvpActionStatus"></div>
+    </div>
+    ${outgoingBlock}
+    ${incomingBlock}
+    <div class="card"${bgAttr('arena')}>
+      <h2>Recent Duels</h2>
+      ${historyRows}
+      <button class="secondary" style="margin-top:14px;" onclick="backFromPvp()">Back to the map</button>
     </div>
   `;
 }
 
-// Converted to the hub pattern with the search box positioned as its own
-// hotspot (see DEFAULT_PVPBROWSE_AREAS above) — the results list scrolls
-// inside a fixed-height inner wrapper so it can't grow past the box
-// regardless of how many matches come back.
 function renderPvpBrowse(){
-  document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const rows = pvpBrowseResults.map(r => `
     <div class="roster-row">
@@ -9687,23 +9499,14 @@ function renderPvpBrowse(){
     </div>
   `).join('') || '<p class="hint">No one found.</p>';
 
-  const searchMarkup = hotspotDropdownMarkup(PVPBROWSE_AREAS, `
-    <input type="text" id="pvpSearchInput" placeholder="Search by guardian name…" value="${esc(pvpBrowseQuery)}" oninput="onPvpSearchInput()">
-    <div style="max-height:26vh;overflow-y:auto;width:100%;">${rows}</div>
-  `);
-
   app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('arena')}>
-        ${hotspotButtonsMarkup(PVPBROWSE_AREAS, 'PVPBROWSE_AREAS', 'arena')}
-        ${searchMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromPvpSub()">‹ Back</button>
-          <h2 style="text-align:center;">Find an Opponent</h2>
-          <p class="hint" style="text-align:center;">Search by guardian name, or leave it blank to browse the ladder near your own position.</p>
-          <div class="status" id="pvpActionStatus"></div>
-        </div>
-      </div>
+    <div class="card"${bgAttr('arena')}>
+      <h2 style="text-align:center;">Find an Opponent</h2>
+      <p class="hint" style="text-align:center;">Search by guardian name, or leave it blank to browse the ladder near your own position.</p>
+      <input type="text" id="pvpSearchInput" placeholder="Search by guardian name…" value="${esc(pvpBrowseQuery)}" oninput="onPvpSearchInput()">
+      ${rows}
+      <div class="status" id="pvpActionStatus"></div>
+      <button class="secondary" style="margin-top:14px;" onclick="backFromPvpSub()">Back</button>
     </div>
   `;
 }
