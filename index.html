@@ -752,13 +752,33 @@ textarea:focus{outline:none;border-color:var(--gold);}
    same positioning shape as the Map Hotspots editor; a zone is colored by
    whichever Circle's own banner_primary currently controls it, or a
    neutral dashed look while unclaimed. */
+/* Direct feedback: "with the new layout we can not see the claim buttons
+   making regions unclaimable." Root cause: this box used to be the ONLY
+   thing in its dropdown panel, so sizing it off its own fixed 1408:768
+   aspect-ratio (matching the background art) was fine — its height was
+   whatever that width implied, and it just fit. Once renderTerritoryMap()
+   started putting a heading + hint paragraph above it in the same panel
+   (see that function's own comment), that math stopped working: the
+   aspect-ratio still forced a height purely from the box's width, with
+   no awareness that the heading above it had already eaten into the
+   panel's fixed total height — so on any panel short enough (packed
+   with many admin-placed regions, or simply a different shape once real
+   art was added), the canvas rendered TALLER than the space actually
+   left for it, and the overflow got silently clipped by .hub-box's own
+   overflow:hidden. Whatever fell in that clipped band — for a canvas
+   packed with many small regions, entire rows of them — lost its claim/
+   invade button first, since that's the last (bottom-most) thing in
+   each region's own stacked layout. Fixed by having this box actually
+   fill whatever room its flex:1 (see the inline style where it's used)
+   says it has, instead of insisting on its own fixed aspect ratio; the
+   background image already uses `cover`, so it still fills the box
+   cleanly at any resulting proportions, and zone positions (all percent-
+   based) are unaffected. */
 .zonemap-canvas{
-  position:relative;overflow:hidden;
-  width:min(100%, calc(70vh * 1408 / 768));
-  aspect-ratio:1408/768;
+  position:relative;
+  width:100%;height:100%;
   background:#0a0810 center/cover no-repeat;
   border:1px solid var(--line);border-radius:4px;
-  margin:16px auto;
 }
 .zonemap-zone{
   position:absolute;box-sizing:border-box;
@@ -1350,6 +1370,76 @@ let serverChatPollTimer = null;
 let circleChatLatestAt = null; // ISO string | null — newest circle-feed message's created_at, once known
 let serverChatLatestAt = null; // ISO string | null — newest Server Chat message's created_at
 
+// Direct feedback: "we want to add petitions and messages counts on the
+// currency pane on the map" — real numbers on the Map Hub's currency HUD
+// (mapHubStatsHtml()), not just the existing checkin/mail/promo/chat
+// blips above (those only ever say "something's new," never how much).
+// pendingPetitionsCount is trials started but never answered (petition's
+// "begin" action can have one open per deity at once — see its
+// existingPending check — so a guardian juggling several deities can
+// genuinely have more than one). unreadMessagesCount adds up three real
+// sources: Direct Messages' actual per-message read_at (already exists
+// for DMs specifically), plus Circle Chat and Server Chat's "anything
+// since I last looked" timestamps turned into real counts instead of a
+// yes/no dot. Same eager-where-free / best-effort-where-it-needs-a-
+// Circle split as circleChatLatestAt/serverChatLatestAt above: see
+// loadUnreadMessagesCount()'s own comment.
+let pendingPetitionsCount = 0;
+let unreadMessagesCount = 0;
+
+async function loadPendingPetitionsCount(){
+  if(!guardian){ pendingPetitionsCount = 0; return; }
+  const { count, error } = await supabaseClient
+    .from('petition_attempts')
+    .select('id', { count: 'exact', head: true })
+    .eq('guardian_id', guardian.id)
+    .eq('status', 'pending');
+  if(error){ console.error('pending petitions count load failed', error); return; }
+  pendingPetitionsCount = count || 0;
+}
+
+// Circle Chat's own slice of this is best-effort, same trade-off
+// circleChatLatestAt already makes: it only becomes accurate once
+// myCircle has loaded at least once this session (see loadMyCircle()),
+// contributing 0 until then rather than adding a full Circle fetch to
+// every player's login just for this number. DM and Server Chat counts
+// have no such limitation and are always accurate.
+async function loadUnreadMessagesCount(){
+  if(!session){ unreadMessagesCount = 0; return; }
+  const me = session.user.id;
+  let total = 0;
+
+  const { count: dmCount, error: dmErr } = await supabaseClient
+    .from('circle_messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('recipient_user_id', me)
+    .is('read_at', null);
+  if(dmErr) console.error('unread DM count load failed', dmErr);
+  else total += dmCount || 0;
+
+  const { count: serverCount, error: serverErr } = await supabaseClient
+    .from('server_chat_messages')
+    .select('id', { count: 'exact', head: true })
+    .neq('sender_id', me)
+    .gt('created_at', getChatSeenAt('server') || '1970-01-01');
+  if(serverErr) console.error('unread server chat count load failed', serverErr);
+  else total += serverCount || 0;
+
+  if(myCircle && myCircle.circle){
+    const { count: feedCount, error: feedErr } = await supabaseClient
+      .from('circle_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('circle_id', myCircle.circle.id)
+      .is('recipient_user_id', null)
+      .neq('sender_id', me)
+      .gt('created_at', getChatSeenAt('circle') || '1970-01-01');
+    if(feedErr) console.error('unread circle chat count load failed', feedErr);
+    else total += feedCount || 0;
+  }
+
+  unreadMessagesCount = total;
+}
+
 function chatSeenKey(kind){
   if(kind === 'server') return 'pgServerChatSeenAt';
   const circleId = (myCircle && myCircle.circle) ? myCircle.circle.id : 'none';
@@ -1687,6 +1777,8 @@ async function afterLogin(){
     loadMail().catch(e => console.error('mail badge preload failed', e)),
     loadPromoEvents().catch(e => console.error('promo badge preload failed', e)),
     loadServerChatLatest().catch(e => console.error('server chat badge preload failed', e)),
+    loadPendingPetitionsCount().catch(e => console.error('pending petitions count preload failed', e)),
+    loadUnreadMessagesCount().catch(e => console.error('unread messages count preload failed', e)),
   ]).then(() => { if(document.body.classList.contains('map-screen')) render(); });
   render();
 
@@ -2437,11 +2529,16 @@ let SHOP_AREAS = DEFAULT_SHOP_AREAS.slice();
 // message log (feed or DM thread) is a read-only scrolling log, so per
 // the standing judgment call it stays a plain panel inside the
 // hub-overlay rather than being forced into a <select>.
+// peerPicker/composer removed (see renderCircleMessages()'s comment) —
+// direct feedback: "when you click messages in the circle it goes to a
+// screen you cant type on while if you switch to server chat it works
+// great." Those two used to be admin-art-dependent hotspot-dropdown
+// boxes; they're now real inline elements inside .hub-overlay instead,
+// same as Server Chat's composer always was, so there's nothing left
+// here an admin could position in a way that makes typing stop working.
 const DEFAULT_CIRCLEMESSAGES_AREAS = [
   { id: 'tabFeed',    label: 'Circle Chat',       left: 3,  top: 6,  width: 30, height: 8,  action: () => switchMessagesTab('feed') },
   { id: 'tabDm',      label: 'Direct Messages',   left: 35, top: 6,  width: 30, height: 8,  action: () => switchMessagesTab('dm') },
-  { id: 'peerPicker', label: 'Whisper to',        left: 3,  top: 16, width: 44, height: 22, kind: 'dropdown' },
-  { id: 'composer',   label: 'Say something',     left: 3,  top: 70, width: 94, height: 16, kind: 'dropdown' },
   { id: 'backToCircleHome', label: 'Back to your Circle', left: 3, top: 88, width: 24, height: 8, action: backToCircleHomeFromMessages },
 ];
 let CIRCLEMESSAGES_AREAS = DEFAULT_CIRCLEMESSAGES_AREAS.slice();
@@ -2719,6 +2816,11 @@ function mapHubStatsHtml(){
     rows.push(['⚡', `${energyNow()}/${staminaSettings.energy_max}`]);
     rows.push(['🎟️', `${ticketsNow()}/${staminaSettings.ticket_max}`]);
   }
+  // Direct feedback: "we want to add petitions and messages counts on
+  // the currency pane on the map" — see loadPendingPetitionsCount()/
+  // loadUnreadMessagesCount() for what these numbers actually count.
+  rows.push(['📜', pendingPetitionsCount]);
+  rows.push(['💬', unreadMessagesCount]);
   return `<div class="map-hub-stats">${rows.map(([icon, val]) => `<div class="row"><span class="icon">${icon}</span><span class="val">${val}</span></div>`).join('')}</div>`;
 }
 
@@ -5567,6 +5669,12 @@ function returnToMapHub(){
   checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
   shopView = null; serverChatView = null;
   render();
+  // Refresh the currency pane's petitions/messages counts every time a
+  // player lands back on the Map Hub — same fire-and-forget-then-
+  // re-render-if-still-here pattern as the login preload above.
+  Promise.all([loadPendingPetitionsCount(), loadUnreadMessagesCount()]).then(() => {
+    if(document.body.classList.contains('map-screen')) render();
+  }).catch(e => console.error('map hub counts refresh failed', e));
 }
 
 /* ---------------- petitions ---------------- */
@@ -6788,6 +6896,10 @@ async function loadMyCircle(){
     // see circleChatLatestAt's comment near chatTabStrip(). Fire-and-
     // forget: it's just a badge, not worth blocking this render on.
     loadCircleChatLatest().then(() => { if(document.body.classList.contains('map-screen') || (circleView && circleView.step === 'messages')) render(); });
+    // The moment myCircle resolves is also the earliest moment
+    // unreadMessagesCount's Circle Chat slice can be accurate (see that
+    // function's comment) — refresh it here too, same fire-and-forget.
+    loadUnreadMessagesCount().then(() => { if(document.body.classList.contains('map-screen')) render(); });
     circleView = { step: 'home' };
     render();
   }else{
@@ -7654,6 +7766,19 @@ async function sendCircleMessage(){
   else await refreshDmMessages(dmPeerId);
 }
 
+// Direct feedback: "when you click messages in the circle it goes to a
+// screen you cant type on while if you switch to server chat it works
+// great." The two screens really were built on different architectures:
+// Server Chat's composer (see the comment above renderServerChat()) was
+// deliberately built as a real inline element inside .hub-overlay from
+// day one; Circle Messages' composer and DM peer-picker were still the
+// older hotspotDropdownMarkup boxes — positioned/shown-or-hidden
+// depending on admin-painted art for the 'circle' page key, the exact
+// pattern already reverted on Petition Challenge/Expedition/Gauntlet
+// once it left an essential control unusable. Rebuilt both as plain
+// inline markup inside .hub-overlay, matching Server Chat exactly, so
+// typing (and picking a DM peer) here no longer depends on where an
+// admin has or hasn't painted art for this screen.
 function renderCircleMessages(){
   document.body.classList.add('hub-active');
   const app = document.getElementById('app');
@@ -7664,12 +7789,6 @@ function renderCircleMessages(){
   const peerOpts = roster.filter(m => m.user_id !== me).map(m =>
     `<option value="${esc(m.user_id)}"${dmPeerId === m.user_id ? ' selected' : ''}>${esc(nameById[m.user_id])}</option>`
   ).join('');
-  const peerPickerMarkup = messagesTab === 'dm'
-    ? hotspotDropdownMarkup(CIRCLEMESSAGES_AREAS, peerOpts ? `
-        <select class="picker-select" id="dmPeerSelect">${peerOpts}</select>
-        <button type="button" onclick="confirmSelectedDmPeer()">Whisper</button>
-      ` : '<p class="hint">No one else here yet.</p>', 'peerPicker', 'circle')
-    : '';
 
   const feedRows = feedMessages.map(m => `
     <div class="msg-row ${m.sender_id === me ? 'mine' : ''}">
@@ -7686,26 +7805,36 @@ function renderCircleMessages(){
   `).join('') || '<p class="hint">No messages yet.</p>';
 
   const canSend = messagesTab === 'feed' || (messagesTab === 'dm' && dmPeerId);
-  const composerMarkup = hotspotDropdownMarkup(CIRCLEMESSAGES_AREAS, canSend ? `
+
+  const peerPickerInline = (messagesTab === 'dm' && !dmPeerId)
+    ? (peerOpts ? `
+        <div style="display:flex;gap:10px;align-items:center;justify-content:center;width:100%;margin-bottom:10px;">
+          <select class="picker-select" id="dmPeerSelect" style="margin:0;">${peerOpts}</select>
+          <button type="button" onclick="confirmSelectedDmPeer()">Whisper</button>
+        </div>
+      ` : '<p class="hint">No one else here yet.</p>')
+    : '';
+
+  const composerInline = canSend ? `
       <div style="display:flex;gap:10px;align-items:center;width:100%;">
         <input type="text" id="messageInput" maxlength="500" placeholder="Say something…" value="${esc(messageDraft)}" oninput="onMessageInput()" onkeydown="if(event.key==='Enter') sendCircleMessage();" style="margin:0;flex:1;">
         <button onclick="sendCircleMessage()">Send</button>
       </div>
-    ` : '<p class="hint">Pick someone above to message.</p>', 'composer', 'circle');
+    ` : '';
 
   app.innerHTML = `
     <div class="hub-screen">
       <div class="hub-box"${bgAttrPlain('circle')}>
         ${hotspotButtonsMarkup(CIRCLEMESSAGES_AREAS, 'CIRCLEMESSAGES_AREAS', 'circle')}
-        ${peerPickerMarkup}
-        ${composerMarkup}
         <div class="hub-overlay">
           <button type="button" class="hub-back" onclick="backToCircleHomeFromMessages()">‹ Back to your Circle</button>
           <h2 style="text-align:center;">${esc(myCircle.circle.name)} — Messages</h2>
           ${chatTabStrip('circle')}
           <p class="hint" style="text-align:center;">${messagesTab === 'feed' ? 'Circle Chat' : 'Direct Messages'}</p>
-          <div class="msg-list" style="max-height:32vh;overflow-y:auto;">${messagesTab === 'feed' ? feedRows : (dmPeerId ? dmRows : '<p class="hint">Pick someone above to message.</p>')}</div>
+          <div class="msg-list" style="max-height:32vh;overflow-y:auto;">${messagesTab === 'feed' ? feedRows : (dmPeerId ? dmRows : '<p class="hint">Pick someone below to message.</p>')}</div>
           <div class="status" id="messagesStatus"></div>
+          ${peerPickerInline}
+          ${composerInline}
         </div>
       </div>
     </div>
