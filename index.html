@@ -3494,7 +3494,7 @@ async function doMageDuelAct(){
     if(data.won){
       Object.assign(mageDuelView, {
         xpGained: data.xpGained, shardsGained: data.shardsGained, level: data.level,
-        levelsGained: data.levelsGained, reagentWon: data.reagentWon,
+        levelsGained: data.levelsGained, reagentWon: data.reagentWon, lootWon: data.lootWon,
       });
       if(data.reagentWon) await loadMageReagentsOwned();
     }
@@ -3542,7 +3542,7 @@ function renderMageDuelScreen(){
   const footer = v.finished
     ? `
       <div class="status ${v.won ? 'ok' : 'err'}">${v.won
-        ? `Victory in ${v.round} round${v.round === 1 ? '' : 's'}! +${v.xpGained} XP, +${v.shardsGained} God Shards.${v.levelsGained > 0 ? ` Leveled up to ${v.level}!` : ''}${v.reagentWon ? ` Found: ${esc(v.reagentWon.name)}.` : ''}`
+        ? `Victory in ${v.round} round${v.round === 1 ? '' : 's'}! +${v.xpGained} XP, +${v.shardsGained} God Shards.${v.levelsGained > 0 ? ` Leveled up to ${v.level}!` : ''}${v.lootWon ? ` Found: ${esc(v.lootWon.name)}.` : ''}`
         : `Beaten back after ${v.round} round${v.round === 1 ? '' : 's'}. No reward, but no other penalty either — heal up or wait it out.`
       }</div>
       <button style="display:block;margin:14px auto 0;" onclick="closeMageDuel()">Continue</button>
@@ -5384,8 +5384,9 @@ async function doAttackWorldBoss(){
       const rewardBits = [];
       if(data.yourEssence) rewardBits.push(`${data.yourEssence} Essence`);
       if(data.yourTokens) rewardBits.push(`${data.yourTokens} God Token${data.yourTokens === 1 ? '' : 's'}`);
+      if(data.yourXp) rewardBits.push(`${data.yourXp} XP`);
       setWorldBossStatusMsg(
-        `${esc(data.bossName)} falls! ${bits.join(' ')} ${data.yourTotalDamage} total damage${rewardBits.length ? (', earning ' + rewardBits.join(' and ') + '.') : '.'}${yourHpNote}`,
+        `${esc(data.bossName)} falls! ${bits.join(' ')} ${data.yourTotalDamage} total damage${rewardBits.length ? (', earning ' + rewardBits.join(' and ') + '.') : '.'}${data.yourLoot ? ` Found: ${esc(data.yourLoot.name)}.` : ''}${yourHpNote}`,
         true
       );
       await loadGuardian();
@@ -7020,6 +7021,7 @@ async function actMove(moveIndex){
         result: data.result,
         essenceGained: data.essenceGained,
         rankUp: data.rankUp,
+        lootWon: data.lootWon,
         opponentName: combatView.opponentName
       };
     }
@@ -7047,12 +7049,13 @@ function renderBattleResult(){
   const bodyHtml = isCampaign
     ? (win
         ? `<p class="verdict-text">${esc(guardian.name)} bested the ${esc(v.opponentName)}.</p>
+           ${v.lootWon ? `<p class="gain-note">Found: ${esc(v.lootWon.name)}.</p>` : ''}
            <div class="status" id="campaignClaimStatus"></div>
            <button onclick="claimCampaignVictory()">Claim your reward</button>`
         : `<p class="verdict-text">${esc(v.opponentName)} proved too much this time.</p>
            <button onclick="backFromCampaignCombat()">Return to your guardian</button>`)
     : `<p class="verdict-text">${win ? `${esc(guardian.name)} bested the ${esc(v.opponentName)}.` : `${esc(v.opponentName)} proved too much this time.`}</p>
-       <p class="gain-note">Essence gained: ${v.essenceGained}.${v.rankUp ? ' A new trial ground has opened.' : ''}</p>
+       <p class="gain-note">Essence gained: ${v.essenceGained}.${v.rankUp ? ' A new trial ground has opened.' : ''}${v.lootWon ? ` Found: ${esc(v.lootWon.name)}.` : ''}</p>
        <button onclick="finishCombat()">Return to your guardian</button>`;
 
   app.innerHTML = `
@@ -8900,6 +8903,8 @@ async function doDragonAttack(){
     bits.unshift(`${esc(data.dragonName)} falls!`);
     bits.push(`The Circle gained ${data.rewardDevotion} Devotion and ${data.rewardRank} rank.`);
     if(data.yourShare) bits.push(`You personally earned ${data.yourShare} Essence.`);
+    if(data.yourXpShare) bits.push(`+${data.yourXpShare} XP.`);
+    if(data.yourLoot) bits.push(`Found: ${esc(data.yourLoot.name)}.`);
     if(data.decorationWon) bits.push('A new Altar decoration was won!');
     if(yourHpNote) bits.push(yourHpNote.trim());
     setDragonActionStatus(bits.join(' '), true);
@@ -10252,7 +10257,10 @@ async function doPvpRespond(challengeId, decision){
   // 'a' (challenger) is always "Opponent". winnerGrants/loserGrants (item
   // 6's admin-configurable payouts, 0064) aren't part of the raw
   // pvp_matches row, so they're folded onto the display object here.
-  pvpLastMatch = { ...data.match, winnerGrants: data.winnerGrants || [], loserGrants: data.loserGrants || [] };
+  pvpLastMatch = {
+    ...data.match, winnerGrants: data.winnerGrants || [], loserGrants: data.loserGrants || [],
+    winnerXp: data.winnerXp || 0, winnerLoot: data.winnerLoot || null,
+  };
   await refreshPvpStatus();
   // 0070 — PvP resolves the whole match instantly server-side (unlike
   // Campaign/Gauntlet's live actMove() loop), so there's no natural
@@ -10439,12 +10447,14 @@ function renderPvpHome(){
     const yourOldPos = won ? m.winner_old_position : m.loser_old_position;
     const yourNewPos = won ? m.winner_new_position : m.loser_new_position;
     const grantsLine = pvpGrantsLine(won ? m.winnerGrants : m.loserGrants);
+    const wonExtras = won ? [m.winnerXp ? `+${m.winnerXp} XP` : '', m.winnerLoot ? `found: ${m.winnerLoot.name}` : ''].filter(Boolean).join(', ') : '';
     app.innerHTML = `
       <div class="card verdict-card" id="pvpResultCard" style="position:relative;"${bgAttr('arena')}>
         <div class="verdict-badge ${won ? 'full' : 'partial'}">${won ? 'Victory' : 'Defeat'}</div>
         <p class="verdict-text">${won ? 'You won the duel.' : 'You lost the duel.'}</p>
         <p class="gain-note">${m.swapped ? `Ranks swapped — you moved from #${yourOldPos} to #${yourNewPos}.` : `No change in rank — #${yourOldPos} was already correctly ordered.`}</p>
         ${grantsLine ? `<p class="gain-note">${esc(grantsLine)}</p>` : ''}
+        ${wonExtras ? `<p class="gain-note">${esc(wonExtras)}.</p>` : ''}
         <div class="battle-log">${pvpDuelLogHtml(m.rounds) || '<div class="entry">No round data.</div>'}</div>
         <button onclick="dismissPvpMatch()">Continue</button>
       </div>
