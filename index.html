@@ -558,6 +558,29 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
 .hub-loose-status.ok{color:var(--gold-bright);}
 .hub-loose-status.err{color:var(--ember);}
 
+/* Ganymede's page tips (0102) — a small fixed corner card, deliberately
+   NOT a .hub-overlay/.hub-loose-panel (those live inside a screen's own
+   render output and get wiped the next time that screen re-renders;
+   this needs to survive that, see maybeShowPageTip()'s comment). z-index
+   above every hub-box's own content (6) and above .hub-overlay/
+   .hub-loose-panel too, since it can appear over any screen. */
+.ganymede-tip{
+  position:fixed;right:16px;bottom:16px;z-index:50;
+  display:flex;gap:10px;align-items:flex-start;
+  max-width:min(340px, 86vw);
+  background:rgba(10,8,16,0.95);border:1px solid var(--gold);border-radius:8px;
+  padding:12px 14px;box-shadow:0 8px 28px rgba(0,0,0,0.6);
+}
+.ganymede-tip-portrait{flex-shrink:0;width:48px;}
+.ganymede-tip-portrait img{width:48px;height:48px;border-radius:50%;object-fit:cover;display:block;}
+.ganymede-tip-name{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:2px;}
+.ganymede-tip-title{font-family:'Cinzel',serif;font-size:13.5px;color:var(--parchment);margin-bottom:4px;}
+.ganymede-tip-text{font-size:12.5px;color:var(--parchment-dim);line-height:1.4;margin:0 0 8px;}
+.ganymede-tip button{padding:5px 12px;font-size:10.5px;}
+@media (max-width: 560px){
+  .ganymede-tip{right:8px;bottom:8px;left:8px;max-width:none;}
+}
+
 .phase-note{text-align:center;color:var(--parchment-dim);font-size:12.5px;font-style:italic;margin-bottom:18px;}
 .phase-note strong{color:var(--gold-bright);font-style:normal;}
 
@@ -922,6 +945,19 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
     </div>
   </div>
 
+  <!-- Ganymede's page tips (0102) — deliberately OUTSIDE #app; see
+       maybeShowPageTip()'s comment for why. hidden by default, toggled
+       by plain DOM calls, never touched by render()'s innerHTML swaps. -->
+  <div id="ganymedeTip" class="ganymede-tip" hidden>
+    <div id="ganymedeTipPortrait" class="ganymede-tip-portrait"></div>
+    <div class="ganymede-tip-body">
+      <div class="ganymede-tip-name" id="ganymedeTipName"></div>
+      <div class="ganymede-tip-title" id="ganymedeTipTitle"></div>
+      <p class="ganymede-tip-text" id="ganymedeTipBody"></p>
+      <button type="button" class="secondary" onclick="dismissPageTip()">Got it</button>
+    </div>
+  </div>
+
   <footer class="notice">The Long Silence · a Pantheon Gate chapter, still being written</footer>
 </div>
 
@@ -1020,7 +1056,7 @@ function mageArtFor(key){ return MAGE_ARTS.find(a => a.key === key) || null; }
 async function loadMage(){
   const { data, error } = await supabaseClient
     .from('mages')
-    .select('id, name, art_key, level, xp, xp_to_next, upgrade_points, vitality, might, ward, swiftness, cunning, last_trained_at, last_duel_at, equipped_weapon_id, equipped_armor_id, equipped_accessory_id, has_seen_guide, current_hp, hp_updated_at, active_buff_stat_key, active_buff_amount, active_buff_expires_at, milestones_seen_level')
+    .select('id, name, art_key, level, xp, xp_to_next, upgrade_points, vitality, might, ward, swiftness, cunning, last_trained_at, last_duel_at, equipped_weapon_id, equipped_armor_id, equipped_accessory_id, has_seen_guide, current_hp, hp_updated_at, active_buff_stat_key, active_buff_amount, active_buff_expires_at, milestones_seen_level, seen_page_tips')
     .eq('owner_user_id', session.user.id)
     .maybeSingle();
   if(error){ console.error('mage load failed', error); return; }
@@ -1054,6 +1090,18 @@ async function loadNarratorSettings(){
     largePortraitUrl: data.large_portrait_url,
     dailyQuestionLimit: data.daily_question_limit ?? 3,
   };
+}
+
+// Ganymede's per-page explanations (0102) — a short note that pops up
+// the first time a player reaches a given screen. Keyed by pageTips
+// (pageKey -> {title, body}); see maybeShowPageTip() further down for
+// the actual pop/dismiss/mark-seen logic and the list of screens wired
+// to call it.
+async function loadPageTips(){
+  const { data, error } = await supabaseClient.from('page_tips').select('page_key, title, body').eq('active', true);
+  if(error){ console.error('page_tips load failed', error); return; }
+  pageTips = {};
+  (data || []).forEach(t => { pageTips[t.page_key] = { title: t.title, body: t.body }; });
 }
 
 async function loadGuideSteps(){
@@ -1269,6 +1317,7 @@ let guideStepIndex = 0;
 let GUIDE_STEPS = [];         // [{key,title,body}], from guide_steps
 let narratorSettings = { name: 'Ganymede', portraitUrl: null, largePortraitUrl: null, dailyQuestionLimit: 3 };
 let narratorChatView = null; // null | {messages:[{role,content}], remaining:number|null, sending:boolean, error:string|null}
+let pageTips = {}; // pageKey -> {title, body}, from page_tips (0102)
 
 // Milestone guidance (0081) — Ganymede narrating progression, not
 // onboarding (that's guide_steps/GUIDE_STEPS above, untouched). Same
@@ -1800,6 +1849,7 @@ async function afterLogin(){
   await loadMageArtsCatalog().catch(e => console.error('mage arts catalog load failed', e));
   await loadNarratorSettings().catch(e => console.error('narrator settings load failed', e));
   await loadGuideSteps().catch(e => console.error('guide steps load failed', e));
+  await loadPageTips().catch(e => console.error('page tips load failed', e));
   await loadMilestoneCatalog().catch(e => console.error('milestone catalog load failed', e));
   await loadFeatureGates().catch(e => console.error('feature gates load failed', e));
   loadSeasonInfo().catch(e => console.error('season pool load failed', e));
@@ -2918,6 +2968,7 @@ function renderMapHub(){
 function openGuardianHome(){
   guardianHomeView = { step: 'home' };
   render();
+  maybeShowPageTip('guardianPage');
   const loaders = [loadMageGearCatalog(), loadMageGearOwned()];
   // 0069 — HP/reagents/potions loaded alongside gear the same
   // progressive-render way, so they're ready the moment the player
@@ -3344,6 +3395,7 @@ async function openMageGear(){
   mageView = { step: 'gear' };
   guardianHomeView = null;
   render();
+  maybeShowPageTip('mageHome');
   await Promise.all([loadMageGearCatalog(), loadMageGearOwned()]);
   if(mageView && mageView.step === 'gear') render();
 }
@@ -3712,6 +3764,83 @@ function renderGuide(){
       </div>
     </div>
   `;
+}
+
+/* ---------------- Ganymede's page tips (0102) ----------------
+   Direct feedback: "I would like for Ganymede to be able to pop up and
+   explain each page as it is reached and/or accessed." A third Ganymede
+   voice alongside the Guide walkthrough (above, one-time onboarding) and
+   Milestone guidance (below, ongoing progression) — this one's tied to
+   PLACES instead: the first time a player reaches one of the screens
+   listed at the bottom of this comment, a short admin-written note pops
+   up in the corner, dismissed by the player or by leaving the page.
+
+   Deliberately NOT a full-screen takeover like the Guide or a milestone
+   popup — those are one-time whole-screen moments; landing on, say,
+   World Boss for the first time shouldn't hide World Boss itself behind
+   Ganymede. Implemented as a fixed overlay OUTSIDE #app (see the
+   #ganymedeTip markup right after #app in the body) specifically so it
+   survives every render() call untouched — render() only ever replaces
+   #app's own innerHTML, never anything outside it, so the tip can stay
+   open across a page's own internal re-renders (a data refresh, a tab
+   switch within the same screen) without this file needing to thread it
+   through 24 different renderXxx() templates.
+
+   Wired into the "reached and/or accessed" moment itself — each
+   screen's own openXxx() entry function — rather than into renderXxx(),
+   since render functions re-run on every state change for a page a
+   player is already on; open functions run exactly once per navigation,
+   which is what "as it is reached" actually means. Currently wired into:
+   returnToMapHub (map), openGuardianHome (guardianPage), openMageGear
+   (mageHome), openShrine (shrine), openBackpack (backpack), openCheckin
+   (checkin), openPromo (promo), openWorldBoss (worldBoss), openShop
+   (shop), openCampaign (campaign), openServerChat (serverChat),
+   openCircle (circle), openPersonalAltar (personalAltar),
+   openCircleDragon (circleDragon), openCircleInvasions
+   (circleInvasions), openTerritoryMap (territoryMap), openExpedition
+   (expeditions), openCraft (craft), openRedeem (chainedGods),
+   openPvpArena (arena), openProfile (profile), openMail (mail),
+   openPetitionPicker (oracle), openProving (gauntlet) — the game's major
+   screens. A handful of narrower sub-steps (age gates, confirm dialogs,
+   the Guide/creation flows Ganymede himself already narrates) are left
+   without one on purpose; admin.html's Page Tips editor still lists
+   every page-key this file uses anywhere, so writing a tip for one of
+   those just never fires rather than erroring. */
+
+function maybeShowPageTip(pageKey){
+  if(!mage) return;
+  const tip = pageTips[pageKey];
+  if(!tip || !(tip.title || tip.body)) return;
+  const seen = mage.seen_page_tips || [];
+  if(seen.includes(pageKey)) return;
+
+  const el = document.getElementById('ganymedeTip');
+  if(!el) return;
+  document.getElementById('ganymedeTipPortrait').innerHTML = opponentImgFor(narratorSettings.portraitUrl, null, 48);
+  document.getElementById('ganymedeTipName').textContent = narratorSettings.name;
+  document.getElementById('ganymedeTipTitle').textContent = tip.title || '';
+  document.getElementById('ganymedeTipBody').textContent = tip.body || '';
+  el.hidden = false;
+
+  // Optimistic — same reasoning as markGuideSeen(): flip it locally right
+  // away so re-navigating to the same page before the network call lands
+  // doesn't pop it a second time.
+  mage.seen_page_tips = [...seen, pageKey];
+  markPageTipSeen(pageKey);
+}
+
+function dismissPageTip(){
+  const el = document.getElementById('ganymedeTip');
+  if(el) el.hidden = true;
+}
+
+async function markPageTipSeen(pageKey){
+  try{
+    await fetch(FUNCTIONS_URL + '/mage', {
+      method: 'POST', headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'mark-page-tip-seen', pageKey })
+    });
+  }catch(e){ console.error('mark-page-tip-seen failed', e); }
 }
 
 /* ---------------- Milestone guidance (0081) ----------------
@@ -4132,6 +4261,7 @@ async function doTrainGuardian(){
 function openProfile(){
   profileView = { step: 'home' };
   render();
+  maybeShowPageTip('profile');
   // "redo the profile to show more about the mage" — the redesigned
   // screen leads with a live Mage HP bar, so loadMageStatus() (the same
   // regen-inclusive read the Mage Home tab uses, see 0069) needs to run
@@ -4576,6 +4706,7 @@ async function savePassword(){
 async function openShrine(){
   shrineView = { step: 'browse' };
   render();
+  maybeShowPageTip('shrine');
   await loadShrineEntitlements();
   if(shrineView) render();
 }
@@ -4651,6 +4782,7 @@ function renderShrine(){
 async function openMail(){
   mailView = { step: 'home' };
   render();
+  maybeShowPageTip('mail');
   await loadMail();
   if(mailView) render();
 }
@@ -4800,6 +4932,7 @@ function claimSelectedMail(){
 async function openBackpack(){
   backpackView = { step: 'home' };
   render();
+  maybeShowPageTip('backpack');
   const loaders = [loadCraftCatalog(), loadCraftInventory(), loadArenaShopCatalog(), loadArenaInventory(), loadExpeditionCatalog()];
   if(mage){
     if(!mageGearCatalog.length) loaders.push(loadMageGearCatalog());
@@ -5001,6 +5134,7 @@ function renderBackpackExpeditions(){
 async function openCheckin(){
   checkinView = { step: 'home' };
   render();
+  maybeShowPageTip('checkin');
 }
 
 function backFromCheckin(){
@@ -5042,6 +5176,7 @@ function renderCheckin(){
 async function openPromo(){
   promoView = { step: 'home' };
   render();
+  maybeShowPageTip('promo');
   await loadPromoEvents();
   if(promoView) render();
 }
@@ -5119,6 +5254,7 @@ function openWorldBoss(){
   worldBossStatus = null;
   worldBossMoves = null;
   render();
+  maybeShowPageTip('worldBoss');
   refreshWorldBossStatus();
   loadWorldBossMoves();
 }
@@ -5409,6 +5545,7 @@ async function openShop(){
   shopStatusMsg = '';
   shopDeitySearch = '';
   render();
+  maybeShowPageTip('shop');
   await Promise.all([loadShopCatalog(), loadShrineEntitlements()]);
   if(shopView) render();
 }
@@ -5647,6 +5784,7 @@ async function openCampaign(){
   campaignView = { step: 'browse' };
   campaignMsg = '';
   render();
+  maybeShowPageTip('campaign');
   await loadCampaignData();
   if(campaignView) render();
 }
@@ -5830,6 +5968,7 @@ function returnToMapHub(){
   checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
   shopView = null; serverChatView = null;
   render();
+  maybeShowPageTip('map');
   // Refresh the currency pane's petitions/messages counts every time a
   // player lands back on the Map Hub — same fire-and-forget-then-
   // re-render-if-still-here pattern as the login preload above.
@@ -5843,6 +5982,7 @@ function returnToMapHub(){
 function openPetitionPicker(){
   petitionView = { step: 'pick' };
   render();
+  maybeShowPageTip('oracle');
 }
 
 function backToGuardianHome(){
@@ -6161,6 +6301,7 @@ async function openServerChat(){
   serverChatView = { step: 'chat' };
   serverChatDraft = '';
   render();
+  maybeShowPageTip('serverChat');
   await refreshServerChatMessages();
   startServerChatPolling();
 }
@@ -6292,6 +6433,7 @@ function openProving(){
   if(!gate.open){ featureLockView = { label: gate.label, message: gate.message }; render(); return; }
   combatView = { step: 'pick' };
   render();
+  maybeShowPageTip('gauntlet');
   loadGauntletOpponents().then(() => { if(combatView && combatView.step === 'pick') render(); });
 }
 
@@ -7035,6 +7177,7 @@ async function openCircle(){
   if(!gate.open){ featureLockView = { label: gate.label, message: gate.message }; render(); return; }
   circleView = { step: 'loading' };
   render();
+  maybeShowPageTip('circle');
   await loadMyCircle();
 }
 
@@ -8433,6 +8576,7 @@ async function openPersonalAltar(){
   palPickerPlot = null;
   palPickerTab = 'plant';
   render();
+  maybeShowPageTip('personalAltar');
   await refreshPersonalAltar();
   startPersonalAltarTicking();
 }
@@ -8666,6 +8810,7 @@ async function openCircleDragon(){
   dragonStatus = null;
   dragonMoves = null;
   render();
+  maybeShowPageTip('circleDragon');
   await refreshDragonStatus();
   loadDragonMoves();
 }
@@ -8874,6 +9019,7 @@ async function openCircleInvasions(){
   circleView = { step: 'invasions' };
   invasionStatus = null;
   render();
+  maybeShowPageTip('circleInvasions');
   await refreshInvasionStatus();
 }
 
@@ -9029,6 +9175,7 @@ async function openTerritoryMap(){
   territoryMap = null;
   openZoneId = null;
   render();
+  maybeShowPageTip('territoryMap');
   const [mapData] = await Promise.all([circleFetch('territory-map'), loadMyOutgoingScouts()]);
   territoryMap = mapData.ok ? mapData : { territoryAltars: [] };
   if(circleView && circleView.step === 'territory') render();
@@ -9298,6 +9445,7 @@ async function loadExpeditionStatus(){
 async function openExpedition(){
   expeditionView = { step: 'home' };
   render();
+  maybeShowPageTip('expeditions');
   await Promise.all([loadExpeditionCatalog(), loadExpeditionStatus()]);
   if(expeditionView) render();
 }
@@ -9466,6 +9614,7 @@ async function loadCraftInventory(){
 async function openCraft(){
   craftView = { step: 'home' };
   render();
+  maybeShowPageTip('craft');
   // Mage gear crafting (0068) folded in alongside the Guardian's own
   // catalog — see renderCraft(). Only loaded when a Mage actually
   // exists yet (mageGearCatalog/mageGearOwned, both cached the same
@@ -9762,6 +9911,7 @@ function renderCraft(){
 function openRedeem(){
   redeemView = { step: 'hub' };
   render();
+  maybeShowPageTip('chainedGods');
 }
 
 function backFromRedeem(){
@@ -9915,13 +10065,13 @@ function renderKeyOfNightPicker(){
       <div class="hub-box"${bgAttrPlain('chainedGods')}>
         ${hotspotButtonsMarkup(KEYOFNIGHT_AREAS, 'KEYOFNIGHT_AREAS', 'chainedGods')}
         ${pickerMarkup}
-        <div class="hub-overlay">
+        <div class="hub-loose-panel">
           <button type="button" class="hub-back" onclick="backToRedeemHub()">‹ Back to Map</button>
-          <h2 style="text-align:center;">Choose with a Key of Night</h2>
-          <p class="hint" style="text-align:center;">Only this season's gods are open to a direct choice.</p>
+          <h2>Choose with a Key of Night</h2>
+          <p class="hint">Only this season's gods are open to a direct choice.</p>
           <div class="essence-row"><span class="essence-label">Key of Night</span><span class="essence-value">${guardian.key_of_night || 0}</span></div>
           <div id="redeemStatus" class="status"></div>
-          ${optgroups ? '' : '<p class="hint" style="text-align:center;">Nothing is in season right now — check back soon.</p>'}
+          ${optgroups ? '' : '<p class="hint">Nothing is in season right now — check back soon.</p>'}
         </div>
       </div>
     </div>
@@ -9962,6 +10112,7 @@ async function openPvpArena(){
   pvpStatus = null;
   pvpLastMatch = null;
   render();
+  maybeShowPageTip('arena');
   await refreshPvpStatus();
 }
 
