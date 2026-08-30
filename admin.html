@@ -861,7 +861,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <table>
             <thead><tr>
               <th>Key</th><th>Name</th><th>Affinity</th><th>Ward</th><th>Power</th><th>HP</th>
-              <th>Reward Essence</th><th>Reward Tokens</th><th>Image URL</th><th>Active</th><th>Heals on own affinity</th><th></th>
+              <th>Reward Essence</th><th>Reward Tokens</th><th>Reward XP</th><th>Image URL</th><th>Active</th><th>Heals on own affinity</th><th></th>
             </tr></thead>
             <tbody id="worldBossCatalogRows"><tr><td colspan="12">Loading…</td></tr></tbody>
           </table>
@@ -901,6 +901,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="form-row">
           <div class="field"><label>Reward Essence pool</label><input type="number" min="0" id="newBossRewardEssence" value="0" style="max-width:150px;"></div>
           <div class="field"><label>Reward God Tokens pool</label><input type="number" min="0" id="newBossRewardTokens" value="0" style="max-width:170px;"></div>
+          <div class="field"><label>Reward XP pool</label><input type="number" min="0" id="newBossRewardXp" value="0" style="max-width:150px;" title="Split across every contributor by % of damage dealt, same as the Essence pool — guaranteed on the kill, not chance-based."></div>
           <div class="field"><label>Image URL (optional)</label><input type="text" id="newBossImageUrl" placeholder="https://…" style="max-width:280px;"></div>
         </div>
         <div class="field" style="max-width:none;">
@@ -1187,12 +1188,14 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Regen per hour</label><input type="number" min="0" id="mpHpRegenPerHour" style="max-width:130px;"></div>
         </div>
         <h3>Duel monster scaling (0069)</h3>
-        <p class="hint">The level-scaled opponent a Duel fights: Monster HP = Base + Mage Level &times; Per-Level, Monster Attack = Base + Mage Level &times; Per-Level (reduced by the Mage's Ward each round).</p>
+        <p class="hint">The level-scaled opponent a Duel fights: Monster HP = Base + Mage Level &times; Per-Level, Monster Attack = Base + Mage Level &times; Per-Level (reduced by the Mage's Ward each round). Monster Ward (0103) is the new DEF-side stat that reduces the Mage's own attack in return, same "ATK vs DEF" rule every other fight in the game already follows.</p>
         <div class="form-row">
           <div class="field"><label>Monster HP base</label><input type="number" min="1" id="mpMonsterHpBase" style="max-width:130px;"></div>
           <div class="field"><label>Monster HP / level</label><input type="number" min="0" id="mpMonsterHpPerLevel" style="max-width:140px;"></div>
           <div class="field"><label>Monster attack base</label><input type="number" min="0" id="mpMonsterAttackBase" style="max-width:140px;"></div>
           <div class="field"><label>Monster attack / level</label><input type="number" min="0" id="mpMonsterAttackPerLevel" style="max-width:150px;"></div>
+          <div class="field"><label>Monster ward base</label><input type="number" min="0" id="mpMonsterWardBase" style="max-width:130px;"></div>
+          <div class="field"><label>Monster ward / level</label><input type="number" min="0" id="mpMonsterWardPerLevel" style="max-width:140px;"></div>
         </div>
         <h3>Reagent drops (0069)</h3>
         <div class="form-row">
@@ -1577,6 +1580,18 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
     <!-- ============================== GUARDIAN ITEMS ============================== -->
     <div class="tab-content" id="tab-guardianitems">
+      <div class="card">
+        <h2>Universal Loot (0103)</h2>
+        <p class="hint">Direct feedback: "anything defeated should drop both exp and loot... ALL ITEMS SHOULD BE ABLE TO BE PRESENTED IN ANY SITUATION THAT ANYTHING CAN BE PRESENTED." One shared chance roll, called after every real combat win in the game (Gauntlet, Campaign, World Boss, Circle Dragon, PvP Arena, Mage Duel) — XP from those fights is guaranteed and unaffected by this card, this only controls the chance-based ITEM half of the rule. On a successful roll it draws from every lootable category at once (Guardian craft items, Mage gear, reagents, potions, personal altar decorations) rather than a table curated per activity, so nothing is siloed to "only drops here."</p>
+        <div class="form-row">
+          <div class="field"><label>Drop chance per win (0–100%)</label><input type="number" min="0" max="100" step="1" id="lootDropChance" style="max-width:150px;"></div>
+          <div class="field"><label><input type="checkbox" id="lootActive"> Loot rolls are active</label></div>
+        </div>
+        <div class="save-bar">
+          <button id="saveLootSettingsBtn">Save changes</button>
+          <div class="status" id="lootSettingsStatus"></div>
+        </div>
+      </div>
       <div class="card">
         <h2>Guardian item catalog</h2>
         <p class="hint">What God Shards can be crafted into. A stat boost applies immediately at craft time. A cosmetic is owned forever — ownership is the effect. A consumable sits in inventory until a player uses it, then applies the picked effect: essence_surge/bond_surge/favor_surge grant Consumable amount of that currency, heal_hp restores that much Guardian HP, stat_buff uses Stat key + Consumable amount + Buff duration for a temporary combat boost (Guardian's own item shop — Craft tab), and cure_status clears a poisoned/weakened/vulnerable status mid-fight from the battle screen (needs no Stat key/amount/duration — it just cures). An enchantment is owned forever like a cosmetic, but grants a real passive combat ability for as long as it's owned (same wired vocabulary and all-fight behavior as Deity Blessings' Effect key).</p>
@@ -3029,6 +3044,7 @@ async function handleSession(session){
   loadDeityMoves();
   loadDeityBlessings();
   loadCirclePatronBonuses();
+  loadLootSettings();
   loadGuardianItemCatalog();
   loadExpeditionArtifacts();
   loadArenaShopCatalog();
@@ -4142,6 +4158,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('saveCircleBonusesBtn').addEventListener('click', saveCirclePatronBonuses);
 
+  document.getElementById('saveLootSettingsBtn').addEventListener('click', saveLootSettings);
   document.getElementById('saveGuardianItemsBtn').addEventListener('click', saveGuardianItemCatalog);
   document.getElementById('addGuardianItemBtn').addEventListener('click', addGuardianItem);
   document.getElementById('newGuardianItemType').addEventListener('change', updateNewGuardianItemTypeFields);
@@ -6242,6 +6259,8 @@ async function loadMageProgression(){
   document.getElementById('mpMonsterHpPerLevel').value = data.monster_hp_per_level;
   document.getElementById('mpMonsterAttackBase').value = data.monster_attack_base;
   document.getElementById('mpMonsterAttackPerLevel').value = data.monster_attack_per_level;
+  document.getElementById('mpMonsterWardBase').value = data.monster_ward_base;
+  document.getElementById('mpMonsterWardPerLevel').value = data.monster_ward_per_level;
   document.getElementById('mpReagentDropChance').value = data.reagent_drop_chance;
 }
 
@@ -6255,9 +6274,10 @@ async function saveMageProgression(){
   const hpBase = v('mpHpBase'), hpPerVitality = v('mpHpPerVitality'), hpRegenPerHour = v('mpHpRegenPerHour');
   const monsterHpBase = v('mpMonsterHpBase'), monsterHpPerLevel = v('mpMonsterHpPerLevel');
   const monsterAttackBase = v('mpMonsterAttackBase'), monsterAttackPerLevel = v('mpMonsterAttackPerLevel');
+  const monsterWardBase = v('mpMonsterWardBase'), monsterWardPerLevel = v('mpMonsterWardPerLevel');
   const reagentDropChance = parseFloat(document.getElementById('mpReagentDropChance').value);
 
-  const allValues = [trainCooldown, trainXp, trainShardsMin, trainShardsMax, duelCooldown, duelXp, duelShardsMin, duelShardsMax, xpCurveBase, xpCurveScale, upgradePointsPerLevel, hpBase, hpPerVitality, hpRegenPerHour, monsterHpBase, monsterHpPerLevel, monsterAttackBase, monsterAttackPerLevel];
+  const allValues = [trainCooldown, trainXp, trainShardsMin, trainShardsMax, duelCooldown, duelXp, duelShardsMin, duelShardsMax, xpCurveBase, xpCurveScale, upgradePointsPerLevel, hpBase, hpPerVitality, hpRegenPerHour, monsterHpBase, monsterHpPerLevel, monsterAttackBase, monsterAttackPerLevel, monsterWardBase, monsterWardPerLevel];
   if(allValues.some(n => isNaN(n) || n < 0)){
     status.className = 'status err';
     status.textContent = 'Every field must be a non-negative number.';
@@ -6298,6 +6318,7 @@ async function saveMageProgression(){
     hp_base: hpBase, hp_per_vitality: hpPerVitality, hp_regen_per_hour: hpRegenPerHour,
     monster_hp_base: monsterHpBase, monster_hp_per_level: monsterHpPerLevel,
     monster_attack_base: monsterAttackBase, monster_attack_per_level: monsterAttackPerLevel,
+    monster_ward_base: monsterWardBase, monster_ward_per_level: monsterWardPerLevel,
     reagent_drop_chance: reagentDropChance,
     updated_at: new Date().toISOString()
   }).eq('id', 1);
@@ -6618,11 +6639,12 @@ async function loadWorldBossCatalog(){
     <td><input type="number" min="1" id="wbtHp_${esc(b.key)}" value="${b.vitality}"></td>
     <td><input type="number" min="0" id="wbtRewardEss_${esc(b.key)}" value="${b.reward_essence_pool}"></td>
     <td><input type="number" min="0" id="wbtRewardTok_${esc(b.key)}" value="${b.reward_god_tokens_pool}"></td>
+    <td><input type="number" min="0" id="wbtRewardXp_${esc(b.key)}" value="${b.reward_xp_pool ?? 0}"></td>
     <td><input type="text" id="wbtImg_${esc(b.key)}" value="${esc(b.image_url || '')}" style="max-width:160px;"></td>
     <td><input type="checkbox" id="wbtActive_${esc(b.key)}" ${b.active ? 'checked' : ''}></td>
     <td><input type="checkbox" id="wbtHeals_${esc(b.key)}" ${b.heals_on_own_affinity ? 'checked' : ''} title="Heals instead of taking damage when hit by an attack of this boss's own affinity"></td>
     <td><button type="button" onclick="spawnWorldBossFromCatalog('${esc(b.key)}')">Spawn this</button></td>
-  </tr>`).join('') || '<tr><td colspan="12">No saved templates yet — spawn one below and tick "save as reusable", or fill in "Save a new template".</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="13">No saved templates yet — spawn one below and tick "save as reusable", or fill in "Save a new template".</td></tr>';
 
   const fromSel = document.getElementById('newBossFromTemplate');
   if(fromSel){
@@ -6651,6 +6673,7 @@ async function saveWorldBossCatalog(){
       hp_total: parseInt(document.getElementById('wbtHp_' + key).value, 10),
       reward_essence_pool: parseInt(document.getElementById('wbtRewardEss_' + key).value, 10),
       reward_god_tokens_pool: parseInt(document.getElementById('wbtRewardTok_' + key).value, 10),
+      reward_xp_pool: parseInt(document.getElementById('wbtRewardXp_' + key).value, 10) || 0,
       image_url: document.getElementById('wbtImg_' + key).value.trim() || null,
       active: document.getElementById('wbtActive_' + key).checked,
       heals_on_own_affinity: document.getElementById('wbtHeals_' + key).checked,
@@ -6658,7 +6681,7 @@ async function saveWorldBossCatalog(){
   });
   status.className = 'status';
   status.textContent = 'Saving…';
-  const payload = rows.map(r => ({ key: r.key, kind: 'world_boss', name: r.name, affinity: r.affinity, ward: r.ward, might: r.power, vitality: r.hp_total, reward_essence_pool: r.reward_essence_pool, reward_god_tokens_pool: r.reward_god_tokens_pool, image_url: r.image_url, active: r.active, heals_on_own_affinity: r.heals_on_own_affinity }));
+  const payload = rows.map(r => ({ key: r.key, kind: 'world_boss', name: r.name, affinity: r.affinity, ward: r.ward, might: r.power, vitality: r.hp_total, reward_essence_pool: r.reward_essence_pool, reward_god_tokens_pool: r.reward_god_tokens_pool, reward_xp_pool: r.reward_xp_pool, image_url: r.image_url, active: r.active, heals_on_own_affinity: r.heals_on_own_affinity }));
   const { error } = await supabaseClient.from('creatures').upsert(payload, { onConflict: 'key' });
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
@@ -6715,6 +6738,7 @@ function applyWorldBossTemplateToForm(){
   document.getElementById('newBossHp').value = tpl.vitality;
   document.getElementById('newBossRewardEssence').value = tpl.reward_essence_pool;
   document.getElementById('newBossRewardTokens').value = tpl.reward_god_tokens_pool;
+  document.getElementById('newBossRewardXp').value = tpl.reward_xp_pool ?? 0;
   document.getElementById('newBossImageUrl').value = tpl.image_url || '';
   document.getElementById('newBossHealsOnOwnAffinity').checked = Boolean(tpl.heals_on_own_affinity);
 }
@@ -6735,6 +6759,7 @@ async function spawnWorldBossFromCatalog(key){
     hp_total: tpl.vitality, hp_remaining: tpl.vitality,
     reward_essence_pool: tpl.reward_essence_pool,
     reward_god_tokens_pool: tpl.reward_god_tokens_pool,
+    reward_xp_pool: tpl.reward_xp_pool ?? 0,
     image_url: tpl.image_url, flavor_text: tpl.flavor_text,
     status: 'active', heals_on_own_affinity: Boolean(tpl.heals_on_own_affinity),
     // 0087 — keep a live pointer back to this catalog row so the boss's
@@ -6769,7 +6794,7 @@ async function loadWorldBoss(){
     `${esc(boss.name)} — ${worldBossStatusLabel(boss.status)}`,
     `HP: ${boss.hp_remaining.toLocaleString()} / ${boss.hp_total.toLocaleString()} (${pct}%)`,
     `Affinity: ${boss.affinity || '—'}   Ward: ${boss.ward}   Power: ${boss.power}`,
-    `Reward pools: ${boss.reward_essence_pool.toLocaleString()} Essence · ${boss.reward_god_tokens_pool.toLocaleString()} God Tokens`,
+    `Reward pools: ${boss.reward_essence_pool.toLocaleString()} Essence · ${boss.reward_god_tokens_pool.toLocaleString()} God Tokens · ${(boss.reward_xp_pool ?? 0).toLocaleString()} XP`,
     `Spawned: ${new Date(boss.spawned_at).toLocaleString()}${boss.resolved_at ? ('   Resolved: ' + new Date(boss.resolved_at).toLocaleString()) : ''}`,
   ].join('<br>');
 
@@ -6805,6 +6830,7 @@ async function spawnWorldBoss(){
   const hp = parseInt(document.getElementById('newBossHp').value, 10);
   const rewardEssence = parseInt(document.getElementById('newBossRewardEssence').value, 10);
   const rewardTokens = parseInt(document.getElementById('newBossRewardTokens').value, 10);
+  const rewardXp = parseInt(document.getElementById('newBossRewardXp').value, 10);
   const imageUrl = document.getElementById('newBossImageUrl').value.trim();
   const flavor = document.getElementById('newBossFlavor').value.trim();
   const healsOnOwnAffinity = document.getElementById('newBossHealsOnOwnAffinity').checked;
@@ -6829,6 +6855,7 @@ async function spawnWorldBoss(){
     hp_total: hp, hp_remaining: hp,
     reward_essence_pool: isNaN(rewardEssence) ? 0 : rewardEssence,
     reward_god_tokens_pool: isNaN(rewardTokens) ? 0 : rewardTokens,
+    reward_xp_pool: isNaN(rewardXp) ? 0 : rewardXp,
     image_url: imageUrl || null,
     flavor_text: flavor || null,
     status: 'active',
@@ -6848,6 +6875,7 @@ async function spawnWorldBoss(){
         key: tplKey, kind: 'world_boss', name, affinity, ward, might: power, vitality: hp,
         reward_essence_pool: isNaN(rewardEssence) ? 0 : rewardEssence,
         reward_god_tokens_pool: isNaN(rewardTokens) ? 0 : rewardTokens,
+        reward_xp_pool: isNaN(rewardXp) ? 0 : rewardXp,
         image_url: imageUrl || null, flavor_text: flavor || null,
         heals_on_own_affinity: healsOnOwnAffinity,
       }, { onConflict: 'key' });
@@ -6867,10 +6895,10 @@ async function spawnWorldBoss(){
 
   status.className = 'status ok';
   status.textContent = name + ' is live — players can attack it from the map now.' + templateNote;
-  ['newBossName','newBossWard','newBossHp','newBossRewardEssence','newBossRewardTokens','newBossImageUrl','newBossFlavor','newBossSaveAsTemplateKey'].forEach(fid => {
+  ['newBossName','newBossWard','newBossHp','newBossRewardEssence','newBossRewardTokens','newBossRewardXp','newBossImageUrl','newBossFlavor','newBossSaveAsTemplateKey'].forEach(fid => {
     const el = document.getElementById(fid);
     if(fid === 'newBossWard') el.value = '0';
-    else if(fid === 'newBossRewardEssence' || fid === 'newBossRewardTokens') el.value = '0';
+    else if(fid === 'newBossRewardEssence' || fid === 'newBossRewardTokens' || fid === 'newBossRewardXp') el.value = '0';
     else el.value = '';
   });
   document.getElementById('newBossAffinity').value = '';
@@ -7633,6 +7661,7 @@ function creatureKindFieldsHtml(kind, c){
     <div class="form-row">
       <div class="field"><label>Reward: Devotion</label><input type="number" min="0" id="crRewardDevotion" value="${c.reward_devotion ?? 0}" style="max-width:130px;"></div>
       <div class="field"><label>Reward: Essence pool</label><input type="number" min="0" id="crRewardEssence" value="${c.reward_essence_pool ?? 0}" style="max-width:140px;"></div>
+      <div class="field"><label>Reward: XP pool</label><input type="number" min="0" id="crRewardXp" value="${c.reward_xp_pool ?? 0}" style="max-width:120px;" title="Split across every contributor by % of damage dealt, same as the Essence pool — guaranteed on the kill, not chance-based."></div>
       <div class="field"><label>Reward: Circle rank Δ</label><input type="number" min="0" id="crRewardRank" value="${c.reward_circle_rank_delta ?? 0}" style="max-width:140px;"></div>
       <div class="field"><label>Deco key</label><input type="text" id="crDecoKey" value="${esc(c.reward_decoration_key || '')}" style="max-width:140px;"></div>
       <div class="field"><label>Deco chance (0-1)</label><input type="number" min="0" max="1" step="0.01" id="crDecoChance" value="${c.reward_decoration_chance ?? 0}" style="max-width:110px;"></div>
@@ -7642,6 +7671,7 @@ function creatureKindFieldsHtml(kind, c){
     return `<div class="form-row">
       <div class="field"><label>Reward: Essence pool</label><input type="number" min="0" id="crRewardEssence" value="${c.reward_essence_pool ?? 0}" style="max-width:140px;"></div>
       <div class="field"><label>Reward: God Tokens pool</label><input type="number" min="0" id="crRewardTokens" value="${c.reward_god_tokens_pool ?? 0}" style="max-width:150px;"></div>
+      <div class="field"><label>Reward: XP pool</label><input type="number" min="0" id="crRewardXp" value="${c.reward_xp_pool ?? 0}" style="max-width:120px;" title="This is just the saved TEMPLATE value, copied onto a new boss when you spawn from it — tune the LIVE boss's XP pool from the World Boss tab's spawn form."></div>
     </div>`;
   }
   return ''; // campaign — no extra fields
@@ -7719,12 +7749,14 @@ async function saveCreature(){
     payload.expiry_rank_penalty = parseInt(document.getElementById('crExpiryPenalty').value, 10) || 0;
     payload.reward_devotion = parseInt(document.getElementById('crRewardDevotion').value, 10) || 0;
     payload.reward_essence_pool = parseInt(document.getElementById('crRewardEssence').value, 10) || 0;
+    payload.reward_xp_pool = parseInt(document.getElementById('crRewardXp').value, 10) || 0;
     payload.reward_circle_rank_delta = parseInt(document.getElementById('crRewardRank').value, 10) || 0;
     payload.reward_decoration_key = document.getElementById('crDecoKey').value.trim() || null;
     payload.reward_decoration_chance = parseFloat(document.getElementById('crDecoChance').value) || 0;
   } else if(kind === 'world_boss'){
     payload.reward_essence_pool = parseInt(document.getElementById('crRewardEssence').value, 10) || 0;
     payload.reward_god_tokens_pool = parseInt(document.getElementById('crRewardTokens').value, 10) || 0;
+    payload.reward_xp_pool = parseInt(document.getElementById('crRewardXp').value, 10) || 0;
   }
 
   status.className = 'status';
@@ -9078,6 +9110,33 @@ function updateNewGuardianItemTypeFields(){
   if(!effectSelect.options.length) effectSelect.innerHTML = effectKeyOptionsHtml(CONSUMABLE_EFFECT_OPTIONS, '');
   const enchantSelect = document.getElementById('newGuardianItemEnchantKey');
   if(!enchantSelect.options.length) enchantSelect.innerHTML = effectKeyOptionsHtml(AURA_EFFECT_OPTIONS, '');
+}
+
+// Universal Loot (0103) — a single-row settings table, same singleton
+// shape as loot_settings' siblings (stamina_settings, pricing_settings).
+async function loadLootSettings(){
+  const { data, error } = await supabaseClient.from('loot_settings').select('*').eq('id', 1).maybeSingle();
+  if(error || !data) return;
+  document.getElementById('lootDropChance').value = data.drop_chance_pct;
+  document.getElementById('lootActive').checked = data.active;
+}
+
+async function saveLootSettings(){
+  const status = document.getElementById('lootSettingsStatus');
+  const dropChance = parseFloat(document.getElementById('lootDropChance').value);
+  const active = document.getElementById('lootActive').checked;
+  if(isNaN(dropChance) || dropChance < 0 || dropChance > 100){
+    status.className = 'status err';
+    status.textContent = 'Drop chance must be between 0 and 100.';
+    return;
+  }
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('loot_settings').update({
+    drop_chance_pct: dropChance, active, updated_at: new Date().toISOString(),
+  }).eq('id', 1);
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
 }
 
 async function loadGuardianItemCatalog(){
