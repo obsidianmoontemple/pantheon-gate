@@ -1651,6 +1651,17 @@ let hallOfAncestors = null; // null (not yet loaded) | array of retired_guardian
 let hallOfAncestorsOpen = false;
 let profilePasswordOpen = false; // true while the set/change-password form is showing on Profile
 
+// Familiar reawakening upgrade (0100) — "new familiars can be purchased
+// depending on their need." Sits on Profile right alongside Hall of
+// Ancestors/Release, same toggle-a-block-open convention, not a separate
+// top-level screen. familiarCosts is loaded once (same lazy-load-on-open
+// pattern as hallOfAncestors) from the new familiar_costs() RPC, since
+// guardian_progression_settings itself stays admin-only to read.
+let newFamiliarOpen = false;
+let newFamiliarSpecies = null;
+let newFamiliarName = '';
+let familiarCosts = null; // null (not yet loaded) | {newFamiliarCostEssence, switchFamiliarCostEssence}
+
 /* ---------------- shop (opened from Profile) ----------------
    Real-money purchasing — pantheons, individual gods, the flat
    subscription, named subscription tiers, and message packs — used to
@@ -4211,15 +4222,43 @@ function renderProfile(){
         <button onclick="confirmReleaseGuardian()">Yes, release ${esc(guardian.name)}</button>
       </div>`
     : `<button class="secondary" style="margin-top:14px;display:block;margin-left:auto;margin-right:auto;" onclick="startReleaseGuardian()">Release your familiar…</button>`;
+  const switchCostLabel = familiarCosts ? `${familiarCosts.switchFamiliarCostEssence} Essence` : 'some Essence';
   const hallBlock = hallOfAncestorsOpen
     ? `<div class="pantheon-group" style="margin-top:10px;text-align:left;">
         <h3>Hall of Ancestors</h3>
-        <p class="hint" style="margin-top:-4px;">Bring one back as your active familiar any time — your current one is archived here in its place, so you can switch back and forth as you like.</p>
+        <p class="hint" style="margin-top:-4px;">Bring one back as your active familiar any time — your current one is archived here in its place, so you can switch back and forth as you like. Everything it had (marks, items, Essence and every other currency, campaign progress) comes back with it. Switching costs ${esc(switchCostLabel)} from whichever familiar you're switching away from — free if you don't currently have one active.</p>
         ${hallOfAncestors === null ? '<p class="hint">Loading…</p>' : (hallOfAncestors.length
           ? hallOfAncestors.map(g => `<div class="deity-row"><span class="name">${esc(g.name)} <span style="opacity:0.6;">(${esc(g.species)}, ${esc(STAGE_LABEL[g.stage] || g.stage || 'egg')})</span></span><div style="display:flex;align-items:center;gap:8px;"><span style="opacity:0.6;font-size:12px;">${g.full_marks_count} full mark${g.full_marks_count === 1 ? '' : 's'} · retired ${new Date(g.retired_at).toLocaleDateString()}</span><button class="secondary" style="padding:4px 10px;font-size:11px;" onclick="doRestoreGuardian('${g.id}')">Bring back</button></div></div>`).join('')
           : '<p class="hint">No familiars retired yet.</p>')}
       </div>`
     : `<button class="secondary" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto;" onclick="openHallOfAncestors()">Hall of Ancestors</button>`;
+  // Get a different familiar (0100) — the actually-new piece: a fresh
+  // familiar of your choice without giving up what you have. Your current
+  // one is archived into the Hall of Ancestors above (not lost — it can
+  // be brought back the same way any other retired familiar can), for a
+  // cost since unlike restoring one you've already had, this one's brand
+  // new. Free the very first time (no active familiar yet), same as
+  // hatching always has been.
+  const newCostLabel = familiarCosts ? `${familiarCosts.newFamiliarCostEssence} Essence` : 'some Essence';
+  const newFamiliarNameOk = newFamiliarName.trim().length >= 2 && newFamiliarName.trim().length <= 40;
+  const newFamiliarBlock = newFamiliarOpen
+    ? `<div class="pantheon-group" style="margin-top:10px;text-align:left;">
+        <h3>Get a different familiar</h3>
+        <p class="hint" style="margin-top:-4px;">${esc(guardian.name)} goes to your Hall of Ancestors in its place — nothing is lost, you can bring it back any time. Costs ${esc(newCostLabel)} from ${esc(guardian.name)}'s own balance.</p>
+        <div class="choice-row" id="newFamiliarSpeciesRow">
+          ${SPECIES.map(s => `
+            <div class="choice ${newFamiliarSpecies === s.id ? 'selected' : ''}" onclick="pickNewFamiliarSpecies('${s.id}')">
+              <div class="art">${imgFor(s.id, 'hatchling', 72)}</div>
+              <div class="label">${esc(s.label)}</div>
+            </div>
+          `).join('')}
+        </div>
+        <input type="text" id="newFamiliarNameInput" maxlength="40" placeholder="Name your new familiar" value="${esc(newFamiliarName)}" oninput="onNewFamiliarNameInput()">
+        <button id="getFamiliarBtn" ${(newFamiliarSpecies && newFamiliarNameOk) ? '' : 'disabled'} onclick="doPurchaseNewFamiliar()">Get this familiar</button>
+        <button class="secondary" onclick="cancelNewFamiliar()">Never mind</button>
+        <div class="status" id="newFamiliarStatus"></div>
+      </div>`
+    : `<button class="secondary" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto;" onclick="openNewFamiliarPicker()">Get a different familiar…</button>`;
   const passwordBlock = profilePasswordOpen
     ? `<div class="pantheon-group" style="margin-top:10px;text-align:left;">
         <h3>Set / change password</h3>
@@ -4318,6 +4357,7 @@ function renderProfile(){
       <button class="secondary" style="margin-top:14px;display:block;margin-left:auto;margin-right:auto;" onclick="backFromProfile()">Back to the map</button>
       <button class="secondary" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto;" onclick="signOutOfGate()">Sign out</button>
       ${hallBlock}
+      ${newFamiliarBlock}
       ${passwordBlock}
       ${releaseBlock}
     </div>
@@ -4425,6 +4465,77 @@ function openHallOfAncestors(){
         if(profileView) render();
       });
   }
+  loadFamiliarCosts();
+}
+
+// Shared by the Hall of Ancestors hint and the "Get a different familiar"
+// block — familiar_costs() rather than reading guardian_progression_settings
+// directly, since that table stays admin-only to select (see 0100).
+function loadFamiliarCosts(){
+  if(familiarCosts !== null) return;
+  supabaseClient.rpc('familiar_costs').then(({ data, error }) => {
+    if(error){ console.error('familiar_costs load failed', error); return; }
+    familiarCosts = data;
+    if(profileView) render();
+  });
+}
+
+function openNewFamiliarPicker(){
+  newFamiliarOpen = true;
+  newFamiliarSpecies = null;
+  newFamiliarName = '';
+  render();
+  loadFamiliarCosts();
+}
+function cancelNewFamiliar(){
+  newFamiliarOpen = false;
+  render();
+}
+function pickNewFamiliarSpecies(id){
+  newFamiliarSpecies = id;
+  render();
+}
+function onNewFamiliarNameInput(){
+  const el = document.getElementById('newFamiliarNameInput');
+  newFamiliarName = el ? el.value : '';
+  const btn = document.getElementById('getFamiliarBtn');
+  if(btn) btn.disabled = !(newFamiliarSpecies && newFamiliarName.trim().length >= 2 && newFamiliarName.trim().length <= 40);
+}
+
+// Direct feedback: "new familiars can be purchased depending on their
+// need." purchase_new_familiar() archives whichever familiar is currently
+// active into the Hall of Ancestors (same as a manual Release, just
+// automatic) before creating the new one, charging Essence out of the one
+// being replaced — free the very first time, same as hatching always was.
+async function doPurchaseNewFamiliar(){
+  const status = document.getElementById('newFamiliarStatus');
+  const name = newFamiliarName.trim();
+  if(!newFamiliarSpecies || name.length < 2 || name.length > 40){
+    status.className = 'status err';
+    status.textContent = 'Pick a species and give it a name (2-40 characters) first.';
+    return;
+  }
+  status.className = 'status';
+  status.textContent = 'The shell is warm…';
+  const { data, error } = await supabaseClient.rpc('purchase_new_familiar', { p_species: newFamiliarSpecies, p_name: name });
+  if(error){
+    status.className = 'status err';
+    status.textContent = error.message || 'Could not get a new familiar.';
+    return;
+  }
+  // Full reset — same list confirmReleaseGuardian()/doRestoreGuardian()
+  // already use, since this also swaps out the active guardian and
+  // everything derived from it.
+  guardian = null; marks = [];
+  petitionView = null; combatView = null; craftView = null; redeemView = null;
+  expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
+  profileView = null; shrineView = null; mailView = null; backpackView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
+  shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false; serverChatView = null;
+  newFamiliarOpen = false; newFamiliarSpecies = null; newFamiliarName = '';
+  profilePasswordOpen = false;
+  await afterLogin();
+  celebrate({ count: 20, distance: 60, duration: 1000, color: '#ffd76a', size: 24, sprite: 'particle-fx/fx_starburst.png' });
 }
 
 // Brings a retired familiar back as the active one — restore_guardian()
