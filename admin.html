@@ -3245,9 +3245,12 @@ const DEFAULT_CIRCLEMESSAGES_AREAS_ADMIN = [
 // (see index.html renderCircleAltar()/renderPersonalAltar()) — no
 // admin-positionable hotspots for either any more.
 
+// Direct feedback: "i need this to be just one screen not 2 overlays" —
+// Circle Altars and Zone Territories used to be two admin-positionable
+// dropdown boxes here; index.html now merges both onto one shared canvas
+// with no positioned box of its own, so only the navigation hotspot is
+// left to place.
 const DEFAULT_TERRITORYMAP_AREAS_ADMIN = [
-  { id: 'circleTiles', label: 'Circle altar flags', left: 3,  top: 10, width: 44, height: 70 },
-  { id: 'zoneCanvas',  label: 'Zone Territories',    left: 50, top: 10, width: 47, height: 70 },
   { id: 'backToCircle', label: 'Back to your Circle', left: 3, top: 88, width: 24, height: 8  },
 ];
 
