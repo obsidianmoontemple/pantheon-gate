@@ -729,6 +729,12 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Essence min</label><input type="number" min="0" id="progTrainEssenceMin" style="max-width:110px;"></div>
           <div class="field"><label>Essence max</label><input type="number" min="0" id="progTrainEssenceMax" style="max-width:110px;"></div>
         </div>
+        <h3>Familiar reawakening (0100)</h3>
+        <p class="hint">Essence costs for the two new personal-familiar actions on Profile: switching to an already-retired familiar from the Hall of Ancestors, and getting a brand-new different familiar without releasing the current one first (which also archives the current one into the Hall of Ancestors, same as a manual Release). Both are free the very first time a player has no active familiar to switch away from.</p>
+        <div class="form-row">
+          <div class="field"><label>Switch to a retired familiar (Essence)</label><input type="number" min="0" id="progSwitchFamiliarCost" style="max-width:150px;"></div>
+          <div class="field"><label>Get a different new familiar (Essence)</label><input type="number" min="0" id="progNewFamiliarCost" style="max-width:150px;"></div>
+        </div>
         <h3>Petition trial rewards</h3>
         <p class="hint">On top of the stat/XP/blessing split a petition verdict already applies, optionally hand out a reward package — a FULL verdict can give something a PARTIAL one deliberately doesn't. Leave either blank for no extra reward.</p>
         <div class="form-row">
@@ -6068,6 +6074,8 @@ async function loadGuardianProgression(){
   document.getElementById('progTrainXp').value = data.training_xp;
   document.getElementById('progTrainEssenceMin').value = data.training_essence_min;
   document.getElementById('progTrainEssenceMax').value = data.training_essence_max;
+  document.getElementById('progSwitchFamiliarCost').value = data.switch_familiar_cost_essence;
+  document.getElementById('progNewFamiliarCost').value = data.new_familiar_cost_essence;
 
   populatePetitionRewardKeySelects(data.petition_full_reward_key, data.petition_partial_reward_key);
 }
@@ -6097,8 +6105,9 @@ async function saveGuardianProgression(){
   const expeditionsPerDay = v('progExpeditionsPerDay');
   const trainCooldown = v('progTrainCooldown'), trainXp = v('progTrainXp');
   const trainEssenceMin = v('progTrainEssenceMin'), trainEssenceMax = v('progTrainEssenceMax');
+  const switchFamiliarCost = v('progSwitchFamiliarCost'), newFamiliarCost = v('progNewFamiliarCost');
 
-  if([hatchling, fledged, ascendant, sovereign, fullGain, partialGain, affinityMarks, trainXp, trainEssenceMin, trainEssenceMax].some(n => isNaN(n) || n < 0)){
+  if([hatchling, fledged, ascendant, sovereign, fullGain, partialGain, affinityMarks, trainXp, trainEssenceMin, trainEssenceMax, switchFamiliarCost, newFamiliarCost].some(n => isNaN(n) || n < 0)){
     status.className = 'status err';
     status.textContent = 'Every field must be a non-negative number.';
     return;
@@ -6135,6 +6144,7 @@ async function saveGuardianProgression(){
     expeditions_per_day: expeditionsPerDay,
     training_cooldown_minutes: trainCooldown, training_xp: trainXp,
     training_essence_min: trainEssenceMin, training_essence_max: trainEssenceMax,
+    switch_familiar_cost_essence: switchFamiliarCost, new_familiar_cost_essence: newFamiliarCost,
     petition_full_reward_key: fullRewardKey, petition_partial_reward_key: partialRewardKey,
     updated_at: new Date().toISOString()
   }).eq('id', 1);
