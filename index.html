@@ -571,6 +571,13 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
   background:rgba(10,8,16,0.95);border:1px solid var(--gold);border-radius:8px;
   padding:12px 14px;box-shadow:0 8px 28px rgba(0,0,0,0.6);
 }
+/* .ganymede-tip's own display:flex above has the same specificity as the
+   browser default [hidden]{display:none} and, being an author rule,
+   beats it outright regardless of source order — so without this, the
+   box stayed visible (blocking the map hub / Backpack) both before any
+   tip was ever shown AND after clicking "Got it" (dismissPageTip() only
+   toggles the hidden attribute). This rule restores hidden's effect. */
+.ganymede-tip[hidden]{display:none;}
 .ganymede-tip-portrait{flex-shrink:0;width:48px;}
 .ganymede-tip-portrait img{width:48px;height:48px;border-radius:50%;object-fit:cover;display:block;}
 .ganymede-tip-name{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:2px;}
