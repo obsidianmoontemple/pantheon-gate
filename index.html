@@ -1323,6 +1323,7 @@ function invasionCostDevotion(){ return invasionSettings ? invasionSettings.cost
 function zoneClaimCostDevotion(){ return invasionSettings ? invasionSettings.zone_claim_cost_devotion : 150; }
 function altarClaimCostDevotion(){ return invasionSettings ? invasionSettings.altar_claim_cost_devotion : 150; }
 function allianceCostDevotion(){ return invasionSettings ? invasionSettings.alliance_cost_devotion : 100; }
+function scoutCostDevotion(){ return invasionSettings ? invasionSettings.scout_cost_devotion : 100; }
 const CIRCLE_ACCENTS = ['#c8a24a','#e6c777','#a1462a','#6a5a8a','#3f7fa6','#7a9457','#8a8a94','#c9c9dd'];
 let circleDraft = {
   name: '', blurb: '', memberCap: 25, leaderTitle: 'high_priest',
@@ -1363,6 +1364,12 @@ let dragonMoves = null;
 
 let invasionStatus = null;    // invasion-status response, while circleView.step === 'invasions'
 let invasionCircleNames = {}; // { circleId: name }, enriched client-side so reports read naturally
+// Scouting (0098) — which incoming scout's deity-defender picker (Circle
+// Home) is currently expanded, and the in-progress deity pick for it, so
+// the select stays controlled across re-renders without a form element
+// of its own to read from at submit time.
+let defenderPickerScoutId = null;
+let defenderPickerDraft = ''; // "pantheonId:deityId" or ''
 
 let pvpView = null;           // null | {step:'locked'} | {step:'home'} | {step:'browse'} | {step:'leaderboard'} | {step:'shop'} — top-level, NOT circle-scoped
 let pvpStatus = null;
@@ -7389,6 +7396,47 @@ function renderCircleHome(){
     `).join('');
   }
 
+  // Scouting alerts (0098) — direct feedback: "alerting the victim circle
+  // to know they are being scouted and set a deity defender." Visible to
+  // every member (same visibility level as patronLine/territoryLine
+  // above); the deity-defender picker itself is officer-only, matching
+  // scout-set-defender's own server-side permission check.
+  const beingScouted = myCircle.beingScouted || [];
+  const myAvailableDefenderDeities = myCircle.myAvailableDefenderDeities || [];
+  let scoutingAlertBlock = '';
+  if(beingScouted.length){
+    scoutingAlertBlock = beingScouted.map(s => {
+      const msRemaining = new Date(s.prepEndsAt) - new Date();
+      const countdown = msRemaining > 0 ? `Prep window: ${formatRemaining(msRemaining)} remaining.` : 'The prep window has ended — invasion can be declared any time now.';
+      const currentDefender = s.defenderDeityId ? deityDisplayName(s.defenderPantheonId, s.defenderDeityId) : null;
+      let pickerHtml = '';
+      if(isOfficer){
+        if(defenderPickerScoutId === s.id){
+          const options = myAvailableDefenderDeities.map(d => {
+            const key = `${d.pantheonId}:${d.deityId}`;
+            return `<option value="${esc(key)}" ${defenderPickerDraft === key ? 'selected' : ''}>${esc(deityDisplayName(d.pantheonId, d.deityId))}</option>`;
+          }).join('');
+          pickerHtml = myAvailableDefenderDeities.length
+            ? `<div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <select onchange="onDefenderPickerSelect(this.value)" style="max-width:220px;margin:0;">
+                  <option value="">— none —</option>
+                  ${options}
+                </select>
+                <button class="secondary" onclick="doSetDefender('${esc(s.id)}')">Set defender</button>
+                <button class="secondary" onclick="closeDefenderPicker()">Cancel</button>
+              </div>`
+            : `<p class="hint">No member holds a full mark with any deity yet — nothing eligible to field as a defender.</p>`;
+        }else{
+          pickerHtml = `<button class="secondary" style="margin-top:4px;" onclick="openDefenderPicker('${esc(s.id)}','${esc(s.defenderPantheonId || '')}','${esc(s.defenderDeityId || '')}')">${currentDefender ? 'Change defender' : 'Set a deity defender'}</button>`;
+        }
+      }
+      return `<div class="hint" style="color:var(--ember);border:1px solid var(--ember);border-radius:6px;padding:8px;margin-top:8px;">
+        Your ${esc(s.targetName)} is being scouted for invasion! ${countdown}${currentDefender ? ` Defender set: <strong style="color:var(--gold-bright);">${esc(currentDefender)}</strong>.` : (isOfficer ? ' No defender set yet.' : '')}
+        ${pickerHtml}
+      </div>`;
+    }).join('');
+  }
+
   const shopRows = circleShopItems.map(item => `
     <div class="roster-row">
       <div>
@@ -7485,6 +7533,7 @@ function renderCircleHome(){
       ${patronLine}
       ${territoryLine}
       ${allianceLine}
+      ${scoutingAlertBlock}
     </div>
 
     <div class="card"${circleHomeBg}>
@@ -7603,6 +7652,36 @@ async function doAllianceKick(allyId){
   const data = await circleFetch('alliance-kick', { allyId });
   setCircleHomeStatus(data.ok ? 'Ally removed.' : (data.error || 'Could not remove that ally.'), data.ok);
   await loadMyCircle();
+}
+
+// Deity defenders (0098) — the picker for my-circle's beingScouted alert,
+// below. defenderPickerScoutId/defenderPickerDraft are kept as top-level
+// state (not read off a form at submit time) so the <select> stays
+// controlled across the re-renders every status-text update triggers.
+function openDefenderPicker(scoutId, currentPantheonId, currentDeityId){
+  defenderPickerScoutId = scoutId;
+  defenderPickerDraft = (currentPantheonId && currentDeityId) ? `${currentPantheonId}:${currentDeityId}` : '';
+  render();
+}
+
+function closeDefenderPicker(){
+  defenderPickerScoutId = null;
+  defenderPickerDraft = '';
+  render();
+}
+
+function onDefenderPickerSelect(value){
+  defenderPickerDraft = value;
+}
+
+async function doSetDefender(scoutId){
+  const [pantheonId, deityId] = defenderPickerDraft ? defenderPickerDraft.split(':') : ['', ''];
+  const data = await circleFetch('scout-set-defender', { scoutId, deityId, pantheonId });
+  setCircleHomeStatus(data.ok ? (deityId ? 'Defender set.' : 'Defender cleared.') : (data.error || 'Could not set defender.'), data.ok);
+  defenderPickerScoutId = null;
+  defenderPickerDraft = '';
+  if(data.ok) await loadMyCircle();
+  render();
 }
 
 async function doPromote(targetUserId, newRole){
@@ -8825,13 +8904,30 @@ function commitSelectedInvasion(){
    `territoryAltars` alongside `zones`. */
 
 let territoryMap = null; // {territoryAltars:[...], zones:[...]} | null (not yet loaded)
+// Scouting (0098) — this Circle's own live outgoing scouts (invasion-
+// status' scoutsAsAttacker), fetched alongside the map itself so each box
+// can show Scout → "Scouting… ready in Xh" → Invade in place, rather than
+// always jumping straight to Invade. Loaded fresh every time the map opens
+// or refreshes, same lifecycle as territoryMap itself.
+let myOutgoingScouts = [];
+
+async function loadMyOutgoingScouts(){
+  const data = await circleFetch('invasion-status');
+  myOutgoingScouts = data.ok ? (data.scoutsAsAttacker || []) : [];
+}
+
+// The live outgoing scout (if any) aimed at this exact target, for
+// renderTerritoryMap's Scout/Invade button logic.
+function outgoingScoutFor(targetKind, targetId){
+  return myOutgoingScouts.find(s => s.target_kind === targetKind && (targetKind === 'altar' ? s.altar_id : s.zone_id) === targetId) || null;
+}
 
 async function openTerritoryMap(){
   circleView = { step: 'territory' };
   territoryMap = null;
   render();
-  const data = await circleFetch('territory-map');
-  territoryMap = data.ok ? data : { territoryAltars: [], zones: [] };
+  const [mapData] = await Promise.all([circleFetch('territory-map'), loadMyOutgoingScouts()]);
+  territoryMap = mapData.ok ? mapData : { territoryAltars: [], zones: [] };
   if(circleView && circleView.step === 'territory') render();
 }
 
@@ -8841,11 +8937,11 @@ function backFromTerritoryMap(){
 }
 
 // Re-reads the map without resetting to the "Charting the realms…"
-// loading state — used after a zone claim/invasion so the map updates in
-// place instead of flashing blank.
+// loading state — used after a zone claim/invasion/scout so the map
+// updates in place instead of flashing blank.
 async function refreshTerritoryMap(){
-  const data = await circleFetch('territory-map');
-  if(data.ok) territoryMap = data;
+  const [mapData] = await Promise.all([circleFetch('territory-map'), loadMyOutgoingScouts()]);
+  if(mapData.ok) territoryMap = mapData;
   if(circleView && circleView.step === 'territory') render();
 }
 
@@ -8863,7 +8959,7 @@ async function doZoneInvade(zoneId){
   render();
   const data = await circleFetch('zone-invade', { zoneId });
   circleStatus = data.ok ? "Invasion declared for that region — check your Circle's Invasions panel." : (data.error || 'Could not declare invasion.');
-  if(data.ok) await loadMyCircle();
+  if(data.ok){ await loadMyCircle(); await refreshTerritoryMap(); }
   render();
 }
 
@@ -8881,7 +8977,20 @@ async function doAltarInvade(altarId){
   render();
   const data = await circleFetch('altar-invade', { altarId });
   circleStatus = data.ok ? "Invasion declared for that altar plot — check your Circle's Invasions panel." : (data.error || 'Could not declare invasion.');
-  if(data.ok) await loadMyCircle();
+  if(data.ok){ await loadMyCircle(); await refreshTerritoryMap(); }
+  render();
+}
+
+// Scouting (0098) — required before either doAltarInvade or doZoneInvade
+// will succeed against a given target; see scout-declare server-side.
+// Alerts the defending Circle and opens a prep window (my-circle's
+// beingScouted, Circle Home) during which it can name a deity defender.
+async function doScout(targetKind, targetId){
+  circleStatus = 'Sending scouts…';
+  render();
+  const data = await circleFetch('scout-declare', { targetKind, targetId });
+  circleStatus = data.ok ? `Scouts sent to ${data.targetName || 'that target'} — the defending Circle has been alerted.` : (data.error || 'Could not send scouts.');
+  if(data.ok) await refreshTerritoryMap();
   render();
 }
 
@@ -8944,7 +9053,17 @@ function renderTerritoryMap(){
       if(isUnclaimed){
         actionBtn = `<button class="secondary" onclick="doAltarClaim('${esc(a.id)}')">Claim — ${altarClaimCostDevotion()} Devotion</button>`;
       }else if(!isMine){
-        actionBtn = `<button class="secondary" onclick="doAltarInvade('${esc(a.id)}')">Invade — ${invasionCostDevotion()} Devotion</button>`;
+        // Scouting gate (0098) — Invade only unlocks once a prior scout's
+        // prep window has actually ended; before that, show the countdown
+        // instead of a button that would just fail server-side.
+        const scout = outgoingScoutFor('altar', a.id);
+        if(!scout){
+          actionBtn = `<button class="secondary" onclick="doScout('altar','${esc(a.id)}')">Scout — ${scoutCostDevotion()} Devotion</button>`;
+        }else if(new Date(scout.prep_ends_at) - new Date() > 0){
+          actionBtn = `<div class="zcontrol">Scouting… ready in ${esc(formatRemaining(new Date(scout.prep_ends_at) - new Date()))}</div>`;
+        }else{
+          actionBtn = `<button class="secondary" onclick="doAltarInvade('${esc(a.id)}')">Invade — ${invasionCostDevotion()} Devotion</button>`;
+        }
         if(canRequestAlliance){
           actionBtn += `<button class="secondary ally-btn" onclick="doAllianceRequest('${esc(a.id)}')">Ally — ${allianceCostDevotion()} Devotion</button>`;
         }
@@ -8972,7 +9091,15 @@ function renderTerritoryMap(){
       if(isUnclaimed){
         actionBtn = `<button class="secondary" onclick="doZoneClaim('${esc(z.id)}')">Claim — ${zoneClaimCostDevotion()} Devotion</button>`;
       }else if(!isMine){
-        actionBtn = `<button class="secondary" onclick="doZoneInvade('${esc(z.id)}')">Invade — ${invasionCostDevotion()} Devotion</button>`;
+        // Scouting gate (0098) — same requirement as Circle Altars above.
+        const scout = outgoingScoutFor('zone', z.id);
+        if(!scout){
+          actionBtn = `<button class="secondary" onclick="doScout('zone','${esc(z.id)}')">Scout — ${scoutCostDevotion()} Devotion</button>`;
+        }else if(new Date(scout.prep_ends_at) - new Date() > 0){
+          actionBtn = `<div class="zcontrol">Scouting… ready in ${esc(formatRemaining(new Date(scout.prep_ends_at) - new Date()))}</div>`;
+        }else{
+          actionBtn = `<button class="secondary" onclick="doZoneInvade('${esc(z.id)}')">Invade — ${invasionCostDevotion()} Devotion</button>`;
+        }
       }
     }
     return `
