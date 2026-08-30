@@ -1549,12 +1549,12 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-blessings">
       <div class="card">
         <h2>Deity Blessings (placeholders — approve with Active)</h2>
-        <p class="hint">Two independent bonuses, either or both: a Stat key/amount is a one-time permanent bump applied the moment a guardian's mark with this deity is newly earned or upgraded to FULL (never reapplied on repeat petitions). An Effect key/amount is a passive ability active for the guardian's <em>entire</em> fight whenever that deity's full mark is actually fielded in the loadout — <code>crit_bonus_pct</code> (+points of crit chance, all fight), <code>lifesteal_pct</code> (heal this % of all damage dealt, all fight), <code>ward_bonus_pct</code> (this % more effective Ward against incoming hits, all fight), <code>essence_bonus_pct</code> (this % bonus Essence on a Gauntlet win), <code>dodge_pct</code> (this % chance to fully negate an incoming hit, all fight, capped 75%), or <code>damage_reduction_pct</code> (this % less damage taken from every hit, all fight, capped 75%). Every row ships inactive on purpose — fill in what you want and check Active when you're ready to go live.</p>
+        <p class="hint">Two independent bonuses, either or both: a Stat key/amount is a one-time permanent bump applied the moment a guardian's mark with this deity is newly earned or upgraded to FULL (never reapplied on repeat petitions). An Effect key/amount is a passive ability active for the guardian's <em>entire</em> fight whenever that deity's full mark is actually fielded in the loadout — <code>crit_bonus_pct</code> (+points of crit chance, all fight), <code>lifesteal_pct</code> (heal this % of all damage dealt, all fight), <code>ward_bonus_pct</code> (this % more effective Ward against incoming hits, all fight), <code>essence_bonus_pct</code> (this % bonus Essence on a Gauntlet win), <code>dodge_pct</code> (this % chance to fully negate an incoming hit, all fight, capped 75%), or <code>damage_reduction_pct</code> (this % less damage taken from every hit, all fight, capped 75%). A third, independent Defender key/amount (0098) applies only when a Circle names this deity as its scouted "deity defender" against one specific invasion — <code>defense_power_pct</code> (this % more total defending power, that resolution only) or <code>attacker_power_penalty_pct</code> (this % less total attacking power, that resolution only). Every row ships inactive on purpose — fill in what you want and check Active when you're ready to go live.</p>
         <input class="search-box" type="text" id="blessingSearch" placeholder="Search by name…">
         <div class="scroll-table">
           <table>
-            <thead><tr><th>God</th><th>Pantheon</th><th>Name</th><th>Description</th><th>Stat key</th><th>Stat amount</th><th>Effect key</th><th>Effect amount</th><th>Active</th></tr></thead>
-            <tbody id="blessingRows"><tr><td colspan="9">Loading…</td></tr></tbody>
+            <thead><tr><th>God</th><th>Pantheon</th><th>Name</th><th>Description</th><th>Stat key</th><th>Stat amount</th><th>Effect key</th><th>Effect amount</th><th>Defender key</th><th>Defender amount</th><th>Active</th></tr></thead>
+            <tbody id="blessingRows"><tr><td colspan="11">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -2613,6 +2613,13 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Zone claim cost (Devotion)</label><input type="number" min="0" id="invZoneClaimCost" style="max-width:180px;"></div>
           <div class="field"><label>Altar plot claim cost (Devotion)</label><input type="number" min="0" id="invAltarClaimCost" style="max-width:180px;"></div>
           <div class="field"><label>Alliance join cost (Devotion)</label><input type="number" min="0" id="invAllianceCost" style="max-width:180px;"></div>
+        </div>
+        <h3>Scouting (0098)</h3>
+        <p class="hint">Required before either an altar plot or a zone can be invaded — see Circle Altars/Territory Zones tabs. Scouting alerts the defending Circle and opens a prep window during which it can name a deity defender; after prep ends, the attacker has until the scout expires to actually declare the invasion, or has to scout again.</p>
+        <div class="form-row">
+          <div class="field"><label>Scout cost (Devotion)</label><input type="number" min="0" id="invScoutCost" style="max-width:170px;"></div>
+          <div class="field"><label>Prep window (hours)</label><input type="number" min="0" step="0.1" id="invScoutPrepHours" style="max-width:160px;"></div>
+          <div class="field"><label>Expires after prep ends (hours)</label><input type="number" min="0" step="0.1" id="invScoutExpireHours" style="max-width:200px;"></div>
         </div>
         <div class="save-bar">
           <button id="saveInvasionSettingsBtn">Save changes</button>
@@ -6311,6 +6318,9 @@ async function loadInvasionSettingsAdmin(){
   document.getElementById('invZoneClaimCost').value = data.zone_claim_cost_devotion;
   document.getElementById('invAltarClaimCost').value = data.altar_claim_cost_devotion;
   document.getElementById('invAllianceCost').value = data.alliance_cost_devotion;
+  document.getElementById('invScoutCost').value = data.scout_cost_devotion;
+  document.getElementById('invScoutPrepHours').value = data.scout_prep_hours;
+  document.getElementById('invScoutExpireHours').value = data.scout_expire_hours;
 }
 
 async function saveInvasionSettingsAdmin(){
@@ -6329,8 +6339,11 @@ async function saveInvasionSettingsAdmin(){
   const zoneClaimCost = vInt('invZoneClaimCost');
   const altarClaimCost = vInt('invAltarClaimCost');
   const allianceCost = vInt('invAllianceCost');
+  const scoutCost = vInt('invScoutCost');
+  const scoutPrepHours = vFloat('invScoutPrepHours');
+  const scoutExpireHours = vFloat('invScoutExpireHours');
 
-  const allValues = [costDevotion, minRankScore, windowHours, graceHours, shieldHours, rankSwing, chestCutPct, personalSharePct, passiveWeightPct, zoneClaimCost, altarClaimCost, allianceCost];
+  const allValues = [costDevotion, minRankScore, windowHours, graceHours, shieldHours, rankSwing, chestCutPct, personalSharePct, passiveWeightPct, zoneClaimCost, altarClaimCost, allianceCost, scoutCost, scoutPrepHours, scoutExpireHours];
   if(allValues.some(n => isNaN(n) || n < 0)){
     status.className = 'status err';
     status.textContent = 'Every field must be a non-negative number.';
@@ -6339,6 +6352,11 @@ async function saveInvasionSettingsAdmin(){
   if(windowHours <= 0){
     status.className = 'status err';
     status.textContent = 'Window (hours) must be greater than 0.';
+    return;
+  }
+  if(scoutPrepHours <= 0 || scoutExpireHours <= 0){
+    status.className = 'status err';
+    status.textContent = 'Scouting prep window and expiry window must both be greater than 0.';
     return;
   }
   if([chestCutPct, personalSharePct, passiveWeightPct].some(n => n > 100)){
@@ -6354,6 +6372,7 @@ async function saveInvasionSettingsAdmin(){
     grace_hours: graceHours, shield_hours: shieldHours, rank_swing: rankSwing,
     chest_cut_pct: chestCutPct / 100, personal_share_pct: personalSharePct / 100, passive_weight: passiveWeightPct / 100,
     zone_claim_cost_devotion: zoneClaimCost, altar_claim_cost_devotion: altarClaimCost, alliance_cost_devotion: allianceCost,
+    scout_cost_devotion: scoutCost, scout_prep_hours: scoutPrepHours, scout_expire_hours: scoutExpireHours,
     updated_at: new Date().toISOString()
   }).eq('id', 1);
   status.className = error ? 'status err' : 'status ok';
@@ -8676,7 +8695,7 @@ async function loadDeityBlessings(){
 
   const rows = document.getElementById('blessingRows');
   rows.innerHTML = FLAT_DEITIES.map(d => {
-    const o = deityBlessings[d.id] || { name: '', description: '', stat_key: '', stat_amount: '', effect_key: '', effect_amount: '', active: false };
+    const o = deityBlessings[d.id] || { name: '', description: '', stat_key: '', stat_amount: '', effect_key: '', effect_amount: '', defender_effect_key: '', defender_effect_amount: '', active: false };
     return `<tr data-name="${esc(d.name.toLowerCase())}">
       <td>${esc(d.name)}</td>
       <td class="dim">${esc(d.pantheonLabel)}</td>
@@ -8695,6 +8714,8 @@ async function loadDeityBlessings(){
       <td><input type="number" min="1" id="blsStatAmount_${d.id}" value="${o.stat_amount ?? ''}" style="max-width:90px;"></td>
       <td><select id="blsEffectKey_${d.id}" style="max-width:220px;">${effectKeyOptionsHtml(AURA_EFFECT_OPTIONS, o.effect_key)}</select></td>
       <td><input type="number" step="0.01" id="blsEffectAmount_${d.id}" value="${o.effect_amount ?? ''}" style="max-width:100px;"></td>
+      <td><select id="blsDefenderEffectKey_${d.id}" style="max-width:220px;">${effectKeyOptionsHtml(DEFENDER_EFFECT_OPTIONS, o.defender_effect_key)}</select></td>
+      <td><input type="number" step="0.01" id="blsDefenderEffectAmount_${d.id}" value="${o.defender_effect_amount ?? ''}" style="max-width:100px;"></td>
       <td><input type="checkbox" id="blsActive_${d.id}" ${o.active ? 'checked' : ''}></td>
     </tr>`;
   }).join('');
@@ -8716,6 +8737,8 @@ async function saveDeityBlessings(){
       const statAmount = document.getElementById('blsStatAmount_' + d.id).value;
       const effectKey = document.getElementById('blsEffectKey_' + d.id).value.trim();
       const effectAmount = document.getElementById('blsEffectAmount_' + d.id).value;
+      const defenderEffectKey = document.getElementById('blsDefenderEffectKey_' + d.id).value.trim();
+      const defenderEffectAmount = document.getElementById('blsDefenderEffectAmount_' + d.id).value;
       return {
         deity_id: d.id,
         pantheon_id: d.pantheonId,
@@ -8725,11 +8748,13 @@ async function saveDeityBlessings(){
         stat_amount: statAmount === '' ? null : parseInt(statAmount, 10),
         effect_key: effectKey || null,
         effect_amount: effectAmount === '' ? null : parseFloat(effectAmount),
+        defender_effect_key: defenderEffectKey || null,
+        defender_effect_amount: defenderEffectAmount === '' ? null : parseFloat(defenderEffectAmount),
         active: document.getElementById('blsActive_' + d.id).checked,
         updated_at: new Date().toISOString()
       };
     })
-    .filter(r => r.name !== '' || r.description !== '' || r.stat_key || r.effect_key || deityBlessings[r.deity_id]);
+    .filter(r => r.name !== '' || r.description !== '' || r.stat_key || r.effect_key || r.defender_effect_key || deityBlessings[r.deity_id]);
 
   status.className = 'status';
   status.textContent = rows.length ? 'Saving…' : 'Nothing to save yet.';
@@ -8825,6 +8850,15 @@ const CIRCLE_PATRON_EFFECT_OPTIONS = [
   { value: 'dragon_damage_pct', label: 'dragon_damage_pct - N% more damage vs Circle Dragons' },
   { value: 'invasion_power_pct', label: 'invasion_power_pct - N% more committed power in invasions' },
   { value: 'shop_discount_pct', label: 'shop_discount_pct - N% off Circle Shop purchases' },
+];
+// Wired by circle/index.ts's resolveInvasionIfDue (0098) — applies ONLY
+// when the defending Circle named this deity as its scouted defender for
+// that one invasion resolution (see deity_blessings' defender_effect_key/
+// defender_effect_amount columns, below the blessing's existing stat/aura
+// pair on the same row).
+const DEFENDER_EFFECT_OPTIONS = [
+  { value: 'defense_power_pct', label: 'defense_power_pct - N% more total defending power, this invasion only' },
+  { value: 'attacker_power_penalty_pct', label: 'attacker_power_penalty_pct - N% less total attacking power, this invasion only' },
 ];
 // Wired by craft/index.ts's use-item action — grants Consumable amount of
 // that currency immediately, no separate step. heal_hp (13-point update
