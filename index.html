@@ -745,107 +745,90 @@ textarea:focus{outline:none;border-color:var(--gold);}
    set of map territories" — plain in-game map, no GPS/real-world location
    involved. Zones are admin-placed (admin.html's Territory Zones editor)
    at percentage coordinates over a background image (site_backgrounds
-   'territoryMap'), same positioning shape as the Map Hotspots editor; a
-   zone is colored by whichever Circle's own banner_primary currently
-   controls it, or a neutral dashed look while unclaimed. Circle Altars
-   (0095, directly below in the JS) reuses these exact same classes for
-   its own, separately-populated canvas. */
-/* Direct feedback: "with the new layout we can not see the claim buttons
-   making regions unclaimable." Root cause: this box used to be the ONLY
-   thing in its dropdown panel, so sizing it off its own fixed 1408:768
-   aspect-ratio (matching the background art) was fine — its height was
-   whatever that width implied, and it just fit. Once renderTerritoryMap()
-   started putting a heading + hint paragraph above it in the same panel
-   (see that function's own comment), that math stopped working: the
-   aspect-ratio still forced a height purely from the box's width, with
-   no awareness that the heading above it had already eaten into the
-   panel's fixed total height — so on any panel short enough (packed
-   with many admin-placed regions, or simply a different shape once real
-   art was added), the canvas rendered TALLER than the space actually
-   left for it, and the overflow got silently clipped by .hub-box's own
-   overflow:hidden. Whatever fell in that clipped band — for a canvas
-   packed with many small regions, entire rows of them — lost its claim/
-   invade button first, since that's the last (bottom-most) thing in
-   each region's own stacked layout. Fixed by having this box actually
-   fill whatever room its flex:1 (see the inline style where it's used)
-   says it has, instead of insisting on its own fixed aspect ratio; the
-   background image already uses `cover`, so it still fills the box
-   cleanly at any resulting proportions, and zone positions (all percent-
-   based) are unaffected. */
+   'territoryMap'), same positioning shape as the Map Hotspots editor.
+   Circle Altars (0095, directly below in the JS) reused these exact same
+   classes for its own, separately-populated canvas, and the two were
+   merged into one system in 0099 — see renderTerritoryBox's own comment,
+   further down, for the current (0100) clean-map/tint-and-flag/hover-
+   popup look these classes actually produce today. */
 .zonemap-canvas{
-  position:relative;
-  width:100%;height:100%;
-  background:#0a0810 center/cover no-repeat;
-  border:1px solid var(--line);border-radius:4px;
+  position:absolute;inset:0;
 }
+/* Direct feedback: "there is a secondary square frame that is smaller
+   than the page and is smooshing stuff together so that intended areas
+   are no longer correct." Root cause: this canvas used to be inset
+   (left:3%/top:9%/width:94%/height:76%) inside .hub-box, but every zone's
+   left/top/width/height percentages are drawn in admin.html against
+   #altarCanvas, a box with the SAME 1408:768 aspect ratio as .hub-box
+   itself — meaning 0-100% on one is meant to line up exactly with 0-100%
+   on the other. Nesting the zones inside a smaller inset box silently
+   rescaled every one of those percentages against the wrong box, shoving
+   every region toward the top-left and out of position. inset:0 makes
+   this canvas exactly as big as .hub-box, so a zone's saved coordinates
+   land exactly where it was drawn.
+
+   Second piece of the same feedback: a clean map with only tinting and
+   flags on it, everything else (name, status, buttons) in a hover/click
+   popup instead of cluttering a possibly-tiny box directly. That drops
+   the entire reason the old container-query text-shedding rules existed
+   (a name+status+button stack no longer lives inside the box at all —
+   only a flag does), so all of that is gone too. */
 .zonemap-zone{
   position:absolute;box-sizing:border-box;
-  border:2px solid rgba(255,255,255,0.45);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  text-align:center;padding:4px;overflow:hidden;
-  background-image:linear-gradient(rgba(0,0,0,0.2),rgba(0,0,0,0.45));
-  background-color:rgba(90,90,100,0.55);
-  /* Direct feedback (screenshot): "with the new layout we can not see
-     the claim buttons making regions unclaimable." A packed Contested
-     Regions map (screenshot showed 20+ admin-placed regions on one
-     canvas) gives most individual regions only a few dozen px in either
-     dimension — nowhere near enough room for a name + status line +
-     button all at the sizes below. Without this, overflow:hidden just
-     silently swallows whichever one runs out of room first — and since
-     the button is LAST in the stack, it was always the first thing to
-     go. container-type:size (safe here since width/height are always
-     explicit percentages, never content-derived) lets the @container
-     rules below shed the less essential text first as a region's own
-     box shrinks, so the one thing a player actually needs to click is
-     the last thing ever given up. */
-  container-type:size;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  background:transparent;border:none;border-radius:3px;
+  transition:background-color .12s;
 }
-.zonemap-zone.unclaimed{border-style:dashed;}
-.zonemap-zone.mine{border-color:var(--gold-bright);}
-.zonemap-zone .zname{font-family:'Cinzel',serif;font-size:11px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.9);line-height:1.15;}
-.zonemap-zone .zcontrol{font-size:9.5px;color:#fff;opacity:0.9;font-style:italic;text-shadow:0 1px 3px rgba(0,0,0,0.9);line-height:1.15;}
-.zonemap-zone button{margin-top:2px;padding:4px 8px;font-size:9.5px;white-space:nowrap;}
-/* Territory Altars (0090/0095, merged into one system 0099) puts a small
-   banner icon inside this box once claimed — capped small by default and
-   shed even earlier than the status line under the same container
-   queries below, since a purchased plot's icon is the least essential
-   thing here next to its name and its claim/invade/rename button. */
-.zonemap-zone .circle-banner{width:22px !important;height:24px !important;flex-shrink:0;}
-/* War treaties (0096) — allied Circles' UNLABELED flags (direct feedback:
-   "add their flag unlabeled to the region they are joining"), smaller
-   still than the holder's own banner and the first thing shed of all,
-   since a plot can carry several. */
-.zonemap-allies{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;flex-shrink:0;}
-.zonemap-allies .ally-flag .circle-banner{width:14px !important;height:15px !important;}
-/* Smallest regions first lose the ally flags, then the holder's own
-   banner icon, then their status line ("Unclaimed"/who holds it), then
-   their name, always keeping the claim/invade/ally button visible — see
-   the container-type comment above. */
-@container (max-height: 74px){
-  .zonemap-allies{display:none;}
+/* Direct feedback: "the area grid itself...will remain invisible unless
+   going to purchase a new zone... Player should only ever see tinting
+   and flags." An unclaimed plot is a real, clickable/hoverable area with
+   nothing drawn for it at rest — this is the ENTIRE fix for "buttons are
+   hard to see on smaller areas" and "new region which needs to change":
+   there's no title text or button sitting on the map to be hard to see
+   any more, just a faint highlight on hover so an invisible region is
+   still discoverable. */
+.zonemap-zone.unclaimed:hover{background-color:rgba(255,255,255,0.10);}
+/* A claimed/held plot gets a permanent tint in its controlling Circle's
+   own banner color (inline --zone-tint, set per box below) plus its
+   flag — the only two things ever shown without hovering, per the same
+   feedback. */
+.zonemap-zone.claimed{background-color:var(--zone-tint, rgba(255,255,255,0.22));border:1px solid rgba(255,255,255,0.35);}
+.zonemap-zone.claimed:hover{filter:brightness(1.25);}
+/* A plot your own Circle holds gets a brighter gold outline on top of its
+   tint, so it reads as "yours" at a glance without needing its name. */
+.zonemap-zone.claimed.mine{border-color:var(--gold-bright);border-width:2px;}
+.zone-flag{pointer-events:none;}
+.zone-flag .circle-banner{width:26px !important;height:28px !important;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));}
+/* Everything that used to sit directly on the map (name, held-by line,
+   ally flags, claim/scout/invade/ally/rename button) now lives in this
+   popup instead — hidden until hover or a tap/click (mobile has no real
+   hover), dismissed the moment the cursor leaves, same as any native
+   tooltip. Fixed comfortable size regardless of how small the underlying
+   region is, since it's no longer boxed into it. */
+.zone-popup{
+  display:none;
+  position:absolute;z-index:30;left:50%;bottom:100%;margin-bottom:8px;transform:translateX(-50%);
+  min-width:140px;max-width:210px;
+  background:rgba(12,10,18,0.95);border:1px solid var(--gold);border-radius:6px;
+  padding:9px 11px;text-align:center;
+  box-shadow:0 6px 22px rgba(0,0,0,0.65);
+  cursor:default;
 }
-@container (max-height: 64px){
-  .zonemap-zone .circle-banner{display:none;}
-}
-/* A held, invadable plot a Circle is also eligible to ally onto shows TWO
-   buttons stacked — the Ally button (supplementary; Invade already covers
-   the same "take this ground" outcome) is the first of the two given up
-   as room runs out, before either ever gets clipped. */
-@container (max-height: 84px){
-  .zonemap-zone .ally-btn{display:none;}
-}
-@container (max-height: 50px){
-  .zonemap-zone{gap:1px;padding:2px;}
-  .zonemap-zone .zcontrol{display:none;}
-  .zonemap-zone button{margin-top:1px;padding:2px 5px;font-size:8px;}
-}
-@container (max-height: 32px){
-  .zonemap-zone .zname{display:none;}
-}
-@container (max-width: 58px){
-  .zonemap-zone .zname{font-size:9px;}
-  .zonemap-zone button{font-size:7.5px;padding:2px 4px;}
-}
+/* Popups anchor upward by default; a region drawn near the top of the
+   map would otherwise push its popup off the top of .hub-box (which
+   clips overflow) — renderTerritoryBox flips these two based on the
+   region's own top_pct/left_pct instead of guessing purely in CSS. */
+.zone-popup.below{bottom:auto;top:100%;margin-bottom:0;margin-top:8px;}
+.zone-popup.align-left{left:0;transform:none;}
+.zone-popup.align-right{left:auto;right:0;transform:none;}
+.zonemap-zone:hover .zone-popup,
+.zonemap-zone.zone-open .zone-popup{display:block;}
+.zone-popup .zname{font-family:'Cinzel',serif;font-size:12.5px;color:#fff;line-height:1.2;}
+.zone-popup .zcontrol{font-size:10.5px;color:#fff;opacity:0.85;font-style:italic;margin-top:2px;line-height:1.2;}
+.zone-popup .zonemap-allies{display:flex;gap:3px;flex-wrap:wrap;justify-content:center;margin-top:5px;}
+.zone-popup .zonemap-allies .circle-banner{width:15px !important;height:16px !important;}
+.zone-popup button{display:block;width:100%;margin-top:6px;padding:5px 8px;font-size:10.5px;white-space:nowrap;}
 .shape-pick-row{display:flex;gap:14px;justify-content:center;margin-bottom:22px;flex-wrap:wrap;}
 .shape-pick{cursor:pointer;text-align:center;padding:10px;border:1px solid var(--line);border-radius:4px;width:80px;transition:border-color .15s;}
 .shape-pick:hover{border-color:var(--gold);}
@@ -9018,6 +9001,11 @@ function commitSelectedInvasion(){
    server-side. */
 
 let territoryMap = null; // {territoryAltars:[...]} | null (not yet loaded)
+// Which plot's popup is pinned open by a tap/click (touch devices have no
+// real hover) — see onZoneClick/closeOpenZone and .zone-open in the CSS.
+// Hovering with an actual mouse still works purely in CSS and never
+// touches this at all.
+let openZoneId = null;
 // Scouting (0098) — this Circle's own live outgoing scouts (invasion-
 // status' scoutsAsAttacker), fetched alongside the map itself so each box
 // can show Scout → "Scouting… ready in Xh" → Invade in place, rather than
@@ -9039,6 +9027,7 @@ function outgoingScoutFor(altarId){
 async function openTerritoryMap(){
   circleView = { step: 'territory' };
   territoryMap = null;
+  openZoneId = null;
   render();
   const [mapData] = await Promise.all([circleFetch('territory-map'), loadMyOutgoingScouts()]);
   territoryMap = mapData.ok ? mapData : { territoryAltars: [] };
@@ -9047,7 +9036,24 @@ async function openTerritoryMap(){
 
 function backFromTerritoryMap(){
   circleView = { step: 'home' };
+  openZoneId = null;
   render();
+}
+
+// A tap/click on a plot's invisible (or tinted) area pins its popup open
+// — needed for touch devices, which never fire a real :hover. Clicking a
+// button INSIDE the popup is left alone (its own onclick already does the
+// real work) rather than also being swallowed by this toggle. Clicking
+// the open map background elsewhere closes whatever's open, same as any
+// dismiss-on-click-away menu.
+function onZoneClick(e, altarId){
+  if(e.target.closest('button')) return;
+  e.stopPropagation();
+  openZoneId = (openZoneId === altarId) ? null : altarId;
+  render();
+}
+function closeOpenZone(){
+  if(openZoneId){ openZoneId = null; render(); }
 }
 
 // Re-reads the map without resetting to the "Charting the realms…"
@@ -9179,13 +9185,40 @@ function renderTerritoryBox(item, ctx){
       }
     }
   }
-  return `
-    <div class="zonemap-zone ${isUnclaimed ? 'unclaimed' : ''} ${isMine ? 'mine' : ''}" style="left:${item.left_pct}%;top:${item.top_pct}%;width:${item.width_pct}%;height:${item.height_pct}%;">
-      ${banner}
+  // Direct feedback: "the area grid itself...will remain invisible unless
+  // going to purchase a new zone... it will tint the zone in the color of
+  // the circle's affinity [and] place their flag on said tinted zone,
+  // leaving this as the only thing the player has to see." A claimed
+  // plot's tint IS the controlling Circle's own banner color (there's no
+  // separate "affinity color" anywhere in this project — a Circle's
+  // banner_primary is the closest existing thing, and it's already what
+  // colors a Circle's flag everywhere else). Presets have no primary/
+  // secondary hex at all, so those fall back to a neutral gold tint
+  // rather than rendering blank.
+  const tintColor = item.controller ? (item.controller.banner_primary || '#c8a24a') : null;
+  const flagIcon = (!isUnclaimed && item.controller)
+    ? `<div class="zone-flag">${renderCircleBanner(item.controller.banner_shape, item.controller.banner_primary, item.controller.banner_secondary, item.controller.banner_preset_key, 26)}</div>`
+    : '';
+  // Name/status/allies/button used to sit directly on the map; direct
+  // feedback: "other info about the zone along with button actions will
+  // be in a hover or click screen viewed by player then dismissed when
+  // cursor moves on." All of it moves into .zone-popup now (shown on
+  // hover via CSS, or tap via onZoneClick below for touch devices, which
+  // have no real hover).
+  const popup = `
+    <div class="zone-popup ${item.top_pct < 20 ? 'below' : ''} ${item.left_pct < 12 ? 'align-left' : (item.left_pct + item.width_pct > 88 ? 'align-right' : '')}">
       <div class="zname">${esc(item.name)}</div>
       <div class="zcontrol">${controlLine}</div>
       ${allyIcons}
       ${actionBtn}
+    </div>
+  `;
+  return `
+    <div class="zonemap-zone ${isUnclaimed ? 'unclaimed' : 'claimed'} ${isMine ? 'mine' : ''} ${openZoneId === item.id ? 'zone-open' : ''}"
+      style="left:${item.left_pct}%;top:${item.top_pct}%;width:${item.width_pct}%;height:${item.height_pct}%;${tintColor ? `--zone-tint:${tintColor}66;` : ''}"
+      onclick="onZoneClick(event, '${esc(item.id)}')">
+      ${flagIcon}
+      ${popup}
     </div>
   `;
 }
@@ -9221,7 +9254,7 @@ function renderTerritoryMap(){
         <div style="position:absolute;left:3%;top:2%;width:94%;text-align:center;">
           <h3 style="margin:0;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.9);">Territory Map</h3>
         </div>
-        <div class="zonemap-canvas" style="position:absolute;left:3%;top:9%;width:94%;height:76%;background:transparent;">
+        <div class="zonemap-canvas" onclick="closeOpenZone()">
           ${allBoxes}
           ${nothingPlaced ? '<p class="hint" style="position:absolute;inset:0;margin:0;display:flex;align-items:center;justify-content:center;text-align:center;">No territory has been placed on the map yet.</p>' : ''}
         </div>
