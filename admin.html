@@ -2540,6 +2540,59 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         </div>
         <div class="status" id="newMilestoneStatus"></div>
       </div>
+
+      <div class="card">
+        <h2>Page tips (0102)</h2>
+        <p class="hint">Direct feedback: "I would like for Ganymede to be able to pop up and explain each page as it is reached and/or accessed." A short note that pops up in the corner the first time a player reaches that page — dismissed by the player, never shown again after that. One row per page, keyed by the exact page this game already uses internally, so there's nothing to typo — pick it from the list. Leave a page out entirely (or set it inactive) and it just never shows a tip.</p>
+        <div class="scroll-table" style="max-height:400px;">
+          <table>
+            <thead><tr><th>Page</th><th>Title</th><th>Body</th><th>Active</th></tr></thead>
+            <tbody id="pageTipsRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="savePageTipsBtn">Save changes</button>
+          <div class="status" id="pageTipsStatus"></div>
+        </div>
+        <h3>Add a new page tip</h3>
+        <div class="form-row">
+          <div class="field"><label>Page</label>
+            <select id="newPageTipKey" style="max-width:220px;">
+              <option value="map">Map Hub</option>
+              <option value="guardianPage">Guardian Page</option>
+              <option value="mageHome">Mage Home / Gear</option>
+              <option value="shrine">Shrine</option>
+              <option value="backpack">Backpack</option>
+              <option value="checkin">Daily Check-in</option>
+              <option value="promo">Promo Events</option>
+              <option value="worldBoss">World Boss</option>
+              <option value="shop">Shop</option>
+              <option value="campaign">Campaign</option>
+              <option value="serverChat">Server Chat</option>
+              <option value="circle">Circle Home</option>
+              <option value="personalAltar">Personal Altar</option>
+              <option value="circleDragon">Circle Dragon</option>
+              <option value="circleInvasions">Circle Invasions</option>
+              <option value="territoryMap">Territory Map</option>
+              <option value="expeditions">Expeditions</option>
+              <option value="craft">Shard Crafting</option>
+              <option value="chainedGods">Chained Gods (Redeem)</option>
+              <option value="arena">PvP Arena</option>
+              <option value="profile">Profile</option>
+              <option value="mail">Mail</option>
+              <option value="oracle">Petition Hall (Oracle)</option>
+              <option value="gauntlet">The Proving (Gauntlet)</option>
+            </select>
+          </div>
+          <div class="field"><label>Title</label><input type="text" id="newPageTipTitle" style="max-width:220px;"></div>
+          <button id="addPageTipBtn">Add tip</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Body (Ganymede's words, shown on the popup)</label>
+          <textarea id="newPageTipBody" rows="3" style="max-width:none;width:100%;"></textarea>
+        </div>
+        <div class="status" id="newPageTipStatus"></div>
+      </div>
     </div>
 
     <!-- ============================== FEATURE ACCESS ============================== -->
@@ -2970,6 +3023,7 @@ async function handleSession(session){
   loadNarratorSettingsAdmin();
   loadGuideStepsAdmin();
   loadMilestonesAdmin();
+  loadPageTipsAdmin();
   loadFeatureGatesAdmin();
   loadSpeciesMoves();
   loadDeityMoves();
@@ -4008,6 +4062,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addGuideStepBtn').addEventListener('click', addGuideStep);
   document.getElementById('saveMilestonesBtn').addEventListener('click', saveMilestones);
   document.getElementById('addMilestoneBtn').addEventListener('click', addMilestone);
+  document.getElementById('savePageTipsBtn').addEventListener('click', savePageTips);
+  document.getElementById('addPageTipBtn').addEventListener('click', addPageTip);
   document.getElementById('newMilestoneCategory').addEventListener('change', updateNewMilestoneCategoryFields);
   updateNewMilestoneCategoryFields();
   document.getElementById('saveFeatureGatesBtn').addEventListener('click', saveFeatureGates);
@@ -8495,6 +8551,66 @@ async function addMilestone(){
   ['newMilestoneKey','newMilestoneTitle','newMilestoneBody','newMilestoneLevel'].forEach(fid => { document.getElementById(fid).value = ''; });
   document.getElementById('newMilestoneSort').value = '120';
   loadMilestonesAdmin();
+}
+
+/* ---------------- Page tips (0102) ----------------
+   Same bulk-editable-table shape as guide_steps/milestone_catalog above,
+   but no sort_order (these aren't shown in any sequence, only ever one
+   at a time, whichever page a player happens to reach) and page_key
+   comes from the fixed dropdown in the "add new" form instead of free
+   text, since a typo'd key would just silently never fire — see
+   maybeShowPageTip() in index.html for the exact, closed list of keys
+   that can ever actually show one. */
+
+async function loadPageTipsAdmin(){
+  const { data, error } = await supabaseClient.from('page_tips').select('*').order('page_key', { ascending: true });
+  const rows = document.getElementById('pageTipsRows');
+  if(!rows) return;
+  if(error){ rows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  rows.innerHTML = (data || []).map(t => `<tr data-key="${esc(t.page_key)}">
+    <td class="dim">${esc(t.page_key)}</td>
+    <td><input type="text" id="ptTitle_${esc(t.page_key)}" value="${esc(t.title)}" style="max-width:180px;"></td>
+    <td><textarea id="ptBody_${esc(t.page_key)}" rows="2" style="max-width:360px;width:100%;">${esc(t.body)}</textarea></td>
+    <td><input type="checkbox" id="ptActive_${esc(t.page_key)}" ${t.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="4">No page tips yet — add one below.</td></tr>';
+}
+
+async function savePageTips(){
+  const status = document.getElementById('pageTipsStatus');
+  const trs = document.querySelectorAll('#pageTipsRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    return {
+      page_key: key,
+      title: document.getElementById('ptTitle_' + key).value.trim(),
+      body: document.getElementById('ptBody_' + key).value.trim(),
+      active: document.getElementById('ptActive_' + key).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  if(!rows.length){ status.className = 'status'; status.textContent = 'Nothing to save.'; return; }
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('page_tips').upsert(rows, { onConflict: 'page_key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadPageTipsAdmin();
+}
+
+async function addPageTip(){
+  const status = document.getElementById('newPageTipStatus');
+  const pageKey = document.getElementById('newPageTipKey').value;
+  const title = document.getElementById('newPageTipTitle').value.trim();
+  const body = document.getElementById('newPageTipBody').value.trim();
+
+  if(!title){ status.className = 'status err'; status.textContent = 'Title is required.'; return; }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('page_tips').insert({ page_key: pageKey, title, body, active: true });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That page already has a tip — edit it in the table above instead.' : ('Failed: ' + error.message); return; }
+  status.className = 'status ok'; status.textContent = title + ' added.';
+  document.getElementById('newPageTipTitle').value = '';
+  document.getElementById('newPageTipBody').value = '';
+  loadPageTipsAdmin();
 }
 
 /* ---------------- Feature access (0081) ----------------
