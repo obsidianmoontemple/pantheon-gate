@@ -246,8 +246,13 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="customers" onclick="showTab('customers')">Customers</button>
       <button class="tab-btn" data-tab="admins" onclick="showTab('admins')">Admins</button>
       <button class="tab-btn" data-tab="invasionsettings" onclick="showTab('invasionsettings')">Invasion Settings</button>
-      <button class="tab-btn" data-tab="territoryzones" onclick="showTab('territoryzones')">Territory Zones</button>
-      <button class="tab-btn" data-tab="territoryaltars" onclick="showTab('territoryaltars')">Circle Altars</button>
+      <!-- Territory Zones tab removed (0099) — direct feedback: "altar
+           plots and territory zones are supposed to be the same thing
+           nothing different." Every zone was copied into Circle Altars
+           below; its editor markup/JS is left in the file, unreachable,
+           purely so nothing errors on load — don't add a nav button back
+           for it, it no longer feeds the Territory Map. -->
+      <button class="tab-btn" data-tab="territoryaltars" onclick="showTab('territoryaltars')">Territory Map (Circle Altars)</button>
       <button class="tab-btn" data-tab="credits" onclick="showTab('credits')">Credits</button>
     </div>
 
@@ -2607,15 +2612,14 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="form-row">
           <div class="field"><label>Passive weight (non-committed members, %)</label><input type="number" min="0" max="100" step="1" id="invPassiveWeightPct" style="max-width:240px;"></div>
         </div>
-        <h3>Zone Territories (0090)</h3>
-        <p class="hint">Claiming a currently-unclaimed zone is a plain purchase, not a fight — its own (typically cheaper) cost rather than the invade price above.</p>
+        <h3>Circle Altars (0095, covers all territory as of 0099)</h3>
+        <p class="hint">Claiming a currently-unclaimed plot is a plain purchase, not a fight — its own (typically cheaper) cost rather than the invade price above.</p>
         <div class="form-row">
-          <div class="field"><label>Zone claim cost (Devotion)</label><input type="number" min="0" id="invZoneClaimCost" style="max-width:180px;"></div>
           <div class="field"><label>Altar plot claim cost (Devotion)</label><input type="number" min="0" id="invAltarClaimCost" style="max-width:180px;"></div>
           <div class="field"><label>Alliance join cost (Devotion)</label><input type="number" min="0" id="invAllianceCost" style="max-width:180px;"></div>
         </div>
         <h3>Scouting (0098)</h3>
-        <p class="hint">Required before either an altar plot or a zone can be invaded — see Circle Altars/Territory Zones tabs. Scouting alerts the defending Circle and opens a prep window during which it can name a deity defender; after prep ends, the attacker has until the scout expires to actually declare the invasion, or has to scout again.</p>
+        <p class="hint">Required before an altar plot can be invaded — see the Circle Altars tab. Scouting alerts the defending Circle and opens a prep window during which it can name a deity defender; after prep ends, the attacker has until the scout expires to actually declare the invasion, or has to scout again.</p>
         <div class="form-row">
           <div class="field"><label>Scout cost (Devotion)</label><input type="number" min="0" id="invScoutCost" style="max-width:170px;"></div>
           <div class="field"><label>Prep window (hours)</label><input type="number" min="0" step="0.1" id="invScoutPrepHours" style="max-width:160px;"></div>
@@ -2631,7 +2635,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <!-- ============================== TERRITORY ZONES ============================== -->
     <div class="tab-content" id="tab-territoryzones">
       <div class="card">
-        <h2>Territory Zones map (0090)</h2>
+        <h2>Territory Zones map (0090) — DEPRECATED, removed from navigation (0099)</h2>
+        <p class="hint" style="color:var(--ember, #a1462a);">Direct feedback: "altar plots and territory zones are supposed to be the same thing nothing different." Every zone drawn here was copied into Circle Altars and the two systems were merged into one — this tab no longer has a nav button and anything drawn/saved here is never read by the Territory Map anymore. Use the Circle Altars tab for everything going forward. Left in place only so old data isn't destroyed.</p>
         <p class="hint">"We want a territory map as well... assign each circle a map color and fill in zones as they are taken." This is a plain in-game map — no GPS, no real-world location — a fixed set of regions you draw here that any Circle can claim or fight over, completely separate from the altar-roster tiles on the existing Territory Map. Set the background image on the Backgrounds &amp; Hotspots tab (page "Territory Map — Zones background"); draw regions here the same way you drag/resize hotspots, except you can also add and remove them. Each region fills with whichever Circle's own banner color currently controls it once players start claiming.</p>
 
         <div class="hotspot-controls">
@@ -2657,8 +2662,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <!-- ============================== CIRCLE ALTARS (TERRITORY ALTARS) ============================== -->
     <div class="tab-content" id="tab-territoryaltars">
       <div class="card">
-        <h2>Circle Altars — Territory Altar Plots (0095)</h2>
-        <p class="hint">Replaces the old "every Circle automatically has its own altar" mechanic. This is a fixed, admin-placed set of altar plots on the SAME Territory Map background as Territory Zones above — a Circle has no presence here at all until it buys a specific plot (Devotion, see the cost field on the Invasion Settings tab), and its banner + name only then appears at that exact spot. A purchased plot can be invaded away just like a Zone; no plot means nothing to redirect — the Circle simply keeps its own Patron Bonus. Draw regions here the same way you drag/resize Territory Zones, and add/remove them the same way too. Once every plot on this map is claimed, plot-less Circles can request a "war treaty" alliance onto a held plot instead (player-driven — request/approve/decline/leave/kick, no editor needed here) — its own Devotion cost is the field right below Altar plot claim cost on the Invasion Settings tab.</p>
+        <h2>Territory Map — Circle Altar Plots (0095, the ONLY territory system as of 0099)</h2>
+        <p class="hint">Replaces the old "every Circle automatically has its own altar" mechanic, and (0099) also replaces the separate Territory Zones system — direct feedback: "altar plots and territory zones are supposed to be the same thing nothing different." This is the entire Territory Map now: a fixed, admin-placed set of plots — a Circle has no presence here at all until it buys a specific plot (Devotion, see the cost field on the Invasion Settings tab), and its banner + name only then appears at that exact spot. A purchased plot can be invaded away; no plot means nothing to redirect — the Circle simply keeps its own Patron Bonus. Players can rename any plot their Circle currently holds themselves (no editor needed here). Once every plot on this map is claimed, plot-less Circles can request a "war treaty" alliance onto a held plot instead (player-driven — request/approve/decline/leave/kick, no editor needed here) — its own Devotion cost is the field right below Altar plot claim cost on the Invasion Settings tab.</p>
 
         <div class="hotspot-controls">
           <div class="field">
@@ -6318,7 +6323,6 @@ async function loadInvasionSettingsAdmin(){
   document.getElementById('invChestCutPct').value = Math.round(data.chest_cut_pct * 100);
   document.getElementById('invPersonalSharePct').value = Math.round(data.personal_share_pct * 100);
   document.getElementById('invPassiveWeightPct').value = Math.round(data.passive_weight * 100);
-  document.getElementById('invZoneClaimCost').value = data.zone_claim_cost_devotion;
   document.getElementById('invAltarClaimCost').value = data.altar_claim_cost_devotion;
   document.getElementById('invAllianceCost').value = data.alliance_cost_devotion;
   document.getElementById('invScoutCost').value = data.scout_cost_devotion;
@@ -6339,14 +6343,13 @@ async function saveInvasionSettingsAdmin(){
   const chestCutPct = vFloat('invChestCutPct');
   const personalSharePct = vFloat('invPersonalSharePct');
   const passiveWeightPct = vFloat('invPassiveWeightPct');
-  const zoneClaimCost = vInt('invZoneClaimCost');
   const altarClaimCost = vInt('invAltarClaimCost');
   const allianceCost = vInt('invAllianceCost');
   const scoutCost = vInt('invScoutCost');
   const scoutPrepHours = vFloat('invScoutPrepHours');
   const scoutExpireHours = vFloat('invScoutExpireHours');
 
-  const allValues = [costDevotion, minRankScore, windowHours, graceHours, shieldHours, rankSwing, chestCutPct, personalSharePct, passiveWeightPct, zoneClaimCost, altarClaimCost, allianceCost, scoutCost, scoutPrepHours, scoutExpireHours];
+  const allValues = [costDevotion, minRankScore, windowHours, graceHours, shieldHours, rankSwing, chestCutPct, personalSharePct, passiveWeightPct, altarClaimCost, allianceCost, scoutCost, scoutPrepHours, scoutExpireHours];
   if(allValues.some(n => isNaN(n) || n < 0)){
     status.className = 'status err';
     status.textContent = 'Every field must be a non-negative number.';
@@ -6374,7 +6377,7 @@ async function saveInvasionSettingsAdmin(){
     cost_devotion: costDevotion, min_rank_score: minRankScore, window_hours: windowHours,
     grace_hours: graceHours, shield_hours: shieldHours, rank_swing: rankSwing,
     chest_cut_pct: chestCutPct / 100, personal_share_pct: personalSharePct / 100, passive_weight: passiveWeightPct / 100,
-    zone_claim_cost_devotion: zoneClaimCost, altar_claim_cost_devotion: altarClaimCost, alliance_cost_devotion: allianceCost,
+    altar_claim_cost_devotion: altarClaimCost, alliance_cost_devotion: allianceCost,
     scout_cost_devotion: scoutCost, scout_prep_hours: scoutPrepHours, scout_expire_hours: scoutExpireHours,
     updated_at: new Date().toISOString()
   }).eq('id', 1);
