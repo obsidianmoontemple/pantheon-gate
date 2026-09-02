@@ -208,9 +208,9 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
 .paywall{border:1px solid var(--line);border-radius:4px;padding:26px;text-align:center;background:rgba(0,0,0,0.2);}
 .paywall p{color:var(--parchment-dim);font-style:italic;margin:0 0 20px;}
 .paywall .buy-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
-.paywall button{background:var(--gold);color:var(--ink);border:none;padding:12px 20px;font-family:'Cinzel',serif;
-  font-size:12px;letter-spacing:0.08em;text-transform:uppercase;border-radius:3px;cursor:pointer;}
-.paywall button:hover{background:var(--gold-bright);}
+.paywall button, .paywall .button-link{background:var(--gold);color:var(--ink);border:none;padding:12px 20px;font-family:'Cinzel',serif;
+  font-size:12px;letter-spacing:0.08em;text-transform:uppercase;border-radius:3px;cursor:pointer;display:inline-block;text-decoration:none;}
+.paywall button:hover, .paywall .button-link:hover{background:var(--gold-bright);}
 .paywall button.secondary{background:transparent;border:1px solid var(--gold);color:var(--gold-bright);}
 .paywall .unavailable{color:var(--parchment-dim);font-style:italic;font-size:14px;}
 </style>
@@ -3723,21 +3723,23 @@ function openDeity(id){
   renderDeityDetail(d);
 }
 
-// The buy-row is identical regardless of lock state (teaser or hidden) —
-// only difference is whether the "Unlock <name>" button appears, which
-// deityForSale(d) already governs. Pulled out so the sealed branch below
-// doesn't have to duplicate it and so a hidden god's name genuinely never
-// gets interpolated into that markup either.
+// Direct feedback: "consolidate the pantheon/deity pricing onto the Shop
+// screen" — this used to be three separate checkout buttons (Unlock
+// <deity>, Unlock this pantheon, Full access), each re-fetching/
+// re-formatting the exact same pricing_settings/deity_settings/
+// pantheon_settings rows that index.html's Shop screen (renderShopBrowse,
+// loadShopCatalog) already reads and sells from — two independent price
+// displays that could drift out of sync with each other, and two
+// independent checkout implementations for the identical
+// create-checkout call. Rather than keep both in sync by hand, this is
+// now a single hand-off to the Shop screen — index.html's own Pantheons
+// dropdown / deity search-buy already cover exactly what these three
+// buttons did. index.html's afterLogin() opens straight to the Shop
+// when it sees ?openShop=1 on the URL (mirroring the existing
+// ?checkout= handling right below it).
 function buyRowHTML(d){
-  return !currentUser ? `<button onclick="openAuthModal()">Sign in</button>` : `
-    ${deityForSale(d)
-      ? `<button onclick="startCheckout('deity', '${d.id}')">Unlock ${esc(d.name)} — ${fmtUsd(deityPrice(d))}</button>`
-      : `<span class="unavailable">Individual unlock unavailable right now</span>`}
-    ${pantheonForSale(currentPantheon)
-      ? `<button class="secondary" onclick="startCheckout('pantheon', '${currentPantheon}')">Unlock this pantheon — ${fmtUsd(pantheonPrice(currentPantheon))}</button>`
-      : ''}
-    <button class="secondary" onclick="startCheckout('all')">Full access — ${fmtUsd(pricing.subscription)}/mo</button>
-  `;
+  if(!currentUser) return `<button onclick="openAuthModal()">Sign in</button>`;
+  return `<a class="button-link" href="index.html?openShop=1">Unlock in the Shop</a>`;
 }
 
 function renderDeityDetail(d){
