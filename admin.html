@@ -87,6 +87,15 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 .tabnav button{background:transparent;border:1px solid var(--line);color:var(--parchment-dim);}
 .tabnav button:hover{border-color:var(--gold);color:var(--gold-bright);background:transparent;}
 .tabnav button.active{background:var(--gold);color:var(--ink);border-color:var(--gold);}
+/* #121 — grouped nav: a row of group buttons sits above the existing
+   flat tab row; selecting a group just toggles which of the existing
+   .tab-btn elements are [hidden] (see selectTabGroup()) rather than
+   restructuring the tab row itself, so showTab()/the tab-content divs
+   below are completely untouched by this. */
+.groupnav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.groupnav button{background:transparent;border:1px solid var(--line);color:var(--parchment-dim);font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.03em;padding:8px 14px;border-radius:3px;cursor:pointer;}
+.groupnav button:hover{border-color:var(--gold);color:var(--gold-bright);}
+.groupnav button.active{background:var(--gold);color:var(--ink);border-color:var(--gold);}
 .tab-content{display:none;}
 .tab-content.active{display:block;}
 .sort-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
@@ -126,45 +135,19 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 .hotspot-controls input[type=range]{max-width:180px;width:180px;}
 .hotspot-readout{font-family:'SF Mono',Consolas,monospace;font-size:11px;color:var(--parchment-dim);margin-top:12px;line-height:1.7;max-height:160px;overflow-y:auto;border:1px solid var(--line);border-radius:3px;padding:10px 12px;}
 
-/* ---- Territory Zones editor (0090) ---- */
-/* Same drag/resize canvas as the Map Hotspots editor above, but zones are
-   admin-CREATABLE/DELETABLE (map_hotspots' registry is a fixed set,
-   repositionable only) — see zonePointerDown()/addZoneBox()/deleteZoneBox()
-   below. Reuses .hotspot-canvas for the frame itself; only the box/resize/
-   delete-button styling gets its own class since a zone box also carries a
-   name label and a remove control the hotspot boxes never needed.
-   The Circle Altars tab (0095, further below) is a sibling editor of this
-   exact same shape, targeting territory_altars instead of territory_zones
-   — see its own "Circle Altars / Territory Altars editor" comment. */
-.zone-box{
-  position:absolute;box-sizing:border-box;
-  border:2px dashed var(--gold-bright);
-  background:rgba(230,199,119,var(--hotspot-alpha,0.35));
-  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
-  font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:0.02em;color:#fff;
-  text-shadow:0 1px 3px rgba(0,0,0,0.9);
-  cursor:move;user-select:none;padding:2px;overflow:hidden;
-}
-.zone-box.active{border-color:#fff;border-style:solid;z-index:5;}
-.zone-box .zone-name-input{
-  position:relative;z-index:2;width:88%;max-width:none;font-size:10.5px;text-align:center;
-  background:rgba(10,8,16,0.55);color:#fff;border:1px solid rgba(255,255,255,0.4);margin:2px auto;padding:2px 4px;
-}
-.zone-resize{
-  position:absolute;right:-7px;bottom:-7px;width:15px;height:15px;
-  background:var(--gold-bright);border:1px solid var(--ink);border-radius:2px;cursor:nwse-resize;
-}
-.zone-delete{
-  position:absolute;left:-7px;top:-7px;width:16px;height:16px;line-height:14px;
-  background:var(--ember);color:#fff;border:1px solid var(--ink);border-radius:50%;cursor:pointer;
-  font-size:11px;text-align:center;padding:0;
-}
-
 /* ---- Circle Altars / Territory Altars editor (0095) ---- */
-/* Exact copy of the Territory Zones editor styling immediately above,
-   under its own class names (not reused verbatim) so the two editors'
-   event handlers — each scoped to querySelector() calls within their own
-   #zoneCanvas / #altarCanvas — never risk matching each other's boxes. */
+/* Same drag/resize canvas as the Map Hotspots editor above, but boxes are
+   admin-CREATABLE/DELETABLE (map_hotspots' registry is a fixed set,
+   repositionable only) — see altarPointerDown()/addAltarBox()/
+   deleteAltarBox() below. Reuses .hotspot-canvas for the frame itself;
+   only the box/resize/delete-button styling gets its own class since an
+   altar box also carries a name label and a remove control the hotspot
+   boxes never needed.
+   (This editor used to have a sibling, the Territory Zones tab/editor —
+   direct feedback: "altar plots and territory zones are supposed to be
+   the same thing nothing different" (0099) merged that concept into this
+   one, and #121 removed the now-fully-superseded Territory Zones
+   markup/CSS/JS outright rather than leaving it as dead weight.) */
 .altar-box{
   position:absolute;box-sizing:border-box;
   border:2px dashed var(--gold-bright);
@@ -209,51 +192,61 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
   <div id="adminArea" style="display:none;">
 
+    <!-- #121 — direct feedback: "collapse into fewer top-level tabs."
+         38 flat buttons in one wrapping row was unnavigable. groupNav
+         (populated by renderGroupNav(), see the TAB_GROUPS/selectTabGroup
+         script below) is a small row of 8 category buttons; picking one
+         just shows/hides the existing .tab-btn buttons in #tabNav below
+         by [hidden] — nothing about showTab() or the .tab-content divs
+         changed, so every existing tab still works exactly as before,
+         just reached through its group instead of one giant row. -->
+    <div class="groupnav" id="groupNav"></div>
+
     <div class="tabnav" id="tabNav">
-      <button class="tab-btn active" data-tab="overview" onclick="showTab('overview')">Overview</button>
-      <button class="tab-btn" data-tab="leaderboards" onclick="showTab('leaderboards')">Leaderboards</button>
-      <button class="tab-btn" data-tab="playerstats" onclick="showTab('playerstats')">Player Battle Stats</button>
-      <button class="tab-btn" data-tab="circles" onclick="showTab('circles')">Circles</button>
-      <button class="tab-btn" data-tab="circlebonuses" onclick="showTab('circlebonuses')">Circle Patron Bonuses</button>
-      <button class="tab-btn" data-tab="currencies" onclick="showTab('currencies')">Currencies &amp; Gifts</button>
-      <button class="tab-btn" data-tab="gifting" onclick="showTab('gifting')">Gifting</button>
-      <button class="tab-btn" data-tab="checkins" onclick="showTab('checkins')">Check-ins &amp; Events</button>
-      <button class="tab-btn" data-tab="progression" onclick="showTab('progression')">Guardian Progression</button>
-      <button class="tab-btn" data-tab="creatures" onclick="showTab('creatures')">Creatures</button>
-      <button class="tab-btn" data-tab="dragons" onclick="showTab('dragons')">Big Baddies</button>
-      <button class="tab-btn" data-tab="worldboss" onclick="showTab('worldboss')">World Boss</button>
-      <button class="tab-btn" data-tab="altars" onclick="showTab('altars')">Altars</button>
-      <button class="tab-btn" data-tab="gauntlet" onclick="showTab('gauntlet')">Gauntlet</button>
-      <button class="tab-btn" data-tab="species" onclick="showTab('species')">Guardian Species</button>
-      <button class="tab-btn" data-tab="mage" onclick="showTab('mage')">Mage</button>
-      <button class="tab-btn" data-tab="stamina" onclick="showTab('stamina')">Energy &amp; Tickets</button>
-      <button class="tab-btn" data-tab="moves" onclick="showTab('moves')">Moves</button>
-      <button class="tab-btn" data-tab="wheel" onclick="showTab('wheel')">Element Wheel</button>
-      <button class="tab-btn" data-tab="blessings" onclick="showTab('blessings')">Deity Blessings</button>
-      <button class="tab-btn" data-tab="guardianitems" onclick="showTab('guardianitems')">Guardian Items</button>
-      <button class="tab-btn" data-tab="giftablerewards" onclick="showTab('giftablerewards')">Giftable Rewards</button>
-      <button class="tab-btn" data-tab="rewardbundles" onclick="showTab('rewardbundles')">Reward Bundles</button>
-      <button class="tab-btn" data-tab="expeditions" onclick="showTab('expeditions')">Expeditions</button>
-      <button class="tab-btn" data-tab="arenastore" onclick="showTab('arenastore')">Arena Store</button>
-      <button class="tab-btn" data-tab="campaign" onclick="showTab('campaign')">Campaign</button>
-      <button class="tab-btn" data-tab="deities" onclick="showTab('deities')">Deity Personalities</button>
-      <button class="tab-btn" data-tab="pricing" onclick="showTab('pricing')">Pricing &amp; Store</button>
-      <button class="tab-btn" data-tab="maphotspots" onclick="showTab('maphotspots')">Backgrounds &amp; Hotspots</button>
-      <button class="tab-btn" data-tab="pantheons" onclick="showTab('pantheons')">Pantheons &amp; Gods</button>
-      <button class="tab-btn" data-tab="chainedgods" onclick="showTab('chainedgods')">Chained Gods</button>
-      <button class="tab-btn" data-tab="guide" onclick="showTab('guide')">Narrator/Guide</button>
-      <button class="tab-btn" data-tab="featureaccess" onclick="showTab('featureaccess')">Feature Access</button>
-      <button class="tab-btn" data-tab="customers" onclick="showTab('customers')">Customers</button>
-      <button class="tab-btn" data-tab="admins" onclick="showTab('admins')">Admins</button>
-      <button class="tab-btn" data-tab="invasionsettings" onclick="showTab('invasionsettings')">Invasion Settings</button>
+      <button class="tab-btn active" data-tab="overview" data-group="dashboard" onclick="showTab('overview')">Overview</button>
+      <button class="tab-btn" data-tab="leaderboards" data-group="dashboard" onclick="showTab('leaderboards')">Leaderboards</button>
+      <button class="tab-btn" data-tab="playerstats" data-group="dashboard" onclick="showTab('playerstats')">Player Battle Stats</button>
+      <button class="tab-btn" data-tab="customers" data-group="dashboard" onclick="showTab('customers')">Customers</button>
+      <button class="tab-btn" data-tab="admins" data-group="dashboard" onclick="showTab('admins')">Admins</button>
+      <button class="tab-btn" data-tab="circles" data-group="circles" onclick="showTab('circles')">Circles</button>
+      <button class="tab-btn" data-tab="circlebonuses" data-group="circles" onclick="showTab('circlebonuses')">Circle Patron Bonuses</button>
       <!-- Territory Zones tab removed (0099) — direct feedback: "altar
            plots and territory zones are supposed to be the same thing
-           nothing different." Every zone was copied into Circle Altars
-           below; its editor markup/JS is left in the file, unreachable,
-           purely so nothing errors on load — don't add a nav button back
-           for it, it no longer feeds the Territory Map. -->
-      <button class="tab-btn" data-tab="territoryaltars" onclick="showTab('territoryaltars')">Territory Map (Circle Altars)</button>
-      <button class="tab-btn" data-tab="credits" onclick="showTab('credits')">Credits</button>
+           nothing different," superseded by Territory Map (Circle
+           Altars) just below. Its dead markup/JS (tab-territoryzones,
+           the Territory Zones editor block) was fully removed as part of
+           #121's cleanup rather than left as unreachable dead weight. -->
+      <button class="tab-btn" data-tab="territoryaltars" data-group="circles" onclick="showTab('territoryaltars')">Territory Map (Circle Altars)</button>
+      <button class="tab-btn" data-tab="invasionsettings" data-group="circles" onclick="showTab('invasionsettings')">Invasion Settings</button>
+      <button class="tab-btn" data-tab="currencies" data-group="economy" onclick="showTab('currencies')">Currencies &amp; Gifts</button>
+      <button class="tab-btn" data-tab="gifting" data-group="economy" onclick="showTab('gifting')">Gifting</button>
+      <button class="tab-btn" data-tab="pricing" data-group="economy" onclick="showTab('pricing')">Pricing &amp; Store</button>
+      <button class="tab-btn" data-tab="giftablerewards" data-group="economy" onclick="showTab('giftablerewards')">Giftable Rewards</button>
+      <button class="tab-btn" data-tab="rewardbundles" data-group="economy" onclick="showTab('rewardbundles')">Reward Bundles</button>
+      <button class="tab-btn" data-tab="arenastore" data-group="economy" onclick="showTab('arenastore')">Arena Store</button>
+      <button class="tab-btn" data-tab="checkins" data-group="checkins" onclick="showTab('checkins')">Check-ins &amp; Events</button>
+      <button class="tab-btn" data-tab="progression" data-group="checkins" onclick="showTab('progression')">Guardian Progression</button>
+      <button class="tab-btn" data-tab="featureaccess" data-group="checkins" onclick="showTab('featureaccess')">Feature Access</button>
+      <button class="tab-btn" data-tab="creatures" data-group="creatures" onclick="showTab('creatures')">Creatures</button>
+      <button class="tab-btn" data-tab="dragons" data-group="creatures" onclick="showTab('dragons')">Big Baddies</button>
+      <button class="tab-btn" data-tab="worldboss" data-group="creatures" onclick="showTab('worldboss')">World Boss</button>
+      <button class="tab-btn" data-tab="gauntlet" data-group="creatures" onclick="showTab('gauntlet')">Gauntlet</button>
+      <button class="tab-btn" data-tab="campaign" data-group="creatures" onclick="showTab('campaign')">Campaign</button>
+      <button class="tab-btn" data-tab="expeditions" data-group="creatures" onclick="showTab('expeditions')">Expeditions</button>
+      <button class="tab-btn" data-tab="altars" data-group="creatures" onclick="showTab('altars')">Altars</button>
+      <button class="tab-btn" data-tab="wheel" data-group="creatures" onclick="showTab('wheel')">Element Wheel</button>
+      <button class="tab-btn" data-tab="moves" data-group="creatures" onclick="showTab('moves')">Moves</button>
+      <button class="tab-btn" data-tab="blessings" data-group="creatures" onclick="showTab('blessings')">Deity Blessings</button>
+      <button class="tab-btn" data-tab="species" data-group="guardian" onclick="showTab('species')">Guardian Species</button>
+      <button class="tab-btn" data-tab="mage" data-group="guardian" onclick="showTab('mage')">Mage</button>
+      <button class="tab-btn" data-tab="stamina" data-group="guardian" onclick="showTab('stamina')">Energy &amp; Tickets</button>
+      <button class="tab-btn" data-tab="guardianitems" data-group="guardian" onclick="showTab('guardianitems')">Guardian Items</button>
+      <button class="tab-btn" data-tab="deities" data-group="deities" onclick="showTab('deities')">Deity Personalities</button>
+      <button class="tab-btn" data-tab="pantheons" data-group="deities" onclick="showTab('pantheons')">Pantheons &amp; Gods</button>
+      <button class="tab-btn" data-tab="chainedgods" data-group="deities" onclick="showTab('chainedgods')">Chained Gods</button>
+      <button class="tab-btn" data-tab="maphotspots" data-group="site" onclick="showTab('maphotspots')">Backgrounds &amp; Hotspots</button>
+      <button class="tab-btn" data-tab="guide" data-group="site" onclick="showTab('guide')">Narrator/Guide</button>
+      <button class="tab-btn" data-tab="credits" data-group="site" onclick="showTab('credits')">Credits</button>
     </div>
 
     <!-- ============================== OVERVIEW ============================== -->
@@ -470,11 +463,40 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-checkins">
       <div class="card">
         <h2>Monthly check-in calendar</h2>
-        <p class="hint">One reward per day of the month, 1 through 31, the same every month — day 31 simply doesn't fire in shorter months, no other bookkeeping needed. Replaces the old streak-milestone system. Every day ships with Active unchecked so nothing pays out until you've reviewed and approved it — fill in a currency/amount/label per day, then check Active when it's ready.</p>
+        <p class="hint">One reward per day of the month, 1 through 31, the same every month — day 31 simply doesn't fire in shorter months, no other bookkeeping needed. This now keys off the actual calendar date rather than a login streak — a player's calendar grid shows every day of the current month, dash-marked once it's passed, and they can spend currency to unlock a day they missed (price below) instead of losing it outright. Every day ships with Active unchecked so nothing pays out until you've reviewed and approved it — fill in a currency/amount/label per day, then check Active when it's ready.</p>
         <div class="checkin-calendar-grid" id="checkinCalendarGrid"><p class="hint">Loading…</p></div>
         <div class="save-bar">
           <button id="saveCheckinCalendarBtn">Save changes</button>
           <div class="status" id="checkinCalendarStatus"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Missed-day unlock price</h2>
+        <p class="hint">What a player pays to retroactively unlock one already-passed day on the monthly calendar above (the reward for that day still has to be Active to actually pay out — an unlock on an inactive/day-off row just spends the currency for nothing, same as tending on that day normally would have).</p>
+        <div class="field"><label>Currency</label><select id="checkinBackdayCurrency" style="max-width:200px;"></select></div>
+        <div class="field"><label>Cost</label><input type="number" min="0" id="checkinBackdayCost" style="max-width:120px;"></div>
+        <button id="saveCheckinBackdayBtn">Save price</button>
+        <div class="status" id="checkinBackdayStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>New player 7-day track</h2>
+        <p class="hint">Separate from the monthly calendar and running alongside it: the first 7 calendar days a guardian exists, one reward per day, auto-granted with no button to click — a player simply receives each day's reward the moment they're logged in on it (catching up on any skipped days rather than losing them). Same Active-gated convention as the monthly calendar.</p>
+        <div class="checkin-calendar-grid" id="checkinNewPlayerGrid"><p class="hint">Loading…</p></div>
+        <div class="save-bar">
+          <button id="saveCheckinNewPlayerBtn">Save changes</button>
+          <div class="status" id="checkinNewPlayerStatus"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Auto-delivery events</h2>
+        <p class="hint">One-time rewards for account-lifecycle events, granted automatically the moment they happen — no scheduling, no manual gifting. "First login ever" fires the next time that guardian logs in once turned on; "First real-money purchase" fires from the Stripe webhook right after their first successful checkout. Each fires at most once per guardian, ever, regardless of how many times the underlying event repeats.</p>
+        <div class="checkin-calendar-grid" id="eventTriggersGrid"><p class="hint">Loading…</p></div>
+        <div class="save-bar">
+          <button id="saveEventTriggersBtn">Save changes</button>
+          <div class="status" id="eventTriggersStatus"></div>
         </div>
       </div>
     </div>
@@ -970,11 +992,11 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>Circle Altar — decorations</h2>
-        <p class="hint">source governs how a Circle gets one: buy (spend Devotion here), find (a harvest can drop it — no cost), unlock (a milestone — set Unlock rule to <code>members_10</code>, <code>members_20</code>, <code>members_30</code>, <code>devotion_1000</code>, or <code>devotion_2500</code>, the only rules the edge function currently checks), or dragon (won from a dragon fight — set this decoration as a dragon's "Deco key" over in Big Baddies).</p>
+        <p class="hint">source governs how a Circle gets one: buy (spend Devotion here), find (a harvest can drop it — no cost), unlock (a milestone — set Unlock rule to <code>members_10</code>, <code>members_20</code>, <code>members_30</code>, <code>devotion_1000</code>, or <code>devotion_2500</code>, the only rules the edge function currently checks), or dragon (won from a dragon fight — set this decoration as a dragon's "Deco key" over in Big Baddies). Effect % is optional — while this decoration is PLACED on the Circle Altar (not just owned), it adds that many percentage points to the Circle's Devotion yield on every harvest, on top of any Patron Bonus. Leave blank for a purely cosmetic decoration.</p>
         <div class="scroll-table" style="max-height:320px;">
           <table>
-            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Source</th><th>Cost Devotion</th><th>Unlock rule</th><th>Image URL</th><th>Active</th></tr></thead>
-            <tbody id="altarDecorationRows"><tr><td colspan="8">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Source</th><th>Cost Devotion</th><th>Unlock rule</th><th>Image URL</th><th>Effect %</th><th>Active</th></tr></thead>
+            <tbody id="altarDecorationRows"><tr><td colspan="9">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -995,6 +1017,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           </div>
           <div class="field" id="newAltarDecoCostField"><label>Cost Devotion</label><input type="number" min="1" id="newAltarDecoCost" style="max-width:110px;"></div>
           <div class="field" id="newAltarDecoRuleField" style="display:none;"><label>Unlock rule</label><input type="text" id="newAltarDecoRule" placeholder="e.g. members_10" style="max-width:150px;"></div>
+          <div class="field"><label>Effect % (optional)</label><input type="number" step="0.1" min="0" id="newAltarDecoEffectAmount" style="max-width:110px;" placeholder="e.g. 5"></div>
           <button id="addAltarDecoBtn">Add decoration</button>
         </div>
         <div class="field" style="max-width:none;">
@@ -1041,11 +1064,11 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>Personal Altar — decorations</h2>
-        <p class="hint">Same source vocabulary as the Circle Altar, minus dragon (dragon fights stay Circle-scoped). Unlock rule options the edge function checks: <code>marks_3</code>, <code>marks_6</code> (full Deity Marks), <code>streak_14</code> (check-in streak), <code>essence_500</code> (current Essence balance).</p>
+        <p class="hint">Same source vocabulary as the Circle Altar, minus dragon (dragon fights stay Circle-scoped). Unlock rule options the edge function checks: <code>marks_3</code>, <code>marks_6</code> (full Deity Marks), <code>streak_14</code> (check-in streak), <code>essence_500</code> (current Essence balance). Effect % is optional — while this decoration is PLACED on the guardian's Personal Altar (not just owned), it adds that many percentage points to their Essence yield on every harvest, on top of any deity-blessing bonus. Leave blank for a purely cosmetic decoration.</p>
         <div class="scroll-table" style="max-height:320px;">
           <table>
-            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Source</th><th>Cost Essence</th><th>Unlock rule</th><th>Image URL</th><th>Active</th></tr></thead>
-            <tbody id="personalAltarDecorationRows"><tr><td colspan="8">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Source</th><th>Cost Essence</th><th>Unlock rule</th><th>Image URL</th><th>Effect %</th><th>Active</th></tr></thead>
+            <tbody id="personalAltarDecorationRows"><tr><td colspan="9">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -1065,6 +1088,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           </div>
           <div class="field" id="newPersonalAltarDecoCostField"><label>Cost Essence</label><input type="number" min="1" id="newPersonalAltarDecoCost" style="max-width:110px;"></div>
           <div class="field" id="newPersonalAltarDecoRuleField" style="display:none;"><label>Unlock rule</label><input type="text" id="newPersonalAltarDecoRule" placeholder="e.g. marks_3" style="max-width:150px;"></div>
+          <div class="field"><label>Effect % (optional)</label><input type="number" step="0.1" min="0" id="newPersonalAltarDecoEffectAmount" style="max-width:110px;" placeholder="e.g. 5"></div>
           <button id="addPersonalAltarDecoBtn">Add decoration</button>
         </div>
         <div class="field" style="max-width:none;">
@@ -2707,33 +2731,6 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
     </div>
 
-    <!-- ============================== TERRITORY ZONES ============================== -->
-    <div class="tab-content" id="tab-territoryzones">
-      <div class="card">
-        <h2>Territory Zones map (0090) — DEPRECATED, removed from navigation (0099)</h2>
-        <p class="hint" style="color:var(--ember, #a1462a);">Direct feedback: "altar plots and territory zones are supposed to be the same thing nothing different." Every zone drawn here was copied into Circle Altars and the two systems were merged into one — this tab no longer has a nav button and anything drawn/saved here is never read by the Territory Map anymore. Use the Circle Altars tab for everything going forward. Left in place only so old data isn't destroyed.</p>
-        <p class="hint">"We want a territory map as well... assign each circle a map color and fill in zones as they are taken." This is a plain in-game map — no GPS, no real-world location — a fixed set of regions you draw here that any Circle can claim or fight over, completely separate from the altar-roster tiles on the existing Territory Map. Set the background image on the Backgrounds &amp; Hotspots tab (page "Territory Map — Zones background"); draw regions here the same way you drag/resize hotspots, except you can also add and remove them. Each region fills with whichever Circle's own banner color currently controls it once players start claiming.</p>
-
-        <div class="hotspot-controls">
-          <div class="field">
-            <label>Box visibility</label>
-            <input type="range" id="zoneAlpha" min="5" max="90" value="35">
-          </div>
-          <button class="secondary" id="addZoneBtn" type="button">Add a new zone</button>
-          <button class="secondary" id="resetZonesBtn" type="button">Reload from saved</button>
-        </div>
-
-        <div class="hotspot-canvas" id="zoneCanvas"></div>
-
-        <div class="save-bar">
-          <button id="saveZonesBtn">Save zones</button>
-          <div class="status" id="zoneStatus"></div>
-        </div>
-
-        <div class="hotspot-readout" id="zoneReadout"></div>
-      </div>
-    </div>
-
     <!-- ============================== CIRCLE ALTARS (TERRITORY ALTARS) ============================== -->
     <div class="tab-content" id="tab-territoryaltars">
       <div class="card">
@@ -2844,6 +2841,53 @@ function showTab(id){
   const btn = document.querySelector('.tab-btn[data-tab="' + id + '"]');
   if(content) content.classList.add('active');
   if(btn) btn.classList.add('active');
+}
+
+// #121 — direct feedback: "collapse into fewer top-level tabs." This is
+// purely a navigation layer on top of the existing flat tab-btn row
+// (see the groupnav comment above #tabNav in the HTML) — the group
+// itself carries no data of its own beyond which data-group values map
+// to which label; every tab's own id/content/behavior is completely
+// unchanged. Labels/membership are intentionally topical rather than
+// alphabetical, grouping by what an admin is usually trying to DO
+// (set up an economy knob, tune a fight, edit a deity) rather than by
+// the historical order tabs were added in.
+const TAB_GROUPS = [
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'circles',   label: 'Circles' },
+  { key: 'economy',   label: 'Economy & Gifting' },
+  { key: 'checkins',  label: 'Check-ins & Progression' },
+  { key: 'creatures', label: 'Creatures & Combat' },
+  { key: 'guardian',  label: 'Guardian & Mage' },
+  { key: 'deities',   label: 'Deities & Pantheons' },
+  { key: 'site',      label: 'Site & Content' },
+];
+let currentTabGroup = 'dashboard';
+
+function renderGroupNav(){
+  const el = document.getElementById('groupNav');
+  if(!el) return;
+  el.innerHTML = TAB_GROUPS.map(g => `<button class="${g.key === currentTabGroup ? 'active' : ''}" onclick="selectTabGroup('${g.key}')">${esc(g.label)}</button>`).join('');
+}
+
+// Switching groups only ever hides/shows buttons in the existing
+// #tabNav row — if the currently-active tab isn't in the newly-picked
+// group, it jumps to that group's first tab (never leaves the panel on
+// a tab whose own button just vanished from view).
+function selectTabGroup(key){
+  currentTabGroup = key;
+  renderGroupNav();
+  const buttons = Array.from(document.querySelectorAll('#tabNav .tab-btn'));
+  let activeStillVisible = false;
+  buttons.forEach(btn => {
+    const visible = btn.getAttribute('data-group') === key;
+    btn.hidden = !visible;
+    if(visible && btn.classList.contains('active')) activeStillVisible = true;
+  });
+  if(!activeStillVisible){
+    const firstInGroup = buttons.find(btn => btn.getAttribute('data-group') === key);
+    if(firstInGroup) showTab(firstInGroup.getAttribute('data-tab'));
+  }
 }
 
 /* ---------------- admin edge function helper ---------------- */
@@ -2986,6 +3030,7 @@ async function handleSession(session){
   gateMsg.textContent = '';
   loginModal.classList.remove('active');
   adminArea.style.display = 'block';
+  selectTabGroup('dashboard'); // #121 — Overview (the default-active tab) lives in this group
   loadPricing();
   loadSiteSettings();
   loadMapHotspots();
@@ -3009,12 +3054,14 @@ async function handleSession(session){
   loadCustomers();
   loadAdminAllowlist();
   loadInvasionSettingsAdmin();
-  loadZonesEditor();
   loadAltarsEditor();
   loadCreditsAdmin();
 
   loadDeityPersonalities();
   loadCheckinCalendar();
+  loadCheckinNewPlayerCatalog();
+  loadCheckinBackdayPricing();
+  loadEventTriggersCatalog();
   loadPromoEvents();
   loadGuardianProgression();
   loadMageProgression();
@@ -3224,8 +3271,17 @@ const DEFAULT_REDEEM_AREAS_ADMIN = [
   { id: 'keyOfNight', label: 'Choose with a Key of Night',  left: 54, top: 54, width: 26, height: 11 },
   { id: 'backToMap',  label: 'Back to the Map',             left: 3,  top: 88, width: 18, height: 8  },
 ];
+// #123 — the old single "Check In" button was replaced on the player
+// side by a real day-by-day calendar grid (see index.html's
+// checkinMonthlyGridHtml()/checkinNewPlayerGridHtml()). These two boxes
+// are just the FRAMES that grid draws inside of, dragged/resized here
+// exactly like any other hotspot — index.html splits whichever box each
+// one ends up at into a uniform grid of day cells, so one drag per frame
+// aligns the whole calendar to the admin's own background art instead of
+// needing 38 separate hotspots hand-placed one at a time.
 const DEFAULT_CHECKIN_AREAS_ADMIN = [
-  { id: 'checkIn',   label: 'Check In',        left: 36, top: 58, width: 28, height: 12 },
+  { id: 'newPlayerGrid', label: 'New Player 7-Day Track', left: 10, top: 14, width: 80, height: 13 },
+  { id: 'checkinGrid',   label: 'Monthly Calendar Grid',   left: 10, top: 30, width: 80, height: 50 },
   { id: 'backToMap', label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8  },
 ];
 
@@ -3517,228 +3573,16 @@ async function saveMapHotspots(){
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Players will see the new positions next time they load this screen.';
 }
 
-/* ---------------- Territory Zones editor (0090) ----------------
-   Same drag/resize canvas as the Map Hotspots editor above, but zones are
-   admin-CREATABLE/DELETABLE — map_hotspots' registry is a fixed set
-   (repositionable only); territory_zones is a table you actually add rows
-   to and remove rows from here. A new box gets a client-side-only tempId
-   until Save inserts it for real and this reloads with its actual id;
-   deleting a box just drops it from the working copy — the row itself
-   isn't gone until Save runs the matching delete. Each zone's name is an
-   editable text field right on its box (there's no separate id/label
-   split the way hotspots have, since a zone's whole identity IS its
-   admin-given name). */
-let zoneState = [];       // [{id, tempId, name, left, top, width, height, controlled_by, controllerName}]
-let zoneDrag = null;      // {mode:'move'|'resize', key, startX, startY, startLeft, startTop, startWidth, startHeight, canvasW, canvasH}
-let zoneTempCounter = 0;
-let deletedZoneIds = [];  // real (already-saved) ids removed since the last load — deleted from the DB on Save
-
-function zoneKey(z){ return z.id || z.tempId; }
-
-async function loadZonesEditor(){
-  const status = document.getElementById('zoneStatus');
-  if(!status) return; // this tab's markup isn't on the page (e.g. mid-deploy) — nothing to fill in
-  deletedZoneIds = [];
-
-  const [{ data, error }, { data: circleRows }, { data: bgRow }] = await Promise.all([
-    supabaseClient.from('territory_zones').select('id, name, left_pct, top_pct, width_pct, height_pct, controlled_by').order('created_at'),
-    supabaseClient.from('circles').select('id, name'),
-    supabaseClient.from('site_backgrounds').select('background_url').eq('page_key', 'territoryMap').maybeSingle()
-  ]);
-  if(error){
-    status.className = 'status err';
-    status.textContent = 'Could not load: ' + error.message;
-    zoneState = [];
-  }else{
-    const circleNameById = {};
-    (circleRows || []).forEach(c => { circleNameById[c.id] = c.name; });
-    zoneState = (data || []).map(z => ({
-      id: z.id, tempId: null,
-      name: z.name,
-      left: z.left_pct, top: z.top_pct, width: z.width_pct, height: z.height_pct,
-      controlled_by: z.controlled_by,
-      controllerName: z.controlled_by ? (circleNameById[z.controlled_by] || 'a Circle') : null,
-    }));
-    status.className = 'status';
-    status.textContent = '';
-  }
-
-  const canvas = document.getElementById('zoneCanvas');
-  const bgUrl = bgRow && bgRow.background_url;
-  canvas.style.backgroundImage = bgUrl ? `url('${bgUrl}')` : 'none';
-
-  renderZoneCanvas();
-}
-
-function renderZoneCanvas(){
-  const canvas = document.getElementById('zoneCanvas');
-  canvas.innerHTML = zoneState.map(z => {
-    const key = zoneKey(z);
-    const controlNote = z.controlled_by ? `Held by ${esc(z.controllerName)}` : 'Unclaimed';
-    return `
-      <div class="zone-box" data-key="${esc(key)}" style="left:${z.left}%;top:${z.top}%;width:${z.width}%;height:${z.height}%;">
-        <button class="zone-delete" type="button" data-key="${esc(key)}" title="Remove this zone">&times;</button>
-        <input class="zone-name-input" data-key="${esc(key)}" value="${esc(z.name)}" placeholder="Zone name">
-        <div style="font-size:9px;opacity:0.85;">${controlNote}</div>
-        <div class="zone-resize" data-key="${esc(key)}"></div>
-      </div>
-    `;
-  }).join('');
-  updateZoneReadout();
-}
-
-function updateZoneReadout(){
-  const el = document.getElementById('zoneReadout');
-  if(!el) return;
-  el.innerHTML = zoneState.map(z =>
-    `${esc(z.name || '(unnamed)')}: left ${z.left.toFixed(1)}%, top ${z.top.toFixed(1)}%, width ${z.width.toFixed(1)}%, height ${z.height.toFixed(1)}%${z.controlled_by ? ' — held by ' + esc(z.controllerName) : ' — unclaimed'}`
-  ).join('<br>');
-}
-
-function addZoneBox(){
-  zoneTempCounter += 1;
-  zoneState.push({
-    id: null, tempId: 'new-' + zoneTempCounter,
-    name: 'New Region', left: 40, top: 40, width: 18, height: 14,
-    controlled_by: null, controllerName: null,
-  });
-  renderZoneCanvas();
-}
-
-function deleteZoneBox(key){
-  const z = zoneState.find(z => zoneKey(z) === key);
-  if(!z) return;
-  if(!confirm(`Remove "${z.name}" from the map? This only changes the editor here — click Save zones afterward to make it permanent.`)) return;
-  if(z.id) deletedZoneIds.push(z.id);
-  zoneState = zoneState.filter(z => zoneKey(z) !== key);
-  renderZoneCanvas();
-}
-
-function zonePointerDown(e){
-  const deleteTarget = e.target.closest('.zone-delete');
-  if(deleteTarget){
-    e.stopPropagation();
-    deleteZoneBox(deleteTarget.getAttribute('data-key'));
-    return;
-  }
-  if(e.target.closest('.zone-name-input')) return; // let the text field take focus/typing normally
-  const resizeTarget = e.target.closest('.zone-resize');
-  const boxTarget = e.target.closest('.zone-box');
-  if(!resizeTarget && !boxTarget) return;
-  const key = (resizeTarget || boxTarget).getAttribute('data-key');
-  const state = zoneState.find(z => zoneKey(z) === key);
-  if(!state) return;
-  const canvas = document.getElementById('zoneCanvas');
-  const rect = canvas.getBoundingClientRect();
-
-  document.querySelectorAll('.zone-box').forEach(b => b.classList.remove('active'));
-  const boxEl = canvas.querySelector(`.zone-box[data-key="${CSS.escape(key)}"]`);
-  if(boxEl) boxEl.classList.add('active');
-
-  if(resizeTarget){
-    e.stopPropagation();
-    zoneDrag = { mode: 'resize', key, startX: e.clientX, startY: e.clientY, startWidth: state.width, startHeight: state.height, canvasW: rect.width, canvasH: rect.height };
-  }else{
-    zoneDrag = { mode: 'move', key, startX: e.clientX, startY: e.clientY, startLeft: state.left, startTop: state.top, canvasW: rect.width, canvasH: rect.height };
-  }
-  e.preventDefault();
-}
-
-function zonePointerMove(e){
-  if(!zoneDrag) return;
-  const state = zoneState.find(z => zoneKey(z) === zoneDrag.key);
-  if(!state) return;
-  const dxPct = ((e.clientX - zoneDrag.startX) / zoneDrag.canvasW) * 100;
-  const dyPct = ((e.clientY - zoneDrag.startY) / zoneDrag.canvasH) * 100;
-
-  if(zoneDrag.mode === 'move'){
-    state.left = Math.max(0, Math.min(100 - state.width, zoneDrag.startLeft + dxPct));
-    state.top = Math.max(0, Math.min(100 - state.height, zoneDrag.startTop + dyPct));
-  }else{
-    state.width = Math.max(2, Math.min(100 - state.left, zoneDrag.startWidth + dxPct));
-    state.height = Math.max(2, Math.min(100 - state.top, zoneDrag.startHeight + dyPct));
-  }
-
-  const canvas = document.getElementById('zoneCanvas');
-  const boxEl = canvas.querySelector(`.zone-box[data-key="${CSS.escape(state.id || state.tempId)}"]`);
-  if(boxEl){
-    boxEl.style.left = state.left + '%';
-    boxEl.style.top = state.top + '%';
-    boxEl.style.width = state.width + '%';
-    boxEl.style.height = state.height + '%';
-  }
-  updateZoneReadout();
-}
-
-function zonePointerUp(){
-  zoneDrag = null;
-}
-
-function zoneNameInputHandler(e){
-  const input = e.target.closest('.zone-name-input');
-  if(!input) return;
-  const key = input.getAttribute('data-key');
-  const state = zoneState.find(z => zoneKey(z) === key);
-  if(state) state.name = input.value;
-  updateZoneReadout();
-}
-
-async function saveZones(){
-  const status = document.getElementById('zoneStatus');
-  if(zoneState.some(z => !z.name || !z.name.trim())){
-    status.className = 'status err';
-    status.textContent = 'Every zone needs a name.';
-    return;
-  }
-  status.className = 'status';
-  status.textContent = 'Saving…';
-
-  if(deletedZoneIds.length){
-    const { error: delError } = await supabaseClient.from('territory_zones').delete().in('id', deletedZoneIds);
-    if(delError){
-      status.className = 'status err';
-      status.textContent = 'Failed removing zones: ' + delError.message;
-      return;
-    }
-  }
-
-  const existing = zoneState.filter(z => z.id);
-  const fresh = zoneState.filter(z => !z.id);
-
-  if(existing.length){
-    const { error: updError } = await supabaseClient.from('territory_zones').upsert(existing.map(z => ({
-      id: z.id, name: z.name.trim(), left_pct: z.left, top_pct: z.top, width_pct: z.width, height_pct: z.height,
-    })), { onConflict: 'id' });
-    if(updError){
-      status.className = 'status err';
-      status.textContent = 'Failed: ' + updError.message;
-      return;
-    }
-  }
-
-  if(fresh.length){
-    const { error: insError } = await supabaseClient.from('territory_zones').insert(fresh.map(z => ({
-      name: z.name.trim(), left_pct: z.left, top_pct: z.top, width_pct: z.width, height_pct: z.height,
-    })));
-    if(insError){
-      status.className = 'status err';
-      status.textContent = 'Failed adding new zones: ' + insError.message;
-      return;
-    }
-  }
-
-  status.className = 'status ok';
-  status.textContent = 'Saved. Reloading…';
-  await loadZonesEditor();
-  status.className = 'status ok';
-  status.textContent = 'Saved. Players will see the new regions next time they open the Territory Map.';
-}
-
 /* ---------------- Circle Altars / Territory Altars editor (0095) ----------------
-   Same drag/resize/add/delete canvas as the Territory Zones editor above,
+   Same drag/resize/add/delete canvas as the Map Hotspots editor above,
    under its own state and its own #altarCanvas — see the class-name
-   comment on .altar-box in the <style> block for why this isn't just a
-   reuse of the zone editor's functions. purchased_by additionally shows
+   comment on .altar-box in the <style> block. (This used to have a
+   sibling, the Territory Zones editor, targeting a separate
+   territory_zones table — direct feedback: "altar plots and territory
+   zones are supposed to be the same thing nothing different" (0099)
+   merged that concept into this editor, and #121 removed the
+   now-fully-superseded Territory Zones code outright.) purchased_by
+   additionally shows
    who ORIGINALLY bought a plot, separate from controlled_by (who holds it
    right now) — the two only differ once a plot's been invaded away. */
 let altarState = [];       // [{id, tempId, name, left, top, width, height, purchased_by, purchasedName, controlled_by, controllerName}]
@@ -4031,6 +3875,9 @@ document.addEventListener('DOMContentLoaded', () => {
   updateBulkGrantScopeVisibility();
 
   document.getElementById('saveCheckinCalendarBtn').addEventListener('click', saveCheckinCalendar);
+  document.getElementById('saveCheckinNewPlayerBtn').addEventListener('click', saveCheckinNewPlayerCatalog);
+  document.getElementById('saveCheckinBackdayBtn').addEventListener('click', saveCheckinBackdayPricing);
+  document.getElementById('saveEventTriggersBtn').addEventListener('click', saveEventTriggersCatalog);
   document.getElementById('addPromoBtn').addEventListener('click', createPromoEvent);
   document.getElementById('newPromoScope').addEventListener('change', updateNewPromoScopeVisibility);
   updateNewPromoScopeVisibility();
@@ -4105,19 +3952,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveHotspotsBtn').addEventListener('click', saveMapHotspots);
 
   document.getElementById('saveInvasionSettingsBtn').addEventListener('click', saveInvasionSettingsAdmin);
-
-  document.getElementById('zoneCanvas').addEventListener('pointerdown', zonePointerDown);
-  document.getElementById('zoneCanvas').addEventListener('input', zoneNameInputHandler);
-  document.addEventListener('pointermove', zonePointerMove);
-  document.addEventListener('pointerup', zonePointerUp);
-  document.getElementById('zoneAlpha').addEventListener('input', (e) => {
-    document.getElementById('zoneCanvas').style.setProperty('--hotspot-alpha', (e.target.value / 100).toFixed(2));
-  });
-  document.getElementById('addZoneBtn').addEventListener('click', addZoneBox);
-  document.getElementById('resetZonesBtn').addEventListener('click', () => {
-    if(confirm('Discard unsaved changes and reload the last-saved zones?')) loadZonesEditor();
-  });
-  document.getElementById('saveZonesBtn').addEventListener('click', saveZones);
 
   document.getElementById('altarCanvas').addEventListener('pointerdown', altarPointerDown);
   document.getElementById('altarCanvas').addEventListener('input', altarNameInputHandler);
@@ -5795,6 +5629,12 @@ async function loadCurrencyDefinitions(){
   populateSelect('bulkGrantCurrency', 'personal');
   populateSelect('newCheckinCurrency', 'personal');
   populateSelect('newPromoCurrency', null);
+  // #123 — populated here (not inline in loadCheckinBackdayPricing()) for
+  // the same reason every other currency <select> on this page is: this
+  // is the one place currencyDefs is guaranteed loaded, and re-running it
+  // after any currency add/edit keeps the option list current everywhere
+  // at once.
+  populateSelect('checkinBackdayCurrency', 'personal');
 
   const giftSel = document.getElementById('newItemGiftCurrency');
   if(giftSel){
@@ -6000,6 +5840,171 @@ async function saveCheckinCalendar(){
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies to the next tend, no redeploy needed.';
   if(!error) loadCheckinCalendar();
+}
+
+// #123 — the new-player 7-day track's catalog editor: same shape as the
+// monthly calendar above (checkin_new_player_days mirrors
+// checkin_calendar_days column-for-column, just keyed 1-7 off account
+// age instead of 1-31 off day-of-month), so this is a straight copy of
+// loadCheckinCalendar()/saveCheckinCalendar() with the table/id prefixes
+// swapped and no image-url field (that field on the monthly table is
+// itself dead — see 0106's migration comment — so it wasn't carried
+// over here).
+async function loadCheckinNewPlayerCatalog(){
+  const { data, error } = await supabaseClient.from('checkin_new_player_days').select('*').order('day_number', { ascending: true });
+  const grid = document.getElementById('checkinNewPlayerGrid');
+  if(error){
+    grid.innerHTML = '<p class="hint">Failed to load: ' + esc(error.message) + '</p>';
+    return;
+  }
+  const personalCurrencies = Object.values(currencyDefs).filter(c => c.scope === 'personal');
+  grid.innerHTML = (data || []).map(d => `<div class="checkin-day-cell${d.active ? '' : ' inactive'}" data-day="${d.day_number}">
+    <div class="day-num">Day ${d.day_number}</div>
+    <select id="npCur_${d.day_number}">
+      ${personalCurrencies.map(c => `<option value="${esc(c.key)}" ${c.key === d.currency_key ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
+    </select>
+    <input type="number" min="1" id="npAmt_${d.day_number}" value="${d.amount}" placeholder="Amount">
+    <input type="text" id="npLabel_${d.day_number}" value="${esc(d.label || '')}" placeholder="Label">
+    <select id="npReward_${d.day_number}">
+      <option value="">No reward package</option>
+      ${giftableRewardsCache.map(r => `<option value="${esc(r.key)}" ${r.key === d.reward_key ? 'selected' : ''}>${esc(r.name)}${r.active ? '' : ' (inactive)'}</option>`).join('')}
+    </select>
+    <select id="npBundle_${d.day_number}">
+      <option value="">No reward bundle</option>
+      ${giftableRewardBundlesCache.map(b => `<option value="${esc(b.bundle_key)}" ${b.bundle_key === d.gift_bundle_key ? 'selected' : ''}>${esc(b.name)}${b.active ? '' : ' (inactive)'}</option>`).join('')}
+    </select>
+    <div class="active-row"><input type="checkbox" id="npActive_${d.day_number}" ${d.active ? 'checked' : ''}><label for="npActive_${d.day_number}">Active</label></div>
+  </div>`).join('') || '<p class="hint">No rows found — run migration 0106.</p>';
+}
+
+async function saveCheckinNewPlayerCatalog(){
+  const status = document.getElementById('checkinNewPlayerStatus');
+  const cells = document.querySelectorAll('#checkinNewPlayerGrid .checkin-day-cell[data-day]');
+  const rows = Array.from(cells).map(cell => {
+    const day = cell.getAttribute('data-day');
+    return {
+      day_number: parseInt(day, 10),
+      currency_key: document.getElementById('npCur_' + day).value,
+      amount: parseInt(document.getElementById('npAmt_' + day).value || '0', 10),
+      label: document.getElementById('npLabel_' + day).value.trim(),
+      reward_key: document.getElementById('npReward_' + day).value || null,
+      gift_bundle_key: document.getElementById('npBundle_' + day).value || null,
+      active: document.getElementById('npActive_' + day).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  const badRow = rows.find(r => r.active && (isNaN(r.amount) || r.amount <= 0));
+  if(badRow){
+    status.className = 'status err';
+    status.textContent = `Day ${badRow.day_number} is marked Active but needs an amount greater than 0.`;
+    return;
+  }
+  rows.forEach(r => { if(isNaN(r.amount) || r.amount <= 0) r.amount = 1; });
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('checkin_new_player_days').upsert(rows, { onConflict: 'day_number' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies the next time a new player logs in on that day.';
+  if(!error) loadCheckinNewPlayerCatalog();
+}
+
+// #135 — the generic auto-delivery event-trigger catalog (event_triggers,
+// migration 0107). Same copy-of-loadCheckinCalendar() shape again, keyed
+// by a fixed text `key` instead of a day number — the row set itself is
+// admin-fixed (seeded by the migration, currently 'first_login' and
+// 'first_purchase') rather than admin-creatable, so there's no "add a
+// row" form here, just editing the currency/amount/label/reward/bundle/
+// active fields on the rows that already exist.
+async function loadEventTriggersCatalog(){
+  const { data, error } = await supabaseClient.from('event_triggers').select('*').order('key', { ascending: true });
+  const grid = document.getElementById('eventTriggersGrid');
+  if(error){
+    grid.innerHTML = '<p class="hint">Failed to load: ' + esc(error.message) + '</p>';
+    return;
+  }
+  const personalCurrencies = Object.values(currencyDefs).filter(c => c.scope === 'personal');
+  grid.innerHTML = (data || []).map(d => `<div class="checkin-day-cell${d.active ? '' : ' inactive'}" data-key="${esc(d.key)}">
+    <div class="day-num">${esc(d.label || d.key)}</div>
+    <select id="etCur_${esc(d.key)}">
+      <option value="">No currency</option>
+      ${personalCurrencies.map(c => `<option value="${esc(c.key)}" ${c.key === d.currency_key ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
+    </select>
+    <input type="number" min="1" id="etAmt_${esc(d.key)}" value="${d.amount ?? ''}" placeholder="Amount">
+    <input type="text" id="etLabel_${esc(d.key)}" value="${esc(d.label || '')}" placeholder="Label">
+    <select id="etReward_${esc(d.key)}">
+      <option value="">No reward package</option>
+      ${giftableRewardsCache.map(r => `<option value="${esc(r.key)}" ${r.key === d.reward_key ? 'selected' : ''}>${esc(r.name)}${r.active ? '' : ' (inactive)'}</option>`).join('')}
+    </select>
+    <select id="etBundle_${esc(d.key)}">
+      <option value="">No reward bundle</option>
+      ${giftableRewardBundlesCache.map(b => `<option value="${esc(b.bundle_key)}" ${b.bundle_key === d.gift_bundle_key ? 'selected' : ''}>${esc(b.name)}${b.active ? '' : ' (inactive)'}</option>`).join('')}
+    </select>
+    <div class="active-row"><input type="checkbox" id="etActive_${esc(d.key)}" ${d.active ? 'checked' : ''}><label for="etActive_${esc(d.key)}">Active</label></div>
+  </div>`).join('') || '<p class="hint">No rows found — run migration 0107.</p>';
+}
+
+async function saveEventTriggersCatalog(){
+  const status = document.getElementById('eventTriggersStatus');
+  const cells = document.querySelectorAll('#eventTriggersGrid .checkin-day-cell[data-key]');
+  const rows = Array.from(cells).map(cell => {
+    const key = cell.getAttribute('data-key');
+    const amountVal = document.getElementById('etAmt_' + key).value;
+    return {
+      key,
+      currency_key: document.getElementById('etCur_' + key).value || null,
+      amount: amountVal === '' ? null : parseInt(amountVal, 10),
+      label: document.getElementById('etLabel_' + key).value.trim(),
+      reward_key: document.getElementById('etReward_' + key).value || null,
+      gift_bundle_key: document.getElementById('etBundle_' + key).value || null,
+      active: document.getElementById('etActive_' + key).checked,
+      updated_at: new Date().toISOString()
+    };
+  });
+  const badRow = rows.find(r => r.active && r.currency_key && (isNaN(r.amount) || r.amount <= 0));
+  if(badRow){
+    status.className = 'status err';
+    status.textContent = `"${badRow.label || badRow.key}" has a currency selected but needs an amount greater than 0.`;
+    return;
+  }
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('event_triggers').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadEventTriggersCatalog();
+}
+
+// Missed-day unlock price — same singleton pricing_settings convention
+// as the God Token / Key of Night cost fields (loadGodTokenPricing()
+// nearby), just its own two columns (0106).
+async function loadCheckinBackdayPricing(){
+  // The <select>'s options themselves are populated by
+  // loadCurrencyDefinitions() (see its populateSelect('checkinBackdayCurrency', ...)
+  // call) — that already runs before this at boot, so only the saved
+  // value needs setting here.
+  const { data: pricing } = await supabaseClient.from('pricing_settings').select('checkin_backday_unlock_currency_key, checkin_backday_unlock_cost').eq('id', 1).maybeSingle();
+  if(pricing){
+    document.getElementById('checkinBackdayCurrency').value = pricing.checkin_backday_unlock_currency_key;
+    document.getElementById('checkinBackdayCost').value = pricing.checkin_backday_unlock_cost;
+  }
+}
+
+async function saveCheckinBackdayPricing(){
+  const status = document.getElementById('checkinBackdayStatus');
+  const currencyKey = document.getElementById('checkinBackdayCurrency').value;
+  const cost = parseInt(document.getElementById('checkinBackdayCost').value || '0', 10);
+  if(isNaN(cost) || cost < 0){
+    status.className = 'status err';
+    status.textContent = 'Cost must be 0 or more.';
+    return;
+  }
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('pricing_settings')
+    .update({ checkin_backday_unlock_currency_key: currencyKey, checkin_backday_unlock_cost: cost, updated_at: new Date().toISOString() })
+    .eq('id', 1);
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
 }
 
 let promoEvents = [];
@@ -7031,8 +7036,9 @@ async function loadAltarDecorationCatalog(){
     <td><input type="number" min="1" id="addCost_${esc(d.key)}" value="${d.cost_devotion ?? ''}" style="max-width:90px;"></td>
     <td><input type="text" id="addRule_${esc(d.key)}" value="${esc(d.unlock_rule || '')}" style="max-width:130px;"></td>
     <td><input type="text" id="addImg_${esc(d.key)}" value="${esc(d.image_url || '')}" style="max-width:170px;" placeholder="https://…"></td>
+    <td><input type="number" step="0.1" min="0" id="addEffectAmount_${esc(d.key)}" value="${d.effect_amount ?? ''}" style="max-width:80px;" placeholder="e.g. 5"></td>
     <td><input type="checkbox" id="addActive_${esc(d.key)}" ${d.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="8">No decorations yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="9">No decorations yet.</td></tr>';
 }
 
 async function saveAltarDecorationCatalog(){
@@ -7041,6 +7047,7 @@ async function saveAltarDecorationCatalog(){
   const rows = Array.from(trs).map(tr => {
     const key = tr.getAttribute('data-key');
     const costVal = document.getElementById('addCost_' + key).value;
+    const effectVal = document.getElementById('addEffectAmount_' + key).value;
     return {
       key,
       name: document.getElementById('addName_' + key).value.trim(),
@@ -7049,6 +7056,8 @@ async function saveAltarDecorationCatalog(){
       cost_devotion: costVal === '' ? null : parseInt(costVal, 10),
       unlock_rule: document.getElementById('addRule_' + key).value.trim() || null,
       image_url: document.getElementById('addImg_' + key).value.trim() || null,
+      effect_key: effectVal === '' ? null : 'devotion_bonus_pct',
+      effect_amount: effectVal === '' ? null : parseFloat(effectVal),
       active: document.getElementById('addActive_' + key).checked
     };
   });
@@ -7068,6 +7077,7 @@ async function addAltarDecoration(){
   const costVal = document.getElementById('newAltarDecoCost').value;
   const rule = document.getElementById('newAltarDecoRule').value.trim();
   const imageUrl = document.getElementById('newAltarDecoImageUrl').value.trim();
+  const effectVal = document.getElementById('newAltarDecoEffectAmount').value;
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -7079,11 +7089,13 @@ async function addAltarDecoration(){
     key, name, description, source,
     cost_devotion: source === 'buy' ? parseInt(costVal, 10) : null,
     unlock_rule: source === 'unlock' ? rule : null,
-    image_url: imageUrl || null
+    image_url: imageUrl || null,
+    effect_key: effectVal === '' ? null : 'devotion_bonus_pct',
+    effect_amount: effectVal === '' ? null : parseFloat(effectVal)
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
   status.className = 'status ok'; status.textContent = name + ' added to the Circle Altar decoration catalog.';
-  ['newAltarDecoKey','newAltarDecoName','newAltarDecoCost','newAltarDecoRule','newAltarDecoDescription','newAltarDecoImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newAltarDecoKey','newAltarDecoName','newAltarDecoCost','newAltarDecoRule','newAltarDecoDescription','newAltarDecoImageUrl','newAltarDecoEffectAmount'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadAltarDecorationCatalog();
 }
 
@@ -7181,8 +7193,9 @@ async function loadPersonalAltarDecorationCatalog(){
     <td><input type="number" min="1" id="paddCost_${esc(d.key)}" value="${d.cost_essence ?? ''}" style="max-width:90px;"></td>
     <td><input type="text" id="paddRule_${esc(d.key)}" value="${esc(d.unlock_rule || '')}" style="max-width:130px;"></td>
     <td><input type="text" id="paddImg_${esc(d.key)}" value="${esc(d.image_url || '')}" style="max-width:170px;" placeholder="https://…"></td>
+    <td><input type="number" step="0.1" min="0" id="paddEffectAmount_${esc(d.key)}" value="${d.effect_amount ?? ''}" style="max-width:80px;" placeholder="e.g. 5"></td>
     <td><input type="checkbox" id="paddActive_${esc(d.key)}" ${d.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="8">No decorations yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="9">No decorations yet.</td></tr>';
 }
 
 async function savePersonalAltarDecorationCatalog(){
@@ -7191,6 +7204,7 @@ async function savePersonalAltarDecorationCatalog(){
   const rows = Array.from(trs).map(tr => {
     const key = tr.getAttribute('data-key');
     const costVal = document.getElementById('paddCost_' + key).value;
+    const effectVal = document.getElementById('paddEffectAmount_' + key).value;
     return {
       key,
       name: document.getElementById('paddName_' + key).value.trim(),
@@ -7199,6 +7213,8 @@ async function savePersonalAltarDecorationCatalog(){
       cost_essence: costVal === '' ? null : parseInt(costVal, 10),
       unlock_rule: document.getElementById('paddRule_' + key).value.trim() || null,
       image_url: document.getElementById('paddImg_' + key).value.trim() || null,
+      effect_key: effectVal === '' ? null : 'essence_bonus_pct',
+      effect_amount: effectVal === '' ? null : parseFloat(effectVal),
       active: document.getElementById('paddActive_' + key).checked
     };
   });
@@ -7218,6 +7234,7 @@ async function addPersonalAltarDecoration(){
   const costVal = document.getElementById('newPersonalAltarDecoCost').value;
   const rule = document.getElementById('newPersonalAltarDecoRule').value.trim();
   const imageUrl = document.getElementById('newPersonalAltarDecoImageUrl').value.trim();
+  const effectVal = document.getElementById('newPersonalAltarDecoEffectAmount').value;
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -7229,11 +7246,13 @@ async function addPersonalAltarDecoration(){
     key, name, description, source,
     cost_essence: source === 'buy' ? parseInt(costVal, 10) : null,
     unlock_rule: source === 'unlock' ? rule : null,
-    image_url: imageUrl || null
+    image_url: imageUrl || null,
+    effect_key: effectVal === '' ? null : 'essence_bonus_pct',
+    effect_amount: effectVal === '' ? null : parseFloat(effectVal)
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
   status.className = 'status ok'; status.textContent = name + ' added to the Personal Altar decoration catalog.';
-  ['newPersonalAltarDecoKey','newPersonalAltarDecoName','newPersonalAltarDecoCost','newPersonalAltarDecoRule','newPersonalAltarDecoDescription','newPersonalAltarDecoImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newPersonalAltarDecoKey','newPersonalAltarDecoName','newPersonalAltarDecoCost','newPersonalAltarDecoRule','newPersonalAltarDecoDescription','newPersonalAltarDecoImageUrl','newPersonalAltarDecoEffectAmount'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadPersonalAltarDecorationCatalog();
 }
 
