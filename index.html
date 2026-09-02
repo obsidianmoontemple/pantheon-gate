@@ -362,6 +362,28 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
   border:1px solid rgba(230,199,119,0.4);
   animation:mapNodeRing 2.6s ease-in-out infinite;
 }
+/* Direct feedback: "we want to start seeing full move for move fights as
+   well as visible description of what each move is doing." Sits between
+   the HP bars and the move buttons — a real named-move + effect-text
+   callout for the beat currently animating, live, instead of only ever
+   showing up afterward in the scrollback log below. See
+   showMoveCallout() in the script. */
+.move-callout{
+  min-height:34px;margin:6px 0;padding:6px 10px;text-align:center;
+  border:1px solid var(--line);border-radius:4px;background:rgba(16,14,22,0.5);
+  font-family:'Cinzel',serif;
+}
+.move-callout .mc-name{font-size:14px;font-weight:700;color:var(--gold-bright,#e6c777);}
+.move-callout .mc-desc{font-size:12px;font-style:italic;color:var(--parchment-dim,#b9ab8e);margin-top:2px;font-family:inherit;}
+.move-desc-inline{font-style:italic;color:var(--parchment-dim,#b9ab8e);}
+
+/* Direct feedback: "the ask ganymede card should be bigger it seems very
+   small" — a one-off larger variant of the glow node/label above, opt-in
+   via `large: true` on a DEFAULT_MAP_AREAS entry, so only Ganymede grows
+   instead of every glowing hotspot on the map. */
+.map-hotspot-node--lg{width:26px;height:26px;box-shadow:0 0 12px 5px rgba(230,199,119,0.6), 0 0 30px 13px rgba(230,199,119,0.28);}
+.map-hotspot-node--lg::after{inset:-16px;}
+.map-hotspot-node-label--lg{top:calc(50% + 20px);font-size:14px;}
 @keyframes mapNodePulse{0%,100%{opacity:0.7;transform:translate(-50%,-50%) scale(0.88);}50%{opacity:1;transform:translate(-50%,-50%) scale(1.18);}}
 @keyframes mapNodeRing{0%{opacity:0.55;transform:scale(0.6);}75%,100%{opacity:0;transform:scale(1.7);}}
 /* "did you label the nodes?" — "yes please". A small caption under the
@@ -555,6 +577,45 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
   font-size:13px;color:var(--parchment-dim);font-style:italic;text-align:center;
   max-width:80vw;text-shadow:0 1px 4px rgba(0,0,0,0.8);
 }
+
+/* #123 — Check-in calendar grid. .checkin-grid-frame is the admin-movable
+   positioning box (see CHECKIN_AREAS' 'checkinGrid'/'newPlayerGrid'
+   entries, kind:'grid') laid over the calendar background art; a plain
+   CSS grid inside it, uniform cells regardless of exactly how many days
+   are in the current month. Each .checkin-cell shows its own day number
+   plus one state marker: a dash for a day already gone, a check for a
+   gone day that was actually claimed, an "Unlock" prompt for a gone day
+   that wasn't, or nothing extra for today (the live Check In button) and
+   the locked future. */
+.checkin-grid-frame{
+  position:absolute;z-index:6;display:grid;gap:4px;
+}
+.checkin-cell{
+  position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border-radius:6px;background:rgba(10,8,20,0.55);border:1px solid rgba(230,199,119,0.25);
+  min-height:28px;font-family:'Cinzel',serif;color:var(--parchment-dim);
+}
+.checkin-cell .cc-day{font-size:12px;line-height:1;}
+.checkin-cell-today{
+  background:rgba(230,199,119,0.25);border-color:var(--gold-bright);color:var(--gold-bright);
+  cursor:pointer;box-shadow:0 0 8px rgba(230,199,119,0.5);
+}
+.checkin-cell-today .cc-today-label{font-size:8px;letter-spacing:0.05em;text-transform:uppercase;margin-top:1px;}
+.checkin-cell-today:hover{background:rgba(230,199,119,0.4);}
+.checkin-cell-future{opacity:0.4;}
+.checkin-cell-gone .cc-dash{
+  position:absolute;top:50%;left:15%;width:70%;height:2px;background:var(--parchment-dim);
+  transform:translateY(-50%) rotate(-8deg);opacity:0.85;
+}
+.checkin-cell-claimed{border-color:rgba(120,200,140,0.6);}
+.checkin-cell-claimed .cc-check{position:absolute;bottom:1px;right:3px;font-size:10px;color:#7cc98e;}
+.checkin-cell-missed{cursor:pointer;border-color:rgba(230,199,119,0.5);}
+.checkin-cell-missed:hover{background:rgba(230,199,119,0.2);}
+.checkin-cell-missed .cc-unlock{
+  font-size:7px;line-height:1.15;text-align:center;color:var(--gold-bright);
+  text-transform:uppercase;letter-spacing:0.03em;margin-top:1px;
+}
+.checkin-cell-newplayer{min-height:24px;}
 .hub-loose-status.ok{color:var(--gold-bright);}
 .hub-loose-status.err{color:var(--ember);}
 
@@ -680,7 +741,14 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .hp-wrap.flash-hit{animation:hitFlash 0.6s ease;}
 .hp-wrap.control-hit .hp-bar-track{box-shadow:0 0 0 1px var(--moon);}
 @keyframes hitFlash{ 0%{filter:brightness(1);} 25%{filter:brightness(1.6) saturate(1.4);transform:translateX(-2px);} 50%{transform:translateX(2px);} 100%{filter:brightness(1);transform:translateX(0);} }
-.dmg-float{position:absolute;right:4px;top:-6px;font-family:'Cinzel',serif;font-size:16px;font-weight:700;color:var(--ember-bright);pointer-events:none;animation:dmgFloat 1.6s ease forwards;text-shadow:0 1px 3px rgba(0,0,0,0.75);}
+/* Direct feedback: "visible description of what each move is doing not
+   that red crap" — plain damage numbers were var(--ember-bright), a
+   jarring neon red-orange, on literally every single hit of every fight.
+   Switched to a calmer parchment/gold tone consistent with the rest of
+   the UI; burn/poison ticks below keep their own thematic ember/green
+   tint since those read as distinct affliction colors, not "damage is
+   always red". */
+.dmg-float{position:absolute;right:4px;top:-6px;font-family:'Cinzel',serif;font-size:16px;font-weight:700;color:var(--parchment,#e8dcc0);pointer-events:none;animation:dmgFloat 1.6s ease forwards;text-shadow:0 1px 3px rgba(0,0,0,0.75);}
 .dmg-float.crit{color:var(--gold-bright);font-size:19px;}
 .dmg-float.control{color:var(--moon);font-size:13px;}
 .dmg-float.heal{color:#7fbf6a;}
@@ -930,6 +998,46 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .altar-plot .pickup-btn{margin-top:4px;padding:2px 6px;font-size:9px;}
 
 footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-style:italic;margin-top:50px;opacity:0.65;}
+
+/* Direct feedback: "in deity redemption and honestly anywhere you spend
+   anything there needs to be a visual verification that their purchase
+   went through" — a small, consistent toast that stacks on top of
+   whatever screen is showing (rather than relying on each screen's own
+   inline .status line, which is easy to miss, gets wiped by the next
+   render(), or — see the Key of Night bug fix — can silently write to
+   an element that no longer exists after a view switch). See
+   showConfirmBanner() in the script below. */
+#confirmBannerStack{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;}
+.confirm-toast{
+  background:rgba(20,16,10,0.94);border:1px solid var(--gold-bright,#e6c777);border-radius:6px;
+  padding:10px 18px;color:var(--parchment,#e8dcc0);font-size:13.5px;font-weight:600;
+  box-shadow:0 4px 18px rgba(0,0,0,0.5), 0 0 14px rgba(230,199,119,0.35);
+  display:flex;align-items:center;gap:8px;white-space:nowrap;
+  animation:confirmToastIn .25s ease-out, confirmToastOut .4s ease-in 2.6s forwards;
+}
+.confirm-toast .check{color:#8fd18a;font-size:15px;}
+@keyframes confirmToastIn{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
+@keyframes confirmToastOut{from{opacity:1;}to{opacity:0;transform:translateY(-6px);}}
+
+/* Direct feedback: "Anytime you get a lvl up or a reward there needs to
+   be a special banner or something that pops up to celebrate and let you
+   know." Bigger/showier than the confirm toast above (which is for
+   "your purchase went through", not "you earned something") — full-width,
+   gold-on-dark, sits above everything, pairs with the existing confetti
+   burst (celebrate()) rather than replacing it. See showRewardBanner(). */
+#rewardBannerStack{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;flex-direction:column;align-items:center;pointer-events:none;}
+.reward-banner{
+  margin-top:22px;padding:14px 30px;border-radius:8px;text-align:center;
+  background:linear-gradient(180deg, rgba(60,44,14,0.97), rgba(20,15,8,0.97));
+  border:2px solid var(--gold-bright,#e6c777);
+  box-shadow:0 6px 26px rgba(0,0,0,0.55), 0 0 30px rgba(230,199,119,0.45);
+  color:var(--gold-bright,#e6c777);font-family:'Cinzel',serif;
+  animation:rewardBannerIn .35s cubic-bezier(.2,1.4,.4,1), rewardBannerOut .5s ease-in 3.4s forwards;
+}
+.reward-banner .rb-title{font-size:18px;font-weight:700;letter-spacing:0.03em;}
+.reward-banner .rb-detail{font-size:13px;color:var(--parchment,#e8dcc0);margin-top:3px;font-family:inherit;}
+@keyframes rewardBannerIn{from{opacity:0;transform:translateY(-24px) scale(0.92);}to{opacity:1;transform:translateY(0) scale(1);}}
+@keyframes rewardBannerOut{from{opacity:1;}to{opacity:0;transform:translateY(-14px);}}
 </style>
 </head>
 <body>
@@ -938,6 +1046,8 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
   <h2>Turn your phone sideways</h2>
   <p>The map is drawn wide — rotate to landscape to step through the Gate.</p>
 </div>
+<div id="confirmBannerStack"></div>
+<div id="rewardBannerStack"></div>
 <div class="wrap">
   <header class="mast">
     <p class="eyebrow">Temple of the Obsidian Moon presents</p>
@@ -1418,6 +1528,14 @@ let pvpBrowseResults = [];
 let pvpBrowseQuery = '';
 let pvpLeaderboard = [];
 let pvpLastMatch = null;      // most recent resolved match, shown once as a result screen
+// Direct feedback: "Arena needs to auto issue fights ... they do not
+// have to be present." Now that challenging someone resolves the duel
+// immediately (no more waiting on the target to accept/decline), the
+// viewer showing the result card can be EITHER side of the match — the
+// challenger (side 'a') most of the time now, or still the defender
+// (side 'b') via the legacy respond() path — so pvpDuelLogHtml() needs
+// to know which side is "You" instead of always assuming 'b'.
+let pvpViewerSide = 'b';
 let arenaShopCatalog = [];    // arena_shop_items, public catalog — loaded once and cached, like circleShopItems
 let arenaInventory = [];      // this guardian's guardian_arena_items, reloaded each time the shop opens
 
@@ -1473,22 +1591,26 @@ let serverChatPollTimer = null;
 let circleChatLatestAt = null; // ISO string | null — newest circle-feed message's created_at, once known
 let serverChatLatestAt = null; // ISO string | null — newest Server Chat message's created_at
 
-// Direct feedback: "we want to add petitions and messages counts on the
-// currency pane on the map" — real numbers on the Map Hub's currency HUD
-// (mapHubStatsHtml()), not just the existing checkin/mail/promo/chat
-// blips above (those only ever say "something's new," never how much).
-// pendingPetitionsCount is trials started but never answered (petition's
-// "begin" action can have one open per deity at once — see its
-// existingPending check — so a guardian juggling several deities can
-// genuinely have more than one). unreadMessagesCount adds up three real
-// sources: Direct Messages' actual per-message read_at (already exists
-// for DMs specifically), plus Circle Chat and Server Chat's "anything
-// since I last looked" timestamps turned into real counts instead of a
-// yes/no dot. Same eager-where-free / best-effort-where-it-needs-a-
-// Circle split as circleChatLatestAt/serverChatLatestAt above: see
-// loadUnreadMessagesCount()'s own comment.
+// Direct feedback (first pass, #113): "we want to add petitions and
+// messages counts on the currency pane on the map" — implemented then as
+// pendingPetitionsCount (trials started but never answered) and
+// unreadMessagesCount (unread chat). Follow-up feedback (#124) corrected
+// what the CURRENCY PANE'S two rows were actually supposed to be: "the
+// icons are there but are not functional I just want to see at anytime
+// how many petitions we have left as well as how many messages to the
+// gods we have left as those are things admin can grant and stack" —
+// i.e. the SPENDABLE, admin-grantable, stackable resources (bonus
+// petition credits and deity-chat message quota), not unread/pending
+// counts — see mapHubStatsHtml(), which now reads
+// guardian.bonus_petition_credits and profileMessagesRemainingLabel()
+// directly instead of these two.
+//
+// pendingPetitionsCount itself wasn't wasted, though — #122 ("expand
+// hotspotBadgeFor coverage") repurposes it as the Oracle hotspot's
+// notification dot instead: a trial you started but never finished is
+// exactly the kind of "something needs your attention" state every
+// other badge on this map already flags.
 let pendingPetitionsCount = 0;
-let unreadMessagesCount = 0;
 
 async function loadPendingPetitionsCount(){
   if(!guardian){ pendingPetitionsCount = 0; return; }
@@ -1501,50 +1623,16 @@ async function loadPendingPetitionsCount(){
   pendingPetitionsCount = count || 0;
 }
 
-// Circle Chat's own slice of this is best-effort, same trade-off
-// circleChatLatestAt already makes: it only becomes accurate once
-// myCircle has loaded at least once this session (see loadMyCircle()),
-// contributing 0 until then rather than adding a full Circle fetch to
-// every player's login just for this number. DM and Server Chat counts
-// have no such limitation and are always accurate.
-async function loadUnreadMessagesCount(){
-  if(!session){ unreadMessagesCount = 0; return; }
-  const me = session.user.id;
-  let total = 0;
-
-  const { count: dmCount, error: dmErr } = await supabaseClient
-    .from('circle_messages')
-    .select('id', { count: 'exact', head: true })
-    .eq('recipient_user_id', me)
-    .is('read_at', null);
-  if(dmErr) console.error('unread DM count load failed', dmErr);
-  else total += dmCount || 0;
-
-  const { count: serverCount, error: serverErr } = await supabaseClient
-    .from('server_chat_messages')
-    .select('id', { count: 'exact', head: true })
-    .neq('sender_id', me)
-    .gt('created_at', getChatSeenAt('server') || '1970-01-01');
-  if(serverErr) console.error('unread server chat count load failed', serverErr);
-  else total += serverCount || 0;
-
-  if(myCircle && myCircle.circle){
-    const { count: feedCount, error: feedErr } = await supabaseClient
-      .from('circle_messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('circle_id', myCircle.circle.id)
-      .is('recipient_user_id', null)
-      .neq('sender_id', me)
-      .gt('created_at', getChatSeenAt('circle') || '1970-01-01');
-    if(feedErr) console.error('unread circle chat count load failed', feedErr);
-    else total += feedCount || 0;
-  }
-
-  unreadMessagesCount = total;
-}
+// loadUnreadMessagesCount() (the #113-era unread-DM/server/circle-chat
+// tally that used to feed the 💬 row below) was removed — #124 replaced
+// that row with the deity-chat message QUOTA instead (see
+// loadPendingPetitionsCount()'s comment above); nothing else read this
+// count, so it's gone rather than left computing three unused queries
+// on every login/circle-load.
 
 function chatSeenKey(kind){
   if(kind === 'server') return 'pgServerChatSeenAt';
+  if(kind === 'promo') return 'pgPromoSeenAt';
   const circleId = (myCircle && myCircle.circle) ? myCircle.circle.id : 'none';
   return 'pgCircleChatSeenAt:' + circleId;
 }
@@ -1559,6 +1647,25 @@ function hasUnreadChat(kind){
   if(!latest) return false;
   const seen = getChatSeenAt(kind);
   return !seen || new Date(latest).getTime() > new Date(seen).getTime();
+}
+
+// Direct feedback: "notification dot will not leave the Promo" — there
+// was no per-player "seen" concept for promos at all (auto-granted,
+// nothing to claim), so the dot just stayed lit forever once anything
+// was active. Same seen-timestamp pattern as chat above: latest active
+// promo's start time vs. the last time this player opened the Promo
+// screen (stamped by openPromo() below), so it clears on open and only
+// relights when a genuinely new promo goes active afterward.
+function hasUnseenPromo(){
+  const active = promoEvents.filter(e => e.status === 'active');
+  if(!active.length) return false;
+  const latestMs = active.reduce((max, e) => {
+    const t = new Date(e.starts_at || e.created_at || 0).getTime();
+    return t > max ? t : max;
+  }, 0);
+  if(!latestMs) return false;
+  const seen = getChatSeenAt('promo');
+  return !seen || latestMs > new Date(seen).getTime();
 }
 
 async function loadServerChatLatest(){
@@ -1662,6 +1769,11 @@ let backpackView = null;   // null | {step:'home'} — top-level aggregator over
 // another screen to actually use anything isn't much of one.
 let backpackTab = 'craft'; // 'craft' | 'magegear' | 'alchemy' | 'arena' | 'expeditions'
 let checkinView = null;    // null | {step:'home'} — top-level (Map hub's "Check-in" hotspot): the once-a-day streak/calendar-reward action (still tend_guardian() under the hood), now its own screen separate from Bond-tending on the home screen
+// #123 rework — checkin_status() RPC result (see migration 0106): which
+// calendar dates this month are already claimed, today's day-of-month,
+// days in the current month, the back-day unlock price, and the
+// new-player 7-day track's progress. null until openCheckin() loads it.
+let checkinCalendarStatus = null;
 let promoView = null;      // null | {step:'home'} — top-level (Map hub's "Promo" hotspot): read-only list of active/recent promo_events via list_visible_promo_events() — separate from Mail
 let worldBossView = null;  // null | {step:'home'} — top-level (Map hub's "World Boss" hotspot, top-right dark corner): shared HP pool every player attacks together, admin-spawned via world-boss/index.ts
 let promoEvents = [];      // cached list for renderPromo()
@@ -1892,9 +2004,49 @@ async function afterLogin(){
     loadMail().catch(e => console.error('mail badge preload failed', e)),
     loadPromoEvents().catch(e => console.error('promo badge preload failed', e)),
     loadServerChatLatest().catch(e => console.error('server chat badge preload failed', e)),
+    // #124 — the Map Hub currency tally's petitions/messages rows need
+    // profileMessageStatus loaded before the player ever opens Profile
+    // (bonus_petition_credits itself already came in with loadGuardian()
+    // above, no separate fetch needed for that half).
+    loadProfileMessageStatus().catch(e => console.error('profile message status preload failed', e)),
+    // #122 — Oracle hotspot's notification dot (see hotspotBadgeFor).
     loadPendingPetitionsCount().catch(e => console.error('pending petitions count preload failed', e)),
-    loadUnreadMessagesCount().catch(e => console.error('unread messages count preload failed', e)),
   ]).then(() => { if(document.body.classList.contains('map-screen')) render(); });
+  // #123 — the new-player 7-day check-in track is "autoran": no button,
+  // no separate screen visit required. Fire-and-forget once per login,
+  // same as the badges above; claim_new_player_checkin() is itself a
+  // no-op once new_player_checkin_last_day already covers today's
+  // account-age day, so this is cheap/safe to call on every login. Only
+  // a fresh welcome-back toast if it actually granted something.
+  if(guardian){
+    supabaseClient.rpc('claim_new_player_checkin', { p_guardian_id: guardian.id }).then(({ data, error }) => {
+      if(error){ console.error('new player checkin claim failed', error); return; }
+      if(data && data.granted > 0){
+        loadGuardian().then(() => {
+          if(document.body.classList.contains('map-screen')) render();
+          const gainParts = (data.rewards || []).filter(r => r.amount > 0).map(r => `+${r.amount} ${CHECKIN_CURRENCY_LABELS[r.currency] || r.currency}`);
+          showRewardBanner('Welcome back!', gainParts.join(' · ') || 'New Seeker rewards granted.');
+        });
+      }
+    });
+  }
+  // #135 — the generic auto-delivery event-trigger system's 'first_login'
+  // hook: same fire-and-forget-once-per-login pattern as the new-player
+  // check-in call just above (grant_event_trigger is itself idempotent —
+  // see migration 0107 — so calling it every login is cheap/safe once
+  // it's already been claimed).
+  if(guardian){
+    supabaseClient.rpc('grant_event_trigger', { p_guardian_id: guardian.id, p_user_id: session.user.id, p_trigger_key: 'first_login' }).then(({ data, error }) => {
+      if(error){ console.error('first_login event trigger grant failed', error); return; }
+      if(data && data.granted){
+        loadGuardian().then(() => {
+          if(document.body.classList.contains('map-screen')) render();
+          const gainParts = (data.rewards || []).filter(r => r.amount > 0).map(r => `+${r.amount} ${CHECKIN_CURRENCY_LABELS[r.currency] || r.currency}`);
+          showRewardBanner(data.label || 'Welcome!', gainParts.join(' · ') || 'A gift awaits.');
+        });
+      }
+    });
+  }
   render();
 
   // Stripe lands back here now (create-checkout's success_url/cancel_url
@@ -1907,6 +2059,18 @@ async function afterLogin(){
     await openShop();
     shopStatusMsg = checkoutResult === 'success' ? 'Payment received — your unlock should be active now.' : 'Checkout cancelled — nothing was charged.';
     render();
+    if(checkoutResult === 'success') showConfirmBanner('Payment received!');
+  }
+
+  // #136 — gate.html's own deity/pantheon "Unlock" paywall buttons were
+  // consolidated onto this Shop screen (see buyRowHTML()'s comment over
+  // there) rather than kept as a second, driftable price display/
+  // checkout implementation. Its "Unlock in the Shop" link lands here
+  // with ?openShop=1 so the hand-off actually goes somewhere instead of
+  // dropping the player back on the bare map.
+  if(params.get('openShop') === '1' && guardian && !checkoutResult){
+    window.history.replaceState({}, '', window.location.pathname);
+    await openShop();
   }
 }
 
@@ -2183,6 +2347,13 @@ function render(){
   // screen instead of Profile winning the check first; backFromCredits()
   // only clears creditsView, so returning lands back on Profile.
   if(guardian && creditsView){ renderCredits(); return; }
+  // Checked ahead of profileView for the same reason creditsView is above:
+  // openShop() is reachable from inside the Profile screen and deliberately
+  // leaves profileView alone, so backFromShop() (which only clears shopView)
+  // drops straight back into Profile. Without this ordering, opening Shop
+  // from Profile silently rendered Profile again until the user backed all
+  // the way out to the map first.
+  if(guardian && shopView){ renderShop(); return; }
   if(guardian && profileView){ renderProfile(); return; }
   if(guardian && shrineView){ renderShrine(); return; }
   if(guardian && mailView){ renderMail(); return; }
@@ -2191,7 +2362,6 @@ function render(){
   if(guardian && promoView){ renderPromo(); return; }
   if(guardian && worldBossView){ renderWorldBoss(); return; }
   if(guardian && campaignView){ renderCampaign(); return; }
-  if(guardian && shopView){ renderShop(); return; }
   // Checked ahead of guardianHomeView for the same reason creditsView is
   // checked ahead of profileView above: doDuelMage() (called from the
   // Guardian Page's Mage tab) sets mageDuelView but deliberately leaves
@@ -2449,7 +2619,7 @@ const DEFAULT_MAP_AREAS = [
   // hotspot — direct feedback: "I need the mage and familiar both under
   // the same guardian tab not separate." Both now live together on the
   // Guardian Page screen, opened the same way as always.)
-  { id: 'guide',         label: 'Ask Ganymede', left: 32,   top: 68,   width: 10,   height: 16,   action: openGuide, glow: true },
+  { id: 'guide',         label: 'Ask Ganymede', left: 32,   top: 68,   width: 10,   height: 16,   action: openGuide, glow: true, large: true },
   // Milestone guidance (0081) — the on-demand roadmap, a separate
   // hotspot from Ask Ganymede above since it's a different screen (a
   // full earned/locked list, not the chat/walkthrough). Another
@@ -2494,8 +2664,21 @@ const DEFAULT_REDEEM_AREAS = [
 ];
 let REDEEM_AREAS = DEFAULT_REDEEM_AREAS.slice();
 
+// #123 rework — the old single invisible "Check In" button is gone,
+// replaced by an actual day-by-day calendar grid (direct feedback: "i
+// need a dash to appear over the image of the calendar signifiing days
+// gone... this is the image i use [a real wall-calendar graphic]").
+// Rather than register 31 (+7 for the new new-player track) individual
+// admin-positionable hotspots — unworkable to hand-place one at a time —
+// these two entries are just POSITIONING FRAMES (kind:'grid', skipped by
+// hotspotButtonsMarkup() same as kind:'dropdown' is): admin drags/sizes
+// each frame with the exact same hotspot editor used everywhere else,
+// and checkinMonthlyGridHtml()/checkinNewPlayerGridHtml() below split
+// whichever box that frame ends up at into a uniform CSS grid of day
+// cells — one box to align per calendar image instead of thirty-eight.
 const DEFAULT_CHECKIN_AREAS = [
-  { id: 'checkIn',   label: 'Check In',        left: 36, top: 58, width: 28, height: 12, action: tendGuardian },
+  { id: 'newPlayerGrid', label: 'New Player 7-Day Track', left: 10, top: 14, width: 80, height: 13, kind: 'grid' },
+  { id: 'checkinGrid',   label: 'Monthly Calendar Grid',   left: 10, top: 30, width: 80, height: 50, kind: 'grid' },
   { id: 'backToMap', label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8,  action: backFromCheckin },
 ];
 let CHECKIN_AREAS = DEFAULT_CHECKIN_AREAS.slice();
@@ -2870,9 +3053,25 @@ async function loadMapHotspots(){
 function hotspotBadgeFor(id){
   if(id === 'checkin') return !!guardian && guardian.last_tended_at !== todayStr();
   if(id === 'mail') return mailBroadcasts.some(b => !mailClaimedIds.has(b.id));
-  if(id === 'promo') return promoEvents.some(e => e.status === 'active');
+  if(id === 'promo') return hasUnseenPromo();
   if(id === 'serverChat') return hasUnreadChat('server');
   if(id === 'circle') return hasUnreadChat('circle');
+  // #122 ("expand hotspotBadgeFor coverage") — three more genuinely
+  // actionable states, all free or near-free off data already loaded
+  // for other reasons, same "just a hint, nothing gated on it" contract
+  // as every badge above:
+  //   - oracle: a petition trial you started but never finished
+  //     (pendingPetitionsCount, preloaded at login — see its own
+  //     comment for why it moved here from the currency pane).
+  //   - chainedGods: an unredeemed God Token or Key of Night just
+  //     sitting in inventory — both already on the guardian row.
+  //   - milestones: an earned-but-not-yet-viewed milestone
+  //     (pendingMilestones(), pure/free off guardian+mage+catalog
+  //     already in memory — see its own comment near
+  //     markMilestonesSeen()).
+  if(id === 'oracle') return pendingPetitionsCount > 0;
+  if(id === 'chainedGods') return !!guardian && ((guardian.god_tokens || 0) > 0 || (guardian.key_of_night || 0) > 0);
+  if(id === 'milestones') return pendingMilestones().length > 0;
   return false;
 }
 
@@ -2880,8 +3079,9 @@ function hotspotButtonsMarkup(areas, arrayName, pageKey){
   const fallback = pageKey ? !siteBackgrounds[pageKey] : false;
   return areas.map((a, i) => {
     if(a.kind === 'dropdown') return ''; // rendered by hotspotDropdownMarkup() instead, see below
+    if(a.kind === 'grid') return ''; // positioning frame only — see checkinMonthlyGridHtml()/checkinNewPlayerGridHtml()
     return `
-    <button class="map-hotspot${fallback ? ' map-hotspot-fallback' : ''}" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;" title="${esc(a.label)}" aria-label="${esc(a.label)}" onclick="${arrayName}[${i}].action()">${fallback ? esc(a.label) : (a.glow ? `<span class="map-hotspot-node" aria-hidden="true"></span><span class="map-hotspot-node-label" aria-hidden="true">${esc(a.label)}</span>` : '')}${hotspotBadgeFor(a.id) ? '<span class="map-hotspot-badge" aria-hidden="true"></span>' : ''}</button>
+    <button class="map-hotspot${fallback ? ' map-hotspot-fallback' : ''}" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;" title="${esc(a.label)}" aria-label="${esc(a.label)}" onclick="${arrayName}[${i}].action()">${fallback ? esc(a.label) : (a.glow ? `<span class="map-hotspot-node${a.large ? ' map-hotspot-node--lg' : ''}" aria-hidden="true"></span><span class="map-hotspot-node-label${a.large ? ' map-hotspot-node-label--lg' : ''}" aria-hidden="true">${esc(a.label)}</span>` : '')}${hotspotBadgeFor(a.id) ? '<span class="map-hotspot-badge" aria-hidden="true"></span>' : ''}</button>
   `;
   }).join('');
 }
@@ -2934,11 +3134,12 @@ function mapHubStatsHtml(){
     rows.push(['⚡', `${energyNow()}/${staminaSettings.energy_max}`]);
     rows.push(['🎟️', `${ticketsNow()}/${staminaSettings.ticket_max}`]);
   }
-  // Direct feedback: "we want to add petitions and messages counts on
-  // the currency pane on the map" — see loadPendingPetitionsCount()/
-  // loadUnreadMessagesCount() for what these numbers actually count.
-  rows.push(['📜', pendingPetitionsCount]);
-  rows.push(['💬', unreadMessagesCount]);
+  // #124: petitions-remaining and deity-messages-remaining, as real
+  // admin-grantable/stackable resource counts (see the comment above
+  // loadPendingPetitionsCount() for the full history of what these two
+  // rows used to show instead).
+  rows.push(['📜', guardian.bonus_petition_credits || 0]);
+  rows.push(['💬', profileMessagesRemainingLabel(true)]);
   return `<div class="map-hub-stats">${rows.map(([icon, val]) => `<div class="row"><span class="icon">${icon}</span><span class="val">${val}</span></div>`).join('')}</div>`;
 }
 
@@ -3444,7 +3645,7 @@ async function doTrainMage(){
   let msg = `+${data.xpGained} XP, +${data.shardsGained} God Shards.`;
   if(data.levelsGained > 0) msg += ` Leveled up to ${data.level}!`;
   setMageActionStatus(msg, true);
-  if(data.levelsGained > 0) celebrate({ count: 14, distance: 44, duration: 850, color: '#e6c777', size: 18, sprite: 'particle-fx/fx_burst.png' });
+  if(data.levelsGained > 0) showRewardBanner('Level Up!', `Your Mage reached level ${data.level}`);
 }
 
 // 0083, Phase 2 of "make the Mage's own Duel interactive" — opens (or
@@ -4186,6 +4387,13 @@ async function tendGuardian(){
     return;
   }
   await loadGuardian(); // refetches every currency field fresh rather than guessing which ones the reward touched
+  // #123 — patch today into the calendar grid's claimed-days set locally
+  // (same reasoning as the currency guardian-row patches used all over
+  // this file) instead of a second round-trip to checkin_status(); it's
+  // the only day that could have just changed.
+  if(checkinCalendarStatus && !checkinCalendarStatus.claimedDaysThisMonth.includes(checkinCalendarStatus.todayDom)){
+    checkinCalendarStatus.claimedDaysThisMonth = [...checkinCalendarStatus.claimedDaysThisMonth, checkinCalendarStatus.todayDom];
+  }
   render();
   const s2 = document.getElementById('checkinHubStatus');
   if(s2){
@@ -4196,6 +4404,7 @@ async function tendGuardian(){
     if(milestoneLabels.length) msg += ' ' + milestoneLabels.join(', ') + '!';
     s2.textContent = msg;
   }
+  showConfirmBanner('Checked in!');
 }
 
 async function doTendBond(){
@@ -4260,7 +4469,7 @@ async function doTrainGuardian(){
   let msg = `+${data.xpGained} XP, +${data.essenceGained} Essence.`;
   if(data.levelsGained > 0) msg += ` Leveled up to ${data.level}!`;
   setGuardianTrainStatus(msg, true);
-  if(data.levelsGained > 0) celebrate({ count: 14, distance: 44, duration: 850, color: '#e6c777', size: 18, sprite: 'particle-fx/fx_burst.png' });
+  if(data.levelsGained > 0) showRewardBanner('Level Up!', `Your guardian reached level ${data.level}`);
 }
 
 /* ---------------- profile (Map hub's "Profile" hotspot) ---------------- */
@@ -4317,14 +4526,19 @@ async function loadProfileMessageStatus(){
 }
 
 // Same "included_messages_per_month <= 0 means unlimited" convention as
-// gate.html's own messagesRemainingLabel().
-function profileMessagesRemainingLabel(){
-  if(!profileMessageStatus) return 'Loading…';
+// gate.html's own messagesRemainingLabel(). short=true (used by the Map
+// Hub currency tally, #124 — that row is a bare number next to an icon,
+// same as every other row there) returns just the count ('∞' for
+// unlimited) instead of the full sentence the Profile screen shows.
+function profileMessagesRemainingLabel(short){
+  if(!profileMessageStatus) return short ? '…' : 'Loading…';
   if(!profileMessageStatus.includedPerMonth || profileMessageStatus.includedPerMonth <= 0){
+    if(short) return profileMessageStatus.bonusMessages > 0 ? ('∞+' + profileMessageStatus.bonusMessages) : '∞';
     return profileMessageStatus.bonusMessages > 0 ? ('Unlimited + ' + profileMessageStatus.bonusMessages + ' bonus') : 'Unlimited';
   }
   const includedLeft = Math.max(0, profileMessageStatus.includedPerMonth - profileMessageStatus.usedThisMonth);
   const total = includedLeft + profileMessageStatus.bonusMessages;
+  if(short) return total;
   return total + ' message' + (total === 1 ? '' : 's') + ' left this month';
 }
 
@@ -4961,6 +5175,10 @@ function backFromBackpack(){
 function switchBackpackTab(tab){
   backpackTab = tab;
   render();
+  // Decor's data (palData/altarData) isn't part of openBackpack()'s
+  // preload list — those two screens weren't normally opened from here,
+  // so load them lazily the first time this tab is actually visited.
+  if(tab === 'decor') ensureDecorDataLoaded();
 }
 
 // Reverted from the hotspot-tabs treatment back to a real visible
@@ -4978,6 +5196,7 @@ function backpackTabStrip(){
       ${mage ? `<button class="tab-btn${backpackTab === 'alchemy' ? ' active' : ''}" onclick="switchBackpackTab('alchemy')">Alchemy</button>` : ''}
       <button class="tab-btn${backpackTab === 'arena' ? ' active' : ''}" onclick="switchBackpackTab('arena')">Arena</button>
       <button class="tab-btn${backpackTab === 'expeditions' ? ' active' : ''}" onclick="switchBackpackTab('expeditions')">Expeditions</button>
+      <button class="tab-btn${backpackTab === 'decor' ? ' active' : ''}" onclick="switchBackpackTab('decor')">Decor</button>
     </div>
   `;
 }
@@ -4993,7 +5212,84 @@ function renderBackpack(){
   if(backpackTab === 'alchemy' && mage) return renderBackpackAlchemy();
   if(backpackTab === 'arena') return renderBackpackArena();
   if(backpackTab === 'expeditions') return renderBackpackExpeditions();
+  if(backpackTab === 'decor') return renderBackpackDecor();
   return renderBackpackCraft();
+}
+
+// Direct feedback: "show a decor tab in backpack for altar items." Both
+// altars (Personal and, if in a Circle, Circle) keep their decorations in
+// their own *_altar_unlocks table, joined against their own catalog for
+// name/description/effect text — this tab is a read-only display case
+// pulling from both, same join pattern loadPersonalAltarUnlocksForChest()
+// already uses for the Circle Item Chest's "share a decoration" list.
+// Loading is lazy (see ensureDecorDataLoaded(), called from
+// switchBackpackTab()) since neither altar's data is normally fetched
+// just to open the Backpack.
+async function ensureDecorDataLoaded(){
+  const tasks = [];
+  if(!palData) tasks.push(personalAltarFetch('view').then(d => { palData = d.ok ? d : null; }));
+  if(myCircle && myCircle.circle && !altarData){
+    if(!altarCircleId) altarCircleId = myCircle.circle.id;
+    tasks.push(circleFetch('altar-view', { circleId: altarCircleId }).then(d => { altarData = d.ok ? d : null; }));
+  }
+  if(tasks.length){
+    await Promise.all(tasks);
+    if(backpackView && backpackTab === 'decor') render();
+  }
+}
+
+function decorEffectLine(item){
+  if(!item || !item.effect_key || !item.effect_amount) return '';
+  if(item.effect_key === 'essence_bonus_pct') return `+${item.effect_amount}% Essence from harvests`;
+  if(item.effect_key === 'devotion_bonus_pct') return `+${item.effect_amount}% Devotion from harvests`;
+  return `+${item.effect_amount} ${item.effect_key.replace(/_/g, ' ')}`;
+}
+
+function renderBackpackDecor(){
+  const app = document.getElementById('app');
+
+  const palCatalog = (palData && palData.decorationCatalog) || [];
+  const palPlacedKeys = new Set((palData && palData.plots || []).filter(p => p.content_type === 'decoration').map(p => p.content_key));
+  const palRows = ((palData && palData.unlocks) || []).map(u => {
+    const item = palCatalog.find(c => c.key === u.decoration_key);
+    const name = item ? item.name : u.decoration_key;
+    const effect = decorEffectLine(item);
+    const placed = palPlacedKeys.has(u.decoration_key);
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(name)}${placed ? ' <span class="cblurb">(placed)</span>' : ''}</div><div class="cblurb">${item && item.description ? esc(item.description) + ' — ' : ''}${effect ? esc(effect) : 'No bonus set yet'}</div></div>
+    </div>`;
+  }).join('') || '<p class="hint">No Personal Altar decorations yet — find or buy some at Your Altar.</p>';
+
+  const circleCatalog = (altarData && altarData.decorationCatalog) || [];
+  const circlePlacedKeys = new Set((altarData && altarData.plots || []).filter(p => p.content_type === 'decoration').map(p => p.content_key));
+  const circleRows = ((altarData && altarData.unlocks) || []).map(u => {
+    const item = circleCatalog.find(c => c.key === u.decoration_key);
+    const name = item ? item.name : u.decoration_key;
+    const effect = decorEffectLine(item);
+    const placed = circlePlacedKeys.has(u.decoration_key);
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(name)}${placed ? ' <span class="cblurb">(placed)</span>' : ''}</div><div class="cblurb">${item && item.description ? esc(item.description) + ' — ' : ''}${effect ? esc(effect) : 'No bonus set yet'}</div></div>
+    </div>`;
+  }).join('') || '<p class="hint">No Circle Altar decorations unlocked yet.</p>';
+
+  app.innerHTML = `
+    <div class="card"${bgAttr('backpack', 'text-align:center;')}>
+      <h2>Backpack</h2>
+      ${backpackTabStrip()}
+    </div>
+    <div class="card"${bgAttr('backpack')}>
+      <h2>Your Altar Decor</h2>
+      ${palRows}
+      <button class="secondary" style="margin-top:10px;" onclick="openPersonalAltar()">Go to Your Altar</button>
+    </div>
+    ${myCircle && myCircle.circle ? `
+    <div class="card"${bgAttr('backpack')}>
+      <h2>Circle Altar Decor</h2>
+      ${circleRows}
+    </div>
+    ` : ''}
+    <div class="card"${bgAttr('backpack')}><button class="secondary" onclick="backFromBackpack()">Back to the map</button></div>
+  `;
 }
 
 function renderBackpackCraft(){
@@ -5138,27 +5434,111 @@ function renderBackpackExpeditions(){
 // giant scroll screen." The hub-overlay's max-height:80vh scroll was a
 // real problem with a growing rewards list behind it; dropping the list
 // entirely (not just shrinking it) is what the art now makes redundant.
+// #123 brought a real grid back on top of that background art — see
+// checkinMonthlyGridHtml() below — but it's a compact absolutely-
+// positioned overlay sized to the admin-placed frame, not the old
+// unbounded scrolling list, so the objection that got it removed doesn't
+// re-apply.
 async function openCheckin(){
   checkinView = { step: 'home' };
   render();
   maybeShowPageTip('checkin');
+  const { data, error } = await supabaseClient.rpc('checkin_status', { p_guardian_id: guardian.id });
+  if(error){ console.error('checkin status load failed', error); return; }
+  checkinCalendarStatus = data;
+  if(checkinView) render();
 }
 
 function backFromCheckin(){
   checkinView = null;
+  checkinCalendarStatus = null;
   render();
+}
+
+// One calendar cell — day < today is "gone" (dash), further split into
+// claimed (a check, nothing to do) vs missed (an "Unlock" button that
+// spends the admin-set backdayUnlockCurrencyKey/backdayUnlockCost, see
+// doClaimMissedCheckinDay()); day === today is the live Check In button
+// (tendGuardian(), same RPC as always); day > today is locked/greyed —
+// nothing to click yet.
+function checkinDayCellHtml(day, s){
+  const claimed = s.claimedDaysThisMonth.includes(day);
+  if(day < s.todayDom){
+    if(claimed) return `<div class="checkin-cell checkin-cell-gone checkin-cell-claimed"><span class="cc-day">${day}</span><span class="cc-dash" aria-hidden="true"></span><span class="cc-check" aria-hidden="true">✓</span></div>`;
+    return `<div class="checkin-cell checkin-cell-gone checkin-cell-missed" onclick="doClaimMissedCheckinDay(${day})" title="${esc('Unlock Day ' + day + ' for ' + s.backdayUnlockCost + ' ' + (CHECKIN_CURRENCY_LABELS[s.backdayUnlockCurrencyKey] || s.backdayUnlockCurrencyKey))}"><span class="cc-day">${day}</span><span class="cc-dash" aria-hidden="true"></span><span class="cc-unlock">Unlock<br>${s.backdayUnlockCost} ${esc((CHECKIN_CURRENCY_LABELS[s.backdayUnlockCurrencyKey] || s.backdayUnlockCurrencyKey))}</span></div>`;
+  }
+  if(day === s.todayDom) return `<div class="checkin-cell checkin-cell-today" onclick="tendGuardian()" title="Check in for today"><span class="cc-day">${day}</span><span class="cc-today-label">Check In</span></div>`;
+  return `<div class="checkin-cell checkin-cell-future"><span class="cc-day">${day}</span></div>`;
+}
+
+// Reads its bounding box from CHECKIN_AREAS (frameId) — the same
+// admin-movable hotspot frame every other positioned element on this
+// screen uses — and fills it with a uniform 7-column CSS grid of day
+// cells built by cellsFn. Returns '' (renders nothing) if the status
+// RPC hasn't landed yet or, for the new-player frame, once that track
+// is no longer active.
+function positionedCheckinGrid(frameId, cellsHtml, cols){
+  const frame = CHECKIN_AREAS.find(a => a.id === frameId);
+  if(!frame) return '';
+  return `<div class="checkin-grid-frame" style="left:${frame.left}%;top:${frame.top}%;width:${frame.width}%;height:${frame.height}%;grid-template-columns:repeat(${cols}, 1fr);">${cellsHtml}</div>`;
+}
+
+function checkinMonthlyGridHtml(){
+  const s = checkinCalendarStatus;
+  if(!s) return '';
+  const cells = [];
+  for(let d = 1; d <= s.daysInMonth; d++) cells.push(checkinDayCellHtml(d, s));
+  return positionedCheckinGrid('checkinGrid', cells.join(''), 7);
+}
+
+// New-player track cells are pure display — claim_new_player_checkin()
+// (called fire-and-forget from afterLogin(), see its own comment) is
+// what actually grants these, with no click required ("autoran" per the
+// direct feedback), so every cell here is non-interactive: granted (a
+// check) or not-yet-reached (locked look), never a button. The whole
+// frame disappears once the track is no longer active (past day 7),
+// freeing the screen for players who've long since aged out of it.
+function checkinNewPlayerGridHtml(){
+  const s = checkinCalendarStatus;
+  if(!s || !s.newPlayer || !s.newPlayer.active) return '';
+  const cells = [];
+  for(let d = 1; d <= 7; d++){
+    const granted = d <= s.newPlayer.lastGrantedDay;
+    const reached = d <= s.newPlayer.daysSinceSignup;
+    cells.push(`<div class="checkin-cell checkin-cell-newplayer${granted ? ' checkin-cell-claimed' : reached ? ' checkin-cell-today' : ' checkin-cell-future'}"><span class="cc-day">${d}</span>${granted ? '<span class="cc-check" aria-hidden="true">✓</span>' : ''}</div>`);
+  }
+  return positionedCheckinGrid('newPlayerGrid', cells.join(''), 7);
+}
+
+async function doClaimMissedCheckinDay(day){
+  const status = document.getElementById('checkinHubStatus');
+  if(status){ status.className = 'hub-loose-status'; status.textContent = 'Unlocking…'; }
+  const { data, error } = await supabaseClient.rpc('claim_missed_checkin_day', { p_guardian_id: guardian.id, p_day_of_month: day });
+  if(error || !data || !data.ok){
+    if(status){ status.className = 'hub-loose-status err'; status.textContent = 'Failed: ' + (error ? error.message : data.error); }
+    return;
+  }
+  await loadGuardian();
+  checkinCalendarStatus.claimedDaysThisMonth = [...checkinCalendarStatus.claimedDaysThisMonth, day];
+  render();
+  const s2 = document.getElementById('checkinHubStatus');
+  if(s2){
+    s2.className = 'hub-loose-status ok';
+    const gainParts = (data.rewards || []).filter(r => r.amount > 0).map(r => `+${r.amount} ${CHECKIN_CURRENCY_LABELS[r.currency] || r.currency}`);
+    s2.textContent = `Unlocked Day ${day} for ${data.spentAmount} ${CHECKIN_CURRENCY_LABELS[data.spentCurrencyKey] || data.spentCurrencyKey}. ${gainParts.join(', ')}`;
+  }
+  showConfirmBanner(`Day ${day} unlocked!`);
 }
 
 // No .hub-overlay panel here anymore (0068) — direct feedback: "gonna
 // have to do the same thing to the daily checkin" (same request as
 // Chained Gods: "get rid of the damn overlay"). The art plus the two
-// existing hotspot buttons (Check In / Back to the Map, both in
-// CHECKIN_AREAS) are the whole screen now. .hub-loose-back/
-// .hub-loose-status (see the CSS comment above .hub-loose-back) replace
-// the overlay's back button and status line with plain floating text,
-// no panel behind either. checkinStatus renamed to checkinHubStatus so
-// its className writes (status/status ok/status err) don't clobber the
-// hub-loose-status positioning class.
+// positioned grids and the Back to the Map hotspot are the whole screen
+// now. .hub-loose-back/.hub-loose-status (see the CSS comment above
+// .hub-loose-back) replace the overlay's back button and status line
+// with plain floating text, no panel behind either. checkinStatus
+// renamed to checkinHubStatus so its className writes (status/status
+// ok/status err) don't clobber the hub-loose-status positioning class.
 function renderCheckin(){
   document.body.classList.add('hub-active');
   const app = document.getElementById('app');
@@ -5166,6 +5546,8 @@ function renderCheckin(){
     <div class="hub-screen">
       <div class="hub-box"${bgAttrPlain('checkin')}>
         ${hotspotButtonsMarkup(CHECKIN_AREAS, 'CHECKIN_AREAS', 'checkin')}
+        ${checkinNewPlayerGridHtml()}
+        ${checkinMonthlyGridHtml()}
         <button type="button" class="hub-loose-back" onclick="backFromCheckin()">‹ Back to Map</button>
         <div id="checkinHubStatus" class="hub-loose-status"></div>
       </div>
@@ -5185,6 +5567,7 @@ async function openPromo(){
   render();
   maybeShowPageTip('promo');
   await loadPromoEvents();
+  markChatSeen('promo');
   if(promoView) render();
 }
 
@@ -5493,7 +5876,7 @@ function renderWorldBoss(){
               : worldBossAttackPickerHtml()
           }
           <div class="status" id="worldBossActionStatus"></div>
-          ${energyBarHtml()}
+          ${guardianHpBarHtml()}
 
           <h3 style="margin-top:16px;text-align:left;">Top damage</h3>
           ${leaderboardRows}
@@ -5848,7 +6231,16 @@ function renderCampaignBrowse(){
       const actionHtml = e.locked
         ? `<span class="hint">Clear the earlier encounters first</span>`
         : `<button class="secondary" onclick="${onclick}">${actionLabel}</button>`;
+      // Direct feedback: "I would like picture cards of the encounters in
+      // the campaign on their description pages please matching the pic
+      // used for the fight scene" — same image (creatureImageUrl, sourced
+      // from the unified creatures table) and same rendering helper
+      // (opponentImgFor) the actual fight screen uses, just smaller.
+      const pictureCard = (e.encounterType === 'combat' && !e.locked)
+        ? `<div style="width:60px;height:60px;flex-shrink:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.25);">${opponentImgFor(e.creatureImageUrl, null, 54)}</div>`
+        : '';
       return `<div class="roster-row">
+        ${pictureCard}
         <div><div class="rname">${icon} ${esc(e.name)}${e.encounterType === 'combat' && e.creatureName ? ' — ' + esc(e.creatureName) : ''}</div>
         <div class="cblurb">${esc(e.description || '')} — ${esc(xpNote)}${e.hasReward && !e.cleared ? ' + a reward' : ''}</div></div>
         <div class="ractions">${statusBadge}${actionHtml}</div>
@@ -5990,10 +6382,17 @@ function returnToMapHub(){
   shopView = null; serverChatView = null;
   render();
   maybeShowPageTip('map');
-  // Refresh the currency pane's petitions/messages counts every time a
-  // player lands back on the Map Hub — same fire-and-forget-then-
-  // re-render-if-still-here pattern as the login preload above.
-  Promise.all([loadPendingPetitionsCount(), loadUnreadMessagesCount()]).then(() => {
+  // Refresh the currency pane's deity-messages count and the Oracle
+  // badge's pending-trial count every time a player lands back on the
+  // Map Hub — same fire-and-forget-then-re-render-if-still-here pattern
+  // as the login preload above. (The petitions half of the currency
+  // row, guardian.bonus_petition_credits, is patched locally by whatever
+  // action just spent/granted it — see doCraftPetition() etc. — so it
+  // doesn't need a refetch here.)
+  Promise.all([
+    loadProfileMessageStatus(),
+    loadPendingPetitionsCount(),
+  ]).then(() => {
     if(document.body.classList.contains('map-screen')) render();
   }).catch(e => console.error('map hub counts refresh failed', e));
 }
@@ -6295,6 +6694,17 @@ function renderPetitionVerdict(){
       spawnParticles(badge, { count: 8, distance: 28, duration: 750, color: '#9fd7ff', size: 18, sprite: 'particle-fx/fx_glow_ring.png' });
     }
   }
+  // Direct feedback: "anytime you get a lvl up or a reward there needs to
+  // be a special banner ... and let you know." This screen only ever had
+  // the badge particle burst above (easy to miss, no actual text saying
+  // what was earned) — add the readable banner for a full mark and/or an
+  // extra reward grant.
+  if(v.verdict === 'full' || (v.extraReward && v.extraReward.granted)){
+    const detailBits = [];
+    if(v.statGain > 0) detailBits.push(`All stats +${v.statGain}`);
+    if(v.extraReward && v.extraReward.granted) detailBits.push(v.extraReward.name || 'Bonus reward');
+    showRewardBanner(v.verdict === 'full' ? 'Full Mark!' : 'Reward earned!', detailBits.join(' · '));
+  }
 }
 
 async function finishPetition(){
@@ -6357,8 +6767,40 @@ async function refreshServerChatMessages(){
   if(serverChatMessages.length) serverChatLatestAt = serverChatMessages[serverChatMessages.length - 1].created_at;
   if(serverChatView){
     markChatSeen('server');
-    renderServerChat();
+    // Direct feedback: "the server chat is still jumping." A full
+    // renderServerChat() every 5s poll replaced the whole screen
+    // (composer <input> included), so mid-typing keystrokes lost focus
+    // and the message list's scroll position reset to the top — that's
+    // the "jump". Patch just the message list in place instead; only
+    // fall back to a full render the one time the screen isn't mounted
+    // yet (serverChatMsgList not found).
+    if(!refreshMsgListInPlace('serverChatMsgList', serverChatRowsHtml())) renderServerChat();
   }
+}
+
+// Shared by renderServerChat() (first paint) and refreshServerChatMessages()
+// (every poll, in-place patch) so the row markup never drifts between the two.
+function serverChatRowsHtml(){
+  const me = session.user.id;
+  return serverChatMessages.map(m => `
+    <div class="msg-row ${m.sender_id === me ? 'mine' : ''}">
+      <div class="msg-meta">${esc(m.sender_name || 'A Keeper')} · ${new Date(m.created_at).toLocaleString()}</div>
+      <div class="msg-body">${esc(m.content)}</div>
+    </div>
+  `).join('') || '<p class="hint">No messages yet — say hello.</p>';
+}
+
+// Generic "patch a scrolling message list without a full re-render" helper —
+// see serverChat/circle-feed jump fix above. Preserves the reader's scroll
+// position unless they were already at (or near) the bottom, in which case
+// it follows new messages down, same as every normal chat UI.
+function refreshMsgListInPlace(elId, rowsHtml){
+  const el = document.getElementById(elId);
+  if(!el) return false;
+  const nearBottom = (el.scrollHeight - el.scrollTop - el.clientHeight) < 40;
+  el.innerHTML = rowsHtml;
+  if(nearBottom) el.scrollTop = el.scrollHeight;
+  return true;
 }
 
 function onServerChatInput(){
@@ -6398,14 +6840,7 @@ async function sendServerChatMessage(){
 function renderServerChat(){
   document.body.classList.add('hub-active');
   const app = document.getElementById('app');
-  const me = session.user.id;
-
-  const rows = serverChatMessages.map(m => `
-    <div class="msg-row ${m.sender_id === me ? 'mine' : ''}">
-      <div class="msg-meta">${esc(m.sender_name || 'A Keeper')} · ${new Date(m.created_at).toLocaleString()}</div>
-      <div class="msg-body">${esc(m.content)}</div>
-    </div>
-  `).join('') || '<p class="hint">No messages yet — say hello.</p>';
+  const rows = serverChatRowsHtml();
 
   const composer = session.user.is_anonymous
     ? '<p class="hint">Sign up with an email (see your Profile) to post in Server Chat — you can still read along as a guest.</p>'
@@ -6424,7 +6859,7 @@ function renderServerChat(){
           <h2 style="text-align:center;">Server Chat</h2>
           ${chatTabStrip('server')}
           <p class="hint" style="text-align:center;">Everyone on the server, one room. Be decent to each other.</p>
-          <div class="msg-list" style="max-height:40vh;overflow-y:auto;">${rows}</div>
+          <div class="msg-list" id="serverChatMsgList" style="max-height:40vh;overflow-y:auto;">${rows}</div>
           <div class="status" id="serverChatStatus"></div>
           ${composer}
         </div>
@@ -6674,20 +7109,22 @@ function renderBattleScreen(){
         // would be nonsensical here ("0 damage" for a move that never
         // targeted anyone). Give it its own honest line instead.
         const healText = e.healed ? ` and heals for ${e.healed} HP` : '';
-        return `<div class="entry heal">Round ${entry.round}: ${who} used ${esc(e.move)}${healText}.</div>`;
+        const descText = e.moveDescription ? ` <span class="move-desc-inline">— ${esc(e.moveDescription)}</span>` : '';
+        return `<div class="entry heal">Round ${entry.round}: ${who} used ${esc(e.move)}${healText}.${descText}</div>`;
       }
       const tag = e.crit ? ' (critical!)' : (e.control ? ' (swiftness shaved)' : '');
       const extra = (e.healed ? ` (+${e.healed} lifesteal)` : '') + (e.stunned ? ' (stunned!)' : '') + (e.burn ? ' (burning)' : '') +
         (e.poison ? ' (poisoned)' : '') + (e.weakened ? ' (weakened)' : '') + (e.vulnerable ? ' (vulnerable)' : '') +
         (e.shieldGranted ? ' (shielded)' : '') + (e.shieldAbsorbed ? ` (shield absorbed ${e.shieldAbsorbed})` : '');
-      return `<div class="entry${e.crit ? ' crit' : ''}">Round ${entry.round}: ${who} used ${esc(e.move)}${tag} — ${e.damage} damage${extra}.</div>`;
+      const descText = e.moveDescription ? ` <span class="move-desc-inline">— ${esc(e.moveDescription)}</span>` : '';
+      return `<div class="entry${e.crit ? ' crit' : ''}">Round ${entry.round}: ${who} used ${esc(e.move)}${tag} — ${e.damage} damage${extra}.${descText}</div>`;
     }).join('');
     return lines;
   }).join('');
 
   app.innerHTML = `
     <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('combat')}>
+      <div class="hub-box"${bgAttrPlainOrUrl('combat', v.opponentImageUrl)}>
         <div class="hub-overlay">
           <h2 style="text-align:center;">${esc(guardian.name)} vs. ${esc(v.opponentName)}</h2>
           <div class="battle-arena">
@@ -6711,6 +7148,7 @@ function renderBattleScreen(){
             </div>
           </div>
 
+          <div class="move-callout" id="moveCallout" hidden></div>
           <div class="move-row" id="moveRow">${moveButtons}</div>
           ${battleCureItemsHtml()}
           <div class="status" id="battleStatus"></div>
@@ -6722,6 +7160,29 @@ function renderBattleScreen(){
 }
 
 function sleep(ms){ return new Promise(res => setTimeout(res, ms)); }
+
+// Shared by actMove()'s live callout and the scrollback log builder below
+// so an actor is named the same way in both places.
+function combatActorLabel(actor, mageName){
+  if(actor === 'mage') return esc(mageName || (mage ? mage.name : 'Your Mage'));
+  if(actor === 'guardian') return esc(guardian.name);
+  return esc(combatView.opponentName);
+}
+
+// Direct feedback: "visible description of what each move is doing not
+// that red crap." Live, updated once per beat as actMove()'s event loop
+// plays through a round — the scrollback log below already names the
+// move after the fact, but nothing ever showed what it actually DOES
+// while it's happening. moveDescription comes straight from the admin-
+// editable moves_catalog.description column (combat/index.ts now threads
+// it through); a move an admin hasn't written a description for still
+// gets the name-only line, no placeholder text.
+function showMoveCallout(actor, mageName, moveName, moveDescription){
+  const el = document.getElementById('moveCallout');
+  if(!el || !moveName) return;
+  el.hidden = false;
+  el.innerHTML = `<div class="mc-name">${combatActorLabel(actor, mageName)} uses ${esc(moveName)}</div>${moveDescription ? `<div class="mc-desc">${esc(moveDescription)}</div>` : ''}`;
+}
 
 /* Direct DOM manipulation for the impact beat — deliberately not a
    render() call, so the HP bars can animate in sequence before the
@@ -6747,6 +7208,40 @@ function celebrate(opts){
   if(!app) return;
   app.style.position = 'relative';
   spawnParticles(app, opts);
+}
+
+// "Anywhere you spend anything there needs to be a visual verification
+// that their purchase went through" — a short-lived toast independent of
+// any one screen's own .status element, so it survives a render() view
+// switch that happens right after the spend (Key of Night, redeeming a
+// God Token, Store checkout, Crafting, decoration/plot purchases, etc.)
+// Stacks if called more than once in quick succession; each toast removes
+// itself after its CSS animation finishes.
+function showConfirmBanner(message){
+  const stack = document.getElementById('confirmBannerStack');
+  if(!stack) return;
+  const el = document.createElement('div');
+  el.className = 'confirm-toast';
+  el.innerHTML = `<span class="check">✓</span><span>${esc(message)}</span>`;
+  stack.appendChild(el);
+  setTimeout(() => { el.remove(); }, 3100);
+}
+
+// "Anytime you get a lvl up or a reward there needs to be a special
+// banner or something that pops up to celebrate and let you know."
+// Pairs with the confetti burst (celebrate()) — this is the actual
+// readable "you got X" banner celebrate() never provided on its own.
+// `detail` is optional secondary text (e.g. "+120 XP · +40 Essence").
+function showRewardBanner(title, detail){
+  const stack = document.getElementById('rewardBannerStack');
+  if(stack){
+    const el = document.createElement('div');
+    el.className = 'reward-banner';
+    el.innerHTML = `<div class="rb-title">${esc(title)}</div>${detail ? `<div class="rb-detail">${esc(detail)}</div>` : ''}`;
+    stack.appendChild(el);
+    setTimeout(() => { el.remove(); }, 3900);
+  }
+  celebrate({ count: 18, distance: 60, duration: 1000 });
 }
 
 function spawnParticles(wrap, opts){
@@ -6983,6 +7478,7 @@ async function actMove(moveIndex){
       // A landed move that was fully dodged: no HP change on either side,
       // just an evasion beat on the defender.
       if(ev.dodged){
+        showMoveCallout(ev.actor, ev.mageName, ev.move, ev.moveDescription);
         const dodgerSide = ev.actor === 'guardian' ? 'opponent' : 'guardian';
         animateDodge(dodgerSide);
         await sleep(900);
@@ -6991,6 +7487,7 @@ async function actMove(moveIndex){
       // A landed move: actor deals damage to the other side. A Mage's
       // hit (0082) always targets the opponent too — it's never itself
       // the target in these fights yet, same as the Guardian.
+      showMoveCallout(ev.actor, ev.mageName, ev.move, ev.moveDescription);
       const targetIsOpponent = ev.actor === 'guardian' || ev.actor === 'mage';
       if(targetIsOpponent) oHp = Math.max(0, oHp - ev.damage); else gHp = Math.max(0, gHp - ev.damage);
       animateHit(
@@ -7036,7 +7533,8 @@ async function actMove(moveIndex){
         rankUp: data.rankUp,
         lootWon: data.lootWon,
         tierReward: data.tierReward,
-        opponentName: combatView.opponentName
+        opponentName: combatView.opponentName,
+        opponentImageUrl: combatView.opponentImageUrl
       };
     }
     render();
@@ -7074,7 +7572,7 @@ function renderBattleResult(){
 
   app.innerHTML = `
     <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('combat')}>
+      <div class="hub-box"${bgAttrPlainOrUrl('combat', v.opponentImageUrl)}>
         <div class="hub-overlay">
           <div class="verdict-badge ${win ? 'full' : 'partial'}">${win ? 'Victory' : 'Defeat'}</div>
           ${bodyHtml}
@@ -7082,6 +7580,17 @@ function renderBattleResult(){
       </div>
     </div>
   `;
+  // Direct feedback: "anytime you get a lvl up or a reward there needs to
+  // be a special banner." Gauntlet wins had no celebration at all before
+  // this — campaign wins keep their own banner in claimCampaignVictory()
+  // instead, once the actual reward is confirmed by the server.
+  if(win && !isCampaign){
+    const detailBits = [`+${v.essenceGained} Essence`];
+    if(v.rankUp) detailBits.push('New trial ground opened');
+    if(v.lootWon) detailBits.push(`Found: ${v.lootWon.name}`);
+    if(v.tierReward && v.tierReward.granted) detailBits.push(v.tierReward.name || 'Bonus reward');
+    showRewardBanner('Victory!', detailBits.join(' · '));
+  }
 }
 
 async function finishCombat(){
@@ -7116,7 +7625,7 @@ async function claimCampaignVictory(){
     await openCampaign();
     campaignMsg = campaignXpSummary(data);
     render();
-    celebrate({ count: 16, distance: 50, duration: 900, color: '#ffd76a', size: 22, sprite: 'particle-fx/fx_starburst.png' });
+    showRewardBanner('Victory!', campaignMsg);
   }catch(e){
     if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
   }
@@ -7224,10 +7733,6 @@ async function loadMyCircle(){
     // see circleChatLatestAt's comment near chatTabStrip(). Fire-and-
     // forget: it's just a badge, not worth blocking this render on.
     loadCircleChatLatest().then(() => { if(document.body.classList.contains('map-screen') || (circleView && circleView.step === 'messages')) render(); });
-    // The moment myCircle resolves is also the earliest moment
-    // unreadMessagesCount's Circle Chat slice can be accurate (see that
-    // function's comment) — refresh it here too, same fire-and-forget.
-    loadUnreadMessagesCount().then(() => { if(document.body.classList.contains('map-screen')) render(); });
     circleView = { step: 'home' };
     render();
   }else{
@@ -8158,8 +8663,34 @@ async function refreshFeedMessages(){
   if(feedMessages.length) circleChatLatestAt = feedMessages[feedMessages.length - 1].created_at;
   if(circleView && circleView.step === 'messages' && messagesTab === 'feed'){
     markChatSeen('circle');
-    renderCircleMessages();
+    // Same jump fix as Server Chat above — patch the message list in
+    // place on every 5s poll instead of a full renderCircleMessages(),
+    // which was resetting scroll position and dropping composer focus.
+    if(!refreshMsgListInPlace('circleMsgList', circleFeedRowsHtml())) renderCircleMessages();
   }
+}
+
+// Shared by renderCircleMessages() (first paint) and refreshFeedMessages()/
+// refreshDmMessages() (every poll, in-place patch).
+function circleFeedRowsHtml(){
+  const me = session.user.id;
+  const nameById = rosterNameMap();
+  return feedMessages.map(m => `
+    <div class="msg-row ${m.sender_id === me ? 'mine' : ''}">
+      <div class="msg-meta">${esc(nameById[m.sender_id] || 'Unknown')} · ${new Date(m.created_at).toLocaleString()}</div>
+      <div class="msg-body">${esc(m.content)}</div>
+    </div>
+  `).join('') || '<p class="hint">No messages yet — say hello.</p>';
+}
+function circleDmRowsHtml(){
+  const me = session.user.id;
+  const nameById = rosterNameMap();
+  return dmMessages.map(m => `
+    <div class="msg-row ${m.sender_id === me ? 'mine' : ''}">
+      <div class="msg-meta">${esc(nameById[m.sender_id] || 'Unknown')} · ${new Date(m.created_at).toLocaleString()}</div>
+      <div class="msg-body">${esc(m.content)}</div>
+    </div>
+  `).join('') || '<p class="hint">No messages yet.</p>';
 }
 
 async function refreshDmMessages(peerId){
@@ -8179,7 +8710,9 @@ async function refreshDmMessages(peerId){
   if(unreadIds.length){
     await supabaseClient.from('circle_messages').update({ read_at: new Date().toISOString() }).in('id', unreadIds);
   }
-  if(circleView && circleView.step === 'messages' && messagesTab === 'dm' && dmPeerId === peerId) renderCircleMessages();
+  if(circleView && circleView.step === 'messages' && messagesTab === 'dm' && dmPeerId === peerId){
+    if(!refreshMsgListInPlace('circleMsgList', circleDmRowsHtml())) renderCircleMessages();
+  }
 }
 
 function switchMessagesTab(tab){
@@ -8250,19 +8783,8 @@ function renderCircleMessages(){
     `<option value="${esc(m.user_id)}"${dmPeerId === m.user_id ? ' selected' : ''}>${esc(nameById[m.user_id])}</option>`
   ).join('');
 
-  const feedRows = feedMessages.map(m => `
-    <div class="msg-row ${m.sender_id === me ? 'mine' : ''}">
-      <div class="msg-meta">${esc(nameById[m.sender_id] || 'Unknown')} · ${new Date(m.created_at).toLocaleString()}</div>
-      <div class="msg-body">${esc(m.content)}</div>
-    </div>
-  `).join('') || '<p class="hint">No messages yet — say hello.</p>';
-
-  const dmRows = dmMessages.map(m => `
-    <div class="msg-row ${m.sender_id === me ? 'mine' : ''}">
-      <div class="msg-meta">${esc(nameById[m.sender_id] || 'Unknown')} · ${new Date(m.created_at).toLocaleString()}</div>
-      <div class="msg-body">${esc(m.content)}</div>
-    </div>
-  `).join('') || '<p class="hint">No messages yet.</p>';
+  const feedRows = circleFeedRowsHtml();
+  const dmRows = circleDmRowsHtml();
 
   const canSend = messagesTab === 'feed' || (messagesTab === 'dm' && dmPeerId);
 
@@ -8291,7 +8813,7 @@ function renderCircleMessages(){
           <h2 style="text-align:center;">${esc(myCircle.circle.name)} — Messages</h2>
           ${chatTabStrip('circle')}
           <p class="hint" style="text-align:center;">${messagesTab === 'feed' ? 'Circle Chat' : 'Direct Messages'}</p>
-          <div class="msg-list" style="max-height:32vh;overflow-y:auto;">${messagesTab === 'feed' ? feedRows : (dmPeerId ? dmRows : '<p class="hint">Pick someone below to message.</p>')}</div>
+          <div class="msg-list" id="circleMsgList" style="max-height:32vh;overflow-y:auto;">${messagesTab === 'feed' ? feedRows : (dmPeerId ? dmRows : '<p class="hint">Pick someone below to message.</p>')}</div>
           <div class="status" id="messagesStatus"></div>
           ${peerPickerInline}
           ${composerInline}
@@ -8407,7 +8929,7 @@ async function doHarvestPlot(plotIndex){
 async function doBuyDecoration(key){
   const data = await circleFetch('altar-buy-decoration', { decorationKey: key });
   setAltarStatus(data.ok ? 'Purchased.' : (data.error || 'Could not buy.'), data.ok);
-  if(data.ok) await refreshAltar();
+  if(data.ok){ await refreshAltar(); showConfirmBanner('Purchased!'); }
 }
 
 async function doClaimUnlock(key){
@@ -8678,7 +9200,7 @@ async function doPalHarvestPlot(plotIndex){
 async function doPalBuyDecoration(key){
   const data = await personalAltarFetch('buy-decoration', { decorationKey: key });
   setPalStatus(data.ok ? 'Purchased.' : (data.error || 'Could not buy.'), data.ok);
-  if(data.ok){ await loadGuardian(); await refreshPersonalAltar(); }
+  if(data.ok){ await loadGuardian(); await refreshPersonalAltar(); showConfirmBanner('Purchased!'); }
 }
 
 async function doPalClaimUnlock(key){
@@ -9030,7 +9552,7 @@ function renderCircleDragon(){
           ${dragonSprite}
           ${mainBlock}
           <div class="status" id="dragonActionStatus"></div>
-          ${energyBarHtml()}
+          ${guardianHpBarHtml()}
           <h3 style="margin-top:14px;">Defeated</h3>
           ${defeatedRows}
         </div>
@@ -9725,6 +10247,7 @@ async function doCraftItem(itemKey){
     await loadCraftInventory();
     render();
     setCraftStatus(data.itemType === 'stat_boost' ? 'Crafted — the boost applied immediately.' : 'Crafted — check Your Items below.', true);
+    showConfirmBanner('Crafted!');
   }catch(e){
     setCraftStatus('Could not reach the relay: ' + e.message, false);
   }
@@ -9744,6 +10267,7 @@ async function doCraftPetition(){
     guardian.bonus_petition_credits = data.bonusPetitionCredits;
     render();
     setCraftStatus('Bonus petition credit banked.', true);
+    showConfirmBanner('Petition credit banked!');
   }catch(e){
     setCraftStatus('Could not reach the relay: ' + e.message, false);
   }
@@ -9983,6 +10507,7 @@ async function doRedeemGodToken(){
       s2.className = 'hub-loose-status ok';
       s2.textContent = `The gate answered: ${data.deityName} steps forward, fully unlocked. ${data.remainingTokens} Token${data.remainingTokens === 1 ? '' : 's'} remaining.`;
     }
+    showConfirmBanner(`${data.deityName} unlocked!`);
   }catch(e){
     const s = document.getElementById('redeemHubStatus');
     if(s){ s.className = 'hub-loose-status err'; s.textContent = 'Could not reach the relay: ' + e.message; }
@@ -10007,11 +10532,18 @@ async function doRedeemKeyOfNight(pantheonId, deityId, deityName){
     guardian.key_of_night = data.remainingKeys;
     redeemView = { step: 'hub' };
     render();
-    const s2 = document.getElementById('redeemStatus');
+    // Bug fix: render() above already switched to the hub template, which
+    // only has #redeemHubStatus (not #redeemStatus, the keyPicker screen's
+    // own element) — writing to the old id here silently lost this
+    // confirmation message every time. Same "visual verification the
+    // purchase went through" ask this covers everywhere else currency is
+    // spent.
+    const s2 = document.getElementById('redeemHubStatus');
     if(s2){
-      s2.className = 'status ok';
+      s2.className = 'hub-loose-status ok';
       s2.textContent = `${deityName} fully unlocked. ${data.remainingKeys} Key${data.remainingKeys === 1 ? '' : 's'} of Night remaining.`;
     }
+    showConfirmBanner(`${deityName} fully unlocked!`);
   }catch(e){
     const s = document.getElementById('redeemStatus');
     if(s){ s.className = 'status err'; s.textContent = 'Could not reach the relay: ' + e.message; }
@@ -10247,6 +10779,7 @@ async function openPvpLeaderboard(){
 }
 
 async function doPvpChallenge(targetUserId){
+  setPvpActionStatus('The duel begins…');
   const data = await pvpFetch('challenge', { targetUserId });
   if(!data.ok){ setPvpActionStatus(data.error || 'Could not send challenge.', false); return; }
   // Tickets (0071) — patch the locally-held guardian row immediately,
@@ -10255,10 +10788,21 @@ async function doPvpChallenge(targetUserId){
     guardian.tickets_current = data.ticketsRemaining;
     guardian.tickets_updated_at = new Date().toISOString();
   }
+  // Direct feedback: "Arena needs to auto issue fights regardless of if
+  // the person is there or not." Challenging someone now resolves the
+  // duel immediately server-side (see pvp/index.ts's resolveAndRecordDuel)
+  // instead of leaving a pending challenge for the target to answer — the
+  // challenger is side 'a' in that resolution, so pvpViewerSide is 'a'
+  // here (doPvpRespond(), the legacy accept path, is still side 'b').
+  await ensureCurrencyDefsLoaded();
+  pvpViewerSide = 'a';
+  pvpLastMatch = {
+    ...data.match, winnerGrants: data.winnerGrants || [], loserGrants: data.loserGrants || [],
+    winnerXp: data.winnerXp || 0, winnerLoot: data.winnerLoot || null,
+  };
   pvpView = { step: 'home' };
-  render();
-  setPvpActionStatus('Challenge sent.', true);
   await refreshPvpStatus();
+  playPvpRoundParticles(pvpLastMatch.rounds);
 }
 
 async function doPvpRespond(challengeId, decision){
@@ -10267,11 +10811,14 @@ async function doPvpRespond(challengeId, decision){
   if(!data.ok){ setPvpActionStatus(data.error || 'Could not respond.', false); return; }
   if(decision === 'decline'){ setPvpActionStatus('Challenge declined.', true); await refreshPvpStatus(); return; }
   await ensureCurrencyDefsLoaded();
-  // pvpLastMatch is only ever set here, by the player who just accepted —
-  // so within its render, side 'b' (defender) is always "You" and side
-  // 'a' (challenger) is always "Opponent". winnerGrants/loserGrants (item
-  // 6's admin-configurable payouts, 0064) aren't part of the raw
-  // pvp_matches row, so they're folded onto the display object here.
+  // Legacy accept-a-pending-challenge path — still reachable if a pending
+  // challenge exists from before 0070's instant-resolve change. The
+  // player who just accepted is always the defender, side 'b', so "You"
+  // is side 'b' here (doPvpChallenge() above is the mirror: the
+  // challenger there is side 'a'). winnerGrants/loserGrants (item 6's
+  // admin-configurable payouts, 0064) aren't part of the raw pvp_matches
+  // row, so they're folded onto the display object here.
+  pvpViewerSide = 'b';
   pvpLastMatch = {
     ...data.match, winnerGrants: data.winnerGrants || [], loserGrants: data.loserGrants || [],
     winnerXp: data.winnerXp || 0, winnerLoot: data.winnerLoot || null,
@@ -10324,9 +10871,10 @@ function pvpDuelLogHtml(rounds){
   return (rounds || []).map(e => {
     const isMage = e.actor === 'mage_a' || e.actor === 'mage_b';
     const side = isMage ? (e.actor === 'mage_a' ? 'a' : 'b') : e.actor;
-    const sideLabel = side === 'a' ? 'Opponent' : 'You';
+    const sideLabel = side === pvpViewerSide ? 'You' : 'Opponent';
     const who = isMage ? esc(e.mageName || (sideLabel + '’s Mage')) : sideLabel;
-    const defender = side === 'a' ? 'You' : 'Opponent';
+    const otherSide = side === 'a' ? 'b' : 'a';
+    const defender = otherSide === pvpViewerSide ? 'You' : 'Opponent';
     if(e.move === undefined && e.burnTick !== undefined){
       return `<div class="entry burntick">Round ${e.round}: ${who} ${pvpVerb(sideLabel, 'takes', 'take')} ${e.burnTick} burn damage.</div>`;
     }
@@ -10477,28 +11025,14 @@ function renderPvpHome(){
     return;
   }
 
-  const outgoing = pvpStatus.outgoing;
-  const incoming = pvpStatus.incoming;
-
-  const outgoingBlock = outgoing ? `
-    <div class="card"${bgAttr('arena')}>
-      <h2>Your Challenge</h2>
-      <p class="hint">Waiting for a response — expires if ignored.</p>
-      <button class="secondary" onclick="doPvpCancel('${esc(outgoing.id)}')">Cancel</button>
-    </div>
-  ` : '';
-
-  const incomingBlock = incoming ? `
-    <div class="card"${bgAttr('arena')}>
-      <h2>Incoming Challenge</h2>
-      <p class="hint">Someone has challenged you to a duel. Accepting resolves it immediately.</p>
-      <div style="display:flex;gap:10px;justify-content:center;">
-        <button onclick="doPvpRespond('${esc(incoming.id)}','accept')">Accept</button>
-        <button class="secondary" onclick="doPvpRespond('${esc(incoming.id)}','decline')">Decline</button>
-      </div>
-    </div>
-  ` : '';
-
+  // 0070 — "Arena needs to auto issue fights regardless of if the person
+  // is there or not": challenge() now resolves the duel instantly
+  // server-side instead of leaving a pending row for the target to
+  // accept/decline, so pvpStatus.outgoing/incoming can no longer be
+  // populated by anything this screen creates. The Your Challenge /
+  // Incoming Challenge cards that used to render from them are gone —
+  // doPvpRespond()/doPvpCancel() are left in place only as a safety net
+  // for any pre-0070 challenge row still on the books.
   const historyRows = (pvpStatus.history || []).map(m => {
     const won = m.winner_user_id === session.user.id;
     return `<div class="roster-row">
@@ -10520,8 +11054,6 @@ function renderPvpHome(){
       </div>
       <div class="status" id="pvpActionStatus"></div>
     </div>
-    ${outgoingBlock}
-    ${incomingBlock}
     <div class="card"${bgAttr('arena')}>
       <h2>Recent Duels</h2>
       ${historyRows}
@@ -10532,17 +11064,21 @@ function renderPvpHome(){
 
 function renderPvpBrowse(){
   const app = document.getElementById('app');
+  // 0070: picking a name here resolves the duel immediately (no waiting
+  // on the target to be online or to respond), so the row action reads
+  // "Duel" and the button is disabled mid-flight rather than the old
+  // "Challenge sent, wait for a response" framing.
   const rows = pvpBrowseResults.map(r => `
     <div class="roster-row">
       <div class="rname">${esc(r.name)}${r.ladder_position ? ' <span class="role-badge initiate">#' + r.ladder_position + '</span>' : ''}</div>
-      <div class="ractions"><button class="secondary" onclick="doPvpChallenge('${esc(r.owner_user_id)}')">Challenge</button></div>
+      <div class="ractions"><button class="secondary" onclick="doPvpChallenge('${esc(r.owner_user_id)}')">Duel</button></div>
     </div>
   `).join('') || '<p class="hint">No one found.</p>';
 
   app.innerHTML = `
     <div class="card"${bgAttr('arena')}>
       <h2 style="text-align:center;">Find an Opponent</h2>
-      <p class="hint" style="text-align:center;">Search by guardian name, or leave it blank to browse the ladder near your own position.</p>
+      <p class="hint" style="text-align:center;">Search by guardian name, or leave it blank to browse the whole ladder. Picking a name duels them right away — they don't need to be online.</p>
       <input type="text" id="pvpSearchInput" placeholder="Search by guardian name…" value="${esc(pvpBrowseQuery)}" oninput="onPvpSearchInput()">
       ${rows}
       <div class="status" id="pvpActionStatus"></div>
