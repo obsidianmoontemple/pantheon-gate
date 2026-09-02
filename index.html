@@ -5386,7 +5386,7 @@ async function doAttackWorldBoss(){
       if(data.yourTokens) rewardBits.push(`${data.yourTokens} God Token${data.yourTokens === 1 ? '' : 's'}`);
       if(data.yourXp) rewardBits.push(`${data.yourXp} XP`);
       setWorldBossStatusMsg(
-        `${esc(data.bossName)} falls! ${bits.join(' ')} ${data.yourTotalDamage} total damage${rewardBits.length ? (', earning ' + rewardBits.join(' and ') + '.') : '.'}${data.yourLoot ? ` Found: ${esc(data.yourLoot.name)}.` : ''}${yourHpNote}`,
+        `${esc(data.bossName)} falls! ${bits.join(' ')} ${data.yourTotalDamage} total damage${rewardBits.length ? (', earning ' + rewardBits.join(' and ') + '.') : '.'}${data.yourLoot ? ` Found: ${esc(data.yourLoot.name)}.` : ''}${data.wasTopDamage && data.bossReward && data.bossReward.granted ? ` Top damage this kill — also received ${esc(data.bossReward.name || 'a reward')}!` : ''}${yourHpNote}`,
         true
       );
       await loadGuardian();
@@ -5830,23 +5830,32 @@ function renderCampaignBrowse(){
     return;
   }
   // Locked chapters are fully hidden, not just greyed out — clear/level
-  // up to reveal the next one.
+  // up to reveal the next one. Within an unlocked chapter, encounters must
+  // now be cleared in order (0104) — a `locked` encounter shows a badge
+  // in place of its Fight/Choose button instead of being hidden, so a
+  // player can see what's coming without being able to jump ahead to it.
   const chapters = campaignData.chapters.filter(c => c.unlocked).map(c => {
     const rows = c.encounters.map(e => {
       const icon = e.encounterType === 'combat' ? '⚔️' : '📜';
-      const statusBadge = e.cleared ? `<span class="mark-badge full">cleared ×${e.clearCount}</span>` : `<span class="mark-badge">new</span>`;
+      const statusBadge = e.locked
+        ? `<span class="mark-badge">locked</span>`
+        : (e.cleared ? `<span class="mark-badge full">cleared ×${e.clearCount}</span>` : `<span class="mark-badge">new</span>`);
       const xpNote = e.cleared ? `+${e.replayXpReward} XP replay` : `+${e.xpReward} XP`;
       const actionLabel = e.encounterType === 'combat' ? 'Fight' : 'Choose';
       const onclick = e.encounterType === 'combat'
         ? `selectCampaignEncounter('${esc(e.key)}','${esc(e.name)}')`
         : `openCampaignChoice('${esc(e.key)}')`;
+      const actionHtml = e.locked
+        ? `<span class="hint">Clear the earlier encounters first</span>`
+        : `<button class="secondary" onclick="${onclick}">${actionLabel}</button>`;
       return `<div class="roster-row">
         <div><div class="rname">${icon} ${esc(e.name)}${e.encounterType === 'combat' && e.creatureName ? ' — ' + esc(e.creatureName) : ''}</div>
         <div class="cblurb">${esc(e.description || '')} — ${esc(xpNote)}${e.hasReward && !e.cleared ? ' + a reward' : ''}</div></div>
-        <div class="ractions">${statusBadge}<button class="secondary" onclick="${onclick}">${actionLabel}</button></div>
+        <div class="ractions">${statusBadge}${actionHtml}</div>
       </div>`;
     }).join('') || '<p class="hint">Nothing here yet.</p>';
-    return `<div class="pantheon-group"><h3>${esc(c.name)}</h3><p class="hint" style="margin:-4px 0 8px;">${esc(c.description || '')}</p>${rows}</div>`;
+    const completedNote = c.completed ? `<p class="hint" style="margin:-4px 0 8px;color:#7a9e6f;">Chapter complete!</p>` : '';
+    return `<div class="pantheon-group"><h3>${esc(c.name)}</h3><p class="hint" style="margin:-4px 0 8px;">${esc(c.description || '')}</p>${completedNote}${rows}</div>`;
   }).join('') || '<p class="hint">No chapters yet — check back soon.</p>';
 
   const campaignBg = bgAttr('campaign', 'text-align:center;');
@@ -5964,6 +5973,10 @@ function campaignXpSummary(data){
   const rewardNames = (xp.rewards || []).filter(r => r.type === 'reward').map(r => r.name).filter(Boolean);
   if(rewardNames.length) msg += ' ' + rewardNames.join(', ') + '!';
   if(data.encounterReward && data.encounterReward.granted) msg += ` Also received ${data.encounterReward.name || 'a reward'}.`;
+  if(data.chapterCompleted){
+    msg += ' Chapter complete!';
+    if(data.chapterReward && data.chapterReward.granted) msg += ` Received ${data.chapterReward.name || 'a reward'} for finishing it.`;
+  }
   return msg;
 }
 
@@ -7022,6 +7035,7 @@ async function actMove(moveIndex){
         essenceGained: data.essenceGained,
         rankUp: data.rankUp,
         lootWon: data.lootWon,
+        tierReward: data.tierReward,
         opponentName: combatView.opponentName
       };
     }
@@ -7055,7 +7069,7 @@ function renderBattleResult(){
         : `<p class="verdict-text">${esc(v.opponentName)} proved too much this time.</p>
            <button onclick="backFromCampaignCombat()">Return to your guardian</button>`)
     : `<p class="verdict-text">${win ? `${esc(guardian.name)} bested the ${esc(v.opponentName)}.` : `${esc(v.opponentName)} proved too much this time.`}</p>
-       <p class="gain-note">Essence gained: ${v.essenceGained}.${v.rankUp ? ' A new trial ground has opened.' : ''}${v.lootWon ? ` Found: ${esc(v.lootWon.name)}.` : ''}</p>
+       <p class="gain-note">Essence gained: ${v.essenceGained}.${v.rankUp ? ' A new trial ground has opened.' : ''}${v.lootWon ? ` Found: ${esc(v.lootWon.name)}.` : ''}${v.tierReward && v.tierReward.granted ? ` Also received ${esc(v.tierReward.name || 'a reward')} for clearing this trial ground.` : ''}</p>
        <button onclick="finishCombat()">Return to your guardian</button>`;
 
   app.innerHTML = `
@@ -8906,6 +8920,7 @@ async function doDragonAttack(){
     if(data.yourXpShare) bits.push(`+${data.yourXpShare} XP.`);
     if(data.yourLoot) bits.push(`Found: ${esc(data.yourLoot.name)}.`);
     if(data.decorationWon) bits.push('A new Altar decoration was won!');
+    if(data.wasTopDamage && data.dragonReward && data.dragonReward.granted) bits.push(`Top damage this kill — also received ${esc(data.dragonReward.name || 'a reward')}!`);
     if(yourHpNote) bits.push(yourHpNote.trim());
     setDragonActionStatus(bits.join(' '), true);
   }else{
