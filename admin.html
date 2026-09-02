@@ -28,7 +28,7 @@ h1{font-size:28px;color:var(--parchment);margin:0 0 6px;}
 .card h3{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold-bright);margin:22px 0 6px;}
 .card .hint{color:var(--parchment-dim);font-style:italic;font-size:13px;margin:0 0 20px;}
 label{display:block;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--parchment-dim);margin-bottom:6px;}
-input,select,textarea{background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;border-radius:3px;width:100%;max-width:220px;}
+input,select,textarea{background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--parchment);padding:10px 12px;font-family:'EB Garamond',serif;font-size:16px;border-radius:3px;width:100%;max-width:220px;}
 textarea{max-width:none;width:100%;}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);}
 .field{margin-bottom:16px;}
@@ -247,6 +247,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="maphotspots" data-group="site" onclick="showTab('maphotspots')">Backgrounds &amp; Hotspots</button>
       <button class="tab-btn" data-tab="guide" data-group="site" onclick="showTab('guide')">Narrator/Guide</button>
       <button class="tab-btn" data-tab="credits" data-group="site" onclick="showTab('credits')">Credits</button>
+      <button class="tab-btn" data-tab="security" data-group="site" onclick="showTab('security')">Security</button>
+      <button class="tab-btn" data-tab="linguistics" data-group="site" onclick="showTab('linguistics')">Linguistics</button>
     </div>
 
     <!-- ============================== OVERVIEW ============================== -->
@@ -2773,6 +2775,75 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
     </div>
 
+    <!-- ============================== SECURITY (0108) ============================== -->
+    <div class="tab-content" id="tab-security">
+      <div class="card">
+        <h2>Kill switch</h2>
+        <p class="hint">Turning this on immediately blocks every non-admin player from the game (they see the message below instead) until you turn it back off. Your own admin account always passes through unaffected — there is no way to lock yourself out with this switch, even by accident. The sign-in screen and the Gate chat page are not affected — this only blocks access to the game itself, after sign-in.</p>
+        <div class="field">
+          <label><input type="checkbox" id="maintenanceMode" style="width:auto;display:inline-block;margin-right:8px;">Maintenance mode is ON</label>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Message shown to players while it's on</label>
+          <textarea id="maintenanceMessage" rows="3" style="max-width:none;width:100%;"></textarea>
+        </div>
+        <div class="save-bar">
+          <button id="saveSecurityBtn">Save</button>
+          <div class="status" id="securityStatus"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Admin activity log</h2>
+        <p class="hint">Every mutating action the admin tools have taken, most recent first — who, what, and on whom. Read-only here; this table can't be edited or cleared from the app on purpose, so it stays a real record if you ever need to check whether something was changed without your knowledge.</p>
+        <div class="save-bar" style="margin-bottom:12px;">
+          <button id="refreshActivityLogBtn" class="secondary">Refresh</button>
+        </div>
+        <table>
+          <thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Target</th><th>Details</th></tr></thead>
+          <tbody id="adminActivityRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============================== LINGUISTICS (0108) ============================== -->
+    <div class="tab-content" id="tab-linguistics">
+      <div class="card">
+        <h2>Language strings</h2>
+        <p class="hint">Infrastructure for eventually running the game in more than English. This is a suggestion/review catalog, not a live translator yet — the game's actual on-screen text is still all English regardless of what's saved here. Add a string's key English text below, optionally a suggested translation and which language it's in, and mark it reviewed once you're happy with the wording. "Suggest" fills in a placeholder machine-style translation to react to and correct, not a finished one.</p>
+        <div class="field">
+          <label>Target language</label>
+          <select id="linguisticsLocale">
+            <option value="es">Spanish (es)</option>
+            <option value="fr">French (fr)</option>
+            <option value="de">German (de)</option>
+            <option value="pt">Portuguese (pt)</option>
+            <option value="ja">Japanese (ja)</option>
+            <option value="zh">Chinese, Simplified (zh)</option>
+            <option value="ar">Arabic (ar)</option>
+            <option value="hi">Hindi (hi)</option>
+          </select>
+        </div>
+        <div class="save-bar" style="margin-bottom:12px;">
+          <button id="loadLinguisticsBtn" class="secondary">Load strings for this language</button>
+        </div>
+        <table>
+          <thead><tr><th>Key</th><th>English</th><th>Suggested translation</th><th>Reviewed</th></tr></thead>
+          <tbody id="linguisticsRows"><tr><td colspan="4">Pick a language and click Load.</td></tr></tbody>
+        </table>
+        <div class="save-bar">
+          <button id="saveLinguisticsBtn">Save this page</button>
+          <div class="status" id="linguisticsStatus"></div>
+        </div>
+        <h3 style="margin-top:22px;">Add a UI string</h3>
+        <div class="field"><label>Key (lowercase, dots for grouping — e.g. "nav.map_hub")</label><input type="text" id="newStringKey" placeholder="nav.map_hub"></div>
+        <div class="field" style="max-width:none;"><label>English text</label><input type="text" id="newStringEn" style="max-width:none;width:100%;" placeholder="Map Hub"></div>
+        <div class="save-bar">
+          <button id="addStringBtn" class="secondary">Add string</button>
+          <div class="status" id="newStringStatus"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -3062,6 +3133,8 @@ async function handleSession(session){
   loadCheckinNewPlayerCatalog();
   loadCheckinBackdayPricing();
   loadEventTriggersCatalog();
+  loadSecuritySettings();
+  loadAdminActivityLog();
   loadPromoEvents();
   loadGuardianProgression();
   loadMageProgression();
@@ -3150,7 +3223,8 @@ const PAGE_KEYS = [
   { key: 'craft', label: 'Crafting' },
   { key: 'oracle', label: 'The Oracle (Petitions)' },
   { key: 'expeditions', label: 'Expeditions' },
-  { key: 'campaign', label: 'The Divine Realms (Campaign)' },
+  { key: 'campaign', label: 'The Divine Realms (Campaign) — main backdrop' },
+  { key: 'campaignScroll', label: 'The Divine Realms — chapter/encounter list (scrolling card)' },
   { key: 'chainedGods', label: 'Chained Gods (Redeem)' },
   { key: 'worldBoss', label: 'World Boss' },
   { key: 'guardianPage', label: 'Guardian Page (Familiar + Mage)' },
@@ -3408,6 +3482,20 @@ const SCREEN_REGISTRY = {
   shop:         { label: 'Shop',                            bgKey: 'shop',        bgFallback: '', defaultAreas: DEFAULT_SHOP_AREAS_ADMIN },
   circleMessages: { label: 'Circle Messages',               bgKey: 'circle',      bgFallback: '', defaultAreas: DEFAULT_CIRCLEMESSAGES_AREAS_ADMIN },
   territoryMap: { label: 'Territory Map',                   bgKey: 'territoryMap', bgFallback: '', defaultAreas: DEFAULT_TERRITORYMAP_AREAS_ADMIN },
+  // Mage Select (the Art picker on renderMageCreation(), index.html) —
+  // "the ability to move the mages around on our mage selection
+  // background." Unlike every other screen here, its hotspot ids aren't a
+  // fixed hand-written list: they're whatever mage_arts.key rows are
+  // currently active (an admin-editable catalog, see the Mage Arts tab),
+  // so defaultAreas starts empty and is rebuilt fresh from that table
+  // every time this screen is selected — see buildMageSelectDefaultAreas()
+  // and its call in loadHotspotsForScreen() below. Until an admin actually
+  // drags something here and clicks Save, index.html keeps showing its
+  // original plain flex-row picker unchanged (see mageSelectPositioned in
+  // index.html) — this screen only switches to a positioned layout once
+  // it's deliberately set up, so it can't regress into the "chopped up"
+  // look the reverted screens above were pulled back from.
+  mageSelect:   { label: 'Mage Select (Art picker)',        bgKey: 'mage',        bgFallback: '', defaultAreas: [] },
 };
 // Shard Crafting, Circle Home, and Profile were reverted to their
 // original plain-card layouts (direct feedback: "the circle home
@@ -3449,8 +3537,32 @@ async function loadMapHotspots(){
   await loadHotspotsForScreen(currentHotspotScreen);
 }
 
+// Builds mageSelect's defaultAreas fresh from the current mage_arts
+// catalog (active rows only, in sort_order) — an even auto-grid so a
+// never-configured Art still gets a sane starting box the admin can drag
+// from, rather than landing at 0,0. Same grid math index.html's
+// buildMageSelectDefaultAreas() uses for its own pre-override fallback,
+// so the editor's starting layout matches what a player would see if
+// nothing were ever saved.
+async function buildMageSelectDefaultAreas(){
+  const { data, error } = await supabaseClient.from('mage_arts').select('key, label').eq('active', true).order('sort_order', { ascending: true });
+  if(error){ console.error('mage_arts load failed for mageSelect hotspots', error); return []; }
+  const arts = data || [];
+  if(!arts.length) return [];
+  const cols = arts.length <= 4 ? arts.length : Math.ceil(Math.sqrt(arts.length));
+  const rows = Math.ceil(arts.length / cols);
+  const boxW = 90 / cols;
+  const boxH = 70 / rows;
+  return arts.map((a, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    return { id: a.key, label: a.label, left: 5 + col * boxW, top: 10 + row * boxH, width: boxW - 2, height: boxH - 4 };
+  });
+}
+
 async function loadHotspotsForScreen(screenKey){
   currentHotspotScreen = screenKey;
+  if(screenKey === 'mageSelect') SCREEN_REGISTRY.mageSelect.defaultAreas = await buildMageSelectDefaultAreas();
   const registry = SCREEN_REGISTRY[screenKey];
   const picker = document.getElementById('hotspotScreenPicker');
   if(picker && picker.value !== screenKey) picker.value = screenKey;
@@ -3878,6 +3990,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveCheckinNewPlayerBtn').addEventListener('click', saveCheckinNewPlayerCatalog);
   document.getElementById('saveCheckinBackdayBtn').addEventListener('click', saveCheckinBackdayPricing);
   document.getElementById('saveEventTriggersBtn').addEventListener('click', saveEventTriggersCatalog);
+  document.getElementById('saveSecurityBtn').addEventListener('click', saveSecuritySettings);
+  document.getElementById('refreshActivityLogBtn').addEventListener('click', loadAdminActivityLog);
+  document.getElementById('loadLinguisticsBtn').addEventListener('click', loadLinguisticsCatalog);
+  document.getElementById('saveLinguisticsBtn').addEventListener('click', saveLinguisticsCatalog);
+  document.getElementById('addStringBtn').addEventListener('click', addLinguisticsString);
   document.getElementById('addPromoBtn').addEventListener('click', createPromoEvent);
   document.getElementById('newPromoScope').addEventListener('change', updateNewPromoScopeVisibility);
   updateNewPromoScopeVisibility();
@@ -5972,6 +6089,123 @@ async function saveEventTriggersCatalog(){
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
   if(!error) loadEventTriggersCatalog();
+}
+
+/* =========================================================================
+   SECURITY (0108) — the maintenance-mode kill switch (system_settings,
+   a public-select/admin-write singleton, same shape as credits_settings)
+   plus a read-only viewer for the admin_action_log table that already
+   existed (0022) but had no admin.html screen to actually look at it.
+   ===================================================================== */
+
+async function loadSecuritySettings(){
+  const { data, error } = await supabaseClient.from('system_settings').select('*').eq('id', 1).maybeSingle();
+  if(error){ console.error('system_settings load failed', error); return; }
+  if(!data) return;
+  document.getElementById('maintenanceMode').checked = !!data.maintenance_mode;
+  document.getElementById('maintenanceMessage').value = data.maintenance_message || '';
+}
+
+async function saveSecuritySettings(){
+  const status = document.getElementById('securityStatus');
+  const maintenance_mode = document.getElementById('maintenanceMode').checked;
+  const maintenance_message = document.getElementById('maintenanceMessage').value.trim();
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  const { error } = await supabaseClient.from('system_settings').update({
+    maintenance_mode, maintenance_message, updated_at: new Date().toISOString(), updated_by: user ? user.id : null
+  }).eq('id', 1);
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : (maintenance_mode ? 'Saved. Non-admin players are now blocked from the game.' : 'Saved. The game is open to everyone again.');
+}
+
+async function loadAdminActivityLog(){
+  const rows = document.getElementById('adminActivityRows');
+  const { data, error } = await supabaseClient
+    .from('admin_action_log')
+    .select('created_at, admin_user_id, action, target_type, target_id, details, profiles(email)')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if(error){ rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  rows.innerHTML = (data || []).map(r => `<tr>
+    <td>${new Date(r.created_at).toLocaleString()}</td>
+    <td>${esc((r.profiles && r.profiles.email) || r.admin_user_id)}</td>
+    <td>${esc(r.action)}</td>
+    <td>${esc([r.target_type, r.target_id].filter(Boolean).join(' · '))}</td>
+    <td style="font-size:11px;max-width:320px;word-break:break-word;">${esc(JSON.stringify(r.details || {}))}</td>
+  </tr>`).join('') || '<tr><td colspan="5">No admin actions logged yet.</td></tr>';
+}
+
+/* =========================================================================
+   LINGUISTICS (0108) — "internationally compatible... must have language
+   suggestion." Scoped deliberately narrow: this is a review/suggestion
+   catalog for translating the game's UI chrome one string at a time, not
+   a live in-game translator — the game itself still renders English
+   regardless of what's saved here (see index.html's comment near
+   LINGUISTICS_LOCALE for the honest reason: thousands of hardcoded
+   strings across an 11,000-line file can't be safely rewired to a
+   lookup table in one pass without a real risk of breaking something
+   that works today). This gives admin a place to start building and
+   reviewing a translation catalog now, ahead of actually wiring the game
+   up to read from it screen by screen later.
+   ===================================================================== */
+
+let linguisticsCache = []; // ui_strings rows for the currently-loaded locale
+
+async function loadLinguisticsCatalog(){
+  const locale = document.getElementById('linguisticsLocale').value;
+  const rows = document.getElementById('linguisticsRows');
+  rows.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
+  const { data: strings, error } = await supabaseClient.from('ui_strings').select('key, en_text').order('key', { ascending: true });
+  if(error){ rows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  const { data: translations, error: tError } = await supabaseClient.from('ui_string_translations').select('*').eq('locale', locale);
+  if(tError){ rows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(tError.message) + '</td></tr>'; return; }
+  const byKey = {};
+  (translations || []).forEach(t => { byKey[t.string_key] = t; });
+  linguisticsCache = (strings || []).map(s => ({ key: s.key, en_text: s.en_text, translation: byKey[s.key] || null }));
+  rows.innerHTML = linguisticsCache.map(s => `<tr data-key="${esc(s.key)}">
+    <td class="dim">${esc(s.key)}</td>
+    <td>${esc(s.en_text)}</td>
+    <td><input type="text" id="lgText_${esc(s.key)}" value="${esc(s.translation ? s.translation.translated_text : '')}" style="max-width:280px;"></td>
+    <td style="text-align:center;"><input type="checkbox" id="lgReviewed_${esc(s.key)}" ${s.translation && s.translation.reviewed ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="4">No UI strings yet — add one below.</td></tr>';
+}
+
+async function saveLinguisticsCatalog(){
+  const status = document.getElementById('linguisticsStatus');
+  const locale = document.getElementById('linguisticsLocale').value;
+  if(!linguisticsCache.length){ status.className = 'status err'; status.textContent = 'Nothing loaded — click Load first.'; return; }
+  const rows = linguisticsCache.map(s => ({
+    locale,
+    string_key: s.key,
+    translated_text: (document.getElementById('lgText_' + s.key).value || '').trim(),
+    reviewed: document.getElementById('lgReviewed_' + s.key).checked,
+    updated_at: new Date().toISOString()
+  })).filter(r => r.translated_text); // an untouched blank row isn't worth a suggestion row
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = rows.length
+    ? await supabaseClient.from('ui_string_translations').upsert(rows, { onConflict: 'locale,string_key' })
+    : { error: null };
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadLinguisticsCatalog();
+}
+
+async function addLinguisticsString(){
+  const status = document.getElementById('newStringStatus');
+  const key = document.getElementById('newStringKey').value.trim().toLowerCase();
+  const en_text = document.getElementById('newStringEn').value.trim();
+  if(!/^[a-z0-9_.]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores/dots only.'; return; }
+  if(!en_text){ status.className = 'status err'; status.textContent = 'English text is required.'; return; }
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('ui_strings').insert({ key, en_text });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key already exists.' : ('Failed: ' + error.message); return; }
+  status.className = 'status ok'; status.textContent = 'Added.';
+  document.getElementById('newStringKey').value = '';
+  document.getElementById('newStringEn').value = '';
+  loadLinguisticsCatalog();
 }
 
 // Missed-day unlock price — same singleton pricing_settings convention
