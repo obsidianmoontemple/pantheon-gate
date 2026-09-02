@@ -154,6 +154,13 @@ body.login-screen .wrap{max-width:none;margin:0;padding:0;}
 .choice .art{margin:0 auto 12px;display:flex;align-items:center;justify-content:center;height:104px;}
 .choice .label{font-family:'Cinzel',serif;font-size:12.5px;letter-spacing:0.06em;color:var(--parchment);}
 .choice .blurb{font-size:12px;color:var(--parchment-dim);font-style:italic;margin-top:4px;}
+/* Mage Select positioned layout (see renderMageCreation()/mageSelectPositioned)
+   — a coordinate space the same shape as the admin hotspot canvas so the
+   left/top/width/height percentages line up the same way for a player as
+   they did while the admin was dragging them into place. */
+.mage-select-canvas{position:relative;width:100%;min-height:360px;margin-bottom:22px;}
+.mage-select-canvas .choice{position:absolute;width:auto;height:auto;margin:0;padding:12px 8px;overflow:auto;}
+@media (max-width:640px){ .mage-select-canvas{min-height:560px;} }
 
 .swatch-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:22px;}
 .swatch{width:44px;height:44px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .15s;}
@@ -510,7 +517,7 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
    now calls its action directly (see renderGuardianHome/renderWorldBoss/
    renderCheckin) — cursor:pointer namesake below. */
 .hub-overlay{
-  position:fixed;left:50%;bottom:3vh;transform:translateX(-50%);z-index:6;
+  position:fixed;left:50%;bottom:calc(3vh + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;
   background:rgba(10,8,16,0.72);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
   border:1px solid var(--line);border-radius:6px;padding:14px 22px;
   text-align:center;max-width:92vw;
@@ -532,7 +539,7 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
    straight on the art. text-shadow keeps it legible now that there's no
    dark panel behind it dimming the art. */
 .hub-loose-panel{
-  position:fixed;left:50%;bottom:3vh;transform:translateX(-50%);z-index:6;
+  position:fixed;left:50%;bottom:calc(3vh + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;
   text-align:center;max-width:92vw;
   max-height:80vh;overflow-y:auto;
   text-shadow:0 1px 4px rgba(0,0,0,0.85);
@@ -626,7 +633,7 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
    above every hub-box's own content (6) and above .hub-overlay/
    .hub-loose-panel too, since it can appear over any screen. */
 .ganymede-tip{
-  position:fixed;right:16px;bottom:16px;z-index:50;
+  position:fixed;right:calc(16px + env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom));z-index:50;
   display:flex;gap:10px;align-items:flex-start;
   max-width:min(340px, 86vw);
   background:rgba(10,8,16,0.95);border:1px solid var(--gold);border-radius:8px;
@@ -1007,7 +1014,7 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
    render(), or — see the Key of Night bug fix — can silently write to
    an element that no longer exists after a view switch). See
    showConfirmBanner() in the script below. */
-#confirmBannerStack{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;}
+#confirmBannerStack{position:fixed;top:calc(16px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;}
 .confirm-toast{
   background:rgba(20,16,10,0.94);border:1px solid var(--gold-bright,#e6c777);border-radius:6px;
   padding:10px 18px;color:var(--parchment,#e8dcc0);font-size:13.5px;font-weight:600;
@@ -1025,7 +1032,7 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
    "your purchase went through", not "you earned something") — full-width,
    gold-on-dark, sits above everything, pairs with the existing confetti
    burst (celebrate()) rather than replacing it. See showRewardBanner(). */
-#rewardBannerStack{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;flex-direction:column;align-items:center;pointer-events:none;}
+#rewardBannerStack{position:fixed;top:0;left:0;right:0;padding-top:env(safe-area-inset-top);z-index:1000;display:flex;flex-direction:column;align-items:center;pointer-events:none;}
 .reward-banner{
   margin-top:22px;padding:14px 30px;border-radius:8px;text-align:center;
   background:linear-gradient(180deg, rgba(60,44,14,0.97), rgba(20,15,8,0.97));
@@ -1960,9 +1967,39 @@ async function continueSession(){
   await afterLogin();
 }
 
+// Security & kill switch (0108) — "security and kill switch options
+// should any devious person try to hack or change our system, or lock
+// me out." Checked as early as possible in afterLogin(), before any real
+// game data loads: if maintenance_mode is on and this account isn't an
+// admin, the whole app stops here and shows renderMaintenance() instead
+// of the game. Admin accounts always pass straight through — the switch
+// can only ever block a signed-in NON-admin session, never the admin who
+// needs to be able to turn it back off, so there is no way to use this
+// to lock yourself out. The sign-in screen itself and gate.html are not
+// gated at all, on purpose, for the same reason.
+async function checkMaintenanceMode(){
+  const { data: settings } = await supabaseClient.from('system_settings').select('maintenance_mode, maintenance_message').eq('id', 1).maybeSingle();
+  if(!settings || !settings.maintenance_mode) return false;
+  const { data: profile } = await supabaseClient.from('profiles').select('is_admin').eq('id', session.user.id).maybeSingle();
+  if(profile && profile.is_admin) return false;
+  renderMaintenance(settings.maintenance_message);
+  return true;
+}
+
+function renderMaintenance(message){
+  document.getElementById('app').innerHTML = `
+    <div class="card" style="text-align:center;">
+      <h2>Gone quiet for a moment</h2>
+      <p class="hint">${esc(message || 'The Long Silence is briefly closed for maintenance. Please check back shortly.')}</p>
+      <button onclick="location.reload()">Try again</button>
+    </div>
+  `;
+}
+
 async function afterLogin(){
   document.body.classList.remove('login-screen');
   document.getElementById('app').innerHTML = '<div class="card"><p class="hint" style="margin:0;text-align:center;">Finding your way through the Gate…</p></div>';
+  if(await checkMaintenanceMode().catch(e => { console.error('maintenance check failed', e); return false; })) return;
   await loadCustomDeitiesIntoCatalog().catch(e => console.error('custom deities fold-in failed', e));
   await loadSpeciesCatalog().catch(e => console.error('species catalog load failed', e));
   await loadMageArtsCatalog().catch(e => console.error('mage arts catalog load failed', e));
@@ -2497,22 +2534,36 @@ async function hatchGuardian(){
    render()'s dispatch chain: no mage row takes priority over everything
    else, including an already-hatched guardian. */
 
+function mageArtChoiceHtml(a, posStyle){
+  return `
+    <div class="choice ${pickedMageArt === a.key ? 'selected' : ''}" ${posStyle ? `style="${posStyle}"` : ''} onclick="pickMageArt('${a.key}')">
+      <div class="art">${opponentImgFor(MAGE_ART_IMAGES[a.key], a.affinity, 92)}</div>
+      <div class="label">${esc(a.label)}</div>
+      <div class="blurb">${esc(a.blurb)}</div>
+    </div>
+  `;
+}
+
 function renderMageCreation(){
   const app = document.getElementById('app');
+  // Positioned layout only once an admin has actually dragged Arts into
+  // place on the Mage Select hotspot screen (mageSelectPositioned) AND
+  // every currently-active Art has a saved position — if the catalog
+  // gained a new Art since the admin last positioned things, this falls
+  // back to the plain row rather than silently hiding the new one.
+  const useCanvas = mageSelectPositioned && MAGE_ARTS.every(a => MAGE_SELECT_AREAS.some(x => x.id === a.key));
+  const artPickerHtml = useCanvas
+    ? `<div class="mage-select-canvas">${MAGE_ARTS.map(a => {
+        const pos = MAGE_SELECT_AREAS.find(x => x.id === a.key);
+        return mageArtChoiceHtml(a, `left:${pos.left}%;top:${pos.top}%;width:${pos.width}%;height:${pos.height}%;`);
+      }).join('')}</div>`
+    : `<div class="choice-row" id="mageArtRow">${MAGE_ARTS.map(a => mageArtChoiceHtml(a)).join('')}</div>`;
   app.innerHTML = `
     <div class="card"${bgAttr('mage')}>
       <h2 style="text-align:center;">Who are you?</h2>
       <p class="hint" style="text-align:center;">Before the egg, before the Gate — you. Pick the Art that calls to you; it colors how you fight, not how well. The name you give yourself next is the one part of this you can never take back.</p>
 
-      <div class="choice-row" id="mageArtRow">
-        ${MAGE_ARTS.map(a => `
-          <div class="choice ${pickedMageArt === a.key ? 'selected' : ''}" onclick="pickMageArt('${a.key}')">
-            <div class="art">${opponentImgFor(MAGE_ART_IMAGES[a.key], a.affinity, 92)}</div>
-            <div class="label">${esc(a.label)}</div>
-            <div class="blurb">${esc(a.blurb)}</div>
-          </div>
-        `).join('')}
-      </div>
+      ${artPickerHtml}
 
       <input type="text" id="mageName" maxlength="24" placeholder="Name yourself — this is permanent" value="${esc(mageNameDraft)}" oninput="onMageNameInput()">
       <button id="mageCreateBtn" ${(pickedMageArt && mageNameDraft.trim().length >= 2) ? '' : 'disabled'} onclick="createMage()">Begin</button>
@@ -2989,6 +3040,58 @@ async function loadHotspotOverrides(screenKey, defaults){
   });
 }
 
+// Mage Select positioning (admin.html's mageSelect SCREEN_REGISTRY entry)
+// — "the ability to move the mages around on our mage selection
+// background." Unlike every other *_AREAS below, its ids aren't a fixed
+// hand-written list: they're whatever MAGE_ARTS.key values are currently
+// active, so the default grid is rebuilt from MAGE_ARTS each login
+// (MAGE_ARTS is already loaded by loadMageArtsCatalog() before
+// loadMapHotspots() runs — see afterLogin()). Same grid math as admin.html's
+// buildMageSelectDefaultAreas() so a never-configured screen looks the
+// same in the editor as it would to a player.
+//
+// mageSelectPositioned stays false until real rows exist in map_hotspots
+// for screen_key 'mageSelect' — renderMageCreation() falls back to its
+// original plain flex-row picker until then, so this can never regress
+// into an unreadable/"chopped up" layout the way earlier hotspot
+// experiments on other screens did before being reverted (see admin.html's
+// SCREEN_REGISTRY comment) — it only switches over once an admin has
+// deliberately dragged something into place and saved.
+let MAGE_SELECT_AREAS = [];
+let mageSelectPositioned = false;
+
+function buildMageSelectDefaultAreas(){
+  const arts = MAGE_ARTS;
+  if(!arts.length) return [];
+  const cols = arts.length <= 4 ? arts.length : Math.ceil(Math.sqrt(arts.length));
+  const rows = Math.ceil(arts.length / cols);
+  const boxW = 90 / cols;
+  const boxH = 70 / rows;
+  return arts.map((a, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    return { id: a.key, label: a.label, left: 5 + col * boxW, top: 10 + row * boxH, width: boxW - 2, height: boxH - 4 };
+  });
+}
+
+async function loadMageSelectHotspots(){
+  const defaults = buildMageSelectDefaultAreas();
+  if(!defaults.length){ MAGE_SELECT_AREAS = []; mageSelectPositioned = false; return; }
+  const { data, error } = await supabaseClient
+    .from('map_hotspots')
+    .select('hotspot_key, left_pct, top_pct, width_pct, height_pct')
+    .eq('screen_key', 'mageSelect');
+  if(error){ console.error('mageSelect hotspots load failed', error); MAGE_SELECT_AREAS = defaults; mageSelectPositioned = false; return; }
+  if(!data || !data.length){ MAGE_SELECT_AREAS = defaults; mageSelectPositioned = false; return; }
+  const overrides = {};
+  data.forEach(r => { overrides[r.hotspot_key] = r; });
+  MAGE_SELECT_AREAS = defaults.map(a => {
+    const o = overrides[a.id];
+    return o ? { ...a, left: o.left_pct, top: o.top_pct, width: o.width_pct, height: o.height_pct } : a;
+  });
+  mageSelectPositioned = true;
+}
+
 async function loadMapHotspots(){
   MAP_AREAS = await loadHotspotOverrides('map', DEFAULT_MAP_AREAS);
   WORLDBOSS_AREAS = await loadHotspotOverrides('worldBoss', DEFAULT_WORLDBOSS_AREAS);
@@ -3002,6 +3105,7 @@ async function loadMapHotspots(){
   SHOP_AREAS = await loadHotspotOverrides('shop', DEFAULT_SHOP_AREAS);
   CIRCLEMESSAGES_AREAS = await loadHotspotOverrides('circleMessages', DEFAULT_CIRCLEMESSAGES_AREAS);
   TERRITORYMAP_AREAS = await loadHotspotOverrides('territoryMap', DEFAULT_TERRITORYMAP_AREAS);
+  await loadMageSelectHotspots();
 }
 
 // Shared by every full-bleed screen (map hub, World Boss, Chained Gods,
@@ -6236,8 +6340,11 @@ function renderCampaignBrowse(){
       // used for the fight scene" — same image (creatureImageUrl, sourced
       // from the unified creatures table) and same rendering helper
       // (opponentImgFor) the actual fight screen uses, just smaller.
+      // Direct feedback: "the monster pics on that scrolling part should
+      // be much bigger you cant hardly see em" — roughly doubled from the
+      // original 60px/54px box.
       const pictureCard = (e.encounterType === 'combat' && !e.locked)
-        ? `<div style="width:60px;height:60px;flex-shrink:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.25);">${opponentImgFor(e.creatureImageUrl, null, 54)}</div>`
+        ? `<div style="width:120px;height:120px;flex-shrink:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.25);">${opponentImgFor(e.creatureImageUrl, null, 112)}</div>`
         : '';
       return `<div class="roster-row">
         ${pictureCard}
@@ -6251,6 +6358,14 @@ function renderCampaignBrowse(){
   }).join('') || '<p class="hint">No chapters yet — check back soon.</p>';
 
   const campaignBg = bgAttr('campaign', 'text-align:center;');
+  // Direct feedback: "I need the scrolling part of the campaign page to
+  // have a separate background from the campaign back itself... going to
+  // change art to match the campaign lines but never the actual campaign
+  // back." Was bgAttr('campaign') on both cards — same page_key, so admin
+  // could only ever set one image for both. Now its own page_key
+  // ('campaignScroll', see admin.html's PAGE_KEYS) so each can carry
+  // different art; until admin sets one, bgAttr's existing no-art
+  // fallback keeps this card looking exactly as it does today.
   app.innerHTML = `
     <div class="card"${campaignBg}>
       <h2>The Divine Realms</h2>
@@ -6258,7 +6373,7 @@ function renderCampaignBrowse(){
       <p class="hint">${campaignData.xp} XP earned</p>
       ${campaignMsg ? `<p class="status ok" style="display:block;">${esc(campaignMsg)}</p>` : ''}
     </div>
-    <div class="card"${bgAttr('campaign')}>
+    <div class="card"${bgAttr('campaignScroll')}>
       ${chapters}
       <button class="secondary" style="margin-top:10px;" onclick="backFromCampaign()">Back to the map</button>
     </div>
@@ -6995,7 +7110,7 @@ function renderLoadoutPicker(){
       <h2 style="text-align:center;">Choose your loadout</h2>
       <p class="hint" style="text-align:center;">Facing the ${esc(opponentLabel)}. Pick up to five full marks to bring — Basic Strike always comes free. ${loadoutPicks.length}/5 chosen.</p>
       ${rows}
-      ${energyBarHtml()}
+      ${guardianHpBarHtml()}
       <button style="margin-top:14px;" onclick="startBattle()">Begin the trial</button>
       <button class="secondary" style="margin-top:10px;" onclick="${isCampaign ? 'backFromCampaignCombat()' : 'cancelCombat()'}">Back</button>
       <div class="status" id="loadoutStatus"></div>
