@@ -861,9 +861,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <table>
             <thead><tr>
               <th>Key</th><th>Name</th><th>Affinity</th><th>Ward</th><th>Power</th><th>HP</th>
-              <th>Reward Essence</th><th>Reward Tokens</th><th>Reward XP</th><th>Image URL</th><th>Active</th><th>Heals on own affinity</th><th></th>
+              <th>Reward Essence</th><th>Reward Tokens</th><th>Reward XP</th><th>Guaranteed reward (top damage)</th><th>Image URL</th><th>Active</th><th>Heals on own affinity</th><th></th>
             </tr></thead>
-            <tbody id="worldBossCatalogRows"><tr><td colspan="12">Loading…</td></tr></tbody>
+            <tbody id="worldBossCatalogRows"><tr><td colspan="14">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -902,6 +902,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Reward Essence pool</label><input type="number" min="0" id="newBossRewardEssence" value="0" style="max-width:150px;"></div>
           <div class="field"><label>Reward God Tokens pool</label><input type="number" min="0" id="newBossRewardTokens" value="0" style="max-width:170px;"></div>
           <div class="field"><label>Reward XP pool</label><input type="number" min="0" id="newBossRewardXp" value="0" style="max-width:150px;" title="Split across every contributor by % of damage dealt, same as the Essence pool — guaranteed on the kill, not chance-based."></div>
+          <div class="field"><label>Guaranteed reward (top damage only)</label><select id="newBossRewardKey" style="max-width:220px;" title="Goes to the single contributor who dealt the most damage to this boss — not split like the pools above."><option value="">No reward package</option></select></div>
           <div class="field"><label>Image URL (optional)</label><input type="text" id="newBossImageUrl" placeholder="https://…" style="max-width:280px;"></div>
         </div>
         <div class="field" style="max-width:none;">
@@ -1989,13 +1990,13 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>Chapters</h2>
-        <p class="hint">Story chapters, unlocked one at a time by Guardian Level. Everything ships inactive until you flip it on — a new chapter with no active encounters is just an empty, harmless entry.</p>
+        <p class="hint">Story chapters, unlocked one at a time by Guardian Level. Within an unlocked chapter, players must now clear its encounters in Sort order — no skipping ahead — so that order is what actually determines play sequence, not just display order. Completion reward pays once, the first time every active encounter in the chapter has been cleared. Everything ships inactive until you flip it on — a new chapter with no active encounters is just an empty, harmless entry.</p>
         <div class="scroll-table" style="max-height:340px;">
           <table>
             <thead><tr>
-              <th>Key</th><th>Name</th><th>Description</th><th>Sort order</th><th>Required level</th><th>Image URL</th><th>Active</th>
+              <th>Key</th><th>Name</th><th>Description</th><th>Sort order</th><th>Required level</th><th>Completion reward</th><th>Image URL</th><th>Active</th>
             </tr></thead>
-            <tbody id="campaignChapterRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+            <tbody id="campaignChapterRows"><tr><td colspan="8">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -6621,7 +6622,7 @@ async function loadWorldBossCatalog(){
 
   const { data, error } = await supabaseClient.from('creatures').select('*').eq('kind', 'world_boss').order('name', { ascending: true });
   if(error){
-    rows.innerHTML = '<tr><td colspan="11">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="14">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
 
@@ -6640,11 +6641,12 @@ async function loadWorldBossCatalog(){
     <td><input type="number" min="0" id="wbtRewardEss_${esc(b.key)}" value="${b.reward_essence_pool}"></td>
     <td><input type="number" min="0" id="wbtRewardTok_${esc(b.key)}" value="${b.reward_god_tokens_pool}"></td>
     <td><input type="number" min="0" id="wbtRewardXp_${esc(b.key)}" value="${b.reward_xp_pool ?? 0}"></td>
+    <td><select id="wbtRewardKey_${esc(b.key)}">${campaignRewardOptions(b.reward_key)}</select></td>
     <td><input type="text" id="wbtImg_${esc(b.key)}" value="${esc(b.image_url || '')}" style="max-width:160px;"></td>
     <td><input type="checkbox" id="wbtActive_${esc(b.key)}" ${b.active ? 'checked' : ''}></td>
     <td><input type="checkbox" id="wbtHeals_${esc(b.key)}" ${b.heals_on_own_affinity ? 'checked' : ''} title="Heals instead of taking damage when hit by an attack of this boss's own affinity"></td>
     <td><button type="button" onclick="spawnWorldBossFromCatalog('${esc(b.key)}')">Spawn this</button></td>
-  </tr>`).join('') || '<tr><td colspan="13">No saved templates yet — spawn one below and tick "save as reusable", or fill in "Save a new template".</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="14">No saved templates yet — spawn one below and tick "save as reusable", or fill in "Save a new template".</td></tr>';
 
   const fromSel = document.getElementById('newBossFromTemplate');
   if(fromSel){
@@ -6674,6 +6676,7 @@ async function saveWorldBossCatalog(){
       reward_essence_pool: parseInt(document.getElementById('wbtRewardEss_' + key).value, 10),
       reward_god_tokens_pool: parseInt(document.getElementById('wbtRewardTok_' + key).value, 10),
       reward_xp_pool: parseInt(document.getElementById('wbtRewardXp_' + key).value, 10) || 0,
+      reward_key: document.getElementById('wbtRewardKey_' + key).value || null,
       image_url: document.getElementById('wbtImg_' + key).value.trim() || null,
       active: document.getElementById('wbtActive_' + key).checked,
       heals_on_own_affinity: document.getElementById('wbtHeals_' + key).checked,
@@ -6681,7 +6684,7 @@ async function saveWorldBossCatalog(){
   });
   status.className = 'status';
   status.textContent = 'Saving…';
-  const payload = rows.map(r => ({ key: r.key, kind: 'world_boss', name: r.name, affinity: r.affinity, ward: r.ward, might: r.power, vitality: r.hp_total, reward_essence_pool: r.reward_essence_pool, reward_god_tokens_pool: r.reward_god_tokens_pool, reward_xp_pool: r.reward_xp_pool, image_url: r.image_url, active: r.active, heals_on_own_affinity: r.heals_on_own_affinity }));
+  const payload = rows.map(r => ({ key: r.key, kind: 'world_boss', name: r.name, affinity: r.affinity, ward: r.ward, might: r.power, vitality: r.hp_total, reward_essence_pool: r.reward_essence_pool, reward_god_tokens_pool: r.reward_god_tokens_pool, reward_xp_pool: r.reward_xp_pool, reward_key: r.reward_key, image_url: r.image_url, active: r.active, heals_on_own_affinity: r.heals_on_own_affinity }));
   const { error } = await supabaseClient.from('creatures').upsert(payload, { onConflict: 'key' });
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
@@ -6739,6 +6742,7 @@ function applyWorldBossTemplateToForm(){
   document.getElementById('newBossRewardEssence').value = tpl.reward_essence_pool;
   document.getElementById('newBossRewardTokens').value = tpl.reward_god_tokens_pool;
   document.getElementById('newBossRewardXp').value = tpl.reward_xp_pool ?? 0;
+  document.getElementById('newBossRewardKey').value = tpl.reward_key || '';
   document.getElementById('newBossImageUrl').value = tpl.image_url || '';
   document.getElementById('newBossHealsOnOwnAffinity').checked = Boolean(tpl.heals_on_own_affinity);
 }
@@ -6760,6 +6764,7 @@ async function spawnWorldBossFromCatalog(key){
     reward_essence_pool: tpl.reward_essence_pool,
     reward_god_tokens_pool: tpl.reward_god_tokens_pool,
     reward_xp_pool: tpl.reward_xp_pool ?? 0,
+    reward_key: tpl.reward_key || null,
     image_url: tpl.image_url, flavor_text: tpl.flavor_text,
     status: 'active', heals_on_own_affinity: Boolean(tpl.heals_on_own_affinity),
     // 0087 — keep a live pointer back to this catalog row so the boss's
@@ -6776,6 +6781,8 @@ async function spawnWorldBossFromCatalog(key){
 async function loadWorldBoss(){
   const affSel = document.getElementById('newBossAffinity');
   if(affSel && affSel.options.length <= 1) AFFINITIES.forEach(a => affSel.insertAdjacentHTML('beforeend', `<option value="${a}">${a}</option>`));
+  const rewardSel = document.getElementById('newBossRewardKey');
+  if(rewardSel) rewardSel.innerHTML = campaignRewardOptions(rewardSel.value);
   loadWorldBossCatalog();
 
   const current = document.getElementById('worldBossCurrent');
@@ -6794,7 +6801,8 @@ async function loadWorldBoss(){
     `${esc(boss.name)} — ${worldBossStatusLabel(boss.status)}`,
     `HP: ${boss.hp_remaining.toLocaleString()} / ${boss.hp_total.toLocaleString()} (${pct}%)`,
     `Affinity: ${boss.affinity || '—'}   Ward: ${boss.ward}   Power: ${boss.power}`,
-    `Reward pools: ${boss.reward_essence_pool.toLocaleString()} Essence · ${boss.reward_god_tokens_pool.toLocaleString()} God Tokens · ${(boss.reward_xp_pool ?? 0).toLocaleString()} XP`,
+    `Reward pools: ${boss.reward_essence_pool.toLocaleString()} Essence · ${boss.reward_god_tokens_pool.toLocaleString()} God Tokens · ${(boss.reward_xp_pool ?? 0).toLocaleString()} XP` +
+      (boss.reward_key ? ` · guaranteed to top damage: ${esc(giftableRewardsCache.find(r => r.key === boss.reward_key)?.name || boss.reward_key)}` : ''),
     `Spawned: ${new Date(boss.spawned_at).toLocaleString()}${boss.resolved_at ? ('   Resolved: ' + new Date(boss.resolved_at).toLocaleString()) : ''}`,
   ].join('<br>');
 
@@ -6831,6 +6839,7 @@ async function spawnWorldBoss(){
   const rewardEssence = parseInt(document.getElementById('newBossRewardEssence').value, 10);
   const rewardTokens = parseInt(document.getElementById('newBossRewardTokens').value, 10);
   const rewardXp = parseInt(document.getElementById('newBossRewardXp').value, 10);
+  const rewardKey = document.getElementById('newBossRewardKey').value || null;
   const imageUrl = document.getElementById('newBossImageUrl').value.trim();
   const flavor = document.getElementById('newBossFlavor').value.trim();
   const healsOnOwnAffinity = document.getElementById('newBossHealsOnOwnAffinity').checked;
@@ -6856,6 +6865,7 @@ async function spawnWorldBoss(){
     reward_essence_pool: isNaN(rewardEssence) ? 0 : rewardEssence,
     reward_god_tokens_pool: isNaN(rewardTokens) ? 0 : rewardTokens,
     reward_xp_pool: isNaN(rewardXp) ? 0 : rewardXp,
+    reward_key: rewardKey,
     image_url: imageUrl || null,
     flavor_text: flavor || null,
     status: 'active',
@@ -6876,6 +6886,7 @@ async function spawnWorldBoss(){
         reward_essence_pool: isNaN(rewardEssence) ? 0 : rewardEssence,
         reward_god_tokens_pool: isNaN(rewardTokens) ? 0 : rewardTokens,
         reward_xp_pool: isNaN(rewardXp) ? 0 : rewardXp,
+        reward_key: rewardKey,
         image_url: imageUrl || null, flavor_text: flavor || null,
         heals_on_own_affinity: healsOnOwnAffinity,
       }, { onConflict: 'key' });
@@ -6902,6 +6913,7 @@ async function spawnWorldBoss(){
     else el.value = '';
   });
   document.getElementById('newBossAffinity').value = '';
+  document.getElementById('newBossRewardKey').value = '';
   document.getElementById('newBossSaveAsTemplate').checked = false;
   document.getElementById('newBossHealsOnOwnAffinity').checked = false;
   document.getElementById('newBossFromTemplate').value = '';
@@ -7650,6 +7662,9 @@ function creatureKindFieldsHtml(kind, c){
     return `<div class="form-row">
       <div class="field"><label>Tier (unique, contiguous from 0)</label><input type="number" min="0" id="crTier" value="${c.tier ?? ''}" style="max-width:100px;"></div>
       <div class="field"><label>Required Level</label><input type="number" min="1" id="crRequiredLevel" value="${c.required_level ?? 1}" style="max-width:120px;"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Guaranteed reward (first clear)</label><select id="crRewardKey" style="max-width:220px;">${campaignRewardOptions(c.reward_key)}</select></div>
     </div>`;
   }
   if(kind === 'dragon'){
@@ -7665,6 +7680,9 @@ function creatureKindFieldsHtml(kind, c){
       <div class="field"><label>Reward: Circle rank Δ</label><input type="number" min="0" id="crRewardRank" value="${c.reward_circle_rank_delta ?? 0}" style="max-width:140px;"></div>
       <div class="field"><label>Deco key</label><input type="text" id="crDecoKey" value="${esc(c.reward_decoration_key || '')}" style="max-width:140px;"></div>
       <div class="field"><label>Deco chance (0-1)</label><input type="number" min="0" max="1" step="0.01" id="crDecoChance" value="${c.reward_decoration_chance ?? 0}" style="max-width:110px;"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Guaranteed reward (top damage only)</label><select id="crRewardKey" style="max-width:220px;">${campaignRewardOptions(c.reward_key)}</select></div>
     </div>`;
   }
   if(kind === 'world_boss'){
@@ -7672,6 +7690,7 @@ function creatureKindFieldsHtml(kind, c){
       <div class="field"><label>Reward: Essence pool</label><input type="number" min="0" id="crRewardEssence" value="${c.reward_essence_pool ?? 0}" style="max-width:140px;"></div>
       <div class="field"><label>Reward: God Tokens pool</label><input type="number" min="0" id="crRewardTokens" value="${c.reward_god_tokens_pool ?? 0}" style="max-width:150px;"></div>
       <div class="field"><label>Reward: XP pool</label><input type="number" min="0" id="crRewardXp" value="${c.reward_xp_pool ?? 0}" style="max-width:120px;" title="This is just the saved TEMPLATE value, copied onto a new boss when you spawn from it — tune the LIVE boss's XP pool from the World Boss tab's spawn form."></div>
+      <div class="field"><label>Guaranteed reward (top damage only)</label><select id="crRewardKey" style="max-width:220px;" title="Also just the saved TEMPLATE value — tune the LIVE boss's guaranteed reward from the World Boss tab's spawn form.">${campaignRewardOptions(c.reward_key)}</select></div>
     </div>`;
   }
   return ''; // campaign — no extra fields
@@ -7743,6 +7762,7 @@ async function saveCreature(){
   if(kind === 'gauntlet'){
     payload.tier = parseInt(document.getElementById('crTier').value, 10);
     payload.required_level = parseInt(document.getElementById('crRequiredLevel').value, 10) || 1;
+    payload.reward_key = document.getElementById('crRewardKey').value || null;
   } else if(kind === 'dragon'){
     payload.tier = parseInt(document.getElementById('crTier').value, 10);
     payload.window_hours = parseInt(document.getElementById('crWindowHours').value, 10) || 72;
@@ -7753,7 +7773,9 @@ async function saveCreature(){
     payload.reward_circle_rank_delta = parseInt(document.getElementById('crRewardRank').value, 10) || 0;
     payload.reward_decoration_key = document.getElementById('crDecoKey').value.trim() || null;
     payload.reward_decoration_chance = parseFloat(document.getElementById('crDecoChance').value) || 0;
+    payload.reward_key = document.getElementById('crRewardKey').value || null;
   } else if(kind === 'world_boss'){
+    payload.reward_key = document.getElementById('crRewardKey').value || null;
     payload.reward_essence_pool = parseInt(document.getElementById('crRewardEssence').value, 10) || 0;
     payload.reward_god_tokens_pool = parseInt(document.getElementById('crRewardTokens').value, 10) || 0;
     payload.reward_xp_pool = parseInt(document.getElementById('crRewardXp').value, 10) || 0;
@@ -10219,7 +10241,7 @@ async function loadCampaignChapters(){
   const { data, error } = await supabaseClient.from('campaign_chapters').select('*').order('sort_order', { ascending: true });
   const rows = document.getElementById('campaignChapterRows');
   if(error){
-    rows.innerHTML = '<tr><td colspan="7">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="8">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   campaignChaptersCache = data || [];
@@ -10229,9 +10251,10 @@ async function loadCampaignChapters(){
     <td><input type="text" id="chDesc_${esc(c.key)}" value="${esc(c.description || '')}" style="min-width:200px;"></td>
     <td><input type="number" id="chSort_${esc(c.key)}" value="${c.sort_order}" style="max-width:80px;"></td>
     <td><input type="number" min="1" id="chLevel_${esc(c.key)}" value="${c.required_level}" style="max-width:100px;"></td>
+    <td><select id="chReward_${esc(c.key)}">${campaignRewardOptions(c.completion_reward_key)}</select></td>
     <td><input type="text" id="chImg_${esc(c.key)}" value="${esc(c.image_url || '')}" style="max-width:180px;"></td>
     <td><input type="checkbox" id="chActive_${esc(c.key)}" ${c.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="7">No chapters yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="8">No chapters yet.</td></tr>';
 
   // The Encounters tab's Chapter dropdown needs this same list.
   populateCampaignEncounterChapterOptions();
@@ -10248,6 +10271,7 @@ async function saveCampaignChapters(){
       description: document.getElementById('chDesc_' + key).value.trim(),
       sort_order: parseInt(document.getElementById('chSort_' + key).value, 10) || 0,
       required_level: parseInt(document.getElementById('chLevel_' + key).value, 10),
+      completion_reward_key: document.getElementById('chReward_' + key).value || null,
       image_url: document.getElementById('chImg_' + key).value.trim() || null,
       active: document.getElementById('chActive_' + key).checked
     };
