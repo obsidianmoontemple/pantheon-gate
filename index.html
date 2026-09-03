@@ -8768,14 +8768,18 @@ function stopMessagesPolling(){
 // `.from('profiles').update(...)` — it goes through the narrow heartbeat()
 // RPC (0115), which only ever touches the caller's own last_seen_at.
 // Fires once immediately (so opening the app registers right away) and
-// every 60s afterward for as long as this tab stays on the login screen —
-// cheap enough that it isn't worth gating on tab visibility.
+// every 20s afterward for as long as this tab is open — cheap enough (one
+// single-column update) that it isn't worth gating on tab visibility.
+// 20s instead of the original 60s so admin.html's online window can be a
+// tight couple of minutes without someone still actively playing dropping
+// off the list between heartbeats — direct feedback: needs to be usable
+// for "is this person actually reachable right now," e.g. at 2am.
 function startHeartbeat(){
   stopHeartbeat();
   supabaseClient.rpc('heartbeat').catch(() => {});
   heartbeatTimer = setInterval(() => {
     supabaseClient.rpc('heartbeat').catch(() => {});
-  }, 60000);
+  }, 20000);
 }
 function stopHeartbeat(){
   if(heartbeatTimer){ clearInterval(heartbeatTimer); heartbeatTimer = null; }
