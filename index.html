@@ -1505,6 +1505,7 @@ let feedMessages = [];
 let dmMessages = [];
 let messageDraft = '';
 let messagesPollTimer = null;
+let heartbeatTimer = null; // "who's online now" (admin.html) — see startHeartbeat()
 let altarData = null;         // full altar-view response for whichever circle is open
 let altarCircleId = null;
 let altarPickerPlot = null;   // plot_index currently showing the plant/decorate picker, or null
@@ -2000,6 +2001,7 @@ async function afterLogin(){
   document.body.classList.remove('login-screen');
   document.getElementById('app').innerHTML = '<div class="card"><p class="hint" style="margin:0;text-align:center;">Finding your way through the Gate…</p></div>';
   if(await checkMaintenanceMode().catch(e => { console.error('maintenance check failed', e); return false; })) return;
+  startHeartbeat();
   await loadCustomDeitiesIntoCatalog().catch(e => console.error('custom deities fold-in failed', e));
   await loadSpeciesCatalog().catch(e => console.error('species catalog load failed', e));
   await loadMageArtsCatalog().catch(e => console.error('mage arts catalog load failed', e));
@@ -8758,6 +8760,25 @@ function startMessagesPolling(){
 }
 function stopMessagesPolling(){
   if(messagesPollTimer){ clearInterval(messagesPollTimer); messagesPollTimer = null; }
+}
+
+// "Who's online now" (admin.html, Dashboard) — profiles has no client
+// update grant at all (0094 exploit hardening: a player could otherwise
+// set is_admin/subscription on their own row), so this can't be a direct
+// `.from('profiles').update(...)` — it goes through the narrow heartbeat()
+// RPC (0115), which only ever touches the caller's own last_seen_at.
+// Fires once immediately (so opening the app registers right away) and
+// every 60s afterward for as long as this tab stays on the login screen —
+// cheap enough that it isn't worth gating on tab visibility.
+function startHeartbeat(){
+  stopHeartbeat();
+  supabaseClient.rpc('heartbeat').catch(() => {});
+  heartbeatTimer = setInterval(() => {
+    supabaseClient.rpc('heartbeat').catch(() => {});
+  }, 60000);
+}
+function stopHeartbeat(){
+  if(heartbeatTimer){ clearInterval(heartbeatTimer); heartbeatTimer = null; }
 }
 
 async function refreshFeedMessages(){
