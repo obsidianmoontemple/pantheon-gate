@@ -8774,11 +8774,17 @@ function stopMessagesPolling(){
 // tight couple of minutes without someone still actively playing dropping
 // off the list between heartbeats — direct feedback: needs to be usable
 // for "is this person actually reachable right now," e.g. at 2am.
+// NOTE: supabaseClient.rpc(...) returns a thenable query builder, not a
+// real Promise — it only implements .then(), not .catch(). Calling
+// .catch() directly on it throws synchronously ("...catch is not a
+// function"), which — because this runs inside afterLogin() — broke
+// login for every player until this was caught. Use .then(ok, fail)
+// instead, same as every other rpc() call in this file.
 function startHeartbeat(){
   stopHeartbeat();
-  supabaseClient.rpc('heartbeat').catch(() => {});
+  supabaseClient.rpc('heartbeat').then(() => {}, () => {});
   heartbeatTimer = setInterval(() => {
-    supabaseClient.rpc('heartbeat').catch(() => {});
+    supabaseClient.rpc('heartbeat').then(() => {}, () => {});
   }, 20000);
 }
 function stopHeartbeat(){
