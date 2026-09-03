@@ -255,7 +255,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content active" id="tab-overview">
       <div class="card">
         <h2>Online now</h2>
-        <p class="hint">Anyone signed into index.html or the Gate (gate.html) whose browser has checked in within the last 5 minutes — a lightweight heartbeat (0115), not a true live connection, so someone who just closed the tab may take up to 5 minutes to drop off this list. Auto-refreshes every 30s while this tab is open.</p>
+        <p class="hint">Anyone signed into index.html or the Gate (gate.html) whose browser has checked in within the last 2 minutes — a lightweight heartbeat (0115, every 20s), not a true live connection, so someone who just closed the tab may take up to 2 minutes to drop off this list. Auto-refreshes every 15s while this tab is open.</p>
         <div class="stat-grid" id="onlineNowStatGrid">
           <div class="stat-tile"><div class="num">—</div><div class="label">Loading…</div></div>
         </div>
@@ -5291,7 +5291,13 @@ async function retractBroadcast(id){
 
 /* ---------------- online now (0115) ---------------- */
 
-const ONLINE_WINDOW_MINUTES = 5;
+// Was 5 minutes / 30s poll — too laggy to tell if someone's actually
+// reachable right now (e.g. moderation at 2am). Heartbeat is 20s
+// (index.html/gate.html), so a 2-minute window still gives ~6 missed
+// beats of slack for a flaky connection before someone drops off the
+// list, while cutting the worst-case "looks online but isn't" gap from
+// 5 minutes down to 2.
+const ONLINE_WINDOW_MINUTES = 2;
 let onlineNowPollTimer = null;
 
 async function loadOnlineNow(){
@@ -5325,7 +5331,7 @@ function secondsAgoLabel(iso){
 
 function startOnlineNowPolling(){
   stopOnlineNowPolling();
-  onlineNowPollTimer = setInterval(loadOnlineNow, 30000);
+  onlineNowPollTimer = setInterval(loadOnlineNow, 15000);
 }
 function stopOnlineNowPolling(){
   if(onlineNowPollTimer){ clearInterval(onlineNowPollTimer); onlineNowPollTimer = null; }
