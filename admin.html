@@ -635,8 +635,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             </select>
           </div>
           <div class="field" id="grantScopeIdField">
-            <label>God or pantheon id</label>
-            <input type="text" id="grantScopeId" placeholder="e.g. hera or norse" style="max-width:180px;">
+            <label>God or pantheon</label>
+            <select id="grantScopeId" style="max-width:200px;"></select>
           </div>
           <div class="field">
             <label>Note (optional)</label>
@@ -696,8 +696,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <input type="number" min="1" step="1" id="broadcastGiftBonus" style="max-width:140px;">
           </div>
           <div class="field" id="broadcastGiftScopeField" style="display:none;">
-            <label>God or pantheon id</label>
-            <input type="text" id="broadcastGiftScopeId" placeholder="e.g. hera or norse" style="max-width:180px;">
+            <label>God or pantheon</label>
+            <select id="broadcastGiftScopeId" style="max-width:200px;"></select>
           </div>
           <div class="field" id="broadcastGiftStoreItemField" style="display:none;">
             <label>Which item</label>
@@ -1236,7 +1236,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>Mage Arts — creation picker</h2>
-        <p class="hint">The premade Art list a player picks from when creating their Mage (0052). Every Art grants the same flat +10% duel-score baseline, plus a further +15% lean toward one specific stat drawn from its own flavor (fire/war -&gt; might, storm/shadow -&gt; swiftness, death/light -&gt; cunning, sea/earth -&gt; vitality — hardcoded in the mage edge function's ART_STAT_LEAN, not editable from here). Sort order controls left-to-right position on the Mage creation screen. Combat move (0082) is the real action that Art's Mage now takes once per round in Gauntlet/Campaign fights, alongside the Guardian — direct feedback: "there is no real battle schematics for mages... which i have asked for." Offers Power-kind moves from the shared move catalog, plus (0086) any Support or Tank-archetype move — e.g. a heal — since those don't use Control's swiftness-shave mechanic either; leave it "— no combat move —" and that Art's Mage simply doesn't act in these fights (same as before this feature).</p>
+        <p class="hint">The premade Art list a player picks from when creating their Mage (0052). Every Art grants the same flat +10% duel-score baseline, plus a further +15% lean toward one specific stat drawn from its own flavor (fire/war -&gt; might, storm/shadow -&gt; swiftness, death/light -&gt; cunning, sea/earth -&gt; vitality — hardcoded in the mage edge function's ART_STAT_LEAN, not editable from here). Sort order controls left-to-right position on the Mage creation screen. Combat move (0082) is the real action that Art's Mage now takes once per round in Gauntlet/Campaign fights, alongside the Guardian — direct feedback: "there is no real battle schematics for mages... which i have asked for." Offers Power-kind moves from the shared move catalog, plus (0086) any Support or Tank-archetype move — e.g. a heal — since those don't use Control's swiftness-shave mechanic either; leave it "— no combat move —" and that Art's Mage simply doesn't act in these fights (same as before this feature). Adding a new Art here is the only required step — it appears in-game immediately in the default layout. Positioning its art on the Mage Select screen is a separate, optional cosmetic step: <button type="button" class="secondary" onclick="jumpToMageSelectPositioning()">Position art on Mage Select screen →</button></p>
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr><th>Key</th><th>Label</th><th>Blurb</th><th>Affinity</th><th>Sort</th><th>Image URL</th><th>Active</th><th>Heals on own affinity</th><th>Combat move</th></tr></thead>
@@ -1726,7 +1726,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
               <option value="deity">One god</option>
             </select>
           </div>
-          <div class="field" id="newRewardScopeIdField" style="display:none;"><label>God or pantheon id</label><input type="text" id="newRewardScopeId" placeholder="e.g. hera or norse" style="max-width:160px;"></div>
+          <div class="field" id="newRewardScopeIdField" style="display:none;"><label>God or pantheon</label><select id="newRewardScopeId" style="max-width:200px;"></select></div>
           <div class="field" id="newRewardGuardianItemField" style="display:none;"><label>Guardian item</label>
             <select id="newRewardGuardianItem" style="max-width:200px;"></select>
           </div>
@@ -1827,8 +1827,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newArtifactKey" style="max-width:150px;"></div>
           <div class="field"><label>Name</label><input type="text" id="newArtifactName" style="max-width:160px;"></div>
           <div class="field"><label>Total fragments</label><input type="number" min="1" id="newArtifactTotalFragments" style="max-width:110px;"></div>
-          <div class="field"><label>Unlock pantheon id</label><input type="text" id="newArtifactPantheon" placeholder="e.g. egyptian" style="max-width:140px;"></div>
-          <div class="field"><label>Unlock deity id</label><input type="text" id="newArtifactDeity" placeholder="e.g. thoth" style="max-width:140px;"></div>
+          <div class="field"><label>Unlock pantheon</label><select id="newArtifactPantheon" style="max-width:160px;"></select></div>
+          <div class="field"><label>Unlock deity</label><select id="newArtifactDeity" style="max-width:180px;"></select></div>
           <button id="addArtifactBtn">Add artifact</button>
         </div>
         <div class="field" style="max-width:none;">
@@ -2172,8 +2172,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             </select>
           </div>
           <div class="field" id="newTierGrantIdField" style="display:none;">
-            <label>God or pantheon id</label>
-            <input type="text" id="newTierGrantId" placeholder="e.g. hera or norse" style="max-width:160px;">
+            <label>God or pantheon</label>
+            <select id="newTierGrantId" style="max-width:200px;"></select>
           </div>
           <div class="field">
             <label>Image URL (optional)</label>
@@ -2226,8 +2226,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             </select>
           </div>
           <div class="field" id="newItemGrantIdField" style="display:none;">
-            <label>God or pantheon id</label>
-            <input type="text" id="newItemGrantId" placeholder="e.g. hera or norse" style="max-width:160px;">
+            <label>God or pantheon</label>
+            <select id="newItemGrantId" style="max-width:200px;"></select>
           </div>
           <button id="addItemBtn">Add item</button>
         </div>
@@ -2870,6 +2870,74 @@ Object.keys(CATALOG).forEach(pid => {
   });
 });
 
+// ---- Shared "god or pantheon" scope picker --------------------------------
+// Six unrelated tabs (Gifting, Broadcasts, Giftable Rewards, Expeditions,
+// Subscription Tiers, Store Items) each need to reference an existing deity
+// or pantheon id. All six used to be freehand text inputs with zero
+// validation — a typo in any of them silently created a grant/reward/unlock
+// that saved fine but never matched anything real, so it just quietly never
+// worked (this is exactly how Expedition artifacts could "finish" and hand
+// out an entitlement for a deity id that doesn't exist). These three
+// helpers turn every one of those fields into a live dropdown sourced from
+// the same CATALOG/FLAT_DEITIES this page already builds for the EZ deity
+// adder — so any admin-added god or pantheon shows up in all six pickers
+// automatically, with no second typing anywhere.
+function pantheonOptionsHtml(selected){
+  return Object.keys(CATALOG).map(pid =>
+    `<option value="${esc(pid)}"${pid === selected ? ' selected' : ''}>${esc(CATALOG[pid].label)}</option>`
+  ).join('');
+}
+function deityOptionsHtml(selected){
+  const groups = {};
+  const order = [];
+  FLAT_DEITIES.forEach(d => {
+    if(!groups[d.pantheonLabel]){ groups[d.pantheonLabel] = []; order.push(d.pantheonLabel); }
+    groups[d.pantheonLabel].push(d);
+  });
+  let html = order.map(label =>
+    `<optgroup label="${esc(label)}">${groups[label].map(d =>
+      `<option value="${esc(d.id)}"${d.id === selected ? ' selected' : ''}>${esc(d.name)}</option>`
+    ).join('')}</optgroup>`
+  ).join('');
+  // A previously-saved value that no longer matches any known deity (legacy
+  // typo'd data, or a deity that was later removed) stays selectable instead
+  // of silently vanishing out from under a saved row.
+  if(selected && !FLAT_DEITIES.some(d => d.id === selected)){
+    html += `<option value="${esc(selected)}" selected>${esc(selected)} (not in catalog)</option>`;
+  }
+  return html;
+}
+// Rebuilds a "god or pantheon" <select> (idSelId) to match its paired
+// scope-type <select> (typeSelId, values 'deity' | 'pantheon' | 'all'/other),
+// preserving the current value if it still applies under the new type.
+function populateScopeIdSelect(typeSelId, idSelId){
+  const typeSel = document.getElementById(typeSelId);
+  const idSel = document.getElementById(idSelId);
+  if(!typeSel || !idSel) return;
+  const type = typeSel.value;
+  const prev = idSel.value;
+  if(type === 'deity') idSel.innerHTML = deityOptionsHtml(prev);
+  else if(type === 'pantheon') idSel.innerHTML = pantheonOptionsHtml(prev);
+  else idSel.innerHTML = '';
+}
+// Rebuilds every "god or pantheon" picker on the page from the current
+// CATALOG/FLAT_DEITIES. Called once at boot (after custom deities/pantheons
+// are merged in) and again right after addCustomGod()/addCustomPantheon()
+// succeed, so a brand-new god shows up in Gifting, Broadcasts, Giftable
+// Rewards, Expeditions, Subscription Tiers, and Store Items immediately —
+// no page reload, no retyping it a second time anywhere.
+function refreshAllScopePickers(){
+  [['grantScopeType','grantScopeId'],
+   ['broadcastGiftType','broadcastGiftScopeId'],
+   ['newRewardScopeType','newRewardScopeId'],
+   ['newTierGrantType','newTierGrantId'],
+   ['newItemGrantType','newItemGrantId']].forEach(([t, i]) => populateScopeIdSelect(t, i));
+  const artP = document.getElementById('newArtifactPantheon');
+  const artD = document.getElementById('newArtifactDeity');
+  if(artP) artP.innerHTML = pantheonOptionsHtml(artP.value);
+  if(artD) artD.innerHTML = deityOptionsHtml(artD.value);
+}
+
 // Affinity catalog (0077) — was a hardcoded fixed 8; now the shipped list
 // is only a fallback used until loadAffinitiesList() (called at startup,
 // see loadStaminaSettings() call site) replaces it with the live,
@@ -2959,6 +3027,17 @@ function selectTabGroup(key){
     const firstInGroup = buttons.find(btn => btn.getAttribute('data-group') === key);
     if(firstInGroup) showTab(firstInGroup.getAttribute('data-tab'));
   }
+}
+
+// One-click jump from the Mage Arts card to the Hotspots screen already
+// pointed at "Mage Select" — the positioning step used to have zero link
+// back to it from where a new Art is actually added, so it was easy to
+// forget existed at all.
+function jumpToMageSelectPositioning(){
+  selectTabGroup('site');
+  showTab('maphotspots');
+  const picker = document.getElementById('hotspotScreenPicker');
+  if(picker){ picker.value = 'mageSelect'; loadHotspotsForScreen('mageSelect'); }
 }
 
 /* ---------------- admin edge function helper ---------------- */
@@ -3061,6 +3140,7 @@ async function init(){
 function updateGrantScopeVisibility(){
   const type = document.getElementById('grantScopeType').value;
   document.getElementById('grantScopeIdField').style.display = (type === 'all') ? 'none' : '';
+  if(type !== 'all') populateScopeIdSelect('grantScopeType', 'grantScopeId');
 }
 
 function updateGrantTargetVisibility(){
@@ -3117,6 +3197,12 @@ async function handleSession(session){
   await loadCustomDeitiesIntoCatalog();
   loadDeitySettings();
   loadCustomGodsList();
+  // CATALOG/FLAT_DEITIES now include any admin-added gods/pantheons — this
+  // is the first point where every "god or pantheon" picker across the page
+  // (Gifting, Broadcasts, Giftable Rewards, Expeditions, Subscription Tiers,
+  // Store Items) can be built with the full, current list. grantScopeType's
+  // own initial populate ran earlier (before login), so refresh it here too.
+  refreshAllScopePickers();
   loadSeasonSettings();
   loadSeasonPool();
   loadEntitlements();
@@ -4121,6 +4207,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addRewardBtn').addEventListener('click', addGiftableReward);
   document.getElementById('newRewardType').addEventListener('change', updateNewRewardTypeFields);
   updateNewRewardTypeFields();
+  document.getElementById('newRewardScopeType').addEventListener('change', () => populateScopeIdSelect('newRewardScopeType', 'newRewardScopeId'));
 
   document.getElementById('saveRewardBundlesBtn').addEventListener('click', saveRewardBundles);
   document.getElementById('addBundleBtn').addEventListener('click', addRewardBundle);
@@ -4282,6 +4369,7 @@ async function addCustomPantheon(){
   populateNewGodPantheonOptions();
   loadPantheonSettings();
   loadCustomPantheonsList();
+  refreshAllScopePickers(); // the new pantheon is now selectable everywhere, no reload needed
 }
 
 async function removeCustomPantheon(id){
@@ -4564,6 +4652,7 @@ async function addCustomGod(){
 
   loadDeitySettings();
   loadCustomGodsList();
+  refreshAllScopePickers(); // the new god is now selectable everywhere, no reload needed
 }
 
 async function removeCustomGod(id, pantheonId){
@@ -4585,6 +4674,7 @@ async function removeCustomGod(id, pantheonId){
 function updateNewTierGrantField(){
   const type = document.getElementById('newTierGrantType').value;
   document.getElementById('newTierGrantIdField').style.display = (type === 'pantheon' || type === 'deity') ? '' : 'none';
+  if(type === 'pantheon' || type === 'deity') populateScopeIdSelect('newTierGrantType', 'newTierGrantId');
 }
 
 function grantLabel(scopeType, scopeId){
@@ -4668,6 +4758,7 @@ async function removeTier(id){
 function updateNewItemGrantField(){
   const type = document.getElementById('newItemGrantType').value;
   document.getElementById('newItemGrantIdField').style.display = (type === 'pantheon' || type === 'deity') ? '' : 'none';
+  if(type === 'pantheon' || type === 'deity') populateScopeIdSelect('newItemGrantType', 'newItemGrantId');
 }
 
 function updateNewItemGiftCurrencyField(){
@@ -5013,6 +5104,7 @@ function updateBroadcastGiftFields(){
   document.getElementById('broadcastGiftBonusField').style.display = (type === 'bonus_messages') ? '' : 'none';
   document.getElementById('broadcastGiftScopeField').style.display = (type === 'deity' || type === 'pantheon') ? '' : 'none';
   document.getElementById('broadcastGiftStoreItemField').style.display = (type === 'store_item') ? '' : 'none';
+  if(type === 'deity' || type === 'pantheon') populateScopeIdSelect('broadcastGiftType', 'broadcastGiftScopeId');
 }
 
 function populateBroadcastGiftStoreItemSelect(){
@@ -9560,6 +9652,7 @@ function updateNewRewardTypeFields(){
   document.getElementById('newRewardCurrencyAmountField').style.display = type === 'currency' ? '' : 'none';
   document.getElementById('newRewardScopeTypeField').style.display = type === 'entitlement' ? '' : 'none';
   document.getElementById('newRewardScopeIdField').style.display = type === 'entitlement' ? '' : 'none';
+  if(type === 'entitlement') populateScopeIdSelect('newRewardScopeType', 'newRewardScopeId');
   document.getElementById('newRewardGuardianItemField').style.display = type === 'guardian_item' ? '' : 'none';
   document.getElementById('newRewardArtifactField').style.display = type === 'expedition_fragment' ? '' : 'none';
   document.getElementById('newRewardFragmentIndexField').style.display = type === 'expedition_fragment' ? '' : 'none';
@@ -9981,8 +10074,8 @@ async function loadExpeditionArtifacts(){
     <td><input type="text" id="artName_${esc(a.key)}" value="${esc(a.name)}" style="max-width:160px;"></td>
     <td><input type="text" id="artDesc_${esc(a.key)}" value="${esc(a.description || '')}" style="max-width:260px;"></td>
     <td><input type="number" min="1" id="artTotal_${esc(a.key)}" value="${a.total_fragments}" style="max-width:80px;"></td>
-    <td><input type="text" id="artPantheon_${esc(a.key)}" value="${esc(a.unlock_pantheon_id)}" style="max-width:120px;"></td>
-    <td><input type="text" id="artDeity_${esc(a.key)}" value="${esc(a.unlock_deity_id)}" style="max-width:120px;"></td>
+    <td><select id="artPantheon_${esc(a.key)}" style="max-width:130px;">${pantheonOptionsHtml(a.unlock_pantheon_id)}</select></td>
+    <td><select id="artDeity_${esc(a.key)}" style="max-width:150px;">${deityOptionsHtml(a.unlock_deity_id)}</select></td>
     <td><input type="checkbox" id="artActive_${esc(a.key)}" ${a.active ? 'checked' : ''}></td>
   </tr>`).join('') || '<tr><td colspan="7">No artifacts yet.</td></tr>';
 
