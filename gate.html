@@ -313,15 +313,19 @@ let heartbeatTimer = null; // "who's online now" (admin.html) — see startHeart
 // profiles has no client update grant at all (0094 exploit hardening), so
 // this goes through the narrow heartbeat() RPC (0115) instead of a direct
 // table write — it only ever touches the caller's own last_seen_at. Fires
-// once immediately, then every 60s for as long as someone stays signed in
+// once immediately, then every 20s for as long as someone stays signed in
 // on this page (the deity chat), same convention as index.html's copy of
-// this function — presence is tracked per-session, not per-file.
+// this function — presence is tracked per-session, not per-file. 20s
+// instead of the original 60s so admin.html's online window can be a tight
+// couple of minutes without someone still actively chatting dropping off
+// the list between heartbeats — needs to be usable for "is this person
+// actually reachable right now," e.g. at 2am.
 function startHeartbeat(){
   stopHeartbeat();
   supabaseClient.rpc('heartbeat').catch(() => {});
   heartbeatTimer = setInterval(() => {
     supabaseClient.rpc('heartbeat').catch(() => {});
-  }, 60000);
+  }, 20000);
 }
 function stopHeartbeat(){
   if(heartbeatTimer){ clearInterval(heartbeatTimer); heartbeatTimer = null; }
