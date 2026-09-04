@@ -652,6 +652,47 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
 
       <div class="card">
+        <h2>Redemption log</h2>
+        <p class="hint">Every reward, currency, unlock, or bonus a player has actually received — from mail/broadcasts, promo events, signup codes, store purchases, admin grants, and check-ins — in one filterable place. This started tracking automatically the moment this feature shipped; rows from before that were backfilled from whatever each old system already had on hand, and are marked "Backfilled" below. A few backfilled promo-event rows only ever recorded a headcount and total, never who specifically got it — those show as "Aggregate only" and can't be broken out by player, no matter the filter.</p>
+        <div class="form-row">
+          <div class="field"><label>Player email</label><input type="email" id="rglFilterEmail" placeholder="leave blank for everyone" style="max-width:220px;"></div>
+          <div class="field"><label>Source</label>
+            <select id="rglFilterSource" style="max-width:160px;">
+              <option value="">All sources</option>
+              <option value="broadcast">Mail / broadcast</option>
+              <option value="promo_event">Promo event</option>
+              <option value="signup_code">Signup code</option>
+              <option value="store_purchase">Store purchase</option>
+              <option value="admin_grant">Admin grant</option>
+              <option value="checkin">Check-in</option>
+              <option value="event_trigger">Event trigger</option>
+              <option value="legacy_unknown">Unattributed (older grant)</option>
+            </select>
+          </div>
+          <div class="field"><label>From (optional)</label><input type="datetime-local" id="rglFilterFrom" style="max-width:200px;"></div>
+          <div class="field"><label>To (optional)</label><input type="datetime-local" id="rglFilterTo" style="max-width:200px;"></div>
+          <button id="rglFilterBtn" onclick="loadRewardGrantLog()">Filter</button>
+          <button class="small" onclick="clearRewardGrantLogFilters()">Clear</button>
+        </div>
+        <div class="status" id="rglStatus"></div>
+        <div class="scroll-table" style="max-height:380px;">
+          <table>
+            <thead><tr><th>When</th><th>Player</th><th>Source</th><th>Type</th><th>Detail</th></tr></thead>
+            <tbody id="rglRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+          </table>
+        </div>
+
+        <h3>Historical promo-event runs (aggregate only)</h3>
+        <p class="hint">These predate this log and were never captured per-recipient — this is genuinely everything that's recoverable about them.</p>
+        <div class="scroll-table" style="max-height:220px;">
+          <table>
+            <thead><tr><th>When</th><th>Event</th><th>Recipients</th><th>Total granted</th></tr></thead>
+            <tbody id="rglAggregateRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
         <h2>Grant or revoke access</h2>
         <p class="hint">Comp a friend, fix a support issue, or claw back access — without touching the database directly. Every recipient must have signed in at least once already; for "Everyone"/"One Circle" this quietly skips anyone who hasn't (same as every other bulk send in this tab).</p>
         <div class="form-row">
@@ -3286,6 +3327,7 @@ async function handleSession(session){
   loadAdminActivityLog();
   loadPromoEvents();
   loadSignupCodes();
+  loadRewardGrantLog();
   loadGuardianProgression();
   loadMageProgression();
   loadStaminaSettings();
@@ -6678,6 +6720,117 @@ async function createSignupCode(){
     document.getElementById('newSignupBundleKey').value = '';
     loadSignupCodes();
   }
+}
+
+/* ---------------- redemption log (0117) ----------------
+   A single filterable view over public.reward_grant_log — the unified
+   record of every currency/entitlement/reward/bundle/bonus-message grant
+   actually applied to a player, regardless of which of the five
+   distribution paths it came from. Admin-select-only table, same
+   query-then-render pattern as loadEntitlements()/loadOnlineNow(). */
+
+const SOURCE_LABELS = {
+  broadcast: 'Mail / broadcast', promo_event: 'Promo event', signup_code: 'Signup code',
+  store_purchase: 'Store purchase', admin_grant: 'Admin grant', checkin: 'Check-in',
+  event_trigger: 'Event trigger', legacy_unknown: 'Unattributed (older grant)'
+};
+
+function rglSummarizeDetail(row){
+  const d = row.detail || {};
+  const parts = [];
+  if(row.grant_type === 'currency') parts.push(`${esc(d.currency_key || '?')} × ${d.amount ?? '?'}`);
+  else if(row.grant_type === 'entitlement') parts.push('Unlock: ' + esc(d.scope_type || d.scopeType || '?') + (d.scope_id || d.scopeId ? (' — ' + esc(d.scope_id || d.scopeId)) : ''));
+  else if(row.grant_type === 'bonus_messages') parts.push(`Bonus messages × ${d.amount ?? '?'}`);
+  else if(row.grant_type === 'bundle') parts.push('Bundle: ' + esc(d.name || d.bundle_key || '?'));
+  else if(row.grant_type === 'reward') parts.push((d.reward_type ? esc(d.reward_type) + ': ' : '') + esc(d.name || d.reward_key || 'reward'));
+  if(d.reason) parts.push('— ' + esc(d.reason));
+  if(d.via) parts.push('(' + esc(d.via) + ')');
+  if(d.reconstructed) parts.push('<span class="dim">[reconstructed from current config]</span>');
+  if(d.backfilled) parts.push('<span class="dim">[Backfilled]</span>');
+  if(d.aggregate_only) parts.push('<span class="dim">[Aggregate only — no per-player detail]</span>');
+  return parts.join(' ') || '<span class="dim">(no detail)</span>';
+}
+
+function clearRewardGrantLogFilters(){
+  ['rglFilterEmail','rglFilterSource','rglFilterFrom','rglFilterTo'].forEach(id => { document.getElementById(id).value = ''; });
+  loadRewardGrantLog();
+}
+
+async function loadRewardGrantLog(){
+  const status = document.getElementById('rglStatus');
+  const rows = document.getElementById('rglRows');
+  status.className = 'status';
+  status.textContent = '';
+
+  const email = document.getElementById('rglFilterEmail').value.trim().toLowerCase();
+  const source = document.getElementById('rglFilterSource').value;
+  const fromRaw = document.getElementById('rglFilterFrom').value;
+  const toRaw = document.getElementById('rglFilterTo').value;
+
+  let userId = null;
+  if(email){
+    const { data: prof, error: profErr } = await supabaseClient.from('profiles').select('id').eq('email', email).maybeSingle();
+    if(profErr || !prof){
+      rows.innerHTML = '<tr><td colspan="5">No player found with that email.</td></tr>';
+      return;
+    }
+    userId = prof.id;
+  }
+
+  let q = supabaseClient
+    .from('reward_grant_log')
+    .select('id, source, source_id, grant_type, detail, created_at, profiles(email)')
+    .order('created_at', { ascending: false })
+    .limit(300);
+  if(userId) q = q.eq('user_id', userId);
+  if(source) q = q.eq('source', source);
+  if(fromRaw) q = q.gte('created_at', new Date(fromRaw).toISOString());
+  if(toRaw) q = q.lte('created_at', new Date(toRaw).toISOString());
+
+  const { data, error } = await q;
+  if(error){
+    rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  if(!data || !data.length){
+    rows.innerHTML = '<tr><td colspan="5">No matching grants.</td></tr>';
+  } else {
+    rows.innerHTML = data.map(r => `<tr>
+      <td class="dim">${esc(new Date(r.created_at).toLocaleString())}</td>
+      <td>${esc(r.profiles?.email || (r.detail?.aggregate_only ? '(everyone in scope)' : '—'))}</td>
+      <td class="dim">${esc(SOURCE_LABELS[r.source] || r.source)}</td>
+      <td class="dim">${esc(r.grant_type)}</td>
+      <td>${rglSummarizeDetail(r)}</td>
+    </tr>`).join('');
+  }
+  loadRewardGrantLogAggregateRuns();
+}
+
+async function loadRewardGrantLogAggregateRuns(){
+  const rows = document.getElementById('rglAggregateRows');
+  const { data, error } = await supabaseClient
+    .from('reward_grant_log')
+    .select('created_at, source_id, detail')
+    .eq('source', 'promo_event')
+    .contains('detail', { aggregate_only: true })
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if(error){
+    rows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  if(!data || !data.length){
+    rows.innerHTML = '<tr><td colspan="4">None on record.</td></tr>';
+    return;
+  }
+  const eventNameById = {};
+  (promoEvents || []).forEach(e => { eventNameById[e.id] = e.name; });
+  rows.innerHTML = data.map(r => `<tr>
+    <td class="dim">${esc(new Date(r.created_at).toLocaleString())}</td>
+    <td>${esc(eventNameById[r.source_id] || r.source_id)}</td>
+    <td class="dim">${esc(r.detail?.recipient_count ?? '?')}</td>
+    <td class="dim">${esc(r.detail?.total_granted ?? '?')}</td>
+  </tr>`).join('');
 }
 
 /* =====================================================================
