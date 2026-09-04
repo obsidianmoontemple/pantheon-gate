@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Pantheon Gate — Admin</title>
+<link rel="icon" id="brandFavicon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%99%3C/text%3E%3C/svg%3E">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
@@ -175,7 +176,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 </head>
 <body>
 <div class="wrap">
-  <h1>The Pantheon Gate — Admin</h1>
+  <h1 id="brandTitle">The Pantheon Gate — Admin</h1>
   <p class="sub">Full administrative control: pricing, catalog, Circles, currencies, deities, and every leaderboard at a glance.</p>
 
   <div id="gateMsg" class="gate-msg">Checking your session…</div>
@@ -620,6 +621,34 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <input type="text" id="newPromoDescription" style="max-width:none;">
         </div>
         <div class="status" id="newPromoStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Signup codes</h2>
+        <p class="hint">A code to hand out — an ad, a flyer, a partner shoutout — that grants a bonus when someone enters it while creating an account. Purely an incentive: signup works fine with no code at all, and a code never blocks it. If the player doesn't have a guardian yet at the moment they redeem, the bonus is held and applied automatically the instant they hatch one — nothing is lost.</p>
+        <div class="scroll-table" style="max-height:300px;">
+          <table>
+            <thead><tr><th>Code</th><th>Label</th><th>Grants</th><th>Uses</th><th>Expires</th><th>Active</th><th></th></tr></thead>
+            <tbody id="signupCodeRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="status" id="signupCodeStatus"></div>
+        <h3>Create a new code</h3>
+        <div class="form-row">
+          <div class="field"><label>Code (a-z0-9_-)</label><input type="text" id="newSignupCode" placeholder="e.g. SPRING2026" style="max-width:180px;"></div>
+          <div class="field"><label>Label (your own note)</label><input type="text" id="newSignupLabel" placeholder="e.g. Lincoln Middle flyer" style="max-width:200px;"></div>
+          <div class="field"><label>Currency (optional)</label><select id="newSignupCurrency" style="max-width:150px;"></select></div>
+          <div class="field"><label>Amount each</label><input type="number" min="1" id="newSignupAmount" style="max-width:120px;"></div>
+          <div class="field"><label>Reward package (optional)</label><select id="newSignupRewardKey" style="max-width:200px;"><option value="">Nothing — no reward package</option></select></div>
+          <div class="field"><label>Reward bundle (optional)</label><select id="newSignupBundleKey" style="max-width:200px;"><option value="">Nothing — no reward bundle</option></select></div>
+        </div>
+        <p class="hint">Pick a currency+amount, a reward package, a reward bundle, or any combination — a code needs at least one of the three to have anything to grant.</p>
+        <div class="form-row">
+          <div class="field"><label>Max uses (optional)</label><input type="number" min="1" id="newSignupMaxUses" placeholder="Unlimited" style="max-width:130px;"></div>
+          <div class="field"><label>Expires (optional)</label><input type="datetime-local" id="newSignupExpires" style="max-width:200px;"></div>
+          <button id="addSignupCodeBtn" onclick="createSignupCode()">Create code</button>
+        </div>
+        <div class="status" id="newSignupCodeStatus"></div>
       </div>
 
       <div class="card">
@@ -2872,6 +2901,22 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 /* Edge functions live on a sibling subdomain — same project, different host. */
 const FUNCTIONS_URL = SUPABASE_URL.replace(".supabase.co", ".functions.supabase.co");
 
+/* ---- BRAND — edit this block, and the matching block in index.html and
+   gate.html, to rebrand the whole site for a white-label deployment.
+   Leave every value as-is to keep this game's own default branding. ---- */
+const BRAND = {
+  siteName: "The Pantheon Gate — Admin",      // header on this page
+  pageTitle: "Pantheon Gate — Admin",         // browser tab title
+  faviconEmoji: "🌙"
+};
+(function applyStaticBranding(){
+  document.title = BRAND.pageTitle;
+  const fav = document.getElementById('brandFavicon');
+  if(fav) fav.href = "data:image/svg+xml," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>${BRAND.faviconEmoji}</text></svg>`);
+  const title = document.getElementById('brandTitle');
+  if(title) title.textContent = BRAND.siteName;
+})();
+
 /* Lightweight catalog — just ids/names/pantheons, so this page can build the
    pricing table without shipping the full myth text from index.html. Keep
    this in sync if you add a new pantheon or god in index.html/deities.json;
@@ -3240,6 +3285,7 @@ async function handleSession(session){
   loadSecuritySettings();
   loadAdminActivityLog();
   loadPromoEvents();
+  loadSignupCodes();
   loadGuardianProgression();
   loadMageProgression();
   loadStaminaSettings();
@@ -5908,6 +5954,11 @@ async function loadCurrencyDefinitions(){
   // valid event) — prepend a none option this shared closure doesn't add.
   const newPromoCurrencySel = document.getElementById('newPromoCurrency');
   if(newPromoCurrencySel) newPromoCurrencySel.innerHTML = '<option value="">Nothing — no currency</option>' + newPromoCurrencySel.innerHTML;
+  // Signup codes (0116) — always personal-scoped, since a brand-new
+  // signup has no Circle to credit yet.
+  populateSelect('newSignupCurrency', 'personal');
+  const newSignupCurrencySel = document.getElementById('newSignupCurrency');
+  if(newSignupCurrencySel) newSignupCurrencySel.innerHTML = '<option value="">Nothing — no currency</option>' + newSignupCurrencySel.innerHTML;
   // #123 — populated here (not inline in loadCheckinBackdayPricing()) for
   // the same reason every other currency <select> on this page is: this
   // is the one place currencyDefs is guaranteed loaded, and re-running it
@@ -6542,6 +6593,90 @@ async function createPromoEvent(){
     document.getElementById('newPromoRewardKey').value = '';
     document.getElementById('newPromoBundleKey').value = '';
     loadPromoEvents();
+  }
+}
+
+/* ---------------- signup codes (0116) ----------------
+   Unlike Promo Events, this needs no edge function: it's plain
+   catalog-shaped data (admins already have direct RLS write access to
+   signup_codes, same as giftable_rewards/mage catalogs/etc. elsewhere on
+   this page) with no server-side fan-out step — redemption itself runs
+   client-side via the redeem_signup_code()/apply_pending_signup_grant()
+   RPCs in index.html, not from here. */
+
+async function loadSignupCodes(){
+  const { data, error } = await supabaseClient.from('signup_codes').select('*').order('created_at', { ascending: false });
+  const rows = document.getElementById('signupCodeRows');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="7">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  if(!data || !data.length){
+    rows.innerHTML = '<tr><td colspan="7">No signup codes yet.</td></tr>';
+    return;
+  }
+  rows.innerHTML = data.map(c => {
+    const cur = currencyDefs[c.currency_key];
+    const grantParts = [];
+    if(c.currency_key) grantParts.push(`${esc(cur?.name || c.currency_key)} × ${c.currency_amount}`);
+    if(c.reward_key) grantParts.push('Reward: ' + esc((giftableRewardsCache.find(r => r.key === c.reward_key) || {}).name || c.reward_key));
+    if(c.gift_bundle_key) grantParts.push('Bundle: ' + esc((giftableRewardBundlesCache.find(b => b.bundle_key === c.gift_bundle_key) || {}).name || c.gift_bundle_key));
+    return `<tr>
+      <td>${esc(c.code)}</td>
+      <td class="dim">${esc(c.label)}</td>
+      <td class="dim">${grantParts.join('<br>') || '(nothing configured)'}</td>
+      <td class="dim">${c.use_count}${c.max_uses ? ' / ' + c.max_uses : ''}</td>
+      <td class="dim">${c.expires_at ? new Date(c.expires_at).toLocaleString() : '—'}</td>
+      <td>${c.active ? 'Yes' : 'No'}</td>
+      <td><button class="small" onclick="toggleSignupCodeActive('${esc(c.code)}', ${!c.active})">${c.active ? 'Deactivate' : 'Reactivate'}</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function toggleSignupCodeActive(code, makeActive){
+  const status = document.getElementById('signupCodeStatus');
+  status.className = 'status';
+  status.textContent = 'Updating…';
+  const { error } = await supabaseClient.from('signup_codes').update({ active: makeActive, updated_at: new Date().toISOString() }).eq('code', code);
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Updated.';
+  if(!error) loadSignupCodes();
+}
+
+async function createSignupCode(){
+  const status = document.getElementById('newSignupCodeStatus');
+  const code = document.getElementById('newSignupCode').value.trim().toUpperCase();
+  const label = document.getElementById('newSignupLabel').value.trim();
+  const currencyKey = document.getElementById('newSignupCurrency').value || null;
+  const amountRaw = document.getElementById('newSignupAmount').value;
+  const amount = amountRaw === '' ? null : Number(amountRaw);
+  const rewardKey = document.getElementById('newSignupRewardKey').value || null;
+  const bundleKey = document.getElementById('newSignupBundleKey').value || null;
+  const maxUsesRaw = document.getElementById('newSignupMaxUses').value;
+  const maxUses = maxUsesRaw === '' ? null : Number(maxUsesRaw);
+  const expiresRaw = document.getElementById('newSignupExpires').value;
+
+  if(!/^[a-zA-Z0-9_-]+$/.test(code)){ status.className = 'status err'; status.textContent = 'Code must be letters/numbers/dashes/underscores only.'; return; }
+  if(!label){ status.className = 'status err'; status.textContent = 'Label is required (your own note — players never see it).'; return; }
+  if(currencyKey && (!Number.isFinite(amount) || amount <= 0)){ status.className = 'status err'; status.textContent = 'Enter an amount greater than 0 for the chosen currency.'; return; }
+  if(!currencyKey && !rewardKey && !bundleKey){ status.className = 'status err'; status.textContent = 'Pick a currency+amount, a reward package, a reward bundle, or some combination.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Creating…';
+  const { error } = await supabaseClient.from('signup_codes').insert({
+    code, label,
+    currency_key: currencyKey, currency_amount: currencyKey ? amount : null,
+    reward_key: rewardKey, gift_bundle_key: bundleKey,
+    max_uses: maxUses,
+    expires_at: expiresRaw ? new Date(expiresRaw).toISOString() : null
+  });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + (error.code === '23505' ? 'That code already exists.' : error.message)) : 'Created and active.';
+  if(!error){
+    ['newSignupCode','newSignupLabel','newSignupAmount','newSignupMaxUses','newSignupExpires'].forEach(fid => { document.getElementById(fid).value = ''; });
+    document.getElementById('newSignupRewardKey').value = '';
+    document.getElementById('newSignupBundleKey').value = '';
+    loadSignupCodes();
   }
 }
 
@@ -9761,7 +9896,7 @@ function populateRewardPackagePickers(){
   // an inactive one would silently do nothing when claimed.
   const opts = '<option value="">Nothing — no reward package</option>' +
     giftableRewardsCache.filter(r => r.active).map(r => `<option value="${esc(r.key)}">${esc(r.name)}</option>`).join('');
-  ['broadcastGiftRewardKey', 'newItemRewardKey', 'newPromoRewardKey'].forEach(id => {
+  ['broadcastGiftRewardKey', 'newItemRewardKey', 'newPromoRewardKey', 'newSignupRewardKey'].forEach(id => {
     const sel = document.getElementById(id);
     if(!sel) return;
     const current = sel.value;
@@ -10023,7 +10158,7 @@ function populateRewardBundlePickers(){
   // would silently do nothing when claimed.
   const opts = '<option value="">Nothing — no reward bundle</option>' +
     giftableRewardBundlesCache.filter(b => b.active).map(b => `<option value="${esc(b.bundle_key)}">${esc(b.name)}</option>`).join('');
-  ['broadcastGiftBundleKey', 'newItemGiftBundleKey', 'newPromoBundleKey'].forEach(id => {
+  ['broadcastGiftBundleKey', 'newItemGiftBundleKey', 'newPromoBundleKey', 'newSignupBundleKey'].forEach(id => {
     const sel = document.getElementById(id);
     if(!sel) return;
     const current = sel.value;
