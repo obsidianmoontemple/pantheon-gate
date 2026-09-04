@@ -3104,6 +3104,8 @@ const TAB_GROUPS = [
   { key: 'site',      label: 'Site & Content' },
 ];
 let currentTabGroup = 'dashboard';
+// Guards handleSession()'s one-time boot sequence — see the comment there.
+let adminBooted = false;
 
 function renderGroupNav(){
   const el = document.getElementById('groupNav');
@@ -3262,6 +3264,7 @@ async function handleSession(session){
     loginModal.classList.add('active');
     adminArea.style.display = 'none';
     signOutRow.style.display = 'none';
+    adminBooted = false; // signed out — a future sign-in should boot fresh
     return;
   }
 
@@ -3276,6 +3279,7 @@ async function handleSession(session){
     loginModal.classList.remove('active');
     adminArea.style.display = 'none';
     signOutRow.style.display = 'block';
+    adminBooted = false;
     return;
   }
 
@@ -3283,6 +3287,21 @@ async function handleSession(session){
   gateMsg.textContent = '';
   loginModal.classList.remove('active');
   adminArea.style.display = 'block';
+
+  // Bug fix: supabase-js fires onAuthStateChange (which calls handleSession)
+  // on more than just an actual sign-in — it also fires on every silent
+  // background token refresh, and on tab-focus session re-checks. This
+  // whole function used to re-run its entire boot sequence (every load*()
+  // call, selectTabGroup('dashboard'), startOnlineNowPolling()) on EVERY
+  // one of those, which is why the panel would periodically jump back to
+  // the Overview tab and reset scroll position while you were mid-edit on
+  // some other tab — and was quietly stacking a duplicate setInterval for
+  // the online-now poll each time it happened. Everything below this now
+  // runs exactly once per real admin session; a background token refresh
+  // just re-confirms admin status and leaves the UI alone.
+  if(adminBooted) return;
+  adminBooted = true;
+
   selectTabGroup('dashboard'); // #121 — Overview (the default-active tab) lives in this group
   loadPricing();
   loadSiteSettings();
