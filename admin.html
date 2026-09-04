@@ -3082,6 +3082,15 @@ function showTab(id){
   const btn = document.querySelector('.tab-btn[data-tab="' + id + '"]');
   if(content) content.classList.add('active');
   if(btn) btn.classList.add('active');
+  // Bug fix: every .tab-content div shares one document flow (display:
+  // none/block, not a scrolled sub-container), and tabs vary hugely in
+  // height (Dashboard is short; Economy & Gifting or Site & Content run
+  // long). Switching tabs while scrolled down used to leave the browser
+  // to clamp the old scroll position into the new, differently-sized
+  // page — which reads as the view "jumping" to some unrelated spot
+  // instead of showing the top of the tab you just clicked. Scrolling to
+  // top on every switch makes every tab open the same predictable way.
+  window.scrollTo(0, 0);
 }
 
 // #121 — direct feedback: "collapse into fewer top-level tabs." This is
@@ -3567,6 +3576,12 @@ const DEFAULT_REDEEM_AREAS_ADMIN = [
 const DEFAULT_CHECKIN_AREAS_ADMIN = [
   { id: 'newPlayerGrid', label: 'New Player 7-Day Track', left: 10, top: 14, width: 80, height: 13 },
   { id: 'checkinGrid',   label: 'Monthly Calendar Grid',   left: 10, top: 30, width: 80, height: 50 },
+  // Direct feedback: a real positioned "Check In" button, back alongside
+  // the calendar grid frames rather than instead of them — for admins
+  // whose own background art has an actual button graphic to line this
+  // up over. index.html wires this to the same tendGuardian() action the
+  // calendar grid's own today-cell already calls.
+  { id: 'checkinButton', label: 'Check In Button', left: 79, top: 88, width: 18, height: 8 },
   { id: 'backToMap', label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8  },
 ];
 
