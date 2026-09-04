@@ -2094,24 +2094,12 @@ async function afterLogin(){
     // #122 — Oracle hotspot's notification dot (see hotspotBadgeFor).
     loadPendingPetitionsCount().catch(e => console.error('pending petitions count preload failed', e)),
   ]).then(() => { if(document.body.classList.contains('map-screen')) render(); });
-  // #123 — the new-player 7-day check-in track is "autoran": no button,
-  // no separate screen visit required. Fire-and-forget once per login,
-  // same as the badges above; claim_new_player_checkin() is itself a
-  // no-op once new_player_checkin_last_day already covers today's
-  // account-age day, so this is cheap/safe to call on every login. Only
-  // a fresh welcome-back toast if it actually granted something.
-  if(guardian){
-    supabaseClient.rpc('claim_new_player_checkin', { p_guardian_id: guardian.id }).then(({ data, error }) => {
-      if(error){ console.error('new player checkin claim failed', error); return; }
-      if(data && data.granted > 0){
-        loadGuardian().then(() => {
-          if(document.body.classList.contains('map-screen')) render();
-          const gainParts = (data.rewards || []).filter(r => r.amount > 0).map(r => `+${r.amount} ${CHECKIN_CURRENCY_LABELS[r.currency] || r.currency}`);
-          showRewardBanner('Welcome back!', gainParts.join(' · ') || 'New Seeker rewards granted.');
-        });
-      }
-    });
-  }
+  // Direct feedback: "the 7 day needs to be a clickable event, all events
+  // must be player click" — reverses 0106's original "autoran" design.
+  // There's no longer anything to fire-and-forget here at login; the
+  // new-player track is claimed one day at a time by the player, from
+  // the Check-in screen itself (see claimNewPlayerCheckinDay() near
+  // checkinNewPlayerGridHtml()).
   // #135 — the generic auto-delivery event-trigger system's 'first_login'
   // hook: same fire-and-forget-once-per-login pattern as the new-player
   // check-in call just above (grant_event_trigger is itself idempotent —
@@ -2798,6 +2786,14 @@ let REDEEM_AREAS = DEFAULT_REDEEM_AREAS.slice();
 const DEFAULT_CHECKIN_AREAS = [
   { id: 'newPlayerGrid', label: 'New Player 7-Day Track', left: 10, top: 14, width: 80, height: 13, kind: 'grid' },
   { id: 'checkinGrid',   label: 'Monthly Calendar Grid',   left: 10, top: 30, width: 80, height: 50, kind: 'grid' },
+  // Direct feedback: the calendar grid's own "today" cell is not a
+  // replacement for a real positioned button — admins with custom art
+  // showing an actual "Check In" button graphic need a real hotspot to
+  // put back over it, same as before the calendar grid existed. This is
+  // purely additive: the calendar grid stays exactly where it is and its
+  // own today-cell click still works too — this just gives a second,
+  // admin-movable way to trigger the same tendGuardian() action.
+  { id: 'checkinButton', label: 'Check In Button', left: 79, top: 88, width: 18, height: 8, action: tendGuardian },
   { id: 'backToMap', label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8,  action: backFromCheckin },
 ];
 let CHECKIN_AREAS = DEFAULT_CHECKIN_AREAS.slice();
@@ -5663,23 +5659,56 @@ function checkinMonthlyGridHtml(){
   return positionedCheckinGrid('checkinGrid', cells.join(''), 7);
 }
 
-// New-player track cells are pure display — claim_new_player_checkin()
-// (called fire-and-forget from afterLogin(), see its own comment) is
-// what actually grants these, with no click required ("autoran" per the
-// direct feedback), so every cell here is non-interactive: granted (a
-// check) or not-yet-reached (locked look), never a button. The whole
-// frame disappears once the track is no longer active (past day 7),
-// freeing the screen for players who've long since aged out of it.
+// Direct feedback: "the 7 day needs to be a clickable event, all events
+// must be player click" — reverses 0106's original "autoran" design.
+// Exactly one cell is ever clickable at a time: whichever day is next in
+// line (lastGrantedDay + 1), and only once it's actually been reached
+// (account age, capped at 7 — daysSinceSignup itself is NOT capped by
+// checkin_status(), since it's also used elsewhere uncapped, so the cap
+// happens here). Everything before it is a claimed check; everything
+// after it (whether truly in the future or just not clicked yet) reads
+// as locked — the server enforces strict in-order claiming regardless
+// of what the client sends (claim_new_player_checkin(), 0118), so there
+// is never more than one real next step to show. The whole frame
+// disappears once the track is fully claimed (past day 7).
 function checkinNewPlayerGridHtml(){
   const s = checkinCalendarStatus;
   if(!s || !s.newPlayer || !s.newPlayer.active) return '';
+  const reachedDay = Math.min(7, s.newPlayer.daysSinceSignup);
+  const nextClaimable = s.newPlayer.lastGrantedDay + 1;
   const cells = [];
   for(let d = 1; d <= 7; d++){
     const granted = d <= s.newPlayer.lastGrantedDay;
-    const reached = d <= s.newPlayer.daysSinceSignup;
-    cells.push(`<div class="checkin-cell checkin-cell-newplayer${granted ? ' checkin-cell-claimed' : reached ? ' checkin-cell-today' : ' checkin-cell-future'}"><span class="cc-day">${d}</span>${granted ? '<span class="cc-check" aria-hidden="true">✓</span>' : ''}</div>`);
+    const claimable = !granted && d === nextClaimable && d <= reachedDay;
+    if(granted){
+      cells.push(`<div class="checkin-cell checkin-cell-newplayer checkin-cell-claimed"><span class="cc-day">${d}</span><span class="cc-check" aria-hidden="true">✓</span></div>`);
+    } else if(claimable){
+      cells.push(`<div class="checkin-cell checkin-cell-newplayer checkin-cell-today" onclick="claimNewPlayerCheckinDay(${d})" title="${esc('Claim Day ' + d)}"><span class="cc-day">${d}</span><span class="cc-today-label">Claim</span></div>`);
+    } else {
+      cells.push(`<div class="checkin-cell checkin-cell-newplayer checkin-cell-future"><span class="cc-day">${d}</span></div>`);
+    }
   }
   return positionedCheckinGrid('newPlayerGrid', cells.join(''), 7);
+}
+
+async function claimNewPlayerCheckinDay(day){
+  const status = document.getElementById('checkinHubStatus');
+  if(status){ status.className = 'hub-loose-status'; status.textContent = 'Claiming…'; }
+  const { data, error } = await supabaseClient.rpc('claim_new_player_checkin', { p_guardian_id: guardian.id, p_day_number: day });
+  if(error || !data || !data.ok){
+    if(status){ status.className = 'hub-loose-status err'; status.textContent = 'Failed: ' + (error ? error.message : data.error); }
+    return;
+  }
+  await loadGuardian();
+  checkinCalendarStatus.newPlayer.lastGrantedDay = day;
+  render();
+  const s2 = document.getElementById('checkinHubStatus');
+  if(s2){
+    s2.className = 'hub-loose-status ok';
+    const gainParts = (data.rewards || []).filter(r => r.amount > 0).map(r => `+${r.amount} ${CHECKIN_CURRENCY_LABELS[r.currency] || r.currency}`);
+    s2.textContent = `Day ${day} claimed! ${gainParts.join(', ') || 'Nothing configured for this day.'}`;
+  }
+  showConfirmBanner(`Day ${day} claimed!`);
 }
 
 async function doClaimMissedCheckinDay(day){
