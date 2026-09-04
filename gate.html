@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>The Pantheon Gate</title>
+<link rel="icon" id="brandFavicon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%99%3C/text%3E%3C/svg%3E">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
@@ -265,11 +266,11 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
 <div class="wrap">
 
   <header class="gate" id="gateHeader">
-    <div class="eyebrow">Temple of the Obsidian Moon presents</div>
-    <h1>The Pantheon Gate</h1>
+    <div class="eyebrow" id="brandEyebrow">Temple of the Obsidian Moon presents</div>
+    <h1 id="brandTitle">The Pantheon Gate</h1>
     <div class="rule"></div>
     <p class="sub">Step through, and the old gods will speak for themselves. Read their stories, or ask them what the poets left out.</p>
-    <a class="silence-link" href="index.html">The Long Silence &rarr;</a>
+    <a class="silence-link" href="index.html" id="brandBackLink">The Long Silence &rarr;</a>
   </header>
 
   <nav class="pantheon-tabs" id="pantheonTabs"></nav>
@@ -296,6 +297,29 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
 const SUPABASE_URL = "https://kuvaeprkmwzlqrqtjbhc.supabase.co";        // ← you fill this in
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dmFlcHJrbXd6bHFycXRqYmhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MDMzOTgsImV4cCI6MjEwMjQ3OTM5OH0.-W7tTHZZob_dY2ydAx26cFx_izPBKJ3_M0sadNd7cOI";      // ← you fill this in
 const FUNCTIONS_URL = SUPABASE_URL.replace(".supabase.co", ".functions.supabase.co");  // ← leave alone, don't touch
+
+/* ---- BRAND — edit this block, and the matching block in index.html and
+   admin.html, to rebrand the whole site for a white-label deployment.
+   Leave every value as-is to keep this game's own default branding. ---- */
+const BRAND = {
+  siteName: "The Pantheon Gate",              // hero title on this page
+  eyebrow: "Temple of the Obsidian Moon presents",
+  pageTitle: "The Pantheon Gate",             // browser tab title
+  backLinkText: "The Long Silence",           // link back to index.html, under this page's header
+  faviconEmoji: "🌙"
+};
+(function applyStaticBranding(){
+  document.title = BRAND.pageTitle;
+  const fav = document.getElementById('brandFavicon');
+  if(fav) fav.href = "data:image/svg+xml," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>${BRAND.faviconEmoji}</text></svg>`);
+  const eyebrow = document.getElementById('brandEyebrow');
+  if(eyebrow) eyebrow.textContent = BRAND.eyebrow;
+  const title = document.getElementById('brandTitle');
+  if(title) title.textContent = BRAND.siteName;
+  const backLink = document.getElementById('brandBackLink');
+  if(backLink) backLink.textContent = BRAND.backLinkText + ' →';
+})();
+
 /* One deity per pantheon is free to chat with, no account needed — a
    teaser. Everything else requires sign-in + an unlock (subscription or
    one-time purchase). Edit this list to change what's free; it MUST also
