@@ -498,7 +498,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>New player 7-day track</h2>
-        <p class="hint">Separate from the monthly calendar and running alongside it: the first 7 calendar days a guardian exists, one reward per day, auto-granted with no button to click — a player simply receives each day's reward the moment they're logged in on it (catching up on any skipped days rather than losing them). Same Active-gated convention as the monthly calendar.</p>
+        <p class="hint">Separate from the monthly calendar and running alongside it: the first 7 calendar days a guardian exists, one reward per day. Shown to the player as its own small popup right when they log in (not on this Check-in screen) — they click Claim, one day at a time, no skipping ahead. <strong>Every row below is seeded inactive by default</strong> — a row with Active unchecked still lets the player click Claim and advances their day, it just pays out nothing, so if gifts don't seem to be landing, check Active here first.</p>
         <div class="checkin-calendar-grid" id="checkinNewPlayerGrid"><p class="hint">Loading…</p></div>
         <div class="save-bar">
           <button id="saveCheckinNewPlayerBtn">Save changes</button>
@@ -746,6 +746,14 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="field" style="max-width:none;">
           <label>Message</label>
           <textarea id="broadcastMessage" rows="3"></textarea>
+        </div>
+        <div class="field" style="max-width:280px;">
+          <!-- 0120 — direct feedback: "the mail doesn't even really say
+               who sent it." Optional; blank falls back to the site's own
+               brand name on the player's side, so nothing looks broken
+               if this is left empty. -->
+          <label>Sender name (optional — e.g. "Zeus", shown to the player)</label>
+          <input type="text" id="broadcastSenderName" placeholder="Defaults to the site name">
         </div>
         <div class="form-row">
           <div class="field">
@@ -1898,10 +1906,16 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <div class="card">
         <h2>Expedition artifacts</h2>
         <p class="hint">Real-world artifact hunts. A guardian collects every fragment below to reassemble one of these and unlock the deity it's tied to — a brand-new secret deity (mark it for_sale=false over in Deity Personalities' partner tab, Pantheons &amp; Gods) or a free earn-it path to an existing paid one, your call per artifact. The daily expedition cap is set in Guardian Progression.</p>
+        <!-- 0123 — direct feedback: "expeditions led by the voice of the
+             deity you are trying to unlock, they will give the hints and
+             story." Deity voice intro is real admin-authored story text
+             (not a live AI narrator — that's a planned follow-up), shown
+             once before a familiar is first sent after this artifact.
+             Optional, blank by default. -->
         <div class="scroll-table" style="max-height:300px;">
           <table>
-            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Total fragments</th><th>Unlock pantheon</th><th>Unlock deity</th><th>Active</th></tr></thead>
-            <tbody id="artifactRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Deity's voice (intro)</th><th>Total fragments</th><th>Unlock pantheon</th><th>Unlock deity</th><th>Active</th></tr></thead>
+            <tbody id="artifactRows"><tr><td colspan="8">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -1921,19 +1935,23 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <label>Description (shown to players)</label>
           <input type="text" id="newArtifactDescription" style="max-width:none;">
         </div>
+        <div class="field" style="max-width:none;">
+          <label>Deity's voice — intro (optional, shown before the first trip)</label>
+          <input type="text" id="newArtifactDeityVoiceIntro" style="max-width:none;">
+        </div>
         <div class="status" id="newArtifactStatus"></div>
       </div>
 
       <div class="card">
         <h2>Expedition fragments (clues)</h2>
-        <p class="hint">Each fragment is one real destination with one real multiple-choice question — this is the "educational" half, so keep it factually accurate. correct_index is 0 for the first choice, 1 for the second, and so on. Choices are entered as one option per line. travel_hours is how long the guardian is away before the clue becomes answerable.</p>
+        <p class="hint">Each fragment is one real destination with one real multiple-choice question — this is the "educational" half, so keep it factually accurate. correct_index is 0 for the first choice, 1 for the second, and so on. Choices are entered as one option per line. travel_hours is how long the guardian is away before the clue becomes answerable. Deity's voice hint (optional) is a short in-character line pointing the familiar toward this site, shown when it's dispatched.</p>
         <div class="form-row">
           <div class="field"><label>Artifact</label><select id="fragmentArtifactSelect" style="max-width:220px;"></select></div>
         </div>
         <div class="scroll-table" style="max-height:420px;">
           <table>
-            <thead><tr><th>#</th><th>Region</th><th>Clue</th><th>Choices (one per line)</th><th>Correct #</th><th>Fun fact</th><th>Travel hrs</th><th>Active</th></tr></thead>
-            <tbody id="fragmentRows"><tr><td colspan="8">Pick an artifact above.</td></tr></tbody>
+            <thead><tr><th>#</th><th>Region</th><th>Clue</th><th>Choices (one per line)</th><th>Correct #</th><th>Fun fact</th><th>Deity's voice hint</th><th>Travel hrs</th><th>Active</th></tr></thead>
+            <tbody id="fragmentRows"><tr><td colspan="9">Pick an artifact above.</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -1960,7 +1978,46 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <label>Fun fact (shown after answering, correct or not)</label>
           <input type="text" id="newFragmentFunFact" style="max-width:none;">
         </div>
+        <div class="field" style="max-width:none;">
+          <label>Deity's voice — hint (optional, shown when dispatched)</label>
+          <input type="text" id="newFragmentDeityVoiceHint" style="max-width:none;">
+        </div>
         <div class="status" id="newFragmentStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Expedition Altar Items</h2>
+        <!-- 0123 — direct feedback: "once the fragments are brought back
+             and completed the deity will fully unlock granting a unique
+             Altar Item granting either self or circle a boon." One row
+             per artifact; saving here also keeps the two underlying altar
+             decoration catalogs (Personal/Circle) in sync automatically —
+             that's what actually makes the item placeable, so there's
+             nothing else to configure elsewhere. -->
+        <p class="hint">Completing an artifact earns a unique Altar Item. The player then chooses where it goes — their own Personal Altar (Essence bonus, a self boon) or their Circle's Altar (Devotion bonus, a circle boon) — never both. Bonus % stacks with existing Deity Blessing / Circle Patron Bonus percentages, same as any other altar decoration.</p>
+        <div class="scroll-table" style="max-height:300px;">
+          <table>
+            <thead><tr><th>Artifact</th><th>Item name</th><th>Description</th><th>Essence bonus % (personal)</th><th>Devotion bonus % (circle)</th><th>Active</th></tr></thead>
+            <tbody id="expAltarItemRows"><tr><td colspan="6">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveExpAltarItemsBtn">Save changes</button>
+          <div class="status" id="expAltarItemStatus"></div>
+        </div>
+        <h3>Add an Altar Item for an artifact</h3>
+        <div class="form-row">
+          <div class="field"><label>Artifact</label><select id="newExpAltarItemArtifact" style="max-width:220px;"></select></div>
+          <div class="field"><label>Item name</label><input type="text" id="newExpAltarItemName" style="max-width:200px;"></div>
+          <div class="field"><label>Essence bonus % (personal)</label><input type="number" min="0.1" step="0.1" value="5" id="newExpAltarItemEssencePct" style="max-width:130px;"></div>
+          <div class="field"><label>Devotion bonus % (circle)</label><input type="number" min="0.1" step="0.1" value="5" id="newExpAltarItemDevotionPct" style="max-width:130px;"></div>
+          <button id="addExpAltarItemBtn">Add Altar Item</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description</label>
+          <input type="text" id="newExpAltarItemDescription" style="max-width:none;">
+        </div>
+        <div class="status" id="newExpAltarItemStatus"></div>
       </div>
     </div>
 
@@ -2529,19 +2586,50 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
     <div class="tab-content" id="tab-chainedgods">
       <div class="card">
         <h2>Current season</h2>
-        <p class="hint">God Tokens are redeemed for a random deity drawn from whichever gods are checked "In season" below — the player doesn't choose. The Key of Night lets a player choose, but only from that same in-season list. Season name is just a display label shown to players; the checkboxes in the table below are what actually control the pool.</p>
+        <!-- 0122 — direct feedback: "both tokens and keys will run off
+             of random pools that i set per token and key... key of
+             night will be the same except it will grant access to a
+             random deity now as well, just from a different pool i set
+             containing bigger deities." Both currencies are now a blind
+             draw from their OWN pool below — nobody picks anymore.
+             Wanting one specific god guaranteed still works exactly as
+             it always has, via a direct Shop purchase. -->
+        <p class="hint">God Tokens and Key of Night are both now a random draw — from two separate pools you set in the table below (a god can be in either, both, or neither). A player wanting one specific god guaranteed, not a gamble, still buys it directly in the Shop as always. Season name is just a display label shown to players.</p>
         <div class="form-row">
           <div class="field">
             <label>Season name (shown to players)</label>
             <input type="text" id="seasonName" placeholder="e.g. Harvest Rites" style="max-width:260px;">
           </div>
           <div class="field">
-            <label>God Token cost (Tokens per random unlock)</label>
+            <label>God Token cost (Tokens per draw)</label>
             <input type="number" min="1" id="godTokenCost" style="max-width:140px;">
           </div>
           <div class="field">
-            <label>Key of Night cost (Keys per chosen unlock)</label>
+            <label>Key of Night cost (Keys per draw)</label>
             <input type="number" min="1" id="keyOfNightCost" style="max-width:140px;">
+          </div>
+        </div>
+        <!-- 0122 — direct feedback: "we will now be allowing while not
+             too often repeat drawings in which case the deity will be
+             transferred into essence." 0% keeps today's behavior
+             (never a duplicate) until dialed up. -->
+        <p class="hint" style="margin-top:14px;">Occasionally a draw can land on a god the player already has — set how often, and what it converts into instead of granting nothing. 0% means it never happens (today's behavior).</p>
+        <div class="form-row">
+          <div class="field">
+            <label>Token pool — duplicate chance (%)</label>
+            <input type="number" min="0" max="100" step="0.1" id="tokenDupChance" style="max-width:140px;">
+          </div>
+          <div class="field">
+            <label>Token pool — Essence if duplicate</label>
+            <input type="number" min="0" id="tokenDupEssence" style="max-width:140px;">
+          </div>
+          <div class="field">
+            <label>Key pool — duplicate chance (%)</label>
+            <input type="number" min="0" max="100" step="0.1" id="keyDupChance" style="max-width:140px;">
+          </div>
+          <div class="field">
+            <label>Key pool — Essence if duplicate</label>
+            <input type="number" min="0" id="keyDupEssence" style="max-width:140px;">
           </div>
         </div>
         <div class="save-bar">
@@ -2551,13 +2639,13 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
 
       <div class="card">
-        <h2>Seasonal deity pool</h2>
-        <p class="hint">Check "In season" for every god you want available this season. An empty pool means God Token redemption will refuse with an error until you've checked at least one — the Key of Night picker will simply show nothing to choose from.</p>
+        <h2>Seasonal deity pools</h2>
+        <p class="hint">Check "Token pool" and/or "Key pool" for every god you want available this season in each draw — independent of each other. An empty pool means that currency's redemption will refuse with an error until you've checked at least one.</p>
         <input class="search-box" type="text" id="seasonPoolSearch" placeholder="Search by name…">
         <div class="scroll-table" style="max-height:460px;">
           <table>
-            <thead><tr><th>God</th><th>Pantheon</th><th>In season</th></tr></thead>
-            <tbody id="seasonPoolRows"><tr><td colspan="3">Loading…</td></tr></tbody>
+            <thead><tr><th>God</th><th>Pantheon</th><th>Token pool</th><th>Key pool</th></tr></thead>
+            <tbody id="seasonPoolRows"><tr><td colspan="4">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -2737,6 +2825,41 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="save-bar">
           <button id="saveFeatureGatesBtn">Save changes</button>
           <div class="status" id="featureGateStatus"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Grant one player past one area</h2>
+        <!-- 0121 — direct feedback, following up on the table above:
+             "can you allow me to grant to a certain level or spot in the
+             game with that?" / "it is for separating between trial
+             players and full." This is a personal exception ON TOP of
+             whatever the Requirement above says for that area — it lets
+             a specific player straight through regardless of the area's
+             global rule (or whether it's even Active), without touching
+             that rule for anyone else. -->
+        <p class="hint">Give one specific player a personal bypass for one area, regardless of what that area's Requirement above is set to — a "trial" player can be let past a full-access area, or anyone past a stage/level gate, without changing the rule for everyone else.</p>
+        <div class="form-row">
+          <div class="field">
+            <label>Player email</label>
+            <input type="text" id="fgoTargetEmail" placeholder="player@example.com">
+          </div>
+          <div class="field">
+            <label>Area</label>
+            <select id="fgoFeatureKey"></select>
+          </div>
+          <div class="field" style="flex:2;">
+            <label>Note (optional, for your own records)</label>
+            <input type="text" id="fgoNote" placeholder="e.g. trial preview through launch week">
+          </div>
+        </div>
+        <button id="grantFeatureOverrideBtn" onclick="grantFeatureOverride()">Grant access</button>
+        <div class="status" id="fgoStatus"></div>
+        <div class="scroll-table" style="max-height:280px;margin-top:12px;">
+          <table>
+            <thead><tr><th>Player</th><th>Area</th><th>Note</th><th>Granted</th><th></th></tr></thead>
+            <tbody id="featureGateOverrideRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -3380,7 +3503,7 @@ async function handleSession(session){
   loadGuideStepsAdmin();
   loadMilestonesAdmin();
   loadPageTipsAdmin();
-  loadFeatureGatesAdmin();
+  loadFeatureGatesAdmin().then(() => loadFeatureGateOverridesAdmin());
   loadSpeciesMoves();
   loadDeityMoves();
   loadDeityBlessings();
@@ -3388,6 +3511,7 @@ async function handleSession(session){
   loadLootSettings();
   loadGuardianItemCatalog();
   loadExpeditionArtifacts();
+  loadExpAltarItems();
   loadArenaShopCatalog();
   loadPvpPayoutRules();
   loadLeaderboards();
@@ -3567,14 +3691,21 @@ const DEFAULT_REDEEM_AREAS_ADMIN = [
 ];
 // #123 — the old single "Check In" button was replaced on the player
 // side by a real day-by-day calendar grid (see index.html's
-// checkinMonthlyGridHtml()/checkinNewPlayerGridHtml()). These two boxes
-// are just the FRAMES that grid draws inside of, dragged/resized here
-// exactly like any other hotspot — index.html splits whichever box each
-// one ends up at into a uniform grid of day cells, so one drag per frame
-// aligns the whole calendar to the admin's own background art instead of
-// needing 38 separate hotspots hand-placed one at a time.
+// checkinMonthlyGridHtml()). 'checkinGrid' below is the FRAME that grid
+// draws inside of, dragged/resized here exactly like any other hotspot —
+// index.html splits whichever box it ends up at into a uniform grid of
+// day cells, so one drag aligns the whole calendar to the admin's own
+// background art instead of needing 31 separate hotspots hand-placed
+// one at a time.
+//
+// Direct feedback on the old 'newPlayerGrid' frame below (the new-player
+// 7-day track used to share this same screen/art): "does not work or
+// look very good... let's move it to its own event card" — it's now a
+// small popup at login instead (nothing to position here for it
+// anymore). Left in this array, unused/retired rather than removed, so
+// an admin's already-saved position for that id isn't silently orphaned.
 const DEFAULT_CHECKIN_AREAS_ADMIN = [
-  { id: 'newPlayerGrid', label: 'New Player 7-Day Track', left: 10, top: 14, width: 80, height: 13 },
+  { id: 'newPlayerGrid', label: 'New Player 7-Day Track (retired — now a login popup)', left: 10, top: 14, width: 80, height: 13 },
   { id: 'checkinGrid',   label: 'Monthly Calendar Grid',   left: 10, top: 30, width: 80, height: 50 },
   // Direct feedback: a real positioned "Check In" button, back alongside
   // the calendar grid frames rather than instead of them — for admins
@@ -4359,6 +4490,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('fragmentArtifactSelect').addEventListener('change', loadExpeditionFragments);
   document.getElementById('saveFragmentsBtn').addEventListener('click', saveExpeditionFragments);
   document.getElementById('addFragmentBtn').addEventListener('click', addExpeditionFragment);
+  document.getElementById('saveExpAltarItemsBtn').addEventListener('click', saveExpAltarItems);
+  document.getElementById('addExpAltarItemBtn').addEventListener('click', addExpAltarItem);
 
   document.getElementById('saveArenaItemsBtn').addEventListener('click', saveArenaShopCatalog);
   document.getElementById('addArenaItemBtn').addEventListener('click', addArenaShopItem);
@@ -4605,12 +4738,20 @@ async function saveDeitySettings(){
    table above, just with one checkbox column instead of pricing fields. */
 
 async function loadSeasonSettings(){
+  // 0122 — season_settings gained the four duplicate-chance/essence
+  // columns (two pools) alongside the existing season_name.
   const { data, error } = await supabaseClient
     .from('season_settings')
-    .select('season_name')
+    .select('season_name, token_duplicate_chance_pct, token_duplicate_essence_amount, key_duplicate_chance_pct, key_duplicate_essence_amount')
     .eq('id', 1)
     .maybeSingle();
-  if(!error && data) document.getElementById('seasonName').value = data.season_name || '';
+  if(!error && data){
+    document.getElementById('seasonName').value = data.season_name || '';
+    document.getElementById('tokenDupChance').value = data.token_duplicate_chance_pct ?? 0;
+    document.getElementById('tokenDupEssence').value = data.token_duplicate_essence_amount ?? 0;
+    document.getElementById('keyDupChance').value = data.key_duplicate_chance_pct ?? 0;
+    document.getElementById('keyDupEssence').value = data.key_duplicate_essence_amount ?? 0;
+  }
 
   const { data: pricing, error: pricingError } = await supabaseClient
     .from('pricing_settings')
@@ -4628,17 +4769,31 @@ async function saveSeasonSettings(){
   const seasonName = document.getElementById('seasonName').value.trim();
   const godTokenCost = parseInt(document.getElementById('godTokenCost').value, 10);
   const keyOfNightCost = parseInt(document.getElementById('keyOfNightCost').value, 10);
+  const tokenDupChance = parseFloat(document.getElementById('tokenDupChance').value);
+  const tokenDupEssence = parseInt(document.getElementById('tokenDupEssence').value, 10);
+  const keyDupChance = parseFloat(document.getElementById('keyDupChance').value);
+  const keyDupEssence = parseInt(document.getElementById('keyDupEssence').value, 10);
 
   if(isNaN(godTokenCost) || godTokenCost < 1 || isNaN(keyOfNightCost) || keyOfNightCost < 1){
     status.className = 'status err';
     status.textContent = 'Both costs must be at least 1.';
     return;
   }
+  if([tokenDupChance, tokenDupEssence, keyDupChance, keyDupEssence].some(n => isNaN(n) || n < 0) || tokenDupChance > 100 || keyDupChance > 100){
+    status.className = 'status err';
+    status.textContent = 'Duplicate chances must be 0-100; essence amounts must be 0 or more.';
+    return;
+  }
 
   status.className = 'status';
   status.textContent = 'Saving…';
   const [seasonResult, pricingResult] = await Promise.all([
-    supabaseClient.from('season_settings').update({ season_name: seasonName, updated_at: new Date().toISOString() }).eq('id', 1),
+    supabaseClient.from('season_settings').update({
+      season_name: seasonName,
+      token_duplicate_chance_pct: tokenDupChance, token_duplicate_essence_amount: tokenDupEssence,
+      key_duplicate_chance_pct: keyDupChance, key_duplicate_essence_amount: keyDupEssence,
+      updated_at: new Date().toISOString()
+    }).eq('id', 1),
     supabaseClient.from('pricing_settings').update({ god_token_unlock_cost: godTokenCost, key_of_night_unlock_cost: keyOfNightCost, updated_at: new Date().toISOString() }).eq('id', 1)
   ]);
   const error = seasonResult.error || pricingResult.error;
@@ -4646,18 +4801,24 @@ async function saveSeasonSettings(){
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
 }
 
+// 0122 — one row per god, two independent pool checkboxes (Token/Key)
+// instead of the old single "In season" column.
 async function loadSeasonPool(){
-  const { data, error } = await supabaseClient.from('deity_season_pool').select('deity_id, in_season');
-  const inSeason = {};
-  (data || []).forEach(r => { inSeason[r.deity_id] = r.in_season; });
+  const { data, error } = await supabaseClient.from('deity_season_pool').select('deity_id, in_season, in_key_pool');
+  const pools = {};
+  (data || []).forEach(r => { pools[r.deity_id] = { token: r.in_season, key: r.in_key_pool }; });
   if(error) console.error('deity_season_pool load failed', error);
 
   const rows = document.getElementById('seasonPoolRows');
-  rows.innerHTML = uniqueFlatDeities().map(d => `<tr data-name="${esc(d.name.toLowerCase())}">
+  rows.innerHTML = uniqueFlatDeities().map(d => {
+    const p = pools[d.id] || {};
+    return `<tr data-name="${esc(d.name.toLowerCase())}">
     <td>${esc(d.name)}</td>
     <td class="dim">${esc(d.pantheonLabels.join(' / '))}</td>
-    <td><input type="checkbox" id="season_${d.id}" ${inSeason[d.id] ? 'checked' : ''}></td>
-  </tr>`).join('');
+    <td><input type="checkbox" id="seasonToken_${d.id}" ${p.token ? 'checked' : ''}></td>
+    <td><input type="checkbox" id="seasonKey_${d.id}" ${p.key ? 'checked' : ''}></td>
+  </tr>`;
+  }).join('');
 }
 
 function filterSeasonPoolRows(){
@@ -4673,14 +4834,15 @@ async function saveSeasonPool(){
   const rows = uniqueFlatDeities().map(d => ({
     deity_id: d.id,
     pantheon_id: d.pantheonId,
-    in_season: document.getElementById('season_' + d.id).checked,
+    in_season: document.getElementById('seasonToken_' + d.id).checked,
+    in_key_pool: document.getElementById('seasonKey_' + d.id).checked,
     updated_at: new Date().toISOString()
   }));
   status.className = 'status';
   status.textContent = 'Saving…';
   const { error } = await supabaseClient.from('deity_season_pool').upsert(rows, { onConflict: 'deity_id' });
   status.className = error ? 'status err' : 'status ok';
-  status.textContent = error ? ('Failed: ' + error.message) : `Saved. ${rows.filter(r => r.in_season).length} god(s) in season.`;
+  status.textContent = error ? ('Failed: ' + error.message) : `Saved. ${rows.filter(r => r.in_season).length} god(s) in the Token pool, ${rows.filter(r => r.in_key_pool).length} in the Key pool.`;
   if(!error) loadSeasonPool();
 }
 
@@ -5315,6 +5477,8 @@ async function postBroadcast(){
     }
   }
 
+  const senderName = document.getElementById('broadcastSenderName').value.trim() || null;
+
   const postOne = (email) => supabaseClient.rpc('admin_post_broadcast', {
     p_message: message,
     p_gift_bonus_messages: giftBonus,
@@ -5323,7 +5487,8 @@ async function postBroadcast(){
     p_target_email: email,
     p_gift_store_item_id: giftStoreItemId,
     p_gift_reward_key: giftRewardKey,
-    p_gift_bundle_key: giftBundleKey
+    p_gift_bundle_key: giftBundleKey,
+    p_sender_name: senderName
   });
 
   status.className = 'status';
@@ -5354,6 +5519,7 @@ async function postBroadcast(){
   status.textContent = resultText;
   {
     document.getElementById('broadcastMessage').value = '';
+    document.getElementById('broadcastSenderName').value = '';
     document.getElementById('broadcastGiftBonus').value = '';
     document.getElementById('broadcastGiftScopeId').value = '';
     document.getElementById('broadcastGiftType').value = 'none';
@@ -9445,10 +9611,14 @@ const FEATURE_REQUIREMENT_OPTIONS = [
   { value: 'full_access', label: 'Full access (backers / subscription holders) — Value unused' },
 ];
 
+let featureGatesCache = []; // [{feature_key, label}] — used to populate the override form's Area dropdown below
 async function loadFeatureGatesAdmin(){
   const { data, error } = await supabaseClient.from('feature_gates').select('*').order('feature_key', { ascending: true });
   const rows = document.getElementById('featureGateRows');
   if(error){ rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  featureGatesCache = data || [];
+  const fgoSel = document.getElementById('fgoFeatureKey');
+  if(fgoSel) fgoSel.innerHTML = featureGatesCache.map(g => `<option value="${esc(g.feature_key)}">${esc(g.label)}</option>`).join('') || '<option value="">No areas yet</option>';
   rows.innerHTML = (data || []).map(g => `<tr data-key="${esc(g.feature_key)}">
     <td class="dim">${esc(g.label)}</td>
     <td><select id="fgType_${esc(g.feature_key)}" style="max-width:340px;">${FEATURE_REQUIREMENT_OPTIONS.map(o => `<option value="${o.value}" ${o.value === g.requirement_type ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></td>
@@ -9477,6 +9647,53 @@ async function saveFeatureGates(){
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
   if(!error) loadFeatureGatesAdmin();
+}
+
+// 0121 — per-player, per-area override list + grant/revoke, the card
+// right below the Feature Access table above.
+async function loadFeatureGateOverridesAdmin(){
+  const rows = document.getElementById('featureGateOverrideRows');
+  const { data, error } = await supabaseClient
+    .from('feature_gate_overrides')
+    .select('user_id, feature_key, note, created_at, profiles!feature_gate_overrides_user_id_fkey(email)')
+    .order('created_at', { ascending: false });
+  if(!rows) return;
+  if(error){ rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  if(!(data || []).length){ rows.innerHTML = '<tr><td colspan="5">No personal overrides yet.</td></tr>'; return; }
+  rows.innerHTML = data.map(r => {
+    const area = featureGatesCache.find(g => g.feature_key === r.feature_key);
+    return `<tr>
+      <td class="dim">${esc(r.profiles?.email || '(unknown player)')}</td>
+      <td>${esc(area ? area.label : r.feature_key)}</td>
+      <td class="dim">${esc(r.note || '—')}</td>
+      <td class="dim">${new Date(r.created_at).toLocaleDateString()}</td>
+      <td><button class="secondary" onclick="revokeFeatureOverride('${esc(r.user_id)}','${esc(r.feature_key)}')">Revoke</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function grantFeatureOverride(){
+  const status = document.getElementById('fgoStatus');
+  const email = document.getElementById('fgoTargetEmail').value.trim();
+  const featureKey = document.getElementById('fgoFeatureKey').value;
+  const note = document.getElementById('fgoNote').value.trim();
+  if(!email){ status.className = 'status err'; status.textContent = 'Enter the player\'s email.'; return; }
+  if(!featureKey){ status.className = 'status err'; status.textContent = 'Pick an area.'; return; }
+  status.className = 'status'; status.textContent = 'Granting…';
+  const { error } = await supabaseClient.rpc('admin_grant_feature_override', { p_target_email: email, p_feature_key: featureKey, p_note: note || null });
+  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+  status.className = 'status ok'; status.textContent = 'Granted.';
+  document.getElementById('fgoTargetEmail').value = '';
+  document.getElementById('fgoNote').value = '';
+  loadFeatureGateOverridesAdmin();
+}
+
+async function revokeFeatureOverride(userId, featureKey){
+  const status = document.getElementById('fgoStatus');
+  const { error } = await supabaseClient.from('feature_gate_overrides').delete().match({ user_id: userId, feature_key: featureKey });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Revoked.';
+  if(!error) loadFeatureGateOverridesAdmin();
 }
 
 let speciesMovePointerCache = {}; // species -> { power: row|null, control: row|null }
@@ -10504,25 +10721,33 @@ async function loadExpeditionArtifacts(){
   const { data, error } = await supabaseClient.from('expedition_artifacts').select('*').order('key', { ascending: true });
   const rows = document.getElementById('artifactRows');
   if(error){
-    rows.innerHTML = '<tr><td colspan="7">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="8">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = (data || []).map(a => `<tr data-key="${esc(a.key)}">
     <td class="dim">${esc(a.key)}</td>
     <td><input type="text" id="artName_${esc(a.key)}" value="${esc(a.name)}" style="max-width:160px;"></td>
     <td><input type="text" id="artDesc_${esc(a.key)}" value="${esc(a.description || '')}" style="max-width:260px;"></td>
+    <td><input type="text" id="artVoiceIntro_${esc(a.key)}" value="${esc(a.deity_voice_intro || '')}" style="max-width:260px;"></td>
     <td><input type="number" min="1" id="artTotal_${esc(a.key)}" value="${a.total_fragments}" style="max-width:80px;"></td>
     <td><select id="artPantheon_${esc(a.key)}" style="max-width:130px;">${pantheonOptionsHtml(a.unlock_pantheon_id)}</select></td>
     <td><select id="artDeity_${esc(a.key)}" style="max-width:150px;">${deityOptionsHtml(a.unlock_deity_id)}</select></td>
     <td><input type="checkbox" id="artActive_${esc(a.key)}" ${a.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="7">No artifacts yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="8">No artifacts yet.</td></tr>';
 
-  // Keep the fragment-editor's artifact picker in sync with the catalog.
+  // Keep the fragment-editor's and Altar Items' artifact pickers in sync.
   const sel = document.getElementById('fragmentArtifactSelect');
   const prev = sel.value;
   sel.innerHTML = (data || []).map(a => `<option value="${esc(a.key)}">${esc(a.name)} (${esc(a.key)})</option>`).join('') || '<option value="">No artifacts yet</option>';
   if(prev && (data || []).some(a => a.key === prev)) sel.value = prev;
   if(sel.value) loadExpeditionFragments();
+
+  const altarSel = document.getElementById('newExpAltarItemArtifact');
+  if(altarSel){
+    const altarPrev = altarSel.value;
+    altarSel.innerHTML = (data || []).map(a => `<option value="${esc(a.key)}">${esc(a.name)} (${esc(a.key)})</option>`).join('') || '<option value="">No artifacts yet</option>';
+    if(altarPrev && (data || []).some(a => a.key === altarPrev)) altarSel.value = altarPrev;
+  }
 }
 
 async function saveExpeditionArtifacts(){
@@ -10534,6 +10759,7 @@ async function saveExpeditionArtifacts(){
       key,
       name: document.getElementById('artName_' + key).value.trim(),
       description: document.getElementById('artDesc_' + key).value.trim(),
+      deity_voice_intro: document.getElementById('artVoiceIntro_' + key).value.trim(),
       total_fragments: parseInt(document.getElementById('artTotal_' + key).value, 10),
       unlock_pantheon_id: document.getElementById('artPantheon_' + key).value.trim(),
       unlock_deity_id: document.getElementById('artDeity_' + key).value.trim(),
@@ -10553,6 +10779,7 @@ async function addExpeditionArtifact(){
   const key = document.getElementById('newArtifactKey').value.trim().toLowerCase();
   const name = document.getElementById('newArtifactName').value.trim();
   const description = document.getElementById('newArtifactDescription').value.trim();
+  const deityVoiceIntro = document.getElementById('newArtifactDeityVoiceIntro').value.trim();
   const totalFragments = parseInt(document.getElementById('newArtifactTotalFragments').value, 10);
   const pantheon = document.getElementById('newArtifactPantheon').value.trim();
   const deity = document.getElementById('newArtifactDeity').value.trim();
@@ -10565,24 +10792,24 @@ async function addExpeditionArtifact(){
   status.className = 'status';
   status.textContent = 'Adding…';
   const { error } = await supabaseClient.from('expedition_artifacts').insert({
-    key, name, description, total_fragments: totalFragments, unlock_pantheon_id: pantheon, unlock_deity_id: deity
+    key, name, description, deity_voice_intro: deityVoiceIntro, total_fragments: totalFragments, unlock_pantheon_id: pantheon, unlock_deity_id: deity
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
 
   status.className = 'status ok';
   status.textContent = name + ' added. Now add ' + totalFragments + ' fragment(s) for it below.';
-  ['newArtifactKey','newArtifactName','newArtifactTotalFragments','newArtifactPantheon','newArtifactDeity','newArtifactDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newArtifactKey','newArtifactName','newArtifactTotalFragments','newArtifactPantheon','newArtifactDeity','newArtifactDescription','newArtifactDeityVoiceIntro'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadExpeditionArtifacts();
 }
 
 async function loadExpeditionFragments(){
   const artifactKey = document.getElementById('fragmentArtifactSelect').value;
   const rows = document.getElementById('fragmentRows');
-  if(!artifactKey){ rows.innerHTML = '<tr><td colspan="8">Pick an artifact above.</td></tr>'; return; }
+  if(!artifactKey){ rows.innerHTML = '<tr><td colspan="9">Pick an artifact above.</td></tr>'; return; }
 
   const { data, error } = await supabaseClient.from('expedition_fragments').select('*').eq('artifact_key', artifactKey).order('fragment_index', { ascending: true });
   if(error){
-    rows.innerHTML = '<tr><td colspan="8">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="9">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = (data || []).map(f => {
@@ -10595,10 +10822,11 @@ async function loadExpeditionFragments(){
       <td><textarea id="fragChoices_${rowId}" rows="3" style="max-width:220px;">${esc(choicesText)}</textarea></td>
       <td><input type="number" min="0" id="fragCorrect_${rowId}" value="${f.correct_index}" style="max-width:70px;"></td>
       <td><input type="text" id="fragFact_${rowId}" value="${esc(f.fun_fact || '')}" style="max-width:220px;"></td>
+      <td><input type="text" id="fragVoiceHint_${rowId}" value="${esc(f.deity_voice_hint || '')}" style="max-width:220px;"></td>
       <td><input type="number" min="0.5" step="0.5" id="fragHours_${rowId}" value="${f.travel_hours}" style="max-width:80px;"></td>
       <td><input type="checkbox" id="fragActive_${rowId}" ${f.active ? 'checked' : ''}></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="8">No fragments yet for this artifact.</td></tr>';
+  }).join('') || '<tr><td colspan="9">No fragments yet for this artifact.</td></tr>';
 }
 
 async function saveExpeditionFragments(){
@@ -10617,6 +10845,7 @@ async function saveExpeditionFragments(){
       choices: choicesLines,
       correct_index: parseInt(document.getElementById('fragCorrect_' + rowId).value, 10),
       fun_fact: document.getElementById('fragFact_' + rowId).value.trim(),
+      deity_voice_hint: document.getElementById('fragVoiceHint_' + rowId).value.trim(),
       travel_hours: parseFloat(document.getElementById('fragHours_' + rowId).value),
       active: document.getElementById('fragActive_' + rowId).checked,
       updated_at: new Date().toISOString()
@@ -10645,6 +10874,7 @@ async function addExpeditionFragment(){
   const choicesLines = document.getElementById('newFragmentChoices').value.split('\n').map(s => s.trim()).filter(Boolean);
   const correctIndex = parseInt(document.getElementById('newFragmentCorrectIndex').value, 10);
   const funFact = document.getElementById('newFragmentFunFact').value.trim();
+  const deityVoiceHint = document.getElementById('newFragmentDeityVoiceHint').value.trim();
   const travelHours = parseFloat(document.getElementById('newFragmentTravelHours').value);
 
   if(!artifactKey){ status.className = 'status err'; status.textContent = 'Pick an artifact above first.'; return; }
@@ -10660,15 +10890,112 @@ async function addExpeditionFragment(){
   status.textContent = 'Adding…';
   const { error } = await supabaseClient.from('expedition_fragments').insert({
     artifact_key: artifactKey, fragment_index: fragmentIndex, region_name: region, clue_text: clue,
-    choices: choicesLines, correct_index: correctIndex, fun_fact: funFact, travel_hours: travelHours
+    choices: choicesLines, correct_index: correctIndex, fun_fact: funFact, deity_voice_hint: deityVoiceHint, travel_hours: travelHours
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That fragment # already exists for this artifact.' : ('Failed: ' + error.message); return; }
 
   status.className = 'status ok';
   status.textContent = 'Fragment #' + fragmentIndex + ' added to ' + artifactKey + '.';
-  ['newFragmentIndex','newFragmentRegion','newFragmentClue','newFragmentChoices','newFragmentCorrectIndex','newFragmentFunFact'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newFragmentIndex','newFragmentRegion','newFragmentClue','newFragmentChoices','newFragmentCorrectIndex','newFragmentFunFact','newFragmentDeityVoiceHint'].forEach(fid => { document.getElementById(fid).value = ''; });
   document.getElementById('newFragmentTravelHours').value = '4';
   loadExpeditionFragments();
+}
+
+/* ---------------- Expedition Altar Items (0123) ---------------- */
+
+async function loadExpAltarItems(){
+  const { data, error } = await supabaseClient.from('expedition_altar_item_catalog').select('*').order('artifact_key', { ascending: true });
+  const rows = document.getElementById('expAltarItemRows');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="6">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = (data || []).map(a => `<tr data-artifact-key="${esc(a.artifact_key)}">
+    <td class="dim">${esc(a.artifact_key)}</td>
+    <td><input type="text" id="expAltarName_${esc(a.artifact_key)}" value="${esc(a.name)}" style="max-width:180px;"></td>
+    <td><input type="text" id="expAltarDesc_${esc(a.artifact_key)}" value="${esc(a.description || '')}" style="max-width:260px;"></td>
+    <td><input type="number" min="0.1" step="0.1" id="expAltarEssencePct_${esc(a.artifact_key)}" value="${a.essence_bonus_pct}" style="max-width:100px;"></td>
+    <td><input type="number" min="0.1" step="0.1" id="expAltarDevotionPct_${esc(a.artifact_key)}" value="${a.devotion_bonus_pct}" style="max-width:100px;"></td>
+    <td><input type="checkbox" id="expAltarActive_${esc(a.artifact_key)}" ${a.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="6">No Altar Items yet.</td></tr>';
+}
+
+// Keeps the two real, placeable altar decoration catalogs (Personal and
+// Circle) in sync with one Altar Item row — that's what actually makes an
+// earned item placeable, so the admin never has to touch those catalogs
+// directly for these. Mirrors the same-shaped insert the 0123 migration
+// itself runs for the starting set.
+async function syncExpAltarItemMirrors(artifactKey, name, description, essenceBonusPct, devotionBonusPct){
+  await Promise.all([
+    supabaseClient.from('personal_altar_decoration_catalog').upsert({
+      key: 'exalt_' + artifactKey, name, description, source: 'expedition',
+      effect_key: 'essence_bonus_pct', effect_amount: essenceBonusPct
+    }, { onConflict: 'key' }),
+    supabaseClient.from('altar_decoration_catalog').upsert({
+      key: 'exdec_' + artifactKey, name, description, source: 'expedition',
+      effect_key: 'devotion_bonus_pct', effect_amount: devotionBonusPct
+    }, { onConflict: 'key' })
+  ]);
+}
+
+async function saveExpAltarItems(){
+  const status = document.getElementById('expAltarItemStatus');
+  const trs = document.querySelectorAll('#expAltarItemRows tr[data-artifact-key]');
+  const rows = Array.from(trs).map(tr => {
+    const artifactKey = tr.getAttribute('data-artifact-key');
+    return {
+      artifact_key: artifactKey,
+      name: document.getElementById('expAltarName_' + artifactKey).value.trim(),
+      description: document.getElementById('expAltarDesc_' + artifactKey).value.trim(),
+      essence_bonus_pct: parseFloat(document.getElementById('expAltarEssencePct_' + artifactKey).value),
+      devotion_bonus_pct: parseFloat(document.getElementById('expAltarDevotionPct_' + artifactKey).value),
+      active: document.getElementById('expAltarActive_' + artifactKey).checked
+    };
+  });
+  const badRow = rows.find(r => !r.name || isNaN(r.essence_bonus_pct) || r.essence_bonus_pct <= 0 || isNaN(r.devotion_bonus_pct) || r.devotion_bonus_pct <= 0);
+  if(badRow){
+    status.className = 'status err';
+    status.textContent = `${badRow.artifact_key}: name is required and both bonus % fields must be greater than 0.`;
+    return;
+  }
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('expedition_altar_item_catalog').upsert(rows, { onConflict: 'artifact_key' });
+  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+  await Promise.all(rows.map(r => syncExpAltarItemMirrors(r.artifact_key, r.name, r.description, r.essence_bonus_pct, r.devotion_bonus_pct)));
+  status.className = 'status ok';
+  status.textContent = 'Saved.';
+  loadExpAltarItems();
+}
+
+async function addExpAltarItem(){
+  const status = document.getElementById('newExpAltarItemStatus');
+  const artifactKey = document.getElementById('newExpAltarItemArtifact').value;
+  const name = document.getElementById('newExpAltarItemName').value.trim();
+  const description = document.getElementById('newExpAltarItemDescription').value.trim();
+  const essencePct = parseFloat(document.getElementById('newExpAltarItemEssencePct').value);
+  const devotionPct = parseFloat(document.getElementById('newExpAltarItemDevotionPct').value);
+
+  if(!artifactKey){ status.className = 'status err'; status.textContent = 'Pick an artifact above first — add it in Expedition artifacts if it is not listed.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Item name is required.'; return; }
+  if(isNaN(essencePct) || essencePct <= 0 || isNaN(devotionPct) || devotionPct <= 0){
+    status.className = 'status err'; status.textContent = 'Both bonus % fields must be greater than 0.'; return;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('expedition_altar_item_catalog').insert({
+    artifact_key: artifactKey, name, description, essence_bonus_pct: essencePct, devotion_bonus_pct: devotionPct
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That artifact already has an Altar Item.' : ('Failed: ' + error.message); return; }
+  await syncExpAltarItemMirrors(artifactKey, name, description, essencePct, devotionPct);
+
+  status.className = 'status ok';
+  status.textContent = name + ' added for ' + artifactKey + '.';
+  ['newExpAltarItemName','newExpAltarItemDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newExpAltarItemEssencePct').value = '5';
+  document.getElementById('newExpAltarItemDevotionPct').value = '5';
+  loadExpAltarItems();
 }
 
 /* =====================================================================
