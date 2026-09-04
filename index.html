@@ -1037,19 +1037,63 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
    "your purchase went through", not "you earned something") — full-width,
    gold-on-dark, sits above everything, pairs with the existing confetti
    burst (celebrate()) rather than replacing it. See showRewardBanner(). */
-#rewardBannerStack{position:fixed;top:0;left:0;right:0;padding-top:env(safe-area-inset-top);z-index:1000;display:flex;flex-direction:column;align-items:center;pointer-events:none;}
+#rewardBannerStack{position:fixed;top:0;left:0;right:0;padding-top:env(safe-area-inset-top);z-index:1000;display:flex;flex-direction:column;align-items:center;pointer-events:none;gap:10px;}
+/* Direct feedback: "reward notifications are still too small whether it be
+   creation, purchase, checkin, or any reward really — very unnoticeable."
+   Sized way up (title/detail font, padding, glow) and given a icon +
+   thicker border so it reads as a real event, not a caption — plus
+   showRewardBanner() is now called from every reward moment that used to
+   only get the small confirm-toast checkmark (checkin, mail, Chained
+   Gods, crafting, altar purchases, petition credits — see each call site). */
 .reward-banner{
-  margin-top:22px;padding:14px 30px;border-radius:8px;text-align:center;
-  background:linear-gradient(180deg, rgba(60,44,14,0.97), rgba(20,15,8,0.97));
-  border:2px solid var(--gold-bright,#e6c777);
-  box-shadow:0 6px 26px rgba(0,0,0,0.55), 0 0 30px rgba(230,199,119,0.45);
+  margin-top:26px;padding:22px 48px;border-radius:12px;text-align:center;
+  min-width:260px;max-width:min(92vw,520px);
+  background:linear-gradient(180deg, rgba(66,48,16,0.98), rgba(18,13,7,0.98));
+  border:3px solid var(--gold-bright,#e6c777);
+  box-shadow:0 10px 40px rgba(0,0,0,0.6), 0 0 48px rgba(230,199,119,0.6), inset 0 0 22px rgba(230,199,119,0.12);
   color:var(--gold-bright,#e6c777);font-family:'Cinzel',serif;
-  animation:rewardBannerIn .35s cubic-bezier(.2,1.4,.4,1), rewardBannerOut .5s ease-in 3.4s forwards;
+  animation:rewardBannerIn .4s cubic-bezier(.2,1.4,.4,1), rewardBannerPulse 1.1s ease-in-out .4s 2, rewardBannerOut .55s ease-in 4.4s forwards;
 }
-.reward-banner .rb-title{font-size:18px;font-weight:700;letter-spacing:0.03em;}
-.reward-banner .rb-detail{font-size:13px;color:var(--parchment,#e8dcc0);margin-top:3px;font-family:inherit;}
-@keyframes rewardBannerIn{from{opacity:0;transform:translateY(-24px) scale(0.92);}to{opacity:1;transform:translateY(0) scale(1);}}
-@keyframes rewardBannerOut{from{opacity:1;}to{opacity:0;transform:translateY(-14px);}}
+.reward-banner .rb-icon{font-size:30px;line-height:1;margin-bottom:4px;filter:drop-shadow(0 0 10px rgba(230,199,119,0.8));}
+.reward-banner .rb-title{font-size:clamp(22px,5vw,30px);font-weight:700;letter-spacing:0.04em;text-shadow:0 0 16px rgba(230,199,119,0.55);}
+.reward-banner .rb-detail{font-size:clamp(14px,3.4vw,17px);color:var(--parchment,#e8dcc0);margin-top:6px;font-family:inherit;letter-spacing:0.01em;}
+@keyframes rewardBannerIn{from{opacity:0;transform:translateY(-30px) scale(0.85);}to{opacity:1;transform:translateY(0) scale(1);}}
+@keyframes rewardBannerPulse{0%,100%{box-shadow:0 10px 40px rgba(0,0,0,0.6), 0 0 48px rgba(230,199,119,0.6), inset 0 0 22px rgba(230,199,119,0.12);}50%{box-shadow:0 10px 40px rgba(0,0,0,0.6), 0 0 68px rgba(230,199,119,0.9), inset 0 0 30px rgba(230,199,119,0.22);}}
+@keyframes rewardBannerOut{from{opacity:1;}to{opacity:0;transform:translateY(-16px);}}
+
+/* New-player 7-day welcome gift popup — direct feedback: the old shared
+   grid on the Check-in screen "does not work or look very good... let's
+   move it to its own event card," clarified as a small popup that drops
+   in once a day at login, glows, and goes away once claimed (or once all
+   7 days are done). Same "fixed overlay OUTSIDE #app" trick as
+   .ganymede-tip so it survives every render() call untouched — see
+   #newPlayerGiftPopup's markup and checkNewPlayerGiftPopup() near
+   afterLogin(). Palette matches .reward-banner exactly (same gold/
+   parchment/dark-gradient look) so it reads as part of the same game,
+   not a bolted-on component. */
+.np-gift-popup{
+  position:fixed;top:calc(14px + env(safe-area-inset-top));right:calc(14px + env(safe-area-inset-right));z-index:900;
+  width:min(84vw,290px);text-align:center;padding:20px 18px 16px;border-radius:14px;
+  background:linear-gradient(180deg, rgba(66,48,16,0.98), rgba(18,13,7,0.98));
+  border:2px solid var(--gold-bright,#e6c777);
+  box-shadow:0 10px 40px rgba(0,0,0,0.6), 0 0 30px rgba(230,199,119,0.45);
+  font-family:'Cinzel',serif;color:var(--gold-bright,#e6c777);
+  animation:npGiftDrop .45s cubic-bezier(.2,1.4,.4,1), npGiftGlow 2.6s ease-in-out 0.45s infinite;
+}
+.np-gift-popup[hidden]{display:none;}
+.np-gift-close{position:absolute;top:6px;right:10px;background:none;border:none;color:var(--parchment-dim,#b9ac93);font-size:20px;line-height:1;cursor:pointer;padding:2px 6px;font-family:inherit;}
+.np-gift-close:hover{color:var(--parchment,#e9decb);}
+.np-gift-icon{font-size:32px;line-height:1;margin-bottom:2px;filter:drop-shadow(0 0 10px rgba(230,199,119,0.8));}
+.np-gift-title{font-size:18px;font-weight:700;letter-spacing:0.04em;text-shadow:0 0 14px rgba(230,199,119,0.5);}
+.np-gift-dots{display:flex;justify-content:center;gap:5px;margin:9px 0 10px;}
+.np-gift-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.18);}
+.np-gift-dot.done{background:var(--gold-bright,#e6c777);}
+.np-gift-dot.today{background:var(--gold-bright,#e6c777);box-shadow:0 0 8px rgba(230,199,119,0.9);}
+.np-gift-text{font-family:'EB Garamond',serif;font-size:13px;color:var(--parchment,#e8dcc0);margin:0 0 12px;line-height:1.4;}
+.np-gift-popup .np-gift-claim{width:100%;}
+@media (max-width:560px){ .np-gift-popup{right:8px;top:8px;width:min(90vw,270px);} }
+@keyframes npGiftDrop{from{opacity:0;transform:translateY(-26px);}to{opacity:1;transform:translateY(0);}}
+@keyframes npGiftGlow{0%,100%{box-shadow:0 10px 40px rgba(0,0,0,0.6), 0 0 30px rgba(230,199,119,0.45);}50%{box-shadow:0 10px 40px rgba(0,0,0,0.6), 0 0 52px rgba(230,199,119,0.85);}}
 </style>
 </head>
 <body>
@@ -1085,6 +1129,22 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
       <p class="ganymede-tip-text" id="ganymedeTipBody"></p>
       <button type="button" class="secondary" onclick="dismissPageTip()">Got it</button>
     </div>
+  </div>
+
+  <!-- New-player 7-day welcome gift popup — deliberately OUTSIDE #app,
+       same reasoning as #ganymedeTip above: it needs to survive every
+       render() call (a screen switch, a data refresh) without this file
+       threading it through renderXxx() templates. Populated and toggled
+       via plain DOM calls from checkNewPlayerGiftPopup()/
+       showNewPlayerGiftPopup()/claimNewPlayerGift() near afterLogin(). -->
+  <div id="newPlayerGiftPopup" class="np-gift-popup" hidden>
+    <button type="button" class="np-gift-close" onclick="dismissNewPlayerGiftPopup()" aria-label="Close">×</button>
+    <div class="np-gift-icon">🎁</div>
+    <div class="np-gift-title">Day <span id="npGiftDay"></span> of 7</div>
+    <div class="np-gift-dots" id="npGiftDots"></div>
+    <p class="np-gift-text">Your Guardian's welcome gift is ready to claim.</p>
+    <button type="button" class="np-gift-claim" id="npGiftClaimBtn" onclick="claimNewPlayerGift()">Claim Gift</button>
+    <div class="status" id="npGiftStatus"></div>
   </div>
 
   <footer class="notice" id="brandFooter">The Long Silence · a Pantheon Gate chapter, still being written</footer>
@@ -1295,6 +1355,13 @@ async function loadFeatureGates(){
   }));
 }
 
+// 0121 — this player's own personal bypasses (see myFeatureOverrides above).
+async function loadMyFeatureOverrides(){
+  const { data, error } = await supabaseClient.from('feature_gate_overrides').select('feature_key').eq('user_id', session.user.id);
+  if(error){ console.error('feature_gate_overrides load failed', error); return; }
+  myFeatureOverrides = new Set((data || []).map(r => r.feature_key));
+}
+
 /* Chained Gods — the seasonal deity pool. God Tokens draw a random deity
    from here (server-side, see doRedeemGodToken); the Key of Night picker
    in renderRedeem() only lists deities present here. Both tables have a
@@ -1489,6 +1556,13 @@ const STAGE_RANK = { egg: 0, hatchling: 1, fledged: 2, ascendant: 3, sovereign: 
 // per-opponent required_level gating already inside those screens.
 let FEATURE_GATES = [];      // [{featureKey,label,requirementType,requirementValue,lockedMessage,active}], from feature_gates
 let featureLockView = null;  // null | {label, message} — shown instead of a gated feature's own screen
+// 0121 — direct feedback, following up on full_access gates: "can you
+// allow me to grant to a certain level or spot in the game with that?"
+// / "it is for separating between trial players and full." A per-
+// player, per-area exception ON TOP of the global gate above — this
+// player's own feature_gate_overrides rows, preloaded at login (own row
+// only, small) so featureGateStatus() can answer instantly.
+let myFeatureOverrides = new Set();
 let marks = [];          // [{deity_id, pantheon_id, mark_type}]
 let currentPhase = null; // {cycle_id, phase, phase_index} — flavor + gating text only, edge function re-checks server-side
 let petitionView = null; // null | {step:'pick'} | {step:'challenge', ...} | {step:'verdict', ...}
@@ -1584,13 +1658,13 @@ let craftView = null;         // null | {step:'home'} — top-level, NOT circle-
 let craftCatalog = [];        // guardian_item_catalog, public catalog — loaded once and cached
 let craftInventory = [];      // this guardian's guardian_items, reloaded each time Craft opens
 
-let redeemView = null;        // null | {step:'hub'|'keyPicker'} — Chained Gods: spend a God Token (random) or a Key of Night (chosen)
+let redeemView = null;        // null | {step:'hub'} — Chained Gods: spend a God Token or a Key of Night, both a blind draw from their own admin-set pool (0122)
 let seasonPool = [];          // [{deity_id, pantheon_id}] — deities currently in_season, loaded via loadSeasonInfo()
 let seasonName = '';          // display label from season_settings, loaded via loadSeasonInfo()
 
 let expeditionView = null;     // null | {step:'home'} | {step:'result', result:{...}} — top-level, NOT circle-scoped
-let expeditionCatalog = null;  // per-guardian: artifacts + fragments owned + daily cap, reloaded each time Expeditions opens
-let expeditionStatus = null;   // this guardian's current trip, if any — null | {ready:false, readyAt} | {ready:true, clueText, choices, ...}
+let expeditionCatalog = null;  // per-guardian: artifacts + fragments owned + daily cap + pendingAltarItems, reloaded each time Expeditions opens
+let expeditionStatus = null;   // this guardian's current trip, if any — null | {ready:false, readyAt} | {ready:true, clueText, choices, deityVoiceHint, ...}
 
 let personalAltarView = null; // null | {step:'altar'} — top-level, NOT circle-scoped; a solo mirror of circleView's altar step
 let palData = null;           // full personal-altar 'view' response
@@ -1812,9 +1886,21 @@ let backpackTab = 'craft'; // 'craft' | 'magegear' | 'alchemy' | 'arena' | 'expe
 let checkinView = null;    // null | {step:'home'} — top-level (Map hub's "Check-in" hotspot): the once-a-day streak/calendar-reward action (still tend_guardian() under the hood), now its own screen separate from Bond-tending on the home screen
 // #123 rework — checkin_status() RPC result (see migration 0106): which
 // calendar dates this month are already claimed, today's day-of-month,
-// days in the current month, the back-day unlock price, and the
-// new-player 7-day track's progress. null until openCheckin() loads it.
+// days in the current month, and the back-day unlock price. null until
+// openCheckin() loads it. (The new-player 7-day track used to live in
+// this same payload's `newPlayer` field too — it still does, but the
+// popup below reads that field itself via its own checkin_status() call
+// at login, independent of whether the player ever opens this screen.)
 let checkinCalendarStatus = null;
+// Direct feedback: the 7-day new-player track "does not work or look
+// very good... let's move it to its own event card" — clarified as a
+// small popup that appears once a day at login, not a shared grid on the
+// Check-in screen (see checkNewPlayerGiftPopup() near afterLogin() and
+// #newPlayerGiftPopup's markup, outside #app next to #ganymedeTip).
+// dismissedDay tracks a day number the player has closed (×) without
+// claiming, so it doesn't keep re-popping every re-render for the rest
+// of this session — purely in-memory, resets on next login/reload.
+let newPlayerGiftDismissedDay = null;
 let promoView = null;      // null | {step:'home'} — top-level (Map hub's "Promo" hotspot): read-only list of active/recent promo_events via list_visible_promo_events() — separate from Mail
 let worldBossView = null;  // null | {step:'home'} — top-level (Map hub's "World Boss" hotspot, top-right dark corner): shared HP pool every player attacks together, admin-spawned via world-boss/index.ts
 let promoEvents = [];      // cached list for renderPromo()
@@ -1868,6 +1954,12 @@ let shopDeitySettings = {};     // deity id -> {price_cents, is_free, for_sale, 
 let shopPantheonSettings = {};  // pantheon id -> {price_cents, for_sale, age_restricted, age_warning}
 let shopStoreItems = [];        // active store_items — message/gift packs
 let shopSubscriptionTiers = []; // active subscription_tiers
+// 0120 — key+name only, just enough for renderMail()'s gift description
+// (describeBroadcastGift()) to name a reward_key/bundle_key gift instead
+// of the old generic "(gift)" tag. Loaded once at login, same "small
+// public catalog, cache forever" convention as shopStoreItems above.
+let giftableRewardsCatalog = [];  // [{key, name}]
+let giftableBundlesCatalog = [];  // [{bundle_key, name}]
 let shopDeitySearch = '';       // filter text for the deity-unlock list — ~150 gods is too many to browse unfiltered
 let shopView = null;            // null | {step:'browse'} | {step:'ageGate', pending:{type,scopeId,label,pantheonId,deityId,warningText}}
 let shopStatusMsg = '';
@@ -2053,6 +2145,7 @@ async function afterLogin(){
   await loadPageTips().catch(e => console.error('page tips load failed', e));
   await loadMilestoneCatalog().catch(e => console.error('milestone catalog load failed', e));
   await loadFeatureGates().catch(e => console.error('feature gates load failed', e));
+  await loadMyFeatureOverrides().catch(e => console.error('feature gate overrides load failed', e));
   // 0119 — a 'full_access' feature gate needs to know the answer the
   // instant a player taps a hotspot, not only after they happen to open
   // Shrine or Shop first (the two screens that used to be the only
@@ -2072,6 +2165,9 @@ async function afterLogin(){
   // Petition Hall and Redeem both filter on them (see renderPetitionPicker/
   // renderRedeem) and can be reached without ever opening the Shop first.
   loadShopCatalog().then(() => { if(petitionView || redeemView) render(); }).catch(e => console.error('shop catalog preload failed', e));
+  // 0120 — mail's gift descriptions need these; fire-and-forget like the
+  // shop catalog line above, re-rendering only if already sitting on Mail.
+  loadGiftableCatalogsForMail().then(() => { if(mailView) render(); }).catch(e => console.error('giftable catalogs preload failed', e));
   // Item 7 (preset banner gallery) — read once, cached client-side and
   // joined locally by key wherever a circle's banner_preset_key needs
   // resolving to actual art, same "load the whole small public catalog
@@ -2101,11 +2197,13 @@ async function afterLogin(){
     loadPendingPetitionsCount().catch(e => console.error('pending petitions count preload failed', e)),
   ]).then(() => { if(document.body.classList.contains('map-screen')) render(); });
   // Direct feedback: "the 7 day needs to be a clickable event, all events
-  // must be player click" — reverses 0106's original "autoran" design.
-  // There's no longer anything to fire-and-forget here at login; the
-  // new-player track is claimed one day at a time by the player, from
-  // the Check-in screen itself (see claimNewPlayerCheckinDay() near
-  // checkinNewPlayerGridHtml()).
+  // must be player click" (0118) — still true, claiming stays one explicit
+  // click per day. What changed (this pass): the track's day is now
+  // surfaced with its own popup right at login instead of only appearing
+  // once the player happens to open the Check-in screen — see
+  // checkNewPlayerGiftPopup() near renderCheckin(). Fire-and-forget, same
+  // shape as the first_login check just below.
+  if(guardian) checkNewPlayerGiftPopup().catch(e => console.error('new-player gift popup check failed', e));
   // #135 — the generic auto-delivery event-trigger system's 'first_login'
   // hook: same fire-and-forget-once-per-login pattern as the new-player
   // check-in call just above (grant_event_trigger is itself idempotent —
@@ -2135,7 +2233,7 @@ async function afterLogin(){
     await openShop();
     shopStatusMsg = checkoutResult === 'success' ? 'Payment received — your unlock should be active now.' : 'Checkout cancelled — nothing was charged.';
     render();
-    if(checkoutResult === 'success') showConfirmBanner('Payment received!');
+    if(checkoutResult === 'success') showRewardBanner('Payment received!', 'Your unlock should be active now.', '💳');
   }
 
   // #136 — gate.html's own deity/pantheon "Unlock" paywall buttons were
@@ -2772,7 +2870,15 @@ let WORLDBOSS_AREAS = DEFAULT_WORLDBOSS_AREAS.slice();
 
 const DEFAULT_REDEEM_AREAS = [
   { id: 'godToken',  label: 'Spend a God Token',       left: 20, top: 54, width: 26, height: 11, action: doRedeemGodToken },
-  { id: 'keyOfNight', label: 'Choose with a Key of Night', left: 54, top: 54, width: 26, height: 11, action: openKeyOfNightPicker },
+  // 0122 — direct feedback: "key of night will be the same except it
+  // will grant access to a random deity now as well, just from a
+  // different pool i set containing bigger deities." No longer opens a
+  // picker (openKeyOfNightPicker/renderKeyOfNightPicker/KEYOFNIGHT_AREAS
+  // are retired but left in place, unreferenced — the admin hotspot
+  // editor row for the old picker screen just goes unused rather than
+  // needing to be torn out) — this button now draws directly, same
+  // one-click shape as Spend a God Token.
+  { id: 'keyOfNight', label: 'Draw with a Key of Night', left: 54, top: 54, width: 26, height: 11, action: doRedeemKeyOfNight },
   { id: 'backToMap', label: 'Back to the Map',          left: 3,  top: 88, width: 18, height: 8,  action: backFromRedeem },
 ];
 let REDEEM_AREAS = DEFAULT_REDEEM_AREAS.slice();
@@ -2781,16 +2887,20 @@ let REDEEM_AREAS = DEFAULT_REDEEM_AREAS.slice();
 // replaced by an actual day-by-day calendar grid (direct feedback: "i
 // need a dash to appear over the image of the calendar signifiing days
 // gone... this is the image i use [a real wall-calendar graphic]").
-// Rather than register 31 (+7 for the new new-player track) individual
-// admin-positionable hotspots — unworkable to hand-place one at a time —
-// these two entries are just POSITIONING FRAMES (kind:'grid', skipped by
-// hotspotButtonsMarkup() same as kind:'dropdown' is): admin drags/sizes
-// each frame with the exact same hotspot editor used everywhere else,
-// and checkinMonthlyGridHtml()/checkinNewPlayerGridHtml() below split
-// whichever box that frame ends up at into a uniform CSS grid of day
-// cells — one box to align per calendar image instead of thirty-eight.
+// Rather than register 31 individual admin-positionable hotspots —
+// unworkable to hand-place one at a time — 'checkinGrid' is just a
+// POSITIONING FRAME (kind:'grid', skipped by hotspotButtonsMarkup() same
+// as kind:'dropdown' is): admin drags/sizes it with the exact same
+// hotspot editor used everywhere else, and checkinMonthlyGridHtml()
+// below splits whichever box it ends up at into a uniform CSS grid of
+// day cells — one box to align instead of thirty-one.
+//
+// 'newPlayerGrid' below is a leftover frame from before the new-player
+// 7-day track moved to its own popup (see checkNewPlayerGiftPopup() near
+// renderCheckin()) — left in the array, unused, rather than removed, so
+// an admin's already-saved position override for that id isn't orphaned.
 const DEFAULT_CHECKIN_AREAS = [
-  { id: 'newPlayerGrid', label: 'New Player 7-Day Track', left: 10, top: 14, width: 80, height: 13, kind: 'grid' },
+  { id: 'newPlayerGrid', label: 'New Player 7-Day Track (retired — now a login popup)', left: 10, top: 14, width: 80, height: 13, kind: 'grid' },
   { id: 'checkinGrid',   label: 'Monthly Calendar Grid',   left: 10, top: 30, width: 80, height: 50, kind: 'grid' },
   // Direct feedback: the calendar grid's own "today" cell is not a
   // replacement for a real positioned button — admins with custom art
@@ -2824,10 +2934,11 @@ const DEFAULT_PETITION_AREAS = [
 ];
 let PETITION_AREAS = DEFAULT_PETITION_AREAS.slice();
 
-// Reuses the 'chainedGods' background (same scene as the main Chained
-// Gods hub) but its own screen_key for hotspot positions, since this is
-// a distinct overlay state with its own single dropdown+back layout
-// rather than the hub's three-button layout.
+// 0122 — RETIRED: Key of Night dropped its player-chosen-deity picker
+// screen in favor of a blind draw (same one-click shape as God Token —
+// see doRedeemKeyOfNight()). This array/its admin.html hotspot-editor
+// row are left in place, unused, purely so admin-set custom positions
+// aren't silently discarded — nothing renders from it anymore.
 const DEFAULT_KEYOFNIGHT_AREAS = [
   { id: 'deityPicker', label: 'Choose a god',    left: 30, top: 48, width: 40, height: 18, kind: 'dropdown' },
   { id: 'backToMap',   label: 'Back to the Map', left: 3,  top: 88, width: 18, height: 8,  action: backToRedeemHub },
@@ -3253,7 +3364,7 @@ function hotspotButtonsMarkup(areas, arrayName, pageKey){
   const fallback = pageKey ? !siteBackgrounds[pageKey] : false;
   return areas.map((a, i) => {
     if(a.kind === 'dropdown') return ''; // rendered by hotspotDropdownMarkup() instead, see below
-    if(a.kind === 'grid') return ''; // positioning frame only — see checkinMonthlyGridHtml()/checkinNewPlayerGridHtml()
+    if(a.kind === 'grid') return ''; // positioning frame only — see checkinMonthlyGridHtml()
     return `
     <button class="map-hotspot${fallback ? ' map-hotspot-fallback' : ''}" style="left:${a.left}%;top:${a.top}%;width:${a.width}%;height:${a.height}%;" title="${esc(a.label)}" aria-label="${esc(a.label)}" onclick="${arrayName}[${i}].action()">${fallback ? esc(a.label) : (a.glow ? `<span class="map-hotspot-node${a.large ? ' map-hotspot-node--lg' : ''}" aria-hidden="true"></span><span class="map-hotspot-node-label${a.large ? ' map-hotspot-node-label--lg' : ''}" aria-hidden="true">${esc(a.label)}</span>` : '')}${hotspotBadgeFor(a.id) ? '<span class="map-hotspot-badge" aria-hidden="true"></span>' : ''}</button>
   `;
@@ -4369,6 +4480,9 @@ function renderMilestoneRoadmap(){
    at the moment a player taps the hotspot — always against live
    guardian/mage state, never a cached verdict. */
 function featureGateStatus(featureKey){
+  // 0121 — a personal override always wins, regardless of what this
+  // area's global rule currently is (or whether it's even active).
+  if(myFeatureOverrides.has(featureKey)) return { open: true };
   const gate = FEATURE_GATES.find(g => g.featureKey === featureKey);
   if(!gate || !gate.active || gate.requirementType === 'none') return { open: true };
   let met = true;
@@ -4583,7 +4697,7 @@ async function tendGuardian(){
     if(milestoneLabels.length) msg += ' ' + milestoneLabels.join(', ') + '!';
     s2.textContent = msg;
   }
-  showConfirmBanner('Checked in!');
+  showRewardBanner('Checked in!', gainParts.join(' · ') || `${data.streak} day streak`, '📅');
 }
 
 async function doTendBond(){
@@ -5229,7 +5343,7 @@ async function loadMail(){
   // correct regardless of what a broader admin policy additionally permits.
   const { data: rows, error } = await supabaseClient
     .from('broadcasts')
-    .select('id, message, created_at, gift_bonus_messages, gift_scope_type, gift_reward_key, gift_store_item_id, gift_bundle_key')
+    .select('id, message, created_at, sender_name, gift_bonus_messages, gift_scope_type, gift_scope_id, gift_reward_key, gift_store_item_id, gift_bundle_key')
     .eq('active', true)
     .or(`target_user_id.is.null,target_user_id.eq.${session.user.id}`)
     .order('created_at', { ascending: false });
@@ -5251,8 +5365,29 @@ function setMailStatus(text, ok){
   el.textContent = text;
 }
 
+// 0120 — turns claim_broadcast's new jsonb `rewards` array back into a
+// human-readable line for the post-claim reward banner, same name-
+// resolution CATALOG/findDeityNameAnywhere() lookups describeBroadcastGift()
+// above uses for the pre-claim preview, so the two always agree.
+function rewardsToDetailLine(rewards){
+  return (rewards || []).map(r => {
+    if(r.kind === 'bonus_messages') return `+${r.amount} message${r.amount === 1 ? '' : 's'}`;
+    if(r.kind === 'entitlement'){
+      if(r.scope_type === 'all') return 'full site access';
+      if(r.scope_type === 'pantheon') return (CATALOG[r.scope_id] ? CATALOG[r.scope_id].label : r.scope_id) + ' pantheon';
+      if(r.scope_type === 'deity') return findDeityNameAnywhere(r.scope_id);
+      return 'an unlock';
+    }
+    if(r.kind === 'reward') return r.label || 'a reward';
+    if(r.kind === 'bundle') return (r.label || 'a bundle') + ' bundle';
+    if(r.kind === 'currency') return `+${r.amount} ${CHECKIN_CURRENCY_LABELS[r.currency_key] || r.currency_key}`;
+    return '';
+  }).filter(Boolean).join(' · ');
+}
+
 async function doClaimMail(broadcastId){
   setMailStatus('Claiming…');
+  const letter = mailBroadcasts.find(b => b.id === broadcastId);
   const { data, error } = await supabaseClient.rpc('claim_broadcast', { p_broadcast_id: broadcastId });
   if(error){ setMailStatus(error.message, false); return; }
   await Promise.all([loadMail(), loadGuardian()]);
@@ -5261,8 +5396,15 @@ async function doClaimMail(broadcastId){
   // by the time this status line paints, the row this button was on has
   // already disappeared from the list above it — "Claimed." here is
   // confirming a letter that just vanished, not one still on screen.
-  setMailStatus(data ? 'Claimed — that letter is gone from your mailbox now.' : 'Already claimed.', true);
-  if(data) celebrate({ count: 12, distance: 40, duration: 850, color: '#e6c777', size: 20, sprite: 'particle-fx/fx_burst.png' });
+  const already = !!(data && data.already_claimed);
+  setMailStatus(already ? 'Already claimed.' : 'Claimed — that letter is gone from your mailbox now.', true);
+  if(data && !already){
+    // showRewardBanner() already bursts celebrate() on its own — no
+    // separate manual celebrate() call needed here anymore.
+    const sender = (letter && letter.sender_name) ? letter.sender_name : BRAND.siteName;
+    const detail = rewardsToDetailLine(data.rewards) || 'Just a letter, no gift attached.';
+    showRewardBanner(`A letter from ${sender}`, detail, '💌');
+  }
 }
 
 // "we need a clear mailbox option or even better mail should disappear
@@ -5287,7 +5429,49 @@ async function doClearMailbox(){
     setMailStatus(`Cleared ${results.length - failed.length} of ${results.length} — ${failed[0].error && failed[0].error.message ? failed[0].error.message : 'some letters failed to clear.'}`, false);
   } else {
     setMailStatus('Mailbox cleared.', true);
+    showRewardBanner('Mailbox cleared!', `${results.length} letter${results.length === 1 ? '' : 's'} claimed.`, '💌');
   }
+}
+
+// 0120 — direct feedback: "the mail doesn't even really say who sent it
+// or what they sent, it just quietly grants it." Looks a deity id up
+// across every pantheon (a broadcast's gift_scope_id for scope_type
+// 'deity' is just the bare id, no pantheon prefix to key off directly).
+function findDeityNameAnywhere(deityId){
+  for(const pid of Object.keys(CATALOG)){
+    const hit = CATALOG[pid].deities.find(([id]) => id === deityId);
+    if(hit) return hit[1];
+  }
+  return deityId;
+}
+
+// Builds a short, human-readable "what's inside" line from a broadcast's
+// own gift_* columns — used both in the mail list preview (before
+// claiming) and, together with claim_broadcast's returned `rewards`, in
+// the post-claim reward banner. Resolves names from whatever's already
+// cached client-side (CATALOG, shopStoreItems, the two small catalogs
+// loadGiftableCatalogsForMail() preloads) rather than a new fetch per
+// letter. Returns '' when a broadcast carries no gift at all (a plain
+// announcement) — callers treat that as "nothing to show."
+function describeBroadcastGift(b){
+  const parts = [];
+  if(b.gift_bonus_messages) parts.push(`${b.gift_bonus_messages} bonus message${b.gift_bonus_messages === 1 ? '' : 's'}`);
+  if(b.gift_scope_type === 'all') parts.push('full site access');
+  else if(b.gift_scope_type === 'pantheon') parts.push((CATALOG[b.gift_scope_id] ? CATALOG[b.gift_scope_id].label : b.gift_scope_id) + ' pantheon access');
+  else if(b.gift_scope_type === 'deity') parts.push(findDeityNameAnywhere(b.gift_scope_id) + ' access');
+  if(b.gift_reward_key){
+    const r = giftableRewardsCatalog.find(x => x.key === b.gift_reward_key);
+    parts.push(r ? r.name : 'a special reward');
+  }
+  if(b.gift_bundle_key){
+    const bundle = giftableBundlesCatalog.find(x => x.bundle_key === b.gift_bundle_key);
+    parts.push(bundle ? bundle.name + ' bundle' : 'a gift bundle');
+  }
+  if(b.gift_store_item_id){
+    const item = shopStoreItems.find(x => x.id === b.gift_store_item_id);
+    parts.push(item ? item.name : 'a store pack');
+  }
+  return parts.join(' · ');
 }
 
 // Converted from a stacked roster-row list to a single dropdown, same
@@ -5304,9 +5488,12 @@ function renderMail(){
   // which already existed for the gift-claim case.
   const visible = mailBroadcasts.filter(b => !mailClaimedIds.has(b.id));
   const opts = visible.map(b => {
-    const hasGift = !!(b.gift_bonus_messages || b.gift_scope_type || b.gift_reward_key || b.gift_store_item_id || b.gift_bundle_key);
+    // 0120 — a real sender + what's actually inside, instead of the old
+    // bare preview + a generic "(gift)" tag.
+    const sender = b.sender_name || BRAND.siteName;
+    const gift = describeBroadcastGift(b);
     const preview = b.message.length > 40 ? b.message.slice(0, 40) + '…' : b.message;
-    const label = new Date(b.created_at).toLocaleDateString() + ' — ' + preview + (hasGift ? ' (gift)' : '');
+    const label = new Date(b.created_at).toLocaleDateString() + ' — From ' + sender + ': ' + preview + (gift ? ' [' + gift + ']' : '');
     return `<option value="${esc(b.id)}">${esc(label)}</option>`;
   }).join('');
 
@@ -5668,10 +5855,10 @@ function checkinDayCellHtml(day, s){
 
 // Reads its bounding box from CHECKIN_AREAS (frameId) — the same
 // admin-movable hotspot frame every other positioned element on this
-// screen uses — and fills it with a uniform 7-column CSS grid of day
-// cells built by cellsFn. Returns '' (renders nothing) if the status
-// RPC hasn't landed yet or, for the new-player frame, once that track
-// is no longer active.
+// screen uses — and fills it with a uniform CSS grid of day cells.
+// Returns '' (renders nothing) if the status RPC hasn't landed yet.
+// Only ever called with 'checkinGrid' now — see checkinMonthlyGridHtml()
+// below — since the new-player track moved to its own popup.
 function positionedCheckinGrid(frameId, cellsHtml, cols){
   const frame = CHECKIN_AREAS.find(a => a.id === frameId);
   if(!frame) return '';
@@ -5686,58 +5873,16 @@ function checkinMonthlyGridHtml(){
   return positionedCheckinGrid('checkinGrid', cells.join(''), 7);
 }
 
-// Direct feedback: "the 7 day needs to be a clickable event, all events
-// must be player click" — reverses 0106's original "autoran" design.
-// Exactly one cell is ever clickable at a time: whichever day is next in
-// line (lastGrantedDay + 1), and only once it's actually been reached
-// (account age, capped at 7 — daysSinceSignup itself is NOT capped by
-// checkin_status(), since it's also used elsewhere uncapped, so the cap
-// happens here). Everything before it is a claimed check; everything
-// after it (whether truly in the future or just not clicked yet) reads
-// as locked — the server enforces strict in-order claiming regardless
-// of what the client sends (claim_new_player_checkin(), 0118), so there
-// is never more than one real next step to show. The whole frame
-// disappears once the track is fully claimed (past day 7).
-function checkinNewPlayerGridHtml(){
-  const s = checkinCalendarStatus;
-  if(!s || !s.newPlayer || !s.newPlayer.active) return '';
-  const reachedDay = Math.min(7, s.newPlayer.daysSinceSignup);
-  const nextClaimable = s.newPlayer.lastGrantedDay + 1;
-  const cells = [];
-  for(let d = 1; d <= 7; d++){
-    const granted = d <= s.newPlayer.lastGrantedDay;
-    const claimable = !granted && d === nextClaimable && d <= reachedDay;
-    if(granted){
-      cells.push(`<div class="checkin-cell checkin-cell-newplayer checkin-cell-claimed"><span class="cc-day">${d}</span><span class="cc-check" aria-hidden="true">✓</span></div>`);
-    } else if(claimable){
-      cells.push(`<div class="checkin-cell checkin-cell-newplayer checkin-cell-today" onclick="claimNewPlayerCheckinDay(${d})" title="${esc('Claim Day ' + d)}"><span class="cc-day">${d}</span><span class="cc-today-label">Claim</span></div>`);
-    } else {
-      cells.push(`<div class="checkin-cell checkin-cell-newplayer checkin-cell-future"><span class="cc-day">${d}</span></div>`);
-    }
-  }
-  return positionedCheckinGrid('newPlayerGrid', cells.join(''), 7);
-}
-
-async function claimNewPlayerCheckinDay(day){
-  const status = document.getElementById('checkinHubStatus');
-  if(status){ status.className = 'hub-loose-status'; status.textContent = 'Claiming…'; }
-  const { data, error } = await supabaseClient.rpc('claim_new_player_checkin', { p_guardian_id: guardian.id, p_day_number: day });
-  if(error || !data || !data.ok){
-    if(status){ status.className = 'hub-loose-status err'; status.textContent = 'Failed: ' + (error ? error.message : data.error); }
-    return;
-  }
-  await loadGuardian();
-  checkinCalendarStatus.newPlayer.lastGrantedDay = day;
-  render();
-  const s2 = document.getElementById('checkinHubStatus');
-  if(s2){
-    s2.className = 'hub-loose-status ok';
-    const gainParts = (data.rewards || []).filter(r => r.amount > 0).map(r => `+${r.amount} ${CHECKIN_CURRENCY_LABELS[r.currency] || r.currency}`);
-    s2.textContent = `Day ${day} claimed! ${gainParts.join(', ') || 'Nothing configured for this day.'}`;
-  }
-  showConfirmBanner(`Day ${day} claimed!`);
-}
-
+// The new-player 7-day track used to render here as a second grid
+// (checkinNewPlayerGridHtml(), claimNewPlayerCheckinDay()) sharing this
+// screen's art with the monthly calendar. Direct feedback: "does not
+// work or look very good... let's move it to its own event card" —
+// clarified as a small popup at login instead (see checkNewPlayerGift-
+// Popup()/showNewPlayerGiftPopup()/claimNewPlayerGift() near afterLogin,
+// and #newPlayerGiftPopup's markup). This screen is the monthly calendar
+// alone now; the CHECKIN_AREAS 'newPlayerGrid' frame is left in place
+// but unused (see its own comment) rather than removed, since deleting
+// it could orphan an admin's already-saved position override for that id.
 async function doClaimMissedCheckinDay(day){
   const status = document.getElementById('checkinHubStatus');
   if(status){ status.className = 'hub-loose-status'; status.textContent = 'Unlocking…'; }
@@ -5749,19 +5894,25 @@ async function doClaimMissedCheckinDay(day){
   await loadGuardian();
   checkinCalendarStatus.claimedDaysThisMonth = [...checkinCalendarStatus.claimedDaysThisMonth, day];
   render();
+  // gainParts moved out of the `if(s2)` block below it used to be declared
+  // in — it was referenced again just after that block's closing brace,
+  // outside its own scope, which threw a ReferenceError and silently
+  // killed showRewardBanner() every time (the currency still landed, via
+  // loadGuardian() above, but the confirmation never showed). That's very
+  // likely why gifts felt like they might not be "coming in."
+  const gainParts = (data.rewards || []).filter(r => r.amount > 0).map(r => `+${r.amount} ${CHECKIN_CURRENCY_LABELS[r.currency] || r.currency}`);
   const s2 = document.getElementById('checkinHubStatus');
   if(s2){
     s2.className = 'hub-loose-status ok';
-    const gainParts = (data.rewards || []).filter(r => r.amount > 0).map(r => `+${r.amount} ${CHECKIN_CURRENCY_LABELS[r.currency] || r.currency}`);
     s2.textContent = `Unlocked Day ${day} for ${data.spentAmount} ${CHECKIN_CURRENCY_LABELS[data.spentCurrencyKey] || data.spentCurrencyKey}. ${gainParts.join(', ')}`;
   }
-  showConfirmBanner(`Day ${day} unlocked!`);
+  showRewardBanner(`Day ${day} unlocked!`, gainParts.join(' · '), '📅');
 }
 
 // No .hub-overlay panel here anymore (0068) — direct feedback: "gonna
 // have to do the same thing to the daily checkin" (same request as
-// Chained Gods: "get rid of the damn overlay"). The art plus the two
-// positioned grids and the Back to the Map hotspot are the whole screen
+// Chained Gods: "get rid of the damn overlay"). The art plus the
+// calendar grid and the Back to the Map hotspot are the whole screen
 // now. .hub-loose-back/.hub-loose-status (see the CSS comment above
 // .hub-loose-back) replace the overlay's back button and status line
 // with plain floating text, no panel behind either. checkinStatus
@@ -5774,13 +5925,104 @@ function renderCheckin(){
     <div class="hub-screen">
       <div class="hub-box"${bgAttrPlain('checkin')}>
         ${hotspotButtonsMarkup(CHECKIN_AREAS, 'CHECKIN_AREAS', 'checkin')}
-        ${checkinNewPlayerGridHtml()}
         ${checkinMonthlyGridHtml()}
         <button type="button" class="hub-loose-back" onclick="backFromCheckin()">‹ Back to Map</button>
         <div id="checkinHubStatus" class="hub-loose-status"></div>
       </div>
     </div>
   `;
+}
+
+/* ---------------- New-player 7-day welcome gift popup ----------------
+   Direct feedback on the old shared-grid version: "does not work or
+   look very good... let's move it to its own event card," clarified as
+   "a special card that pops up once a day after login for the first
+   seven days, they have to click to claim then the box goes away until
+   next day — after seven days the box is gone." checkNewPlayerGiftPopup()
+   is called once from afterLogin() (fire-and-forget, guarded on
+   `guardian` existing) — same trigger point/shape as the first_login
+   event-trigger check right beside it, just reading checkin_status()
+   instead of calling grant_event_trigger(). */
+
+// day/lastGrantedDay for whichever day is currently shown, so
+// claimNewPlayerGift() doesn't need to re-fetch checkin_status() just to
+// know what it's claiming.
+let newPlayerGiftShownDay = null;
+
+async function checkNewPlayerGiftPopup(){
+  if(!guardian) return;
+  try{
+    const { data, error } = await supabaseClient.rpc('checkin_status', { p_guardian_id: guardian.id });
+    if(error || !data || !data.newPlayer) return;
+    const np = data.newPlayer;
+    if(!np.active) return; // day 7 already claimed — track is done, never pops again
+    const reachedDay = Math.min(7, np.daysSinceSignup);
+    const nextDay = np.lastGrantedDay + 1;
+    if(nextDay > reachedDay) return; // tomorrow's day isn't here yet
+    if(newPlayerGiftDismissedDay === nextDay) return; // already closed today's popup this session
+    // This RPC round-trip lands after afterLogin()'s own synchronous
+    // render() call, so on a brand-new player's very first login,
+    // guideView may already be open (see render()'s own auto-trigger) by
+    // the time this resolves — skip popping the gift card on top of that
+    // onboarding walkthrough. Day 1 is still fully claimable; it'll pop
+    // normally on this player's next login instead of fighting the Guide
+    // for attention on their very first one.
+    if(guideView) return;
+    showNewPlayerGiftPopup(nextDay, np.lastGrantedDay);
+  }catch(e){ console.error('new-player gift check failed', e); }
+}
+
+function showNewPlayerGiftPopup(day, lastGrantedDay){
+  const el = document.getElementById('newPlayerGiftPopup');
+  if(!el) return;
+  newPlayerGiftShownDay = day;
+  document.getElementById('npGiftDay').textContent = day;
+  const dots = [];
+  for(let d = 1; d <= 7; d++){
+    const cls = d <= lastGrantedDay ? 'done' : (d === day ? 'today' : '');
+    dots.push(`<span class="np-gift-dot${cls ? ' ' + cls : ''}"></span>`);
+  }
+  document.getElementById('npGiftDots').innerHTML = dots.join('');
+  const btn = document.getElementById('npGiftClaimBtn');
+  if(btn) btn.disabled = false;
+  const status = document.getElementById('npGiftStatus');
+  if(status){ status.className = 'status'; status.textContent = ''; }
+  el.hidden = false;
+}
+
+function dismissNewPlayerGiftPopup(){
+  const el = document.getElementById('newPlayerGiftPopup');
+  if(!el) return;
+  newPlayerGiftDismissedDay = newPlayerGiftShownDay;
+  el.hidden = true;
+}
+
+async function claimNewPlayerGift(){
+  const day = newPlayerGiftShownDay;
+  if(!day || !guardian) return;
+  const status = document.getElementById('npGiftStatus');
+  const btn = document.getElementById('npGiftClaimBtn');
+  if(btn) btn.disabled = true;
+  if(status){ status.className = 'status'; status.textContent = 'Claiming…'; }
+  try{
+    const { data, error } = await supabaseClient.rpc('claim_new_player_checkin', { p_guardian_id: guardian.id, p_day_number: day });
+    if(error || !data || !data.ok){
+      if(status){ status.className = 'status err'; status.textContent = 'Failed: ' + (error ? error.message : (data && data.error)); }
+      if(btn) btn.disabled = false;
+      return;
+    }
+    await loadGuardian();
+    if(checkinCalendarStatus && checkinCalendarStatus.newPlayer) checkinCalendarStatus.newPlayer.lastGrantedDay = day;
+    if(document.body.classList.contains('map-screen') || checkinView) render();
+    const el = document.getElementById('newPlayerGiftPopup');
+    if(el) el.hidden = true;
+    newPlayerGiftShownDay = null;
+    const gainParts = (data.rewards || []).filter(r => r.amount > 0).map(r => `+${r.amount} ${CHECKIN_CURRENCY_LABELS[r.currency] || r.currency}`);
+    showRewardBanner(`Day ${day} claimed!`, gainParts.join(' · ') || 'Nothing configured for this day.', '🎁');
+  }catch(e){
+    if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
+    if(btn) btn.disabled = false;
+  }
 }
 
 /* ---------------- promo (Map hub's "Promo" hotspot, separate from Mail) ----------------
@@ -6198,6 +6440,22 @@ async function loadShopCatalog(){
   if(tiersErr) console.error('subscription_tiers fetch failed', tiersErr);
   shopStoreItems = items || [];
   shopSubscriptionTiers = tiers || [];
+}
+
+// 0120 — mail's gift description (describeBroadcastGift()) needs a name
+// for a reward_key/bundle_key gift; small enough (key+name only, same
+// tables the admin's Gift composer already picks from) to just load in
+// full and cache forever, same convention as shopStoreItems above.
+async function loadGiftableCatalogsForMail(){
+  if(giftableRewardsCatalog.length || giftableBundlesCatalog.length) return;
+  const [{ data: rewards, error: rErr }, { data: bundles, error: bErr }] = await Promise.all([
+    supabaseClient.from('giftable_rewards').select('key, name'),
+    supabaseClient.from('giftable_reward_bundles').select('bundle_key, name')
+  ]);
+  if(rErr) console.error('giftable_rewards preload failed', rErr);
+  if(bErr) console.error('giftable_reward_bundles preload failed', bErr);
+  giftableRewardsCatalog = rewards || [];
+  giftableBundlesCatalog = bundles || [];
 }
 
 function renderShop(){
@@ -7477,14 +7735,20 @@ function showConfirmBanner(message){
 // Pairs with the confetti burst (celebrate()) — this is the actual
 // readable "you got X" banner celebrate() never provided on its own.
 // `detail` is optional secondary text (e.g. "+120 XP · +40 Essence").
-function showRewardBanner(title, detail){
+// `icon` (optional 3rd arg, default a sparkle) — a single emoji shown above
+// the title so different reward moments (mail, check-in, Chained Gods…)
+// read as visually distinct at a glance, not just a wall of gold text.
+function showRewardBanner(title, detail, icon){
   const stack = document.getElementById('rewardBannerStack');
   if(stack){
     const el = document.createElement('div');
     el.className = 'reward-banner';
-    el.innerHTML = `<div class="rb-title">${esc(title)}</div>${detail ? `<div class="rb-detail">${esc(detail)}</div>` : ''}`;
+    el.innerHTML = `<div class="rb-icon">${esc(icon || '✨')}</div><div class="rb-title">${esc(title)}</div>${detail ? `<div class="rb-detail">${esc(detail)}</div>` : ''}`;
     stack.appendChild(el);
-    setTimeout(() => { el.remove(); }, 3900);
+    // Matches the CSS animation's total runtime (in .4s + pulse 2×1.1s +
+    // out .55s starting at 4.4s ≈ 4.95s) so the node isn't yanked out
+    // mid-fade — was 3900ms against the old, much shorter animation.
+    setTimeout(() => { el.remove(); }, 5000);
   }
   celebrate({ count: 18, distance: 60, duration: 1000 });
 }
@@ -9203,7 +9467,7 @@ async function doHarvestPlot(plotIndex){
 async function doBuyDecoration(key){
   const data = await circleFetch('altar-buy-decoration', { decorationKey: key });
   setAltarStatus(data.ok ? 'Purchased.' : (data.error || 'Could not buy.'), data.ok);
-  if(data.ok){ await refreshAltar(); showConfirmBanner('Purchased!'); }
+  if(data.ok){ await refreshAltar(); showRewardBanner('Decoration purchased!', 'Added to your Circle Altar\'s stock.', '🏺'); }
 }
 
 async function doClaimUnlock(key){
@@ -9474,7 +9738,11 @@ async function doPalHarvestPlot(plotIndex){
 async function doPalBuyDecoration(key){
   const data = await personalAltarFetch('buy-decoration', { decorationKey: key });
   setPalStatus(data.ok ? 'Purchased.' : (data.error || 'Could not buy.'), data.ok);
-  if(data.ok){ await loadGuardian(); await refreshPersonalAltar(); showConfirmBanner('Purchased!'); }
+  if(data.ok){
+    await loadGuardian(); await refreshPersonalAltar();
+    const item = personalAltarDecorationCatalog.find(d => d.key === key);
+    showRewardBanner((item ? item.name : 'Decoration') + ' purchased!', 'Added to your Personal Altar\'s stock.', '🏺');
+  }
 }
 
 async function doPalClaimUnlock(key){
@@ -10301,7 +10569,7 @@ async function refreshExpeditionStatus(){
 }
 
 async function doStartExpedition(artifactKey, fragmentIndex){
-  setExpeditionMsg('Setting out…');
+  setExpeditionMsg('Sending your familiar out…');
   try{
     const resp = await fetch(FUNCTIONS_URL + '/expedition', {
       method: 'POST',
@@ -10312,7 +10580,7 @@ async function doStartExpedition(artifactKey, fragmentIndex){
     if(!data.ok){ setExpeditionMsg(data.error || 'Could not start that expedition.', false); return; }
     await Promise.all([loadExpeditionCatalog(), loadExpeditionStatus()]);
     render();
-    setExpeditionMsg(`Your guardian set out for ${data.regionName}.`, true);
+    setExpeditionMsg(data.deityVoiceHint ? `"${data.deityVoiceHint}" — your familiar follows the trail toward ${data.regionName}.` : `Your familiar sets off following the story toward ${data.regionName}.`, true);
   }catch(e){
     setExpeditionMsg('Could not reach the relay: ' + e.message, false);
   }
@@ -10339,6 +10607,45 @@ async function doAnswerExpedition(choiceIndex){
   }
 }
 
+// 0123 — the Personal/Circle choice for a freshly-earned (or still-pending)
+// Altar Item. showRewardBanner matches every other reward moment now.
+// Only artifactKey/destination ever travel through the onclick string below
+// (both are safe, punctuation-free values) — the display name always comes
+// back from the server response, never round-tripped through inline JS, so
+// an apostrophe in an admin-authored item name (e.g. "Nefertiti's Missing
+// Inlay") can never break the handler the way it would if esc()'d HTML-
+// escaping leaked into a single-quoted onclick argument.
+async function doClaimAltarItem(artifactKey, destination){
+  setExpeditionMsg('Placing it…');
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/expedition', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'claim-altar-item', guardianId: guardian.id, artifactKey, destination })
+    });
+    const data = await resp.json();
+    if(!data.ok){ setExpeditionMsg(data.error || 'Could not place that Altar Item.', false); return; }
+    // Clear the claim buttons off the result screen too, if that's what's showing.
+    if(expeditionView && expeditionView.step === 'result' && expeditionView.result && expeditionView.result.altarItem && expeditionView.result.altarItem.artifactKey === artifactKey){
+      expeditionView.result = { ...expeditionView.result, altarItem: null };
+    }
+    await loadExpeditionCatalog();
+    render();
+    const dest = destination === 'personal' ? 'your Personal Altar' : "your Circle's Altar";
+    showRewardBanner('Altar Item placed!', `${data.itemName || 'It'} now blesses ${dest}.`, '🏺');
+  }catch(e){
+    setExpeditionMsg('Could not reach the relay: ' + e.message, false);
+  }
+}
+
+function altarItemChoiceHtml(artifactKey, itemName){
+  return `<div style="margin-top:8px;">
+    <p class="hint" style="margin:4px 0;">Where should ${esc(itemName)} go?</p>
+    <button class="secondary" style="margin:2px;" onclick="doClaimAltarItem('${esc(artifactKey)}', 'personal')">Place on my Personal Altar</button>
+    <button class="secondary" style="margin:2px;" onclick="doClaimAltarItem('${esc(artifactKey)}', 'circle')">Donate to my Circle's Altar</button>
+  </div>`;
+}
+
 function renderExpedition(){
   const app = document.getElementById('app');
 
@@ -10354,9 +10661,10 @@ function renderExpedition(){
       <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
         <h2>${r.correct ? 'Found it!' : 'Not quite'}</h2>
         <p class="hint">${esc(r.regionName || '')}</p>
-        <p>${r.correct ? 'Correct — the fragment is yours.' : `The correct answer was: <strong>${esc(correctText)}</strong>`}</p>
+        <p>${r.correct ? 'Correct — your familiar brings the fragment home.' : `The correct answer was: <strong>${esc(correctText)}</strong>`}</p>
         <p class="hint">${esc(r.funFact || '')}</p>
-        ${r.artifactCompleted ? `<p class="status ok" style="display:block;">Artifact complete — a deity has taken notice of you. Check your pantheon list.</p>` : ''}
+        ${r.artifactCompleted ? `<p class="status ok" style="display:block;">Every fragment is home — the deity has fully unlocked and taken notice of you. Check your pantheon list.</p>` : ''}
+        ${r.altarItem ? `<div class="status ok" style="display:block;text-align:left;">Its Altar Item, ${esc(r.altarItem.name)}, is yours to place. ${esc(r.altarItem.description || '')}${altarItemChoiceHtml(r.altarItem.artifactKey, r.altarItem.name)}</div>` : ''}
         <div class="status" id="expeditionMsg"></div>
         <button class="secondary" onclick="backFromExpeditionResult()">Continue</button>
       </div>
@@ -10369,15 +10677,16 @@ function renderExpedition(){
     const readyDate = new Date(expeditionStatus.readyAt);
     travelCard = `
       <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
-        <h2>Away exploring</h2>
-        <p class="hint">Your guardian is traveling. It'll be ready to report back at ${readyDate.toLocaleString()}.</p>
+        <h2>Away following the story</h2>
+        <p class="hint">Your familiar is out following the deity's story to the site. It'll be ready to report back at ${readyDate.toLocaleString()}.</p>
         <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
       </div>`;
   } else if(expeditionStatus && expeditionStatus.ready){
     const choices = expeditionStatus.choices || [];
     travelCard = `
       <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
-        <h2>${esc(expeditionStatus.regionName || 'Your guardian has arrived')}</h2>
+        <h2>${esc(expeditionStatus.regionName || 'Your familiar has arrived')}</h2>
+        ${expeditionStatus.deityVoiceHint ? `<p class="hint" style="font-style:italic;">"${esc(expeditionStatus.deityVoiceHint)}"</p>` : ''}
         <p>${esc(expeditionStatus.clueText || '')}</p>
         <div style="display:flex;flex-direction:column;gap:8px;max-width:420px;margin:10px auto 0;">
           ${choices.map((c, i) => `<button class="secondary" onclick="doAnswerExpedition(${i})">${esc(c)}</button>`).join('')}
@@ -10389,18 +10698,31 @@ function renderExpedition(){
   const capReached = expeditionCatalog.expeditionsRemainingToday <= 0;
   const capNote = `${expeditionCatalog.expeditionsRemainingToday} of ${expeditionCatalog.expeditionsPerDay} expeditions left today.`;
 
+  // 0123 — an Altar Item earned earlier but never placed (the player left
+  // before choosing) still shows up here so it's never stranded.
+  const pendingAltarItems = expeditionCatalog.pendingAltarItems || [];
+  const pendingAltarCard = pendingAltarItems.length ? `
+    <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+      <h2>Waiting to be placed</h2>
+      ${pendingAltarItems.map(p => `<div class="roster-row">
+        <div><div class="rname">${esc(p.name)}</div><div class="cblurb">${esc(p.description || '')}</div></div>
+        <div class="ractions" style="flex-direction:column;">${altarItemChoiceHtml(p.artifactKey, p.name)}</div>
+      </div>`).join('')}
+    </div>` : '';
+
   const artifactCards = (expeditionCatalog.artifacts || []).map(a => {
     const owned = new Set(a.fragmentsOwned || []);
     const complete = owned.size >= a.total_fragments;
     const fragmentButtons = Array.from({ length: a.total_fragments }, (_, i) => i + 1).map(idx => {
       if(owned.has(idx)) return `<span style="display:inline-block;padding:4px 10px;border-radius:12px;background:rgba(255,255,255,0.08);margin:2px;">Fragment ${idx} ✓</span>`;
       const disabled = hasActiveTrip || capReached;
-      return `<button class="secondary" style="margin:2px;" ${disabled ? 'disabled' : ''} onclick="doStartExpedition('${esc(a.key)}', ${idx})">Send for Fragment ${idx}</button>`;
+      return `<button class="secondary" style="margin:2px;" ${disabled ? 'disabled' : ''} onclick="doStartExpedition('${esc(a.key)}', ${idx})">Send familiar for Fragment ${idx}</button>`;
     }).join(' ');
     const statusLabel = complete ? (a.deityAlreadyUnlocked ? 'Unlocked' : 'Complete!') : `${owned.size}/${a.total_fragments} fragments`;
     return `<div class="roster-row">
       <div><div class="rname">${esc(a.name)} — ${esc(statusLabel)}</div>
-      <div class="cblurb">${esc(a.description || '')}</div></div>
+      <div class="cblurb">${esc(a.description || '')}</div>
+      ${a.deity_voice_intro && !complete ? `<div class="cblurb" style="font-style:italic;margin-top:4px;">"${esc(a.deity_voice_intro)}"</div>` : ''}</div>
       <div class="ractions" style="flex-wrap:wrap;">${complete ? '' : fragmentButtons}</div>
     </div>`;
   }).join('') || '<p class="hint">No expeditions are available right now — check back later.</p>';
@@ -10408,10 +10730,11 @@ function renderExpedition(){
   app.innerHTML = `
     <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
       <h2>Expeditions</h2>
-      <p class="hint">Send your guardian to real places in search of ancient artifact fragments. Answer honestly, learn something true either way, and reassemble a full set to draw a deity's attention.</p>
+      <p class="hint">Send your familiar out, guided by the voice and story of the deity it's trying to unlock, to find real-world artifact fragments. Answer honestly, learn something true either way, and reassemble a full set to fully unlock that deity and earn a unique Altar Item.</p>
       <p class="hint">${capNote}</p>
       <div class="status" id="expeditionMsg"></div>
     </div>
+    ${pendingAltarCard}
     ${travelCard}
     <div class="card"${bgAttr('expeditions')}>
       <h2>Artifacts</h2>
@@ -10527,7 +10850,8 @@ async function doCraftItem(itemKey){
     await loadCraftInventory();
     render();
     setCraftStatus(data.itemType === 'stat_boost' ? 'Crafted — the boost applied immediately.' : 'Crafted — check Your Items below.', true);
-    showConfirmBanner('Crafted!');
+    const craftedItem = craftCatalog.find(c => c.key === itemKey);
+    showRewardBanner((craftedItem ? craftedItem.name : 'Item') + ' crafted!', data.itemType === 'stat_boost' ? 'The boost applied immediately.' : 'Check Your Items below.', '⚒️');
   }catch(e){
     setCraftStatus('Could not reach the relay: ' + e.message, false);
   }
@@ -10547,7 +10871,7 @@ async function doCraftPetition(){
     guardian.bonus_petition_credits = data.bonusPetitionCredits;
     render();
     setCraftStatus('Bonus petition credit banked.', true);
-    showConfirmBanner('Petition credit banked!');
+    showRewardBanner('Petition credit banked!', `You now have ${data.bonusPetitionCredits} bonus credit${data.bonusPetitionCredits === 1 ? '' : 's'}.`, '📜');
   }catch(e){
     setCraftStatus('Could not reach the relay: ' + e.message, false);
   }
@@ -10752,22 +11076,35 @@ function backFromRedeem(){
   render();
 }
 
-function openKeyOfNightPicker(){
-  redeemView = { step: 'keyPicker' };
-  render();
-}
-
 function backToRedeemHub(){
   redeemView = { step: 'hub' };
   render();
 }
 
+// 0122 — both draws now share this shape (random pick, occasional
+// duplicate-to-essence conversion), so the result-handling half is
+// pulled out into one shared helper both doRedeemGodToken()/
+// doRedeemKeyOfNight() call — currencyLabel/remainingKey/remainingCount
+// are the only bits that differ between the two.
+function handleRedeemDrawResult(data, currencyLabel, remaining, icon){
+  const s2 = document.getElementById('redeemHubStatus');
+  if(s2){
+    s2.className = 'hub-loose-status ok';
+    s2.textContent = data.duplicate
+      ? `The gate answered with ${data.deityName} again — already yours, so it turned into ${data.essenceGained} Essence instead. ${remaining} ${currencyLabel}${remaining === 1 ? '' : 's'} remaining.`
+      : `The gate answered: ${data.deityName} steps forward, fully unlocked. ${remaining} ${currencyLabel}${remaining === 1 ? '' : 's'} remaining.`;
+  }
+  showRewardBanner(
+    data.duplicate ? `${data.deityName} again — converted!` : `${data.deityName} unlocked!`,
+    data.duplicate ? `+${data.essenceGained} Essence` : `${remaining} ${currencyLabel}${remaining === 1 ? '' : 's'} remaining`,
+    icon
+  );
+}
+
 async function doRedeemGodToken(){
-  // Element id is redeemHubStatus (not redeemStatus) on purpose — this is
-  // the boxless .hub-loose-status floating directly on the Chained Gods
-  // hub's art (0068, "get rid of the damn overlay"), a different element
-  // than the .status one renderKeyOfNightPicker's own screen uses under
-  // the same old name.
+  // Element id is redeemHubStatus — the boxless .hub-loose-status
+  // floating directly on the Chained Gods hub's art (0068, "get rid of
+  // the damn overlay").
   const status = document.getElementById('redeemHubStatus');
   if(status){ status.className = 'hub-loose-status'; status.textContent = 'Spending a God Token…'; }
   try{
@@ -10783,52 +11120,43 @@ async function doRedeemGodToken(){
       return;
     }
     guardian.god_tokens = data.remainingTokens;
+    if(data.duplicate) guardian.essence = (guardian.essence || 0) + data.essenceGained;
     render();
-    const s2 = document.getElementById('redeemHubStatus');
-    if(s2){
-      s2.className = 'hub-loose-status ok';
-      s2.textContent = `The gate answered: ${data.deityName} steps forward, fully unlocked. ${data.remainingTokens} Token${data.remainingTokens === 1 ? '' : 's'} remaining.`;
-    }
-    showConfirmBanner(`${data.deityName} unlocked!`);
+    handleRedeemDrawResult(data, 'Token', data.remainingTokens, '🪙');
   }catch(e){
     const s = document.getElementById('redeemHubStatus');
     if(s){ s.className = 'hub-loose-status err'; s.textContent = 'Could not reach the relay: ' + e.message; }
   }
 }
 
-async function doRedeemKeyOfNight(pantheonId, deityId, deityName){
-  const status = document.getElementById('redeemStatus');
-  if(status){ status.className = 'status'; status.textContent = 'Spending a Key of Night…'; }
+// 0122 — direct feedback: "key of night will be the same except it will
+// grant access to a random deity now as well, just from a different
+// pool i set containing bigger deities." No longer takes a player-
+// chosen pantheonId/deityId — this is now a blind draw from its own
+// pool, same one-click shape (and same duplicate-to-essence handling)
+// as doRedeemGodToken() just above.
+async function doRedeemKeyOfNight(){
+  const status = document.getElementById('redeemHubStatus');
+  if(status){ status.className = 'hub-loose-status'; status.textContent = 'Spending a Key of Night…'; }
   try{
     const resp = await fetch(FUNCTIONS_URL + '/redeem', {
       method: 'POST',
       headers: await petitionHeaders(),
-      body: JSON.stringify({ action: 'redeem-key-of-night', pantheonId, deityId })
+      body: JSON.stringify({ action: 'redeem-key-of-night' })
     });
     const data = await resp.json();
+    const s = document.getElementById('redeemHubStatus');
     if(!data.ok){
-      const s = document.getElementById('redeemStatus');
-      if(s){ s.className = 'status err'; s.textContent = data.error || 'Could not redeem.'; }
+      if(s){ s.className = 'hub-loose-status err'; s.textContent = data.error || 'Could not redeem.'; }
       return;
     }
     guardian.key_of_night = data.remainingKeys;
-    redeemView = { step: 'hub' };
+    if(data.duplicate) guardian.essence = (guardian.essence || 0) + data.essenceGained;
     render();
-    // Bug fix: render() above already switched to the hub template, which
-    // only has #redeemHubStatus (not #redeemStatus, the keyPicker screen's
-    // own element) — writing to the old id here silently lost this
-    // confirmation message every time. Same "visual verification the
-    // purchase went through" ask this covers everywhere else currency is
-    // spent.
-    const s2 = document.getElementById('redeemHubStatus');
-    if(s2){
-      s2.className = 'hub-loose-status ok';
-      s2.textContent = `${deityName} fully unlocked. ${data.remainingKeys} Key${data.remainingKeys === 1 ? '' : 's'} of Night remaining.`;
-    }
-    showConfirmBanner(`${deityName} fully unlocked!`);
+    handleRedeemDrawResult(data, 'Key', data.remainingKeys, '🗝️');
   }catch(e){
-    const s = document.getElementById('redeemStatus');
-    if(s){ s.className = 'status err'; s.textContent = 'Could not reach the relay: ' + e.message; }
+    const s = document.getElementById('redeemHubStatus');
+    if(s){ s.className = 'hub-loose-status err'; s.textContent = 'Could not reach the relay: ' + e.message; }
   }
 }
 
@@ -10852,8 +11180,6 @@ function deityNameFromCatalog(pantheonId, deityId){
 // across the pool either way, unaffected by this — nothing about the
 // odds changed, only whether they're spelled out on screen.
 function renderRedeem(){
-  if(redeemView.step === 'keyPicker'){ renderKeyOfNightPicker(); return; }
-
   document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   // No .hub-overlay panel here anymore (0068) — direct feedback: "get rid
@@ -10873,57 +11199,6 @@ function renderRedeem(){
       </div>
     </div>
   `;
-}
-
-function renderKeyOfNightPicker(){
-  const app = document.getElementById('app');
-  document.body.classList.add('hub-active');
-  // Not-for-sale deities/pantheons stay off the table too — a Key
-  // shouldn't be a back door around the same for_sale flag the Shop and
-  // Petition Hall both respect, on top of the season-pool restriction.
-  // Rewritten from a chip-row grid to a single dropdown (0068) — same
-  // "turn the deity lists into a dropdown" feedback as Petition Hall,
-  // see the select.picker-select comment above — then again (same 0068)
-  // into a hub-box screen with the dropdown positioned as its own
-  // admin-draggable hotspot (KEYOFNIGHT_AREAS, separate screen_key from
-  // the main Chained Gods hub's REDEEM_AREAS, same background art).
-  const poolIds = new Set(seasonPool.map(d => d.deity_id));
-  const optgroups = Object.keys(CATALOG).filter(pid => shopPantheonForSale(pid)).map(pid => {
-    const opts = CATALOG[pid].deities.filter(([id]) => poolIds.has(id) && shopDeityForSale(id)).map(([id, name]) => `<option value="${esc(pid)}::${esc(id)}">${esc(name)}</option>`).join('');
-    if(!opts) return '';
-    return `<optgroup label="${esc(CATALOG[pid].label)}">${opts}</optgroup>`;
-  }).join('');
-
-  const pickerMarkup = optgroups
-    ? hotspotDropdownMarkup(KEYOFNIGHT_AREAS, `
-        <select class="picker-select" id="keyOfNightSelect">${optgroups}</select>
-        <button type="button" onclick="doRedeemKeyOfNightFromSelect()">Redeem</button>
-      `, null, 'chainedGods')
-    : '';
-
-  app.innerHTML = `
-    <div class="hub-screen">
-      <div class="hub-box"${bgAttrPlain('chainedGods')}>
-        ${hotspotButtonsMarkup(KEYOFNIGHT_AREAS, 'KEYOFNIGHT_AREAS', 'chainedGods')}
-        ${pickerMarkup}
-        <div class="hub-loose-panel">
-          <button type="button" class="hub-back" onclick="backToRedeemHub()">‹ Back to Map</button>
-          <h2>Choose with a Key of Night</h2>
-          <p class="hint">Only this season's gods are open to a direct choice.</p>
-          <div class="essence-row"><span class="essence-label">Key of Night</span><span class="essence-value">${guardian.key_of_night || 0}</span></div>
-          <div id="redeemStatus" class="status"></div>
-          ${optgroups ? '' : '<p class="hint">Nothing is in season right now — check back soon.</p>'}
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function doRedeemKeyOfNightFromSelect(){
-  const sel = document.getElementById('keyOfNightSelect');
-  if(!sel || !sel.value) return;
-  const [pantheonId, deityId] = sel.value.split('::');
-  doRedeemKeyOfNight(pantheonId, deityId, deityNameFromCatalog(pantheonId, deityId));
 }
 
 /* ---------------- raw PvP (Phase 5c) ---------------- */
