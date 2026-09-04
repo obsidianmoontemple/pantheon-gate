@@ -2053,6 +2053,12 @@ async function afterLogin(){
   await loadPageTips().catch(e => console.error('page tips load failed', e));
   await loadMilestoneCatalog().catch(e => console.error('milestone catalog load failed', e));
   await loadFeatureGates().catch(e => console.error('feature gates load failed', e));
+  // 0119 — a 'full_access' feature gate needs to know the answer the
+  // instant a player taps a hotspot, not only after they happen to open
+  // Shrine or Shop first (the two screens that used to be the only
+  // callers of loadShrineEntitlements()). Preloaded here, right beside
+  // the gates themselves, so featureGateStatus() always has real data.
+  await loadShrineEntitlements().catch(e => console.error('entitlements preload failed', e));
   loadSeasonInfo().catch(e => console.error('season pool load failed', e));
   await loadMapHotspots().catch(e => console.error('map hotspots load failed', e));
   await loadGuardian();
@@ -4372,6 +4378,11 @@ function featureGateStatus(featureKey){
     met = !!guardian && (guardian.campaign_level || 0) >= parseInt(gate.requirementValue || '0', 10);
   } else if(gate.requirementType === 'mage_level'){
     met = !!mage && (mage.level || 0) >= parseInt(gate.requirementValue || '0', 10);
+  } else if(gate.requirementType === 'full_access'){
+    // 0119 — direct feedback: "I need the ability to lock areas for
+    // points of trials and full access gaming" / "full access to the
+    // game will be restricted to backers and subscription holders."
+    met = hasFullAccess();
   }
   return { open: met, label: gate.label, message: gate.lockedMessage || "This isn't open to you yet." };
 }
@@ -5093,6 +5104,8 @@ async function savePassword(){
    gate.html — now deep-link-aware — to actually talk to them. */
 
 async function openShrine(){
+  const gate = featureGateStatus('shrine');
+  if(!gate.open){ featureLockView = { label: gate.label, message: gate.message }; render(); return; }
   shrineView = { step: 'browse' };
   render();
   maybeShowPageTip('shrine');
@@ -5112,6 +5125,20 @@ async function loadShrineEntitlements(){
     .eq('user_id', session.user.id);
   if(error){ console.error('entitlements load failed', error); shrineEntitlements = []; return; }
   shrineEntitlements = data || [];
+}
+
+// 0119 — "full access" for the feature-gate system (locking whole map
+// destinations behind backers/subscribers) reuses the exact same
+// scope_type='all' entitlements row that already means full-site access
+// everywhere else (Shrine's unlock check just below, Shop's "already
+// owned" check) — no separate "is a backer" flag. That row comes from
+// either the flat "Full Access" subscription (Stripe) or an admin's
+// manual admin_grant_entitlement(email, 'all') call, which is also how
+// a Kickstarter backer gets permanent access by hand (no expires_at set
+// = never expires).
+function hasFullAccess(){
+  const now = Date.now();
+  return shrineEntitlements.some(e => e.scope_type === 'all' && (!e.expires_at || new Date(e.expires_at).getTime() > now));
 }
 
 function isDeityUnlocked(pantheonId, deityId){
@@ -5841,6 +5868,8 @@ let worldBossStatus = null; // {active, boss:{...}, cooldownEndsAt, leaderboard:
 let worldBossMoves = null;
 
 function openWorldBoss(){
+  const gate = featureGateStatus('world_boss');
+  if(!gate.open){ featureLockView = { label: gate.label, message: gate.message }; render(); return; }
   worldBossView = { step: 'home' };
   worldBossStatus = null;
   worldBossMoves = null;
@@ -6373,6 +6402,8 @@ function shopBuySelectedPantheon(){
    time or a grind replay — feeds XP back into that same level. */
 
 async function openCampaign(){
+  const gate = featureGateStatus('campaign');
+  if(!gate.open){ featureLockView = { label: gate.label, message: gate.message }; render(); return; }
   campaignView = { step: 'browse' };
   campaignMsg = '';
   render();
@@ -6612,6 +6643,8 @@ function returnToMapHub(){
 /* ---------------- petitions ---------------- */
 
 function openPetitionPicker(){
+  const gate = featureGateStatus('oracle');
+  if(!gate.open){ featureLockView = { label: gate.label, message: gate.message }; render(); return; }
   petitionView = { step: 'pick' };
   render();
   maybeShowPageTip('oracle');
@@ -9576,6 +9609,8 @@ async function openCircleDragonEntry(){
     render();
     return;
   }
+  const gate = featureGateStatus('circle_dragon');
+  if(!gate.open){ featureLockView = { label: gate.label, message: gate.message }; render(); return; }
   circleView = { step: 'loading' };
   render();
   const data = await circleFetch('my-circle');
@@ -10233,6 +10268,8 @@ async function loadExpeditionStatus(){
 }
 
 async function openExpedition(){
+  const gate = featureGateStatus('expeditions');
+  if(!gate.open){ featureLockView = { label: gate.label, message: gate.message }; render(); return; }
   expeditionView = { step: 'home' };
   render();
   maybeShowPageTip('expeditions');
@@ -10402,6 +10439,8 @@ async function loadCraftInventory(){
 }
 
 async function openCraft(){
+  const gate = featureGateStatus('craft');
+  if(!gate.open){ featureLockView = { label: gate.label, message: gate.message }; render(); return; }
   craftView = { step: 'home' };
   render();
   maybeShowPageTip('craft');
@@ -10701,6 +10740,8 @@ function renderCraft(){
    loadSeasonInfo() (see near loadSpeciesCatalog), refreshed at login. */
 
 function openRedeem(){
+  const gate = featureGateStatus('chained_gods');
+  if(!gate.open){ featureLockView = { label: gate.label, message: gate.message }; render(); return; }
   redeemView = { step: 'hub' };
   render();
   maybeShowPageTip('chainedGods');
