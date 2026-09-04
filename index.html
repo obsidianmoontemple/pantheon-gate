@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <title>The Long Silence — Pantheon Gate</title>
+<!-- BRAND (white-label): the title above is just the pre-JS fallback shown
+     for an instant before the script below overwrites it — the real
+     source of truth is the BRAND block near the top of the main inline
+     script tag further down this file. Edit that block, not this line. -->
+<link rel="icon" id="brandFavicon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%99%3C/text%3E%3C/svg%3E">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
@@ -1057,8 +1062,8 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
 <div id="rewardBannerStack"></div>
 <div class="wrap">
   <header class="mast">
-    <p class="eyebrow">Temple of the Obsidian Moon presents</p>
-    <h1>The Long Silence</h1>
+    <p class="eyebrow" id="brandEyebrow">Temple of the Obsidian Moon presents</p>
+    <h1 id="brandTitle">The Long Silence</h1>
     <div class="rule"></div>
     <p class="sub">The gods did not leave. They were silenced. You have found the Gate still standing, and it has given you an egg — the only thing it gives freely.</p>
   </header>
@@ -1082,7 +1087,7 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
     </div>
   </div>
 
-  <footer class="notice">The Long Silence · a Pantheon Gate chapter, still being written</footer>
+  <footer class="notice" id="brandFooter">The Long Silence · a Pantheon Gate chapter, still being written</footer>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -1091,6 +1096,34 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
 const SUPABASE_URL = "https://kuvaeprkmwzlqrqtjbhc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dmFlcHJrbXd6bHFycXRqYmhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MDMzOTgsImV4cCI6MjEwMjQ3OTM5OH0.-W7tTHZZob_dY2ydAx26cFx_izPBKJ3_M0sadNd7cOI";
 const FUNCTIONS_URL = SUPABASE_URL.replace(".supabase.co", ".functions.supabase.co");  // ← leave alone, don't touch
+
+// ---- BRAND — edit this block, and the matching block in gate.html and
+// admin.html, to rebrand the whole site for a white-label deployment.
+// Nothing else in any of the three files needs to change. Leave every
+// value as-is to keep this game's own default branding exactly as it is
+// today (that's what these defaults already are).
+const BRAND = {
+  siteName: "The Long Silence",              // used on the hero, footer, login screen, maintenance message
+  gateName: "The Pantheon Gate",              // used in the Get Help email subject and the nav link back from gate.html
+  tagline: "a Pantheon Gate chapter, still being written",  // footer line, after "siteName · "
+  eyebrow: "Temple of the Obsidian Moon presents",          // small line above the hero title
+  pageTitle: "The Long Silence — Pantheon Gate",            // browser tab title
+  supportEmail: "silverstag212007@gmail.com", // "Get Help" mailto address on the Account screen
+  faviconEmoji: "🌙"                          // browser tab icon — any one or two emoji
+};
+
+function applyStaticBranding(){
+  document.title = BRAND.pageTitle;
+  const fav = document.getElementById('brandFavicon');
+  if(fav) fav.href = "data:image/svg+xml," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>${BRAND.faviconEmoji}</text></svg>`);
+  const eyebrow = document.getElementById('brandEyebrow');
+  if(eyebrow) eyebrow.textContent = BRAND.eyebrow;
+  const title = document.getElementById('brandTitle');
+  if(title) title.textContent = BRAND.siteName;
+  const footer = document.getElementById('brandFooter');
+  if(footer) footer.textContent = BRAND.siteName + ' · ' + BRAND.tagline;
+}
+applyStaticBranding();
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -1991,7 +2024,7 @@ function renderMaintenance(message){
   document.getElementById('app').innerHTML = `
     <div class="card" style="text-align:center;">
       <h2>Gone quiet for a moment</h2>
-      <p class="hint">${esc(message || 'The Long Silence is briefly closed for maintenance. Please check back shortly.')}</p>
+      <p class="hint">${esc(message || (BRAND.siteName + ' is briefly closed for maintenance. Please check back shortly.'))}</p>
       <button onclick="location.reload()">Try again</button>
     </div>
   `;
@@ -2002,6 +2035,16 @@ async function afterLogin(){
   document.getElementById('app').innerHTML = '<div class="card"><p class="hint" style="margin:0;text-align:center;">Finding your way through the Gate…</p></div>';
   if(await checkMaintenanceMode().catch(e => { console.error('maintenance check failed', e); return false; })) return;
   startHeartbeat();
+  // Signup codes (0116) — loginWithSignup() redeems immediately when a
+  // session starts right away, but stashes the code here instead when
+  // email confirmation was required first (no auth.uid() yet at that
+  // point). Pick it up on the first afterLogin() after that, once —
+  // cleared right away so it's never retried on later logins.
+  const pendingSignupCode = localStorage.getItem('pendingSignupCode');
+  if(pendingSignupCode){
+    localStorage.removeItem('pendingSignupCode');
+    supabaseClient.rpc('redeem_signup_code', { p_code: pendingSignupCode }).then(() => {}, () => {});
+  }
   await loadCustomDeitiesIntoCatalog().catch(e => console.error('custom deities fold-in failed', e));
   await loadSpeciesCatalog().catch(e => console.error('species catalog load failed', e));
   await loadMageArtsCatalog().catch(e => console.error('mage arts catalog load failed', e));
@@ -2125,7 +2168,7 @@ function renderLoginScreen(){
     app.innerHTML = `
       <div class="login-screen-wrap"${bg}>
         <div class="login-card">
-          <h1>The Long Silence</h1>
+          <h1>${esc(BRAND.siteName)}</h1>
           <p class="hint">Welcome back, ${esc(session.user.email || 'traveler')}.</p>
           <button onclick="continueSession()">Continue</button>
           <button class="secondary" style="margin-top:12px;" onclick="signOutOfGate()">Sign in as someone else</button>
@@ -2138,7 +2181,7 @@ function renderLoginScreen(){
   app.innerHTML = `
     <div class="login-screen-wrap"${bg}>
       <div class="login-card">
-        <h1>The Long Silence</h1>
+        <h1>${esc(BRAND.siteName)}</h1>
         <p class="hint">Somewhere past the Gate, an egg is waiting for a keeper. Sign in to claim it.</p>
         <button onclick="loginWithGoogle()">Sign in with Google</button>
         <div class="login-divider">or</div>
@@ -2147,6 +2190,7 @@ function renderLoginScreen(){
         <button class="secondary" onclick="loginWithPassword()">Sign in with password</button>
         <button class="secondary" style="margin-top:10px;" onclick="loginWithMagicLink()">Email me a sign-in link</button>
         <div class="login-divider">new here?</div>
+        <input type="text" id="loginSignupCode" placeholder="Have a code? (optional)" autocapitalize="none" autocomplete="off">
         <button class="secondary" onclick="loginWithSignup()">Create an account with a password</button>
         <div class="status" id="loginStatus"></div>
         <p class="hint" style="margin-top:14px;margin-bottom:0;"><a href="#" onclick="forgotPassword();return false;" style="color:inherit;text-decoration:underline;">Forgot your password?</a></p>
@@ -2196,6 +2240,7 @@ async function loginWithPassword(){
 async function loginWithSignup(){
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
+  const code = (document.getElementById('loginSignupCode')?.value || '').trim();
   const status = document.getElementById('loginStatus');
   if(!email || !password){ status.className = 'status err'; status.textContent = 'Enter both an email and a password first.'; return; }
   if(password.length < 6){ status.className = 'status err'; status.textContent = 'Password needs to be at least 6 characters.'; return; }
@@ -2208,8 +2253,25 @@ async function loginWithSignup(){
   if(error){ status.className = 'status err'; status.textContent = error.message; return; }
   if(data.session){
     session = data.session;
+    // Signup codes (0116) — a session exists right away (email
+    // confirmation is off), so redeem now, while #loginStatus is still
+    // on screen, right before afterLogin() replaces the whole page.
+    if(code){
+      const { data: result } = await supabaseClient.rpc('redeem_signup_code', { p_code: code }).then(r => r, () => ({ data: null }));
+      if(result){
+        status.className = result.redeemed ? 'status ok' : 'status err';
+        status.textContent = result.redeemed
+          ? (result.granted ? 'Signup bonus applied — welcome!' : 'Code accepted — your bonus will apply once you hatch your guardian.')
+          : ('Code not applied: ' + (result.reason || 'unknown error'));
+      }
+    }
     await afterLogin();
   } else {
+    // Email confirmation required — there's no session yet, so
+    // redeem_signup_code() would fail its auth.uid() check right now.
+    // Stash the code and pick it up in afterLogin() on the first real
+    // session after the user confirms and signs in (see there).
+    if(code) localStorage.setItem('pendingSignupCode', code);
     status.className = 'status ok';
     status.textContent = 'Account created — check your email to confirm it, then sign in with your password.';
   }
@@ -2528,6 +2590,10 @@ async function hatchGuardian(){
   guardian = data;
   render();
   celebrate({ count: 20, distance: 60, duration: 1000, color: '#ffd76a', size: 24, sprite: 'particle-fx/fx_starburst.png' });
+  // Signup codes (0116) — a code entered at signup can't be credited
+  // until a guardian exists to credit; this is the other half of that,
+  // firing right after one gets hatched. No-op if nothing's pending.
+  supabaseClient.rpc('apply_pending_signup_grant').then(() => {}, () => {});
 }
 
 /* ---------------- mage creation (0054) ----------------
@@ -4806,7 +4872,7 @@ function renderProfile(){
       <h2>Account</h2>
       <p class="hint" style="margin-top:-6px;">Player: ${esc((profileMessageStatus && profileMessageStatus.displayName) || session.user.email || 'Unknown')}</p>
       <p class="hint">Account ID: <span style="user-select:all;">${esc(session.user.id)}</span> <span style="opacity:0.7;">(have this handy if you email support)</span></p>
-      <a href="mailto:silverstag212007@gmail.com?subject=${encodeURIComponent('Pantheon Gate help — ' + session.user.id)}"
+      <a href="mailto:${BRAND.supportEmail}?subject=${encodeURIComponent(BRAND.gateName + ' help — ' + session.user.id)}"
         style="display:block;width:fit-content;margin:10px auto 0;background:transparent;border:1px solid var(--gold);color:var(--gold-bright);padding:12px 26px;font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;text-decoration:none;">Get Help</a>
       <button class="secondary" style="margin-top:14px;display:block;margin-left:auto;margin-right:auto;" onclick="openCredits()">Game Credits</button>
     </div>
