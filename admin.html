@@ -9436,6 +9436,13 @@ const FEATURE_REQUIREMENT_OPTIONS = [
   { value: 'guardian_stage', label: 'Guardian stage — Value is a stage key (hatchling/fledged/ascendant/sovereign)' },
   { value: 'guardian_campaign_level', label: 'Guardian Campaign chapters cleared — Value is a number' },
   { value: 'mage_level', label: 'Mage level — Value is a number' },
+  // 0119 — direct feedback: "I need the ability to lock areas for points
+  // of trials and full access gaming." Value is unused/ignored for this
+  // type (same as 'none') — met/unmet comes from whether the player has
+  // an active scope_type='all' entitlement: the flat Full Access
+  // subscription, a one-time all-scope purchase, or an admin's manual
+  // grant (the way a Kickstarter backer gets permanent access by hand).
+  { value: 'full_access', label: 'Full access (backers / subscription holders) — Value unused' },
 ];
 
 async function loadFeatureGatesAdmin(){
