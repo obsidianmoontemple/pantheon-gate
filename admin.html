@@ -603,7 +603,26 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Reward package (optional)</label><select id="newPromoRewardKey" style="max-width:200px;"><option value="">Nothing — no reward package</option></select></div>
           <div class="field"><label>Reward bundle (optional)</label><select id="newPromoBundleKey" style="max-width:200px;"><option value="">Nothing — no reward bundle</option></select></div>
         </div>
-        <p class="hint">Pick a currency+amount, a reward package, a reward bundle, or any combination — an event needs at least one of the three to have anything to distribute. Currency (personal) and rewards/bundles go to every guardian in scope; a circle-scoped currency (like Devotion) goes to the Circle's own balance instead.</p>
+        <!-- 0126 — direct feedback: "I would like to be able to set certain
+             deity unlocks into the promos page." Same 'all'/'pantheon'/
+             'deity' vocabulary as the Gifting tab's one-off grant form
+             above, just as a named, re-runnable Promo Event instead of an
+             instant action. -->
+        <div class="form-row">
+          <div class="field"><label>Deity/pantheon unlock (optional)</label>
+            <select id="newPromoEntitlementType" style="max-width:170px;">
+              <option value="none" selected>None — no unlock</option>
+              <option value="all">Full site access</option>
+              <option value="pantheon">A pantheon</option>
+              <option value="deity">A specific god</option>
+            </select>
+          </div>
+          <div class="field" id="newPromoEntitlementIdField" style="display:none;">
+            <label>Which one</label>
+            <select id="newPromoEntitlementId" style="max-width:200px;"></select>
+          </div>
+        </div>
+        <p class="hint">Pick a currency+amount, a reward package, a reward bundle, a deity/pantheon unlock, or any combination — an event needs at least one to have anything to distribute. Currency (personal) and rewards/bundles/unlocks go to every guardian in scope; a circle-scoped currency (like Devotion) goes to the Circle's own balance instead.</p>
         <div class="form-row">
           <div class="field"><label>Destination</label>
             <select id="newPromoScope" style="max-width:140px;"><option value="sitewide">Everyone</option><option value="circle">One Circle</option></select>
@@ -838,6 +857,11 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <h3>Expeditions</h3>
         <div class="form-row">
           <div class="field"><label>Expeditions per guardian per day</label><input type="number" min="1" id="progExpeditionsPerDay" style="max-width:170px;"></div>
+          <!-- 0125 — direct feedback: "the familiar will need a recovery
+               time after a wrong move." How long a familiar is out of
+               action after guessing the wrong location, on top of the
+               travel time it already spent getting there. -->
+          <div class="field"><label>Recovery hours after a wrong guess</label><input type="number" min="0" step="0.5" id="progExpeditionRecoveryHours" style="max-width:170px;"></div>
         </div>
         <h3>Training (item 4)</h3>
         <p class="hint">The Guardian's own standalone training action (new `training` edge function) — a Mage-Train-shaped loop it never had before: free, cooldown-gated, a small Essence trickle, and XP fed into the same unified Guardian Level every other guardian activity already feeds.</p>
@@ -1944,7 +1968,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>Expedition fragments (clues)</h2>
-        <p class="hint">Each fragment is one real destination with one real multiple-choice question — this is the "educational" half, so keep it factually accurate. correct_index is 0 for the first choice, 1 for the second, and so on. Choices are entered as one option per line. travel_hours is how long the guardian is away before the clue becomes answerable. Deity's voice hint (optional) is a short in-character line pointing the familiar toward this site, shown when it's dispatched.</p>
+        <p class="hint">Each fragment is one real destination with one real multiple-choice question — this is the "educational" half, so keep it factually accurate. correct_index is 0 for the first choice, 1 for the second, and so on. Choices are entered as one option per line. travel_hours is how long the guardian is away before the clue becomes answerable. Deity's voice hint (optional) is no longer the primary whisper players see — since 0124, the deity now speaks a fresh, live AI-generated line at dispatch (grounded on this Region/Clue, via the same Groq key chat/narrator/petition use). This field is now only the FALLBACK text shown if that live call ever fails (missing key, outage, etc.), so it's still worth writing something in-character rather than leaving it blank.</p>
         <div class="form-row">
           <div class="field"><label>Artifact</label><select id="fragmentArtifactSelect" style="max-width:220px;"></select></div>
         </div>
@@ -2018,6 +2042,38 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <input type="text" id="newExpAltarItemDescription" style="max-width:none;">
         </div>
         <div class="status" id="newExpAltarItemStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Expedition Decoy Locations</h2>
+        <!-- 0125 — direct feedback: "the mage must select from a dropdown
+             list of locations and choose where to journey based on the
+             clue... we dont want them told directly anymore." Each
+             expedition attempt mixes one fragment's real region_name with
+             a few of these into a shuffled dropdown — a wrong pick still
+             costs travel + recovery time. This is a SHARED pool used
+             across every artifact, so a name here should never be the
+             real site of any fragment (that would spoil that fragment's
+             true answer whenever it shows up as a decoy elsewhere). A
+             starting list of 24 real, well-known sites was seeded for
+             you — edit, remove, or add to it freely below. -->
+        <p class="hint">A wrong guess still sends the familiar there and back — it costs travel time either way, plus a recovery period (set on the Guardian Progression tab) before the next attempt. Keep names real and specific (e.g. "Petra, Jordan"), and avoid anything that's the true answer for one of your own fragments.</p>
+        <div class="scroll-table" style="max-height:320px;">
+          <table>
+            <thead><tr><th>Name</th><th>Active</th></tr></thead>
+            <tbody id="expDecoyLocationRows"><tr><td colspan="2">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveExpDecoyLocationsBtn">Save changes</button>
+          <div class="status" id="expDecoyLocationStatus"></div>
+        </div>
+        <h3>Add a decoy location</h3>
+        <div class="form-row">
+          <div class="field" style="max-width:none;flex:1;"><label>Name</label><input type="text" id="newExpDecoyLocationName" style="max-width:none;" placeholder="e.g. Petra, Jordan"></div>
+          <button id="addExpDecoyLocationBtn">Add</button>
+        </div>
+        <div class="status" id="newExpDecoyLocationStatus"></div>
       </div>
     </div>
 
@@ -2253,6 +2309,29 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="save-bar">
           <button id="savePersonalitiesBtn">Save changes</button>
           <div class="status" id="personalityStatus"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Deity pictures</h2>
+        <!-- 0127 — direct feedback: "I need a url picture override for
+             all the deities... I dont have to resize every picture." Every
+             static god's portrait normally has to already be a pre-cropped
+             PNG shipped in the frontend repo; this lets any of them be
+             swapped for a plain image URL instead, no resizing needed —
+             the browser scales it to fit. Leave blank to keep the original
+             picture. -->
+        <p class="hint">Override any god's picture with an image URL instead of the built-in artwork — no need to crop or resize it yourself first, it'll scale to fit. Leave blank (or uncheck Active) to keep the original picture.</p>
+        <input class="search-box" type="text" id="deityImageSearch" placeholder="Search by name…">
+        <div class="scroll-table">
+          <table>
+            <thead><tr><th>God</th><th>Pantheon</th><th>Image URL</th><th>Active</th></tr></thead>
+            <tbody id="deityImageRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveDeityImagesBtn">Save changes</button>
+          <div class="status" id="deityImageStatus"></div>
         </div>
       </div>
     </div>
@@ -3156,7 +3235,8 @@ function refreshAllScopePickers(){
    ['broadcastGiftType','broadcastGiftScopeId'],
    ['newRewardScopeType','newRewardScopeId'],
    ['newTierGrantType','newTierGrantId'],
-   ['newItemGrantType','newItemGrantId']].forEach(([t, i]) => populateScopeIdSelect(t, i));
+   ['newItemGrantType','newItemGrantId'],
+   ['newPromoEntitlementType','newPromoEntitlementId']].forEach(([t, i]) => populateScopeIdSelect(t, i));
   const artP = document.getElementById('newArtifactPantheon');
   const artD = document.getElementById('newArtifactDeity');
   if(artP) artP.innerHTML = pantheonOptionsHtml(artP.value);
@@ -3360,6 +3440,8 @@ async function init(){
 
   document.getElementById('grantScopeType').addEventListener('change', updateGrantScopeVisibility);
   updateGrantScopeVisibility();
+  document.getElementById('newPromoEntitlementType').addEventListener('change', updateNewPromoEntitlementVisibility);
+  updateNewPromoEntitlementVisibility();
 
   document.getElementById('signOutBtn').addEventListener('click', async () => {
     await supabaseClient.auth.signOut();
@@ -3377,6 +3459,16 @@ function updateGrantScopeVisibility(){
   const type = document.getElementById('grantScopeType').value;
   document.getElementById('grantScopeIdField').style.display = (type === 'all') ? 'none' : '';
   if(type !== 'all') populateScopeIdSelect('grantScopeType', 'grantScopeId');
+}
+
+// 0126 — same show/hide-the-id-picker pattern as updateGrantScopeVisibility
+// above, just with a third "None" option (this unlock is optional on a
+// Promo Event, unlike the Gifting form where granting something is the
+// whole point).
+function updateNewPromoEntitlementVisibility(){
+  const type = document.getElementById('newPromoEntitlementType').value;
+  document.getElementById('newPromoEntitlementIdField').style.display = (type === 'pantheon' || type === 'deity') ? '' : 'none';
+  if(type === 'pantheon' || type === 'deity') populateScopeIdSelect('newPromoEntitlementType', 'newPromoEntitlementId');
 }
 
 function updateGrantTargetVisibility(){
@@ -3470,6 +3562,7 @@ async function handleSession(session){
   loadCreditsAdmin();
 
   loadDeityPersonalities();
+  loadDeityImageOverrides();
   loadCheckinCalendar();
   loadCheckinNewPlayerCatalog();
   loadCheckinBackdayPricing();
@@ -3512,6 +3605,7 @@ async function handleSession(session){
   loadGuardianItemCatalog();
   loadExpeditionArtifacts();
   loadExpAltarItems();
+  loadExpDecoyLocations();
   loadArenaShopCatalog();
   loadPvpPayoutRules();
   loadLeaderboards();
@@ -4492,6 +4586,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addFragmentBtn').addEventListener('click', addExpeditionFragment);
   document.getElementById('saveExpAltarItemsBtn').addEventListener('click', saveExpAltarItems);
   document.getElementById('addExpAltarItemBtn').addEventListener('click', addExpAltarItem);
+  document.getElementById('saveExpDecoyLocationsBtn').addEventListener('click', saveExpDecoyLocations);
+  document.getElementById('addExpDecoyLocationBtn').addEventListener('click', addExpDecoyLocation);
 
   document.getElementById('saveArenaItemsBtn').addEventListener('click', saveArenaShopCatalog);
   document.getElementById('addArenaItemBtn').addEventListener('click', addArenaShopItem);
@@ -4512,6 +4608,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('savePersonalitiesBtn').addEventListener('click', savePersonalityOverrides);
   document.getElementById('personalitySearch').addEventListener('input', filterPersonalityRows);
+  document.getElementById('deityImageSearch').addEventListener('input', filterDeityImageRows);
+  document.getElementById('saveDeityImagesBtn').addEventListener('click', saveDeityImageOverrides);
 });
 
 /* ---------------- pantheons ---------------- */
@@ -6736,6 +6834,12 @@ async function loadPromoEvents(){
     if(ev.currency_key) grantParts.push(`${esc(cur?.name || ev.currency_key)} × ${ev.amount}`);
     if(ev.reward_key) grantParts.push('Reward: ' + esc((giftableRewardsCache.find(r => r.key === ev.reward_key) || {}).name || ev.reward_key));
     if(ev.gift_bundle_key) grantParts.push('Bundle: ' + esc((giftableRewardBundlesCache.find(b => b.bundle_key === ev.gift_bundle_key) || {}).name || ev.gift_bundle_key));
+    if(ev.entitlement_scope_type){
+      const unlockLabel = ev.entitlement_scope_type === 'all' ? 'Full site access'
+        : ev.entitlement_scope_type === 'pantheon' ? (CATALOG[ev.entitlement_scope_id]?.label || ev.entitlement_scope_id)
+        : (FLAT_DEITIES.find(d => d.id === ev.entitlement_scope_id)?.name || ev.entitlement_scope_id);
+      grantParts.push('Unlock: ' + esc(unlockLabel));
+    }
     return `<tr>
       <td>${esc(ev.name)}<div class="dim">${esc(ev.key)}</div></td>
       <td class="dim">${grantParts.join('<br>') || '(nothing configured)'}</td>
@@ -6788,6 +6892,9 @@ async function createPromoEvent(){
   const amount = amountRaw === '' ? null : Number(amountRaw);
   const rewardKey = document.getElementById('newPromoRewardKey').value || null;
   const bundleKey = document.getElementById('newPromoBundleKey').value || null;
+  const entitlementScopeTypeRaw = document.getElementById('newPromoEntitlementType').value;
+  const entitlementScopeType = entitlementScopeTypeRaw === 'none' ? null : entitlementScopeTypeRaw;
+  const entitlementScopeId = entitlementScopeType && entitlementScopeType !== 'all' ? document.getElementById('newPromoEntitlementId').value : null;
   const scope = document.getElementById('newPromoScope').value;
   const description = document.getElementById('newPromoDescription').value.trim();
   const startsRaw = document.getElementById('newPromoStarts').value;
@@ -6802,7 +6909,8 @@ async function createPromoEvent(){
   // gap, not just a missing dropdown) — an admin literally could not
   // distribute a crafted item, mage gear, or a bundle via a Promo Event.
   if(currencyKey && (!Number.isFinite(amount) || amount <= 0)){ status.className = 'status err'; status.textContent = 'Enter an amount greater than 0 for the chosen currency.'; return; }
-  if(!currencyKey && !rewardKey && !bundleKey){ status.className = 'status err'; status.textContent = 'Pick a currency+amount, a reward package, a reward bundle, or some combination.'; return; }
+  if(entitlementScopeType && entitlementScopeType !== 'all' && !entitlementScopeId){ status.className = 'status err'; status.textContent = 'Pick which pantheon or god this event unlocks.'; return; }
+  if(!currencyKey && !rewardKey && !bundleKey && !entitlementScopeType){ status.className = 'status err'; status.textContent = 'Pick a currency+amount, a reward package, a reward bundle, a deity/pantheon unlock, or some combination.'; return; }
 
   let circleId = null;
   if(scope === 'circle'){
@@ -6817,7 +6925,9 @@ async function createPromoEvent(){
   status.className = 'status';
   status.textContent = 'Creating…';
   const result = await callAdmin('create-promo-event', {
-    key, name, description, currencyKey, amount: currencyKey ? amount : null, rewardKey, bundleKey, scope, circleId,
+    key, name, description, currencyKey, amount: currencyKey ? amount : null, rewardKey, bundleKey,
+    entitlementScopeType, entitlementScopeId,
+    scope, circleId,
     startsAt: startsRaw ? new Date(startsRaw).toISOString() : null,
     endsAt: endsRaw ? new Date(endsRaw).toISOString() : null
   });
@@ -6834,6 +6944,8 @@ async function createPromoEvent(){
     ['newPromoKey','newPromoName','newPromoAmount','newPromoDescription','newPromoCircleName','newPromoStarts','newPromoEnds','newPromoImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
     document.getElementById('newPromoRewardKey').value = '';
     document.getElementById('newPromoBundleKey').value = '';
+    document.getElementById('newPromoEntitlementType').value = 'none';
+    updateNewPromoEntitlementVisibility();
     loadPromoEvents();
   }
 }
@@ -7051,6 +7163,7 @@ async function loadGuardianProgression(){
   document.getElementById('progPartialGain').value = data.partial_mark_stat_gain;
   document.getElementById('progAffinityMarks').value = data.dominant_affinity_marks;
   document.getElementById('progExpeditionsPerDay').value = data.expeditions_per_day;
+  document.getElementById('progExpeditionRecoveryHours').value = data.expedition_recovery_hours;
   document.getElementById('progTrainCooldown').value = data.training_cooldown_minutes;
   document.getElementById('progTrainXp').value = data.training_xp;
   document.getElementById('progTrainEssenceMin').value = data.training_essence_min;
@@ -7084,6 +7197,7 @@ async function saveGuardianProgression(){
   const hatchling = v('progHatchling'), fledged = v('progFledged'), ascendant = v('progAscendant'), sovereign = v('progSovereign');
   const fullGain = v('progFullGain'), partialGain = v('progPartialGain'), affinityMarks = v('progAffinityMarks');
   const expeditionsPerDay = v('progExpeditionsPerDay');
+  const expeditionRecoveryHours = parseFloat(document.getElementById('progExpeditionRecoveryHours').value);
   const trainCooldown = v('progTrainCooldown'), trainXp = v('progTrainXp');
   const trainEssenceMin = v('progTrainEssenceMin'), trainEssenceMax = v('progTrainEssenceMax');
   const switchFamiliarCost = v('progSwitchFamiliarCost'), newFamiliarCost = v('progNewFamiliarCost');
@@ -7096,6 +7210,11 @@ async function saveGuardianProgression(){
   if(isNaN(expeditionsPerDay) || expeditionsPerDay < 1){
     status.className = 'status err';
     status.textContent = 'Expeditions per day must be at least 1.';
+    return;
+  }
+  if(isNaN(expeditionRecoveryHours) || expeditionRecoveryHours < 0){
+    status.className = 'status err';
+    status.textContent = 'Recovery hours after a wrong guess must be a non-negative number.';
     return;
   }
   if(isNaN(trainCooldown) || trainCooldown < 1){
@@ -7123,6 +7242,7 @@ async function saveGuardianProgression(){
     hatchling_marks: hatchling, fledged_marks: fledged, ascendant_marks: ascendant, sovereign_marks: sovereign,
     full_mark_stat_gain: fullGain, partial_mark_stat_gain: partialGain, dominant_affinity_marks: affinityMarks,
     expeditions_per_day: expeditionsPerDay,
+    expedition_recovery_hours: expeditionRecoveryHours,
     training_cooldown_minutes: trainCooldown, training_xp: trainXp,
     training_essence_min: trainEssenceMin, training_essence_max: trainEssenceMax,
     switch_familiar_cost_essence: switchFamiliarCost, new_familiar_cost_essence: newFamiliarCost,
@@ -9633,8 +9753,18 @@ async function saveFeatureGates(){
   const trs = document.querySelectorAll('#featureGateRows tr[data-key]');
   const rows = Array.from(trs).map(tr => {
     const key = tr.getAttribute('data-key');
+    // Bug fix: this upsert previously omitted `label` entirely. label is
+    // NOT NULL with no default, and Postgres validates that on the
+    // candidate row for an INSERT ... ON CONFLICT DO UPDATE even when the
+    // conflict means it'll just update the existing row — so every save
+    // failed with "null value in column label violates not-null
+    // constraint". label isn't editable here (it's the dim/display-only
+    // first column), so pull the current value back out of the already-
+    // loaded cache instead of re-reading a DOM element that doesn't exist.
+    const existing = featureGatesCache.find(g => g.feature_key === key);
     return {
       feature_key: key,
+      label: existing ? existing.label : key,
       requirement_type: document.getElementById('fgType_' + key).value,
       requirement_value: document.getElementById('fgValue_' + key).value.trim() || null,
       locked_message: document.getElementById('fgMessage_' + key).value.trim(),
@@ -10998,6 +11128,66 @@ async function addExpAltarItem(){
   loadExpAltarItems();
 }
 
+/* ---------------- Expedition Decoy Locations (0125) ----------------
+   Shared pool mixed with a fragment's real region_name into the
+   location-guess dropdown. Same simple row-table pattern as every other
+   flat catalog in this project — id per row (never shown/editable), name
+   + active per row, bulk upsert on save. */
+
+async function loadExpDecoyLocations(){
+  const { data, error } = await supabaseClient.from('expedition_decoy_locations').select('*').order('name', { ascending: true });
+  const rows = document.getElementById('expDecoyLocationRows');
+  if(error){
+    rows.innerHTML = '<tr><td colspan="2">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = (data || []).map(d => `<tr data-id="${esc(d.id)}">
+    <td><input type="text" id="expDecoyName_${esc(d.id)}" value="${esc(d.name)}" style="max-width:320px;"></td>
+    <td><input type="checkbox" id="expDecoyActive_${esc(d.id)}" ${d.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="2">No decoy locations yet.</td></tr>';
+}
+
+async function saveExpDecoyLocations(){
+  const status = document.getElementById('expDecoyLocationStatus');
+  const trs = document.querySelectorAll('#expDecoyLocationRows tr[data-id]');
+  const rows = Array.from(trs).map(tr => {
+    const id = tr.getAttribute('data-id');
+    return {
+      id,
+      name: document.getElementById('expDecoyName_' + id).value.trim(),
+      active: document.getElementById('expDecoyActive_' + id).checked
+    };
+  });
+  const badRow = rows.find(r => !r.name);
+  if(badRow){
+    status.className = 'status err';
+    status.textContent = 'Every decoy location needs a name.';
+    return;
+  }
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('expedition_decoy_locations').upsert(rows, { onConflict: 'id' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  loadExpDecoyLocations();
+}
+
+async function addExpDecoyLocation(){
+  const status = document.getElementById('newExpDecoyLocationStatus');
+  const name = document.getElementById('newExpDecoyLocationName').value.trim();
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('expedition_decoy_locations').insert({ name });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That name is already in the pool.' : ('Failed: ' + error.message); return; }
+
+  status.className = 'status ok';
+  status.textContent = name + ' added.';
+  document.getElementById('newExpDecoyLocationName').value = '';
+  loadExpDecoyLocations();
+}
+
 /* =====================================================================
    ARENA STORE CATALOG (Favor spending)
    ===================================================================== */
@@ -11641,6 +11831,60 @@ async function savePersonalityOverrides(){
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies to the next message sent to that deity, no redeploy needed.';
   if(!error) loadDeityPersonalities();
+}
+
+/* =====================================================================
+   DEITY IMAGE OVERRIDES (0127) — same FLAT_DEITIES-driven row-per-god
+   list, upsert-on-deity_id save, as the Personality Overrides above.
+   ===================================================================== */
+
+let deityImageOverrides = {};
+
+async function loadDeityImageOverrides(){
+  const { data, error } = await supabaseClient.from('deity_image_overrides').select('*');
+  deityImageOverrides = {};
+  (data || []).forEach(r => { deityImageOverrides[r.deity_id] = r; });
+  if(error) console.error('deity_image_overrides load failed', error);
+
+  const rows = document.getElementById('deityImageRows');
+  rows.innerHTML = FLAT_DEITIES.map(d => {
+    const o = deityImageOverrides[d.id] || { image_url: '', active: true };
+    return `<tr data-name="${esc(d.name.toLowerCase())}">
+      <td>${esc(d.name)}</td>
+      <td class="dim">${esc(d.pantheonLabel)}</td>
+      <td><input type="text" id="deityImg_${d.id}" value="${esc(o.image_url || '')}" placeholder="https://…" style="max-width:420px;width:100%;"></td>
+      <td><input type="checkbox" id="deityImgActive_${d.id}" ${o.active !== false ? 'checked' : ''}></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterDeityImageRows(){
+  const q = document.getElementById('deityImageSearch').value.trim().toLowerCase();
+  document.querySelectorAll('#deityImageRows tr').forEach(tr => {
+    const name = tr.getAttribute('data-name') || '';
+    tr.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+}
+
+async function saveDeityImageOverrides(){
+  const status = document.getElementById('deityImageStatus');
+  const rows = FLAT_DEITIES
+    .map(d => ({
+      deity_id: d.id,
+      pantheon_id: d.pantheonId,
+      image_url: document.getElementById('deityImg_' + d.id).value.trim(),
+      active: document.getElementById('deityImgActive_' + d.id).checked,
+      updated_at: new Date().toISOString()
+    }))
+    .filter(r => r.image_url !== '' || deityImageOverrides[r.deity_id]);
+
+  status.className = 'status';
+  status.textContent = rows.length ? 'Saving…' : 'Nothing to save yet.';
+  if(!rows.length) return;
+  const { error } = await supabaseClient.from('deity_image_overrides').upsert(rows, { onConflict: 'deity_id' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies the next time a player opens gate.html, no redeploy needed.';
+  if(!error) loadDeityImageOverrides();
 }
 
 init();
