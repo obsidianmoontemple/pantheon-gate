@@ -3027,21 +3027,34 @@ let MAIL_AREAS = DEFAULT_MAIL_AREAS.slice();
 // Shop — the screen the user's original "scrolling list" complaint most
 // literally describes, and the first screen with more than one
 // independent catalog showing at once (no tabs here — Subscriptions/
-// Packs/Pantheons/deity search are all visible simultaneously), so it's
-// the reason hotspotDropdownMarkup() above learned to take an `id`.
+// Packs/deity search are all visible simultaneously), so it's the reason
+// hotspotDropdownMarkup() above learned to take an `id`.
 // Subscriptions folds the fixed "Full site access" option in alongside
 // admin-authored tiers; Packs folds the fixed message pack in alongside
 // store items — both same "combine the catalog with its one fixed
-// option" reasoning, one dropdown apiece. Pantheons is its own dropdown.
-// Individual gods keeps the locked live-search exception (text box +
-// scrolling results as one positioned box, same as PvP Browse) since a
-// <select> can't search-as-you-type — the per-row Buy button stays
-// inline in the results list, same as PvP Browse's per-row Challenge.
+// option" reasoning, one dropdown apiece. Individual gods keeps the
+// locked live-search exception (text box + scrolling results as one
+// positioned box, same as PvP Browse) since a <select> can't
+// search-as-you-type — the per-row Buy button stays inline in the
+// results list, same as PvP Browse's per-row Challenge.
+//
+// 0129 — direct feedback: "we cant have that dang option to buy pantheons
+// for a singular price espeacially free each one is different as
+// dictated in the shop already" — every deity already has its own price
+// via the Individual gods search below, so a flat whole-pantheon price
+// contradicted that per-deity pricing (and was showing a buggy $0.00 on
+// top of it). The 'pantheonPicker' dropdown is removed outright rather
+// than retired-in-place (unlike DEFAULT_KEYOFNIGHT_AREAS's precedent) —
+// this isn't a screen that might come back, the user asked for the whole
+// mechanic gone. deitySearch widens to fill the freed row since it's the
+// screen's main, most-used box; subsPicker/packsPicker keep their spot.
+// Any admin-saved custom position for the old 'pantheonPicker' hotspot
+// (screen 'shop' in the hotspot_overrides table) is simply never read
+// again — harmless leftover data, not cleaned up here.
 const DEFAULT_SHOP_AREAS = [
   { id: 'subsPicker',     label: 'Subscriptions',    left: 3,  top: 12, width: 44, height: 22, kind: 'dropdown' },
   { id: 'packsPicker',    label: 'Packs & items',    left: 52, top: 12, width: 44, height: 22, kind: 'dropdown' },
-  { id: 'pantheonPicker', label: 'Pantheons',        left: 3,  top: 38, width: 44, height: 20, kind: 'dropdown' },
-  { id: 'deitySearch',    label: 'Search for a god', left: 52, top: 38, width: 44, height: 42, kind: 'dropdown' },
+  { id: 'deitySearch',    label: 'Search for a god', left: 3,  top: 38, width: 93, height: 48, kind: 'dropdown' },
   { id: 'backToMap',      label: 'Back to the Map',  left: 3,  top: 88, width: 18, height: 8,  action: backFromShop },
 ];
 let SHOP_AREAS = DEFAULT_SHOP_AREAS.slice();
@@ -6465,8 +6478,10 @@ function shopIsFree(deityId){ const s = shopDeitySettings[deityId]; return s ? s
 function shopDeityForSale(deityId){ const s = shopDeitySettings[deityId]; return s ? s.for_sale : true; }
 function shopPantheonForSale(pid){ const s = shopPantheonSettings[pid]; return s ? s.for_sale : true; }
 function shopDeityPrice(deityId){ const s = shopDeitySettings[deityId]; return (s && s.price_cents != null) ? s.price_cents : shopPricing.deity; }
-function shopPantheonPrice(pid){ const s = shopPantheonSettings[pid]; return (s && s.price_cents != null) ? s.price_cents : shopPricing.pantheon; }
-
+// shopPantheonPrice()/shopBuyPantheon() (the flat whole-pantheon
+// purchase) were removed in 0129 — shopPantheonForSale() stays just
+// below, it's a shared visibility filter also used by
+// renderPetitionPicker() further down.
 function shopIsAgeRestricted(pantheonId, deityId){
   const ds = deityId ? shopDeitySettings[deityId] : null;
   const ps = shopPantheonSettings[pantheonId];
@@ -6545,15 +6560,6 @@ function renderShop(){
   return renderShopBrowse();
 }
 
-function shopBuyPantheon(pid, label){
-  if(shopIsAgeRestricted(pid, null) && !(shopAgeVerified() && shopAgeWarned(pid))){
-    shopView = { step: 'ageGate', pending: { type: 'pantheon', scopeId: pid, label, pantheonId: pid, deityId: null, warningText: shopAgeWarningText(pid, null) } };
-    render();
-    return;
-  }
-  shopStartCheckout('pantheon', pid);
-}
-
 function shopBuyDeity(deityId, label, pantheonId){
   if(shopIsAgeRestricted(pantheonId, deityId) && !(shopAgeVerified() && shopAgeWarned(deityId))){
     shopView = { step: 'ageGate', pending: { type: 'deity', scopeId: deityId, label, pantheonId, deityId, warningText: shopAgeWarningText(pantheonId, deityId) } };
@@ -6610,8 +6616,15 @@ function confirmShopAgeGate(){
 }
 
 async function shopStartCheckout(type, scopeId){
-  const status = document.getElementById('shopAgeGateStatus') || document.getElementById('shopStatus');
-  if(status){ status.className = 'status'; status.textContent = 'Opening checkout…'; }
+  // shopAgeGateStatus lives inside the (still boxed) age-gate confirm
+  // screen's .hub-overlay; shopStatus is the Shop screen's own loose
+  // .hub-loose-status (0129) — pick the matching base class for whichever
+  // one is actually on screen, same "loose element gets loose classes"
+  // rule as pickerStatus/redeemHubStatus elsewhere.
+  const ageGateStatus = document.getElementById('shopAgeGateStatus');
+  const status = ageGateStatus || document.getElementById('shopStatus');
+  const baseClass = ageGateStatus ? 'status' : 'hub-loose-status';
+  if(status){ status.className = baseClass; status.textContent = 'Opening checkout…'; }
   try{
     const resp = await fetch(FUNCTIONS_URL + '/create-checkout', {
       method: 'POST',
@@ -6622,11 +6635,11 @@ async function shopStartCheckout(type, scopeId){
     if(data.ok && data.url){
       window.location.href = data.url;
     } else if(status){
-      status.className = 'status err';
+      status.className = baseClass + ' err';
       status.textContent = data.error || 'Could not start checkout.';
     }
   }catch(e){
-    if(status){ status.className = 'status err'; status.textContent = 'Could not reach checkout: ' + e.message; }
+    if(status){ status.className = baseClass + ' err'; status.textContent = 'Could not reach checkout: ' + e.message; }
   }
 }
 
@@ -6662,19 +6675,6 @@ function renderShopBrowse(){
     <button type="button" onclick="shopBuySelectedPack()">Buy</button>
   `, 'packsPicker', 'shop');
 
-  // Pantheons.
-  const pantheonKeys = Object.keys(CATALOG).filter(pid => {
-    const owned = shrineEntitlements.some(e => (e.scope_type === 'all') || (e.scope_type === 'pantheon' && e.scope_id === pid));
-    return !owned && shopPantheonForSale(pid);
-  });
-  const pantheonOpts = pantheonKeys.map(pid => `<option value="${esc(pid)}">${esc(CATALOG[pid].label)} — ${shopFmtUsd(shopPantheonPrice(pid))}</option>`).join('');
-  const pantheonPickerMarkup = pantheonOpts
-    ? hotspotDropdownMarkup(SHOP_AREAS, `
-        <select class="picker-select" id="shopPantheonSelect">${pantheonOpts}</select>
-        <button type="button" onclick="shopBuySelectedPantheon()">Buy</button>
-      `, 'pantheonPicker', 'shop')
-    : '';
-
   // Individual gods — the locked live-search exception, same shape as
   // PvP Browse: a visible text box + scrolling results as one box,
   // since a <select> can't search-as-you-type. Per-row Buy stays inline
@@ -6693,20 +6693,23 @@ function renderShopBrowse(){
     <div style="max-height:26vh;overflow-y:auto;width:100%;">${deityRows}</div>
   `, 'deitySearch', 'shop');
 
+  // No .hub-overlay panel any more (0129) — direct feedback: "fix the
+  // visual it should be just as clean as the chained gods." Same
+  // .hub-loose-back/.hub-loose-status treatment already given to Chained
+  // Gods' renderRedeem() and Petition Hall's renderPetitionPicker(): the
+  // boxed heading/back-button/status panel is gone, replaced with plain
+  // floating text with no panel behind it — the art (which already
+  // spells out "Celestial Marketplace") plus the dropdown hotspots are
+  // the whole screen now.
   app.innerHTML = `
     <div class="hub-screen">
       <div class="hub-box"${bgAttrPlain('shop')}>
         ${hotspotButtonsMarkup(SHOP_AREAS, 'SHOP_AREAS', 'shop')}
         ${subsPickerMarkup}
         ${packsPickerMarkup}
-        ${pantheonPickerMarkup}
         ${deitySearchMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromShop()">‹ Back to Map</button>
-          <h2 style="text-align:center;">Shop</h2>
-          <div class="status" id="shopStatus">${esc(shopStatusMsg)}</div>
-          ${pantheonOpts ? '' : '<p class="hint" style="text-align:center;">Every pantheon is already unlocked.</p>'}
-        </div>
+        <button type="button" class="hub-loose-back" onclick="backFromShop()">‹ Back to Map</button>
+        <div id="shopStatus" class="hub-loose-status">${esc(shopStatusMsg)}</div>
       </div>
     </div>
   `;
@@ -6724,13 +6727,6 @@ function shopBuySelectedPack(){
   if(!sel || !sel.value) return;
   const [type, scopeId] = sel.value.split('::');
   shopStartCheckout(type, scopeId || null);
-}
-
-function shopBuySelectedPantheon(){
-  const sel = document.getElementById('shopPantheonSelect');
-  if(!sel || !sel.value) return;
-  const pid = sel.value;
-  shopBuyPantheon(pid, CATALOG[pid] ? CATALOG[pid].label : pid);
 }
 
 /* ---------------- campaign (Map hub's "The Divine Realms" title hotspot, Phase 4) ----------------
