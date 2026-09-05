@@ -1542,6 +1542,11 @@ let GUIDE_STEPS = [];         // [{key,title,body}], from guide_steps
 let narratorSettings = { name: 'Ganymede', portraitUrl: null, largePortraitUrl: null, dailyQuestionLimit: 3 };
 let narratorChatView = null; // null | {messages:[{role,content}], remaining:number|null, sending:boolean, error:string|null}
 let pageTips = {}; // pageKey -> {title, body}, from page_tips (0102)
+// 0124 — "ask your deity" during an active Expedition hunt. Same shape as
+// narratorChatView, just scoped to one artifact/deity at a time instead of
+// one fixed persona. remaining is display-only, same caveat as above —
+// the daily quota is enforced server-side, never trusted client-side.
+let deityQAView = null; // null | {artifactKey, deityName, messages:[{role,content}], remaining:number|null, sending:boolean, error:string|null}
 
 // Milestone guidance (0081) — Ganymede narrating progression, not
 // onboarding (that's guide_steps/GUIDE_STEPS above, untouched). Same
@@ -2078,7 +2083,7 @@ async function boot(){
       petitionView = null; combatView = null; craftView = null; redeemView = null;
       expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
       profileView = null; shrineView = null; mailView = null; backpackView = null;
-      checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
+      checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; deityQAView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
       shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false; serverChatView = null;
       profilePasswordOpen = false;
       renderLoginScreen();
@@ -2530,6 +2535,11 @@ function render(){
   if(guardian && combatView){ renderCombat(); return; }
   if(guardian && craftView){ renderCraft(); return; }
   if(guardian && redeemView){ renderRedeem(); return; }
+  // Checked ahead of expeditionView on purpose — openDeityQA() (called
+  // from the Expeditions screen) deliberately leaves expeditionView set
+  // so backFromDeityQA() can drop straight back into it, same reasoning
+  // as mageDuelView being checked ahead of guardianHomeView above.
+  if(guardian && deityQAView){ renderDeityQA(); return; }
   if(guardian && expeditionView){ renderExpedition(); return; }
   if(guardian && pvpView){ renderPvpArena(); return; }
   if(guardian && circleView){ renderCircle(); return; }
@@ -5076,7 +5086,7 @@ async function confirmReleaseGuardian(){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; deityQAView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
   shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false; serverChatView = null;
   render();
 }
@@ -5157,7 +5167,7 @@ async function doPurchaseNewFamiliar(){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; deityQAView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
   shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false; serverChatView = null;
   newFamiliarOpen = false; newFamiliarSpecies = null; newFamiliarName = '';
   profilePasswordOpen = false;
@@ -5178,7 +5188,7 @@ async function doRestoreGuardian(retiredId){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; deityQAView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
   shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false; serverChatView = null;
   profilePasswordOpen = false;
   await afterLogin();
@@ -6879,7 +6889,7 @@ function returnToMapHub(){
   petitionView = null; combatView = null; craftView = null; redeemView = null;
   expeditionView = null; pvpView = null; circleView = null; personalAltarView = null;
   profileView = null; shrineView = null; mailView = null; backpackView = null;
-  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
+  checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; deityQAView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
   shopView = null; serverChatView = null;
   render();
   maybeShowPageTip('map');
@@ -10568,19 +10578,49 @@ async function refreshExpeditionStatus(){
   render();
 }
 
-async function doStartExpedition(artifactKey, fragmentIndex){
+// 0125 — "start" split in two: request a clue first (the deity picks a
+// hidden target fragment, gives a live whisper, and offers a shuffled list
+// of candidate place names — never which one is real), then commit a guess
+// via doChooseLocation() below. Direct feedback: "the mage must select
+// from a dropdown list of locations and choose where to journey based on
+// the clue... we dont want them told directly anymore."
+async function doRequestClue(artifactKey){
+  setExpeditionMsg('Consulting the deity…');
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/expedition', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'request-clue', guardianId: guardian.id, artifactKey })
+    });
+    const data = await resp.json();
+    if(!data.ok){ setExpeditionMsg(data.error || 'Could not get a clue right now.', false); return; }
+    await loadExpeditionStatus();
+    render();
+  }catch(e){
+    setExpeditionMsg('Could not reach the relay: ' + e.message, false);
+  }
+}
+
+async function doChooseLocation(){
+  if(!expeditionStatus || expeditionStatus.phase !== 'choosing') return;
+  const select = document.getElementById('expeditionLocationChoice');
+  const chosenLocationName = select ? select.value : '';
+  if(!chosenLocationName) return;
   setExpeditionMsg('Sending your familiar out…');
   try{
     const resp = await fetch(FUNCTIONS_URL + '/expedition', {
       method: 'POST',
       headers: await petitionHeaders(),
-      body: JSON.stringify({ action: 'start', guardianId: guardian.id, artifactKey, fragmentIndex })
+      body: JSON.stringify({ action: 'start', guardianId: guardian.id, artifactKey: expeditionStatus.artifactKey, chosenLocationName })
     });
     const data = await resp.json();
-    if(!data.ok){ setExpeditionMsg(data.error || 'Could not start that expedition.', false); return; }
+    if(!data.ok){ setExpeditionMsg(data.error || 'Could not send your familiar.', false); return; }
     await Promise.all([loadExpeditionCatalog(), loadExpeditionStatus()]);
     render();
-    setExpeditionMsg(data.deityVoiceHint ? `"${data.deityVoiceHint}" — your familiar follows the trail toward ${data.regionName}.` : `Your familiar sets off following the story toward ${data.regionName}.`, true);
+    // Deliberately no correct/incorrect reveal here — the server doesn't
+    // tell us either (see start's server-side comment); the suspense
+    // survives the travel wait just like trivia correctness already does.
+    setExpeditionMsg(`Your familiar sets off toward ${chosenLocationName}.`, true);
   }catch(e){
     setExpeditionMsg('Could not reach the relay: ' + e.message, false);
   }
@@ -10646,6 +10686,112 @@ function altarItemChoiceHtml(artifactKey, itemName){
   </div>`;
 }
 
+/* ---------------- 0124: ask your deity, during the hunt ----------------
+   Direct feedback: "the deities do not show up at all... integrate the
+   AI gods into this system... maybe we set it to 3 questions to the
+   deity per day outside of what the deity will already say in the
+   quest." Modeled directly on the Ganymede narrator-chat pattern above
+   (openNarratorChat/sendNarratorMessage/renderNarratorChat) — same
+   remaining-count/disabled-when-exhausted treatment — just scoped to one
+   artifact/deity at a time instead of one fixed persona. Deliberately
+   NOT a general chat: the server (expedition/index.ts's ask-deity
+   action) keeps this quest/lore-scoped so it can't substitute for the
+   game's separate paid full-chat feature on a still-locked deity. */
+
+function openDeityQA(artifactKey){
+  const artifact = (expeditionCatalog && expeditionCatalog.artifacts || []).find(a => a.key === artifactKey);
+  if(!artifact) return;
+  const deityName = deityDisplayName(artifact.unlock_pantheon_id, artifact.unlock_deity_id);
+  deityQAView = { artifactKey, deityName, messages: [], remaining: null, sending: false, error: null };
+  render();
+}
+
+function backFromDeityQA(){
+  deityQAView = null;
+  render();
+}
+
+async function sendDeityQuestion(){
+  if(!deityQAView || deityQAView.sending) return;
+  const input = document.getElementById('deityQAInput');
+  const text = input ? input.value.trim() : '';
+  if(!text) return;
+  if(deityQAView.remaining === 0){
+    deityQAView.error = `You've asked ${esc(deityQAView.deityName)} all you can for today. Come back tomorrow.`;
+    render();
+    return;
+  }
+
+  deityQAView.messages.push({ role: 'user', content: text });
+  deityQAView.sending = true;
+  deityQAView.error = null;
+  render();
+
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/expedition', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'ask-deity', guardianId: guardian.id, artifactKey: deityQAView.artifactKey, question: text })
+    });
+    const data = await resp.json();
+    if(!deityQAView) return; // screen was left mid-request
+    if(data.ok){
+      deityQAView.messages.push({ role: 'assistant', content: data.reply });
+      if(typeof data.remainingToday === 'number') deityQAView.remaining = data.remainingToday;
+    } else {
+      deityQAView.messages.pop(); // don't leave an unanswered question in the log
+      deityQAView.error = data.error || `${deityQAView.deityName} could not answer that.`;
+    }
+  }catch(e){
+    console.error('ask-deity failed', e);
+    if(deityQAView){
+      deityQAView.messages.pop();
+      deityQAView.error = 'Could not reach the relay — try again in a moment.';
+    }
+  }
+  if(deityQAView){
+    deityQAView.sending = false;
+    render();
+  }
+}
+
+function deityQAKeydown(ev){
+  if(ev.key === 'Enter' && !ev.shiftKey){
+    ev.preventDefault();
+    sendDeityQuestion();
+  }
+}
+
+function renderDeityQA(){
+  const app = document.getElementById('app');
+  const v = deityQAView;
+  const historyMarkup = v.messages.map(m => `
+    <div class="narrator-msg narrator-msg-${m.role === 'user' ? 'you' : 'ganymede'}">
+      <span class="narrator-msg-label">${m.role === 'user' ? 'You' : esc(v.deityName)}</span>
+      <p>${esc(m.content)}</p>
+    </div>
+  `).join('');
+  const remainingLabel = v.remaining === null ? ''
+    : `<p class="hint">${v.remaining} question${v.remaining === 1 ? '' : 's'} left today</p>`;
+  app.innerHTML = `
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('expeditions')}>
+        <div class="hub-overlay">
+          <button type="button" class="hub-back" onclick="backFromDeityQA()">‹ Back to Expeditions</button>
+          <div class="essence-label" style="display:block;margin-bottom:6px;">${esc(v.deityName)}</div>
+          ${v.messages.length === 0 ? `<p class="challenge-text">Ask about the hunt, or what you might learn along the way.</p>` : `<div class="narrator-history">${historyMarkup}</div>`}
+          ${v.error ? `<p class="status err">${esc(v.error)}</p>` : ''}
+          ${remainingLabel}
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <input id="deityQAInput" type="text" placeholder="Ask ${esc(v.deityName)} something…" maxlength="300" style="flex:1;" onkeydown="deityQAKeydown(event)" ${v.sending || v.remaining === 0 ? 'disabled' : ''} />
+            <button onclick="sendDeityQuestion()" ${v.sending || v.remaining === 0 ? 'disabled' : ''}>${v.sending ? '…' : 'Ask'}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderExpedition(){
   const app = document.getElementById('app');
 
@@ -10672,26 +10818,67 @@ function renderExpedition(){
     return;
   }
 
+  // 0125 — expeditionStatus now carries a `phase` instead of the old
+  // binary ready/not-ready: choosing (deity has spoken, no pick made yet),
+  // traveling (a pick has been committed, not arrived), trivia (arrived at
+  // the RIGHT place — identical to the old ready:true shape), or
+  // wrong-location/recovering (arrived at, or still recovering from, the
+  // WRONG place). Direct feedback: "the mage must select from a dropdown
+  // list of locations and choose where to journey based on the clue...
+  // yes I expect them to travel to the wrong places from time to time."
   let travelCard = '';
-  if(expeditionStatus && !expeditionStatus.ready){
-    const readyDate = new Date(expeditionStatus.readyAt);
-    travelCard = `
-      <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
-        <h2>Away following the story</h2>
-        <p class="hint">Your familiar is out following the deity's story to the site. It'll be ready to report back at ${readyDate.toLocaleString()}.</p>
-        <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
-      </div>`;
-  } else if(expeditionStatus && expeditionStatus.ready){
-    const choices = expeditionStatus.choices || [];
-    travelCard = `
-      <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
-        <h2>${esc(expeditionStatus.regionName || 'Your familiar has arrived')}</h2>
-        ${expeditionStatus.deityVoiceHint ? `<p class="hint" style="font-style:italic;">"${esc(expeditionStatus.deityVoiceHint)}"</p>` : ''}
-        <p>${esc(expeditionStatus.clueText || '')}</p>
-        <div style="display:flex;flex-direction:column;gap:8px;max-width:420px;margin:10px auto 0;">
-          ${choices.map((c, i) => `<button class="secondary" onclick="doAnswerExpedition(${i})">${esc(c)}</button>`).join('')}
-        </div>
-      </div>`;
+  if(expeditionStatus){
+    const artifactForStatus = (expeditionCatalog.artifacts || []).find(a => a.key === expeditionStatus.artifactKey);
+    const deityNameForStatus = artifactForStatus ? deityDisplayName(artifactForStatus.unlock_pantheon_id, artifactForStatus.unlock_deity_id) : 'The deity';
+
+    if(expeditionStatus.phase === 'choosing'){
+      const opts = expeditionStatus.options || [];
+      travelCard = `
+        <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+          <h2>${esc(deityNameForStatus)} speaks</h2>
+          ${expeditionStatus.whisper ? `<p class="hint" style="font-style:italic;">"${esc(expeditionStatus.whisper)}"</p>` : ''}
+          <p class="hint">Where should the familiar go?</p>
+          <select id="expeditionLocationChoice" style="max-width:320px;margin:0 auto;display:block;">
+            ${opts.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}
+          </select>
+          <button class="secondary" style="margin-top:10px;" onclick="doChooseLocation()">Send familiar</button>
+        </div>`;
+    } else if(expeditionStatus.phase === 'traveling'){
+      const readyDate = new Date(expeditionStatus.readyAt);
+      travelCard = `
+        <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+          <h2>Away following the story</h2>
+          <p class="hint">Your familiar is out following the deity's story to the site. It'll be ready to report back at ${readyDate.toLocaleString()}.</p>
+          <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
+        </div>`;
+    } else if(expeditionStatus.phase === 'trivia'){
+      const choices = expeditionStatus.choices || [];
+      travelCard = `
+        <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+          <h2>${esc(expeditionStatus.regionName || 'Your familiar has arrived')}</h2>
+          <p class="hint" style="font-style:italic;">The whisper led true.</p>
+          <p>${esc(expeditionStatus.clueText || '')}</p>
+          <div style="display:flex;flex-direction:column;gap:8px;max-width:420px;margin:10px auto 0;">
+            ${choices.map((c, i) => `<button class="secondary" onclick="doAnswerExpedition(${i})">${esc(c)}</button>`).join('')}
+          </div>
+        </div>`;
+    } else if(expeditionStatus.phase === 'wrong-location'){
+      const recoverDate = expeditionStatus.recoversAt ? new Date(expeditionStatus.recoversAt) : null;
+      travelCard = `
+        <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+          <h2>Nothing here</h2>
+          <p class="hint">Your familiar arrives at ${esc(expeditionStatus.chosenLocationName || 'the wrong place')} — the trail led elsewhere. It needs time to recover${recoverDate ? ` before it can travel again, until ${recoverDate.toLocaleString()}` : ''}.</p>
+          <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
+        </div>`;
+    } else if(expeditionStatus.phase === 'recovering'){
+      const recoverDate = expeditionStatus.recoversAt ? new Date(expeditionStatus.recoversAt) : null;
+      travelCard = `
+        <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+          <h2>Still recovering</h2>
+          <p class="hint">Your familiar is still recovering from its last wrong turn${recoverDate ? ` — try again after ${recoverDate.toLocaleString()}` : ''}.</p>
+          <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
+        </div>`;
+    }
   }
 
   const hasActiveTrip = !!expeditionStatus;
@@ -10713,24 +10900,32 @@ function renderExpedition(){
   const artifactCards = (expeditionCatalog.artifacts || []).map(a => {
     const owned = new Set(a.fragmentsOwned || []);
     const complete = owned.size >= a.total_fragments;
-    const fragmentButtons = Array.from({ length: a.total_fragments }, (_, i) => i + 1).map(idx => {
-      if(owned.has(idx)) return `<span style="display:inline-block;padding:4px 10px;border-radius:12px;background:rgba(255,255,255,0.08);margin:2px;">Fragment ${idx} ✓</span>`;
-      const disabled = hasActiveTrip || capReached;
-      return `<button class="secondary" style="margin:2px;" ${disabled ? 'disabled' : ''} onclick="doStartExpedition('${esc(a.key)}', ${idx})">Send familiar for Fragment ${idx}</button>`;
-    }).join(' ');
+    const deityName = deityDisplayName(a.unlock_pantheon_id, a.unlock_deity_id);
+    // 0125 — no more picking a fragment number directly: consulting the
+    // deity is what starts an attempt, and which fragment it's actually
+    // for stays hidden until you either guess right or wrong.
+    const consultDisabled = hasActiveTrip || capReached;
+    const consultButton = complete ? '' : `<button class="secondary" style="margin:2px;" ${consultDisabled ? 'disabled' : ''} onclick="doRequestClue('${esc(a.key)}')">Consult ${esc(deityName)}</button>`;
     const statusLabel = complete ? (a.deityAlreadyUnlocked ? 'Unlocked' : 'Complete!') : `${owned.size}/${a.total_fragments} fragments`;
+    // 0124 — once the hunt has actually begun (>=1 fragment in hand),
+    // offer a way to hear the deity's own voice about it. Hidden again
+    // once complete: at that point the deity is unlocked and the game's
+    // full chat feature is the better place to keep talking to them.
+    const askDeityButton = (owned.size > 0 && !complete)
+      ? `<button class="secondary" style="margin:2px;" onclick="openDeityQA('${esc(a.key)}')">Ask ${esc(deityName)} a question</button>`
+      : '';
     return `<div class="roster-row">
       <div><div class="rname">${esc(a.name)} — ${esc(statusLabel)}</div>
       <div class="cblurb">${esc(a.description || '')}</div>
       ${a.deity_voice_intro && !complete ? `<div class="cblurb" style="font-style:italic;margin-top:4px;">"${esc(a.deity_voice_intro)}"</div>` : ''}</div>
-      <div class="ractions" style="flex-wrap:wrap;">${complete ? '' : fragmentButtons}</div>
+      <div class="ractions" style="flex-wrap:wrap;">${consultButton}${askDeityButton}</div>
     </div>`;
   }).join('') || '<p class="hint">No expeditions are available right now — check back later.</p>';
 
   app.innerHTML = `
     <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
       <h2>Expeditions</h2>
-      <p class="hint">Send your familiar out, guided by the voice and story of the deity it's trying to unlock, to find real-world artifact fragments. Answer honestly, learn something true either way, and reassemble a full set to fully unlock that deity and earn a unique Altar Item.</p>
+      <p class="hint">Consult the deity you're trying to unlock, interpret its whisper, and pick where to send your familiar from the choices it gives you. Guess wrong and it still travels — you'll pay in wait time and need to let it recover before trying again. Guess right, answer honestly, learn something true either way, and reassemble a full set to fully unlock that deity and earn a unique Altar Item.</p>
       <p class="hint">${capNote}</p>
       <div class="status" id="expeditionMsg"></div>
     </div>
