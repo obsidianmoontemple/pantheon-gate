@@ -4252,6 +4252,16 @@ function openGuide(){
 function backFromGuide(){
   guideView = null;
   returnToMapHub();
+  // Direct feedback: "the 7 day checkin card is still not showing up."
+  // checkNewPlayerGiftPopup() already deliberately skips popping the
+  // gift card on top of the Guide on a brand-new player's very first
+  // login (see its own comment) and defers Day 1 to "this player's next
+  // login instead" — but a player who signs up, finishes the Guide, and
+  // just keeps playing the same session never gets a next login to defer
+  // to, so the card looked like it never worked at all. Re-checking right
+  // here, the instant the Guide actually closes, means Day 1 still shows
+  // up this same session instead of only after signing back in.
+  if(guardian) checkNewPlayerGiftPopup().catch(e => console.error('new-player gift popup re-check after guide failed', e));
 }
 
 function guideNext(){
