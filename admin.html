@@ -3889,11 +3889,16 @@ const DEFAULT_GUIDE_AREAS_ADMIN = [
 // PvP Home reverted to a plain visible layout (see index.html
 // renderPvpHome()) — no admin-positionable hotspots any more.
 
+// 0129 — the flat whole-pantheon purchase ('pantheonPicker') is removed
+// outright, matching index.html's DEFAULT_SHOP_AREAS: every deity already
+// has its own price via Search for a god, so a single flat pantheon price
+// was redundant with (and inconsistent with) that. deitySearch widens to
+// fill the freed row. Any admin-saved custom position for the old
+// 'pantheonPicker' hotspot is simply never read again.
 const DEFAULT_SHOP_AREAS_ADMIN = [
   { id: 'subsPicker',     label: 'Subscriptions',    left: 3,  top: 12, width: 44, height: 22 },
   { id: 'packsPicker',    label: 'Packs & items',    left: 52, top: 12, width: 44, height: 22 },
-  { id: 'pantheonPicker', label: 'Pantheons',        left: 3,  top: 38, width: 44, height: 20 },
-  { id: 'deitySearch',    label: 'Search for a god', left: 52, top: 38, width: 44, height: 42 },
+  { id: 'deitySearch',    label: 'Search for a god', left: 3,  top: 38, width: 93, height: 48 },
   { id: 'backToMap',      label: 'Back to the Map',  left: 3,  top: 88, width: 18, height: 8  },
 ];
 
