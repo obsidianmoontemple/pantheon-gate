@@ -1933,6 +1933,13 @@ let profileReleaseConfirm = false; // true while the "release your familiar" con
 let hallOfAncestors = null; // null (not yet loaded) | array of retired_guardians rows for this player
 let hallOfAncestorsOpen = false;
 let profilePasswordOpen = false; // true while the set/change-password form is showing on Profile
+// "I need a redeem code option in the profile page" — signup codes (0116)
+// used to be redeemable only at the moment of creating an account
+// (loginWithSignup()'s optional field). redeem_signup_code() itself has
+// no such restriction (just auth.uid() is not null, and one redemption
+// per user per code), so this reuses that exact RPC from a normal,
+// already-signed-in Profile screen instead of adding a second code path.
+let profileRedeemCodeOpen = false;
 
 // Familiar reawakening upgrade (0100) — "new familiars can be purchased
 // depending on their need." Sits on Profile right alongside Hall of
@@ -2086,6 +2093,7 @@ async function boot(){
       checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; deityQAView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
       shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false; serverChatView = null;
       profilePasswordOpen = false;
+      profileRedeemCodeOpen = false;
       renderLoginScreen();
     }
   });
@@ -4805,6 +4813,7 @@ function backFromProfile(){
   profileReleaseConfirm = false;
   hallOfAncestorsOpen = false;
   profilePasswordOpen = false;
+  profileRedeemCodeOpen = false;
   render();
 }
 
@@ -4907,6 +4916,23 @@ function renderProfile(){
         <div class="status" id="passwordStatus"></div>
       </div>`
     : `<button class="secondary" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto;" onclick="openPasswordForm()">Set / change password</button>`;
+  // "I need a redeem code option in the profile page" — same toggle-a-
+  // block-open convention as the password form right above. Reuses the
+  // exact redeem_signup_code() RPC loginWithSignup() already calls at
+  // account creation; that RPC has no restriction to signup time, only
+  // one redemption per (account, code) — so a code missed at signup, or
+  // handed out after someone already has an account, now has somewhere
+  // to actually be entered.
+  const redeemCodeBlock = profileRedeemCodeOpen
+    ? `<div class="pantheon-group" style="margin-top:10px;text-align:left;">
+        <h3>Redeem a code</h3>
+        <p class="hint" style="margin-top:-4px;">Have a promo code from an ad, a flyer, or an event? Enter it below — each code only works once per account.</p>
+        <input type="text" id="redeemCodeInput" placeholder="Enter your code" autocapitalize="none" autocomplete="off">
+        <button onclick="submitRedeemCode()">Redeem</button>
+        <button class="secondary" onclick="closeRedeemCodeForm()">Cancel</button>
+        <div class="status" id="redeemCodeStatus"></div>
+      </div>`
+    : `<button class="secondary" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto;" onclick="openRedeemCodeForm()">Redeem a code</button>`;
   // Redesign, direct feedback: "redo the profile to show more about the
   // mage with a small notation of their familiar it should have picture
   // username user id and a get help button." The Mage is now the hero
@@ -4996,6 +5022,7 @@ function renderProfile(){
       ${hallBlock}
       ${newFamiliarBlock}
       ${passwordBlock}
+      ${redeemCodeBlock}
       ${releaseBlock}
     </div>
 
@@ -5171,6 +5198,7 @@ async function doPurchaseNewFamiliar(){
   shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false; serverChatView = null;
   newFamiliarOpen = false; newFamiliarSpecies = null; newFamiliarName = '';
   profilePasswordOpen = false;
+  profileRedeemCodeOpen = false;
   await afterLogin();
   celebrate({ count: 20, distance: 60, duration: 1000, color: '#ffd76a', size: 24, sprite: 'particle-fx/fx_starburst.png' });
 }
@@ -5191,6 +5219,7 @@ async function doRestoreGuardian(retiredId){
   checkinView = null; promoView = null; campaignView = null; guardianHomeView = null; guardianHomeTab = 'familiar'; worldBossView = null; mageView = null; mageDuelView = null; guideView = null; narratorChatView = null; deityQAView = null; milestoneView = null; milestoneRoadmapView = null; featureLockView = null;
   shopView = null; creditsView = null; profileReleaseConfirm = false; hallOfAncestors = null; hallOfAncestorsOpen = false; serverChatView = null;
   profilePasswordOpen = false;
+  profileRedeemCodeOpen = false;
   await afterLogin();
   celebrate();
 }
@@ -5215,6 +5244,49 @@ async function savePassword(){
   if(error){ status.className = 'status err'; status.textContent = error.message; return; }
   status.className = 'status ok';
   status.textContent = 'Password saved — you can sign in with it next time.';
+}
+
+function openRedeemCodeForm(){
+  profileRedeemCodeOpen = true;
+  render();
+}
+function closeRedeemCodeForm(){
+  profileRedeemCodeOpen = false;
+  render();
+}
+async function submitRedeemCode(){
+  const status = document.getElementById('redeemCodeStatus');
+  const code = document.getElementById('redeemCodeInput').value.trim();
+  if(!code){ status.className = 'status err'; status.textContent = 'Enter a code first.'; return; }
+  status.className = 'status';
+  status.textContent = 'Redeeming…';
+  const { data: result, error } = await supabaseClient.rpc('redeem_signup_code', { p_code: code });
+  if(error){ status.className = 'status err'; status.textContent = error.message || 'Could not redeem that code.'; return; }
+  if(!result || !result.redeemed){
+    status.className = 'status err';
+    status.textContent = (result && result.reason) || 'That code could not be redeemed.';
+    return;
+  }
+  const message = result.granted
+    ? 'Code redeemed — your bonus has been applied!'
+    : 'Code accepted — your bonus will apply once you hatch your guardian.';
+  // A code can grant currency (guardian.essence/etc.), a deity/pantheon/
+  // full-access unlock (shrineEntitlements), or a reward/bundle —
+  // refresh both so whatever just landed shows up immediately instead of
+  // waiting for the next full page load. render() rebuilds this whole
+  // screen from scratch (a fresh, empty #redeemCodeStatus included), so
+  // the success message has to be set AFTER it, not before, or it'd be
+  // wiped out the instant render() runs.
+  await loadGuardian();
+  await loadShrineEntitlements().catch(e => console.error('entitlements refresh after code redeem failed', e));
+  if(profileView){
+    render();
+    const freshStatus = document.getElementById('redeemCodeStatus');
+    if(freshStatus){ freshStatus.className = 'status ok'; freshStatus.textContent = message; }
+    const input = document.getElementById('redeemCodeInput');
+    if(input) input.value = '';
+  }
+  if(result.granted) showRewardBanner('Code redeemed!', 'Your bonus has been applied.');
 }
 
 /* ---------------- shrine (Map hub's "Temple of the Gods" hotspot) ----------------
