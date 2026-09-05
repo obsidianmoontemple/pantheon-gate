@@ -2148,7 +2148,17 @@ async function afterLogin(){
   const pendingSignupCode = localStorage.getItem('pendingSignupCode');
   if(pendingSignupCode){
     localStorage.removeItem('pendingSignupCode');
-    supabaseClient.rpc('redeem_signup_code', { p_code: pendingSignupCode }).then(() => {}, () => {});
+    // Fire-and-forget by design (no status element exists during this
+    // loading transition) — but this used to give literally zero feedback
+    // about what the code granted. Best-effort a reward banner once it
+    // resolves; showRewardBanner() already no-ops safely if #rewardBannerStack
+    // isn't mounted yet, so there's no risk in trying even this early.
+    supabaseClient.rpc('redeem_signup_code', { p_code: pendingSignupCode }).then(({ data: result }) => {
+      if(result && result.redeemed){
+        const detail = describeSignupCodeGrant(result.items);
+        if(detail) showRewardBanner('Signup code redeemed!', detail);
+      }
+    }, () => {});
   }
   await loadCustomDeitiesIntoCatalog().catch(e => console.error('custom deities fold-in failed', e));
   await loadSpeciesCatalog().catch(e => console.error('species catalog load failed', e));
@@ -2364,9 +2374,12 @@ async function loginWithSignup(){
     if(code){
       const { data: result } = await supabaseClient.rpc('redeem_signup_code', { p_code: code }).then(r => r, () => ({ data: null }));
       if(result){
+        const detail = describeSignupCodeGrant(result.items);
         status.className = result.redeemed ? 'status ok' : 'status err';
         status.textContent = result.redeemed
-          ? (result.granted ? 'Signup bonus applied — welcome!' : 'Code accepted — your bonus will apply once you hatch your guardian.')
+          ? (result.granted
+              ? (detail ? `Signup bonus applied — you got: ${detail}!` : 'Signup bonus applied — welcome!')
+              : (detail ? `Code accepted — you got: ${detail}. The rest applies once you hatch your guardian.` : 'Code accepted — your bonus will apply once you hatch your guardian.'))
           : ('Code not applied: ' + (result.reason || 'unknown error'));
       }
     }
@@ -5280,9 +5293,16 @@ async function submitRedeemCode(){
     status.textContent = (result && result.reason) || 'That code could not be redeemed.';
     return;
   }
+  // Direct feedback: this just said "your bonus has been applied" without
+  // ever saying what — describeSignupCodeGrant() spells out exactly what
+  // the code handed over (currency amounts, unlock names, reward/bundle
+  // names), same wording used everywhere else a grant is described.
+  const detail = describeSignupCodeGrant(result.items);
   const message = result.granted
-    ? 'Code redeemed — your bonus has been applied!'
-    : 'Code accepted — your bonus will apply once you hatch your guardian.';
+    ? (detail ? `Code redeemed — you got: ${detail}` : 'Code redeemed — your bonus has been applied!')
+    : (detail
+        ? `Code accepted — you got: ${detail}. The rest applies once you hatch your guardian.`
+        : 'Code accepted — your bonus will apply once you hatch your guardian.');
   // A code can grant currency (guardian.essence/etc.), a deity/pantheon/
   // full-access unlock (shrineEntitlements), or a reward/bundle —
   // refresh both so whatever just landed shows up immediately instead of
@@ -5299,7 +5319,7 @@ async function submitRedeemCode(){
     const input = document.getElementById('redeemCodeInput');
     if(input) input.value = '';
   }
-  if(result.granted) showRewardBanner('Code redeemed!', 'Your bonus has been applied.');
+  if(detail || result.granted) showRewardBanner('Code redeemed!', detail || 'Your bonus has been applied.');
 }
 
 /* ---------------- shrine (Map hub's "Temple of the Gods" hotspot) ----------------
@@ -5478,6 +5498,43 @@ function rewardsToDetailLine(rewards){
     if(r.kind === 'currency') return `+${r.amount} ${CHECKIN_CURRENCY_LABELS[r.currency_key] || r.currency_key}`;
     return '';
   }).filter(Boolean).join(' · ');
+}
+
+// 0129 — direct feedback: redeeming a code just said "your bonus has been
+// applied" without ever saying what the bonus actually was. Turns
+// redeem_signup_code()/apply_signup_code_grant()'s `items` array (0128 —
+// each entry is {type, result}, one per currency/reward/bundle/entitlement
+// branch that actually ran) into the same kind of human-readable line
+// rewardsToDetailLine() builds for mail, reusing the same CHECKIN_CURRENCY_
+// LABELS/CATALOG/findDeityNameAnywhere() name resolution so the wording
+// matches everywhere else a grant is described. Used by submitRedeemCode()
+// (Profile), loginWithSignup()'s signup-time code field, and afterLogin()'s
+// deferred pendingSignupCode apply.
+function describeSignupCodeGrant(items){
+  return (items || []).map(it => {
+    const r = it.result || {};
+    if(it.type === 'currency'){
+      if(!r.credited) return '';
+      return `+${r.amount} ${CHECKIN_CURRENCY_LABELS[r.currency] || r.currency}`;
+    }
+    if(it.type === 'reward'){
+      if(r.granted === false) return '';
+      return r.name || 'a reward';
+    }
+    if(it.type === 'bundle'){
+      if(r.granted === false) return '';
+      return (r.bundle || 'a bundle') + ' bundle';
+    }
+    if(it.type === 'entitlement'){
+      let label;
+      if(r.scopeType === 'all') label = 'full site access';
+      else if(r.scopeType === 'pantheon') label = (CATALOG[r.scopeId] ? CATALOG[r.scopeId].label : r.scopeId) + ' pantheon';
+      else if(r.scopeType === 'deity') label = findDeityNameAnywhere(r.scopeId);
+      else label = 'an unlock';
+      return r.alreadyHad ? `${label} (already unlocked)` : label;
+    }
+    return '';
+  }).filter(Boolean).join(', ');
 }
 
 async function doClaimMail(broadcastId){
