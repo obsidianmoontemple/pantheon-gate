@@ -438,6 +438,7 @@ async function initAuth(){
   await refreshCatalogSettings();
   await mergeCustomPantheons();
   await mergeCustomDeities();
+  await applyDeityImageOverrides();
   await refreshShop();
 
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -697,6 +698,32 @@ async function mergeCustomDeities(){
       portrait: row.portrait_url || '',
       portraitCaption: row.portrait_caption || ''
     });
+  });
+}
+
+// 0127 — direct feedback: "I need a url picture override for all the
+// deities... I dont have to resize every picture." Every static deity's
+// portrait is normally a bare filename (art("Zeus.png")) pointing at a
+// PNG that ships pre-cropped/sized in this repo; this lets an admin swap
+// any deity's picture for a plain image URL instead — the browser scales
+// it via object-fit, same as custom_deities.portrait_url already does for
+// admin-created gods. Runs after mergeCustomDeities() so it can override
+// either kind of deity by id; portraitHTML() itself needs no change, it
+// already just renders whatever string ends up in d.portrait.
+async function applyDeityImageOverrides(){
+  if(!supabaseClient) return;
+  const { data, error } = await supabaseClient
+    .from('deity_image_overrides')
+    .select('deity_id, pantheon_id, image_url, active')
+    .eq('active', true);
+  if(error){ console.error('deity_image_overrides fetch failed', error); return; }
+  (data || []).forEach(row => {
+    if(!row.image_url) return;
+    const pantheon = PANTHEONS[row.pantheon_id];
+    if(!pantheon) return;
+    const deity = pantheon.deities.find(d => d.id === row.deity_id);
+    if(!deity) return;
+    deity.portrait = row.image_url;
   });
 }
 
