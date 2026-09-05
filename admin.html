@@ -661,7 +661,27 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <div class="field"><label>Reward package (optional)</label><select id="newSignupRewardKey" style="max-width:200px;"><option value="">Nothing — no reward package</option></select></div>
           <div class="field"><label>Reward bundle (optional)</label><select id="newSignupBundleKey" style="max-width:200px;"><option value="">Nothing — no reward bundle</option></select></div>
         </div>
-        <p class="hint">Pick a currency+amount, a reward package, a reward bundle, or any combination — a code needs at least one of the three to have anything to grant.</p>
+        <!-- 0128 — direct feedback: "the deity code thing was supposed to
+             be in the signup codes lol so i can do a promotion with a
+             code online." Same 'all'/'pantheon'/'deity' vocabulary as the
+             Gifting tab and Promo Events. Unlike currency/reward/bundle,
+             this unlock lands the instant the code is redeemed — it
+             doesn't need the player to have hatched a guardian yet. -->
+        <div class="form-row">
+          <div class="field"><label>Deity/pantheon unlock (optional)</label>
+            <select id="newSignupEntitlementType" style="max-width:170px;">
+              <option value="none" selected>None — no unlock</option>
+              <option value="all">Full site access</option>
+              <option value="pantheon">A pantheon</option>
+              <option value="deity">A specific god</option>
+            </select>
+          </div>
+          <div class="field" id="newSignupEntitlementIdField" style="display:none;">
+            <label>Which one</label>
+            <select id="newSignupEntitlementId" style="max-width:200px;"></select>
+          </div>
+        </div>
+        <p class="hint">Pick a currency+amount, a reward package, a reward bundle, a deity/pantheon unlock, or any combination — a code needs at least one to have anything to grant.</p>
         <div class="form-row">
           <div class="field"><label>Max uses (optional)</label><input type="number" min="1" id="newSignupMaxUses" placeholder="Unlimited" style="max-width:130px;"></div>
           <div class="field"><label>Expires (optional)</label><input type="datetime-local" id="newSignupExpires" style="max-width:200px;"></div>
@@ -3236,7 +3256,8 @@ function refreshAllScopePickers(){
    ['newRewardScopeType','newRewardScopeId'],
    ['newTierGrantType','newTierGrantId'],
    ['newItemGrantType','newItemGrantId'],
-   ['newPromoEntitlementType','newPromoEntitlementId']].forEach(([t, i]) => populateScopeIdSelect(t, i));
+   ['newPromoEntitlementType','newPromoEntitlementId'],
+   ['newSignupEntitlementType','newSignupEntitlementId']].forEach(([t, i]) => populateScopeIdSelect(t, i));
   const artP = document.getElementById('newArtifactPantheon');
   const artD = document.getElementById('newArtifactDeity');
   if(artP) artP.innerHTML = pantheonOptionsHtml(artP.value);
@@ -3442,6 +3463,8 @@ async function init(){
   updateGrantScopeVisibility();
   document.getElementById('newPromoEntitlementType').addEventListener('change', updateNewPromoEntitlementVisibility);
   updateNewPromoEntitlementVisibility();
+  document.getElementById('newSignupEntitlementType').addEventListener('change', updateNewSignupEntitlementVisibility);
+  updateNewSignupEntitlementVisibility();
 
   document.getElementById('signOutBtn').addEventListener('click', async () => {
     await supabaseClient.auth.signOut();
@@ -3469,6 +3492,14 @@ function updateNewPromoEntitlementVisibility(){
   const type = document.getElementById('newPromoEntitlementType').value;
   document.getElementById('newPromoEntitlementIdField').style.display = (type === 'pantheon' || type === 'deity') ? '' : 'none';
   if(type === 'pantheon' || type === 'deity') populateScopeIdSelect('newPromoEntitlementType', 'newPromoEntitlementId');
+}
+
+// 0128 — same pattern as updateNewPromoEntitlementVisibility above, for
+// the Signup Codes card's own copy of this picker.
+function updateNewSignupEntitlementVisibility(){
+  const type = document.getElementById('newSignupEntitlementType').value;
+  document.getElementById('newSignupEntitlementIdField').style.display = (type === 'pantheon' || type === 'deity') ? '' : 'none';
+  if(type === 'pantheon' || type === 'deity') populateScopeIdSelect('newSignupEntitlementType', 'newSignupEntitlementId');
 }
 
 function updateGrantTargetVisibility(){
@@ -6975,6 +7006,12 @@ async function loadSignupCodes(){
     if(c.currency_key) grantParts.push(`${esc(cur?.name || c.currency_key)} × ${c.currency_amount}`);
     if(c.reward_key) grantParts.push('Reward: ' + esc((giftableRewardsCache.find(r => r.key === c.reward_key) || {}).name || c.reward_key));
     if(c.gift_bundle_key) grantParts.push('Bundle: ' + esc((giftableRewardBundlesCache.find(b => b.bundle_key === c.gift_bundle_key) || {}).name || c.gift_bundle_key));
+    if(c.entitlement_scope_type){
+      const unlockLabel = c.entitlement_scope_type === 'all' ? 'Full site access'
+        : c.entitlement_scope_type === 'pantheon' ? (CATALOG[c.entitlement_scope_id]?.label || c.entitlement_scope_id)
+        : (FLAT_DEITIES.find(d => d.id === c.entitlement_scope_id)?.name || c.entitlement_scope_id);
+      grantParts.push('Unlock: ' + esc(unlockLabel));
+    }
     return `<tr>
       <td>${esc(c.code)}</td>
       <td class="dim">${esc(c.label)}</td>
@@ -7006,6 +7043,9 @@ async function createSignupCode(){
   const amount = amountRaw === '' ? null : Number(amountRaw);
   const rewardKey = document.getElementById('newSignupRewardKey').value || null;
   const bundleKey = document.getElementById('newSignupBundleKey').value || null;
+  const entitlementScopeTypeRaw = document.getElementById('newSignupEntitlementType').value;
+  const entitlementScopeType = entitlementScopeTypeRaw === 'none' ? null : entitlementScopeTypeRaw;
+  const entitlementScopeId = entitlementScopeType && entitlementScopeType !== 'all' ? document.getElementById('newSignupEntitlementId').value : null;
   const maxUsesRaw = document.getElementById('newSignupMaxUses').value;
   const maxUses = maxUsesRaw === '' ? null : Number(maxUsesRaw);
   const expiresRaw = document.getElementById('newSignupExpires').value;
@@ -7013,7 +7053,8 @@ async function createSignupCode(){
   if(!/^[a-zA-Z0-9_-]+$/.test(code)){ status.className = 'status err'; status.textContent = 'Code must be letters/numbers/dashes/underscores only.'; return; }
   if(!label){ status.className = 'status err'; status.textContent = 'Label is required (your own note — players never see it).'; return; }
   if(currencyKey && (!Number.isFinite(amount) || amount <= 0)){ status.className = 'status err'; status.textContent = 'Enter an amount greater than 0 for the chosen currency.'; return; }
-  if(!currencyKey && !rewardKey && !bundleKey){ status.className = 'status err'; status.textContent = 'Pick a currency+amount, a reward package, a reward bundle, or some combination.'; return; }
+  if(entitlementScopeType && entitlementScopeType !== 'all' && !entitlementScopeId){ status.className = 'status err'; status.textContent = 'Pick which pantheon or god this code unlocks.'; return; }
+  if(!currencyKey && !rewardKey && !bundleKey && !entitlementScopeType){ status.className = 'status err'; status.textContent = 'Pick a currency+amount, a reward package, a reward bundle, a deity/pantheon unlock, or some combination.'; return; }
 
   status.className = 'status';
   status.textContent = 'Creating…';
@@ -7021,6 +7062,8 @@ async function createSignupCode(){
     code, label,
     currency_key: currencyKey, currency_amount: currencyKey ? amount : null,
     reward_key: rewardKey, gift_bundle_key: bundleKey,
+    entitlement_scope_type: entitlementScopeType,
+    entitlement_scope_id: entitlementScopeType === 'all' ? null : entitlementScopeId,
     max_uses: maxUses,
     expires_at: expiresRaw ? new Date(expiresRaw).toISOString() : null
   });
@@ -7030,6 +7073,8 @@ async function createSignupCode(){
     ['newSignupCode','newSignupLabel','newSignupAmount','newSignupMaxUses','newSignupExpires'].forEach(fid => { document.getElementById(fid).value = ''; });
     document.getElementById('newSignupRewardKey').value = '';
     document.getElementById('newSignupBundleKey').value = '';
+    document.getElementById('newSignupEntitlementType').value = 'none';
+    updateNewSignupEntitlementVisibility();
     loadSignupCodes();
   }
 }
