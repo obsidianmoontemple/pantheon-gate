@@ -1598,6 +1598,10 @@ let marks = [];          // [{deity_id, pantheon_id, mark_type}]
 let currentPhase = null; // {cycle_id, phase, phase_index} — flavor + gating text only, edge function re-checks server-side
 let petitionView = null; // null | {step:'pick'} | {step:'challenge', ...} | {step:'verdict', ...}
 let answerDraft = '';
+// Kept in sync with petition/index.ts's own copy of this constant and
+// admin.html's CONSUMABLE_EFFECT_OPTIONS entry — the one guardian_item_catalog
+// key the trial screen offers a "use this to pass instantly" button for.
+const PETITION_CLEAR_ITEM_KEY = 'petition_clear';
 let combatView = null;    // null | {step:'pick'} | {step:'loadout', ...} | {step:'battle', ...} | {step:'result', ...}
 let loadoutPicks = [];    // [{pantheonId, deityId}, ...] up to 5, chosen from full marks
 
@@ -7218,6 +7222,12 @@ async function beginPetition(pantheonId, deityId){
       phase: data.phase
     };
     answerDraft = '';
+    // Refresh so the trial screen can offer a "use it to pass instantly"
+    // button when this guardian owns an unconsumed Petition Clear item —
+    // craftInventory/craftCatalog otherwise only ever load when the Craft
+    // screen itself opens, which most players won't have visited in this
+    // same session before petitioning.
+    await Promise.all([loadCraftInventory(), loadCraftCatalog()]);
     render();
   }catch(e){
     if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
@@ -7244,6 +7254,16 @@ function renderPetitionChallenge(){
   const hintBlock = v.hint
     ? `<p class="hint" id="hintBox" style="font-style:italic;">"${esc(v.hint)}"</p>`
     : `<div id="hintBox"></div>`;
+  // Petition Clear: a Shop-purchasable consumable that skips this trial
+  // straight to a full mark, no answer needed. Only offered when this
+  // guardian actually owns an unconsumed one — craftInventory/craftCatalog
+  // were refreshed by beginPetition() right before this screen first
+  // rendered, and again by usePetitionClearItem() itself on success.
+  const clearItem = craftInventory.find(it => it.item_key === PETITION_CLEAR_ITEM_KEY && !it.consumed_at);
+  const clearItemName = (craftCatalog.find(c => c.key === PETITION_CLEAR_ITEM_KEY) || {}).name || 'Petition Clear';
+  const clearItemBlock = clearItem ? `
+    <p class="hint">You're holding ${esc(clearItemName)}. Use it to skip answering and pass this trial instantly, with a full mark.</p>
+    <button class="secondary" id="clearItemBtn" style="margin-bottom:10px;" onclick="usePetitionClearItem('${esc(clearItem.id)}')">Use ${esc(clearItemName)}</button>` : '';
   app.innerHTML = `
     <div class="card"${bgAttr('oracle')}>
       <h2 style="text-align:center;">${esc(v.deityName)} sets a trial</h2>
@@ -7251,6 +7271,7 @@ function renderPetitionChallenge(){
       <p class="challenge-text">"${esc(v.challenge)}"</p>
       ${hintBlock}
       <button class="secondary" id="hintBtn" style="margin-bottom:10px;" ${v.hint ? 'disabled' : ''} onclick="getPetitionHint()">${v.hint ? 'Hint revealed' : 'Ask for a hint'}</button>
+      ${clearItemBlock}
       <textarea id="answerBox" placeholder="Answer as your guardian's keeper…" oninput="onAnswerInput()">${esc(answerDraft)}</textarea>
       <button id="answerBtn" ${answerDraft.trim().length < 2 ? 'disabled' : ''} onclick="submitPetitionAnswer()">Offer your answer</button>
       <div class="status" id="answerStatus"></div>
@@ -7311,6 +7332,66 @@ function onAnswerInput(){
   if(btn) btn.disabled = answerDraft.trim().length < 2;
 }
 
+// Shared by submitPetitionAnswer() and usePetitionClearItem() — both hit
+// the same petition edge function shape ({ok, verdict, verdictText,
+// markType, statGain, newStage, bond, blessing, extraReward}) and need
+// the exact same local state update (guardian stats/bond/stage, this
+// deity's mark) before handing off to the verdict screen. Kept in one
+// place so the two paths can't quietly drift apart.
+function applyPetitionVerdictLocally(data){
+  const stageBefore = guardian.stage;
+  guardian.bond = data.bond;
+  guardian.stage = data.newStage;
+  if(data.statGain > 0){
+    guardian.vitality += data.statGain;
+    guardian.might += data.statGain;
+    guardian.ward += data.statGain;
+    guardian.swiftness += data.statGain;
+    guardian.cunning += data.statGain;
+  }
+  const existing = markFor(petitionView.pantheonId, petitionView.deityId);
+  if(existing){ existing.mark_type = data.markType; }
+  else{ marks.push({ pantheon_id: petitionView.pantheonId, deity_id: petitionView.deityId, mark_type: data.markType }); }
+
+  return {
+    step: 'verdict',
+    deityName: petitionView.deityName,
+    verdict: data.verdict,
+    verdictText: data.verdictText,
+    statGain: data.statGain,
+    newStage: data.newStage,
+    grew: data.newStage !== stageBefore,
+    extraReward: data.extraReward || null
+  };
+}
+
+async function usePetitionClearItem(itemId){
+  const status = document.getElementById('answerStatus');
+  const btn = document.getElementById('clearItemBtn');
+  if(btn) btn.disabled = true;
+  if(status){ status.className = 'status'; status.textContent = `${petitionView.deityName} accepts the offering…`; }
+
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/petition', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'use-clear-item', attemptId: petitionView.attemptId, itemId })
+    });
+    const data = await resp.json();
+    if(!data.ok){
+      if(status){ status.className = 'status err'; status.textContent = data.error || 'Could not use that item right now.'; }
+      if(btn) btn.disabled = false;
+      return;
+    }
+    await loadCraftInventory(); // reflect the item's new consumed state
+    petitionView = applyPetitionVerdictLocally(data);
+    render();
+  }catch(e){
+    if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
+    if(btn) btn.disabled = false;
+  }
+}
+
 async function submitPetitionAnswer(){
   const status = document.getElementById('answerStatus');
   const btn = document.getElementById('answerBtn');
@@ -7339,30 +7420,7 @@ async function submitPetitionAnswer(){
     }
 
     // Reflect the result locally without a full reload.
-    const stageBefore = guardian.stage;
-    guardian.bond = data.bond;
-    guardian.stage = data.newStage;
-    if(data.statGain > 0){
-      guardian.vitality += data.statGain;
-      guardian.might += data.statGain;
-      guardian.ward += data.statGain;
-      guardian.swiftness += data.statGain;
-      guardian.cunning += data.statGain;
-    }
-    const existing = markFor(petitionView.pantheonId, petitionView.deityId);
-    if(existing){ existing.mark_type = data.markType; }
-    else{ marks.push({ pantheon_id: petitionView.pantheonId, deity_id: petitionView.deityId, mark_type: data.markType }); }
-
-    petitionView = {
-      step: 'verdict',
-      deityName: petitionView.deityName,
-      verdict: data.verdict,
-      verdictText: data.verdictText,
-      statGain: data.statGain,
-      newStage: data.newStage,
-      grew: data.newStage !== stageBefore,
-      extraReward: data.extraReward || null
-    };
+    petitionView = applyPetitionVerdictLocally(data);
     render();
   }catch(e){
     status.className = 'status err';
@@ -10795,7 +10853,23 @@ async function doRequestClue(artifactKey){
       body: JSON.stringify({ action: 'request-clue', guardianId: guardian.id, artifactKey })
     });
     const data = await resp.json();
-    if(!data.ok){ setExpeditionMsg(data.error || 'Could not get a clue right now.', false); return; }
+    if(!data.ok){
+      // Direct feedback: "that's all we get when clicking consult no
+      // dropdowns nothing." A request-clue failure is very often the
+      // server reporting a trip this client doesn't know about yet (an
+      // earlier attempt that never got refreshed into expeditionStatus) —
+      // refresh + re-render even on failure so whatever's actually
+      // blocking (arrived and waiting on an answer, still traveling,
+      // still recovering) shows up as a real card instead of leaving just
+      // a dead-end red line with no way to act on it. render() rebuilds
+      // #expeditionMsg from scratch, so the error text has to be set
+      // AFTER render() runs, not before, same reordering fix as
+      // submitRedeemCode() on the Profile page.
+      await loadExpeditionStatus();
+      render();
+      setExpeditionMsg(data.error || 'Could not get a clue right now.', false);
+      return;
+    }
     await loadExpeditionStatus();
     render();
   }catch(e){
@@ -11157,15 +11231,23 @@ function renderExpedition(){
     </div>`;
   }).join('') || '<p class="hint">No expeditions are available right now — check back later.</p>';
 
+  // Direct feedback: "the current expedition should be on the top not
+  // bottom" — travelCard (whatever's actually happening right now: a
+  // clue waiting to be acted on, a familiar traveling, a trivia question,
+  // a wrong-turn recovery) now leads the whole screen, ahead of even the
+  // static intro text, instead of being sandwiched between it and the
+  // artifact list. pendingAltarItems (already-earned, not-yet-placed
+  // rewards) stay grouped right after it — also something to act on now,
+  // not background reading.
   app.innerHTML = `
+    ${travelCard}
+    ${pendingAltarCard}
     <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
       <h2>Expeditions</h2>
       <p class="hint">Consult the deity you're trying to unlock, interpret its whisper, and pick where to send your familiar from the choices it gives you. Guess wrong and it still travels — you'll pay in wait time and need to let it recover before trying again. Guess right, answer honestly, learn something true either way, and reassemble a full set to fully unlock that deity and earn a unique Altar Item.</p>
       <p class="hint">${capNote}</p>
       <div class="status" id="expeditionMsg"></div>
     </div>
-    ${pendingAltarCard}
-    ${travelCard}
     <div class="card"${bgAttr('expeditions')}>
       <h2>Artifacts</h2>
       ${artifactCards}
