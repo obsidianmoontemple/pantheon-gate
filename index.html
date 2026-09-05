@@ -340,6 +340,32 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
   border-radius:6px;padding:8px;
 }
 
+/* Shop's click-to-reveal pickers (0130) — direct feedback: "those should
+   remain invisible unless triggered by my art button." Sits INSIDE an
+   already-positioned .map-hotspot-dropdown box (see shopPickerBox()), so
+   this just needs to fill that box invisibly — same transparent-in-every-
+   state treatment as .map-hotspot above, but width/height:100% instead of
+   its own position:absolute since the parent box already provides that. */
+.hub-picker-trigger{
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  width:100%;height:100%;background:transparent!important;border:none;padding:4px;margin:0;cursor:pointer;
+  color:var(--parchment,#e8dcc0);font-size:12px;line-height:1.25;
+  -webkit-tap-highlight-color:transparent;
+}
+.hub-picker-trigger:hover,.hub-picker-trigger:active,.hub-picker-trigger:focus{background:transparent!important;}
+.hub-picker-trigger:focus-visible{outline:2px solid rgba(230,199,119,0.55);outline-offset:2px;}
+/* The small ✕ that appears once a picker is open, so there's a way back
+   to invisible without completing a purchase — pinned to the revealed
+   box's corner (positions relative to .map-hotspot-dropdown, which is
+   already position:absolute). */
+.hub-picker-close{
+  position:absolute;top:-8px;right:-8px;z-index:1;
+  width:20px;height:20px;border-radius:50%;padding:0;line-height:18px;
+  background:rgba(10,8,16,0.85)!important;border:1px solid rgba(230,199,119,0.55);
+  color:var(--parchment,#e8dcc0);font-size:13px;cursor:pointer;
+}
+.hub-picker-close:hover{background:rgba(10,8,16,0.95)!important;border-color:var(--gold-bright,#e6c777);color:var(--gold-bright,#e6c777);}
+
 /* Direct feedback (Petition Hall's "Petition this god" button, but
    written generically since the same request will come up anywhere
    else the admin's art already draws the button): "i have my own art
@@ -1975,6 +2001,13 @@ let giftableBundlesCatalog = [];  // [{bundle_key, name}]
 let shopDeitySearch = '';       // filter text for the deity-unlock list — ~150 gods is too many to browse unfiltered
 let shopView = null;            // null | {step:'browse'} | {step:'ageGate', pending:{type,scopeId,label,pantheonId,deityId,warningText}}
 let shopStatusMsg = '';
+// 0130 — direct feedback: "those should remain invisible unless triggered
+// by my art button." Each of Shop's three positioned boxes now starts
+// hidden (just an invisible click target filling the same admin-placed
+// box) and only reveals its real picker once toggled open — see
+// toggleShopPicker()/renderShopBrowse(). Reset to all-closed every time
+// Shop is (re)opened, same as shopDeitySearch clearing on openShop().
+let shopPickerOpen = { subs: false, packs: false, deitySearch: false };
 
 async function loadCircleShopItems(){
   if(circleShopItems.length) return;
@@ -3064,6 +3097,15 @@ let MAIL_AREAS = DEFAULT_MAIL_AREAS.slice();
 // Any admin-saved custom position for the old 'pantheonPicker' hotspot
 // (screen 'shop' in the hotspot_overrides table) is simply never read
 // again — harmless leftover data, not cleaned up here.
+//
+// 0130 — direct feedback: "those should remain invisible unless triggered
+// by my art button." These three boxes are still exactly what they were
+// (same left/top/width/height, same admin-draggable positions below) —
+// what changed is what renderShopBrowse() puts INSIDE each one. Closed
+// (the default, reset every time Shop opens), it's just an invisible
+// .hub-picker-trigger filling the box — position it over wherever your
+// art draws the button. Clicking it reveals the real picker in that same
+// spot. See shopPickerBox()/toggleShopPicker().
 const DEFAULT_SHOP_AREAS = [
   { id: 'subsPicker',     label: 'Subscriptions',    left: 3,  top: 12, width: 44, height: 22, kind: 'dropdown' },
   { id: 'packsPicker',    label: 'Packs & items',    left: 52, top: 12, width: 44, height: 22, kind: 'dropdown' },
@@ -6571,6 +6613,7 @@ async function openShop(){
   shopView = { step: 'browse' };
   shopStatusMsg = '';
   shopDeitySearch = '';
+  shopPickerOpen = { subs: false, packs: false, deitySearch: false };
   render();
   maybeShowPageTip('shop');
   await Promise.all([loadShopCatalog(), loadShrineEntitlements()]);
@@ -6715,6 +6758,30 @@ function filterShopDeities(val){
   renderShopBrowse();
 }
 
+// 0130 — direct feedback: "those should remain invisible unless triggered
+// by my art button." Each of Shop's three positioned boxes (unchanged
+// position/size, still admin-draggable via SHOP_AREAS/the Screen Hotspots
+// editor) now renders one of two things depending on shopPickerOpen[key]:
+// closed, nothing but an invisible .hub-picker-trigger filling the whole
+// box — position that box (in the hotspot editor) directly over wherever
+// your art draws the button, and clicking it is "triggering your art
+// button"; open, the real picker plus a small ✕ to close it again.
+function shopPickerBox(key, label, innerHtml){
+  if(shopPickerOpen[key]){
+    return `<button type="button" class="hub-picker-close" onclick="toggleShopPicker('${key}')" aria-label="Close">✕</button>${innerHtml}`;
+  }
+  // Same "no art yet" visible-label fallback hotspotButtonsMarkup() uses
+  // (siteBackgrounds['shop'] unset) — otherwise this trigger would be
+  // completely blank and unfindable while the admin is still positioning
+  // it, before any art exists to click on.
+  const fallback = !siteBackgrounds['shop'];
+  return `<button type="button" class="hub-picker-trigger" onclick="toggleShopPicker('${key}')" aria-label="${esc(label)}">${fallback ? esc(label) : ''}</button>`;
+}
+function toggleShopPicker(key){
+  shopPickerOpen[key] = !shopPickerOpen[key];
+  renderShopBrowse();
+}
+
 function renderShopBrowse(){
   document.body.classList.add('hub-active');
   const app = document.getElementById('app');
@@ -6726,10 +6793,10 @@ function renderShopBrowse(){
     `<option value="all::">Full site access — ${shopFmtUsd(shopPricing.subscription)}/mo</option>`,
     ...shopSubscriptionTiers.map(t => `<option value="tier::${esc(t.id)}">${esc(t.name)} — ${shopFmtUsd(t.price_cents)}/mo</option>`)
   ].join('');
-  const subsPickerMarkup = hotspotDropdownMarkup(SHOP_AREAS, `
+  const subsPickerMarkup = hotspotDropdownMarkup(SHOP_AREAS, shopPickerBox('subs', 'Subscriptions', `
     <select class="picker-select" id="shopSubsSelect">${subsOpts}</select>
     <button type="button" onclick="shopBuySelectedSubscription()">Subscribe</button>
-  `, 'subsPicker', 'shop');
+  `), 'subsPicker', 'shop');
 
   // Packs & items — the fixed message pack folded in alongside store
   // items, one dropdown.
@@ -6737,10 +6804,10 @@ function renderShopBrowse(){
     `<option value="messages::">Message pack — ${shopPricing.packSize} messages — ${shopFmtUsd(shopPricing.packPrice)}</option>`,
     ...shopStoreItems.map(i => `<option value="store_item::${esc(i.id)}">${esc(i.name)} — ${shopFmtUsd(i.price_cents)}</option>`)
   ].join('');
-  const packsPickerMarkup = hotspotDropdownMarkup(SHOP_AREAS, `
+  const packsPickerMarkup = hotspotDropdownMarkup(SHOP_AREAS, shopPickerBox('packs', 'Packs & items', `
     <select class="picker-select" id="shopPacksSelect">${packsOpts}</select>
     <button type="button" onclick="shopBuySelectedPack()">Buy</button>
-  `, 'packsPicker', 'shop');
+  `), 'packsPicker', 'shop');
 
   // Individual gods — the locked live-search exception, same shape as
   // PvP Browse: a visible text box + scrolling results as one box,
@@ -6755,10 +6822,10 @@ function renderShopBrowse(){
       <button class="secondary" onclick="shopBuyDeity('${esc(id)}','${esc(name)}','${esc(pid)}')">${shopFmtUsd(shopDeityPrice(id))}</button>
     </div>`)
   ).join('') || '<p class="hint">No matching gods — everything shown is already unlocked, free, or not currently for sale.</p>';
-  const deitySearchMarkup = hotspotDropdownMarkup(SHOP_AREAS, `
+  const deitySearchMarkup = hotspotDropdownMarkup(SHOP_AREAS, shopPickerBox('deitySearch', 'Search for a god', `
     <input type="text" id="shopDeitySearchInput" placeholder="Search by name…" value="${esc(shopDeitySearch)}" oninput="filterShopDeities(this.value)">
     <div style="max-height:26vh;overflow-y:auto;width:100%;">${deityRows}</div>
-  `, 'deitySearch', 'shop');
+  `), 'deitySearch', 'shop');
 
   // No .hub-overlay panel any more (0129) — direct feedback: "fix the
   // visual it should be just as clean as the chained gods." Same
@@ -11013,6 +11080,22 @@ function renderExpedition(){
           <p class="hint">Your familiar is still recovering from its last wrong turn${recoverDate ? ` — try again after ${recoverDate.toLocaleString()}` : ''}.</p>
           <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
         </div>`;
+    } else {
+      // Direct feedback: "consult does nothing... it doesnt show the
+      // selection box for locations to travel to." expeditionStatus being
+      // truthy already disables every "Consult" button below (see
+      // hasActiveTrip) — if none of the phases above match (an
+      // unrecognized/unexpected value, e.g. a server response shape this
+      // build doesn't know about yet), that used to silently render
+      // nothing at all: buttons look dead with zero explanation. Surface
+      // it instead so a mismatch like this is visible and reportable
+      // rather than looking like the feature just doesn't work.
+      travelCard = `
+        <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+          <h2>Your familiar is busy</h2>
+          <p class="hint">This expedition is in an unrecognized state ("${esc(expeditionStatus.phase || 'unknown')}"). Try Check now — if that doesn't clear it, this is worth reporting.</p>
+          <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
+        </div>`;
     }
   }
 
@@ -11040,7 +11123,24 @@ function renderExpedition(){
     // deity is what starts an attempt, and which fragment it's actually
     // for stays hidden until you either guess right or wrong.
     const consultDisabled = hasActiveTrip || capReached;
-    const consultButton = complete ? '' : `<button class="secondary" style="margin:2px;" ${consultDisabled ? 'disabled' : ''} onclick="doRequestClue('${esc(a.key)}')">Consult ${esc(deityName)}</button>`;
+    // Direct feedback: "consult does nothing" — a disabled button gives
+    // zero explanation for why, so clicking it really does look like
+    // nothing happened. Same familiar/same daily cap applies across every
+    // artifact, so this reason is identical no matter which artifact's
+    // button it's attached to.
+    let consultDisabledReason = '';
+    if(consultDisabled){
+      if(capReached) consultDisabledReason = `You've used all ${expeditionCatalog.expeditionsPerDay} expeditions for today — try again after the day turns over.`;
+      else {
+        const phase = expeditionStatus && expeditionStatus.phase;
+        if(phase === 'choosing') consultDisabledReason = 'Your familiar is already weighing where to go — pick a destination above.';
+        else if(phase === 'traveling') consultDisabledReason = 'Your familiar is already away on an expedition.';
+        else if(phase === 'trivia') consultDisabledReason = 'Your familiar has arrived — answer its question above.';
+        else if(phase === 'wrong-location' || phase === 'recovering') consultDisabledReason = 'Your familiar is still recovering from its last wrong turn.';
+        else consultDisabledReason = 'Your familiar is already busy with an expedition.';
+      }
+    }
+    const consultButton = complete ? '' : `<button class="secondary" style="margin:2px;" ${consultDisabled ? 'disabled' : ''} onclick="doRequestClue('${esc(a.key)}')">Consult ${esc(deityName)}</button>${consultDisabledReason ? `<div class="hint" style="width:100%;margin:2px 0 0;">${esc(consultDisabledReason)}</div>` : ''}`;
     const statusLabel = complete ? (a.deityAlreadyUnlocked ? 'Unlocked' : 'Complete!') : `${owned.size}/${a.total_fragments} fragments`;
     // 0124 — once the hunt has actually begun (>=1 fragment in hand),
     // offer a way to hear the deity's own voice about it. Hidden again
