@@ -1394,13 +1394,13 @@ async function loadGuideSteps(){
 async function loadMilestoneCatalog(){
   const { data, error } = await supabaseClient
     .from('milestone_catalog')
-    .select('key, category, stage_key, level_threshold, title, body, sort_order')
+    .select('key, category, stage_key, level_threshold, title, body, sort_order, image_url')
     .eq('active', true)
     .order('sort_order', { ascending: true });
   if(error){ console.error('milestone_catalog load failed', error); return; }
   MILESTONE_CATALOG = (data || []).map(m => ({
     key: m.key, category: m.category, stageKey: m.stage_key, levelThreshold: m.level_threshold,
-    title: m.title, body: m.body,
+    title: m.title, body: m.body, imageUrl: m.image_url || null,
   }));
 }
 
@@ -4568,7 +4568,7 @@ function renderMilestone(){
     <div class="hub-screen">
       <div class="hub-box"${bgAttrPlain('guide')}>
         <div class="hub-overlay">
-          <div class="art">${opponentImgFor(narratorSettings.portraitUrl, null, 110)}</div>
+          <div class="art">${opponentImgFor(m.imageUrl || narratorSettings.portraitUrl, null, 110)}</div>
           <div class="essence-label" style="display:block;margin-bottom:6px;">${esc(narratorSettings.name)}</div>
           <h2 style="text-align:center;">${esc(m.title)}</h2>
           <p class="challenge-text">${esc(m.body)}</p>
@@ -4603,7 +4603,7 @@ function renderMilestoneRoadmap(){
     const rowsHtml = rows.map(m => {
       const earned = milestoneEarned(m);
       return `<div class="roster-row"${earned ? '' : ' style="opacity:0.55;"'}>
-        <div><div class="rname">${earned ? '✓ ' : '🔒 '}${esc(m.title)}</div><div class="cblurb">${esc(m.body)}</div></div>
+        <div style="display:flex;align-items:center;gap:8px;">${shopThumb(m.imageUrl)}<div><div class="rname">${earned ? '✓ ' : '🔒 '}${esc(m.title)}</div><div class="cblurb">${esc(m.body)}</div></div></div>
       </div>`;
     }).join('');
     return `<h3 style="margin-top:16px;">${esc(CATEGORY_LABEL[cat])}</h3>${rowsHtml}`;
@@ -5582,7 +5582,9 @@ async function loadMail(){
 function setMailStatus(text, ok){
   const el = document.getElementById('mailStatus');
   if(!el) return;
-  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  // hub-loose-status, not the boxed .status (0132) — mailStatus now lives
+  // loose on the Mail screen, same as pickerStatus/redeemHubStatus.
+  el.className = 'hub-loose-status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
   el.textContent = text;
 }
 
@@ -5736,6 +5738,18 @@ function describeBroadcastGift(b){
 // treatment as Shrine above — see DEFAULT_MAIL_AREAS. One letter is
 // picked and acted on at a time; the dropdown naturally shrinks as
 // letters are claimed since it's rebuilt from `visible` on every render.
+//
+// 0132 — direct feedback: "there is a strange card in the way that does
+// not tell you you have mail and when you click on it it looks like you
+// are opening mail or something." The boxed .hub-overlay panel (a
+// generic titled card floating over whatever art the admin painted for
+// this screen) is gone entirely, same "get rid of the damn overlay"
+// treatment already given to Shop (0129), Chained Gods' renderRedeem(),
+// and Petition Hall's renderPetitionPicker() — the admin's own mail art
+// is the interface now, not a text card sitting on top of it. The one
+// thing Mail needed that those other screens didn't: a plain, unmissable
+// "you have unread mail" line, since that was the actual complaint —
+// mailStatus now opens already saying so instead of starting blank.
 function renderMail(){
   document.body.classList.add('hub-active');
   const app = document.getElementById('app');
@@ -5762,18 +5776,17 @@ function renderMail(){
       `, null, 'mail')
     : '';
 
+  const initialStatus = visible.length
+    ? `📬 You have ${visible.length} unread letter${visible.length === 1 ? '' : 's'} — pick one above to read it.`
+    : (mailBroadcasts.length ? "You're all caught up — no unread mail." : 'Nothing here yet.');
+
   app.innerHTML = `
     <div class="hub-screen">
       <div class="hub-box"${bgAttrPlain('mail')}>
         ${hotspotButtonsMarkup(MAIL_AREAS, 'MAIL_AREAS', 'mail')}
         ${pickerMarkup}
-        <div class="hub-overlay">
-          <button type="button" class="hub-back" onclick="backFromMail()">‹ Back to Map</button>
-          <h2 style="text-align:center;">Mail</h2>
-          <p class="hint" style="text-align:center;">Announcements and gifts sent your way. Claim a gift once and it's yours. Reading (or claiming) a letter clears it from this list for good.</p>
-          <div class="status" id="mailStatus"></div>
-          ${opts ? '' : `<p class="hint" style="text-align:center;">${mailBroadcasts.length ? "You're all caught up — no unread mail." : 'Nothing here yet.'}</p>`}
-        </div>
+        <button type="button" class="hub-loose-back" onclick="backFromMail()">‹ Back to Map</button>
+        <div id="mailStatus" class="hub-loose-status">${esc(initialStatus)}</div>
       </div>
     </div>
   `;
@@ -11190,12 +11203,13 @@ function renderExpedition(){
     const correctText = (r.choices || [])[r.correctIndex] ?? '';
     app.innerHTML = `
       <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+        ${r.imageUrl ? `<div style="margin-bottom:8px;">${opponentImgFor(r.imageUrl, null, 130)}</div>` : ''}
         <h2>${r.correct ? 'Found it!' : 'Not quite'}</h2>
         <p class="hint">${esc(r.regionName || '')}</p>
         <p>${r.correct ? 'Correct — your familiar brings the fragment home.' : `The correct answer was: <strong>${esc(correctText)}</strong>`}</p>
         <p class="hint">${esc(r.funFact || '')}</p>
         ${r.artifactCompleted ? `<p class="status ok" style="display:block;">Every fragment is home — the deity has fully unlocked and taken notice of you. Check your pantheon list.</p>` : ''}
-        ${r.altarItem ? `<div class="status ok" style="display:block;text-align:left;">Its Altar Item, ${esc(r.altarItem.name)}, is yours to place. ${esc(r.altarItem.description || '')}${altarItemChoiceHtml(r.altarItem.artifactKey, r.altarItem.name)}</div>` : ''}
+        ${r.altarItem ? `<div class="status ok" style="display:block;text-align:left;">${r.altarItem.imageUrl ? `<div style="text-align:center;margin-bottom:6px;">${shopThumb(r.altarItem.imageUrl)}</div>` : ''}Its Altar Item, ${esc(r.altarItem.name)}, is yours to place. ${esc(r.altarItem.description || '')}${altarItemChoiceHtml(r.altarItem.artifactKey, r.altarItem.name)}</div>` : ''}
         <div class="status" id="expeditionMsg"></div>
         <button class="secondary" onclick="backFromExpeditionResult()">Continue</button>
       </div>
@@ -11248,6 +11262,7 @@ function renderExpedition(){
       const choices = status.choices || [];
       return `
         <div class="card" style="margin-top:6px;text-align:center;">
+          ${status.imageUrl ? `<div style="margin-bottom:8px;">${opponentImgFor(status.imageUrl, null, 130)}</div>` : ''}
           <h2>${esc(status.regionName || 'Your familiar has arrived')}</h2>
           <p class="hint" style="font-style:italic;">The whisper led true.</p>
           <p>${esc(status.clueText || '')}</p>
@@ -11310,7 +11325,7 @@ function renderExpedition(){
     <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
       <h2>Waiting to be placed</h2>
       ${pendingAltarItems.map(p => `<div class="roster-row">
-        <div><div class="rname">${esc(p.name)}</div><div class="cblurb">${esc(p.description || '')}</div></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;">${shopThumb(p.imageUrl)}<div><div class="rname">${esc(p.name)}</div><div class="cblurb">${esc(p.description || '')}</div></div></div>
         <div class="ractions" style="flex-direction:column;">${altarItemChoiceHtml(p.artifactKey, p.name)}</div>
       </div>`).join('')}
     </div>` : '';
@@ -11363,9 +11378,9 @@ function renderExpedition(){
     const activeCard = isActiveArtifact ? buildActiveExpeditionCard(expeditionStatus, deityName) : '';
     return `<div style="margin-bottom:6px;">
       <div class="roster-row">
-        <div><div class="rname">${esc(a.name)} — ${esc(statusLabel)}</div>
+        <div style="display:flex;align-items:flex-start;gap:8px;">${shopThumb(a.image_url)}<div><div class="rname">${esc(a.name)} — ${esc(statusLabel)}</div>
         <div class="cblurb">${esc(a.description || '')}</div>
-        ${a.deity_voice_intro && !complete ? `<div class="cblurb" style="font-style:italic;margin-top:4px;">"${esc(a.deity_voice_intro)}"</div>` : ''}</div>
+        ${a.deity_voice_intro && !complete ? `<div class="cblurb" style="font-style:italic;margin-top:4px;">"${esc(a.deity_voice_intro)}"</div>` : ''}</div></div>
         <div class="ractions" style="flex-wrap:wrap;">${isActiveArtifact ? '' : consultButton}${askDeityButton}</div>
       </div>
       ${activeCard}
