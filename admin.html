@@ -386,12 +386,11 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <p class="hint">Full override on any Circle — roster, chat, balances, identity. Bypasses the normal leader-only rules on purpose.</p>
         <div class="form-row">
           <div class="field">
-            <label>Search by name</label>
-            <input type="text" id="circleSearchInput" placeholder="e.g. Ember" style="max-width:240px;">
+            <label>Circle</label>
+            <select id="circleSearchInput" style="max-width:280px;"></select>
           </div>
-          <button id="circleSearchBtn">Search</button>
+          <button id="circleSearchBtn">Load Circle</button>
         </div>
-        <ul class="pick-list" id="circleSearchResults"></ul>
         <div class="status" id="circleSearchStatus"></div>
 
         <div class="circle-detail" id="circleDetail">
@@ -576,7 +575,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <select id="bulkGrantScope" style="max-width:140px;"><option value="sitewide">Everyone</option><option value="circle">One Circle</option></select>
           </div>
           <div class="field" id="bulkGrantCircleField" style="display:none;">
-            <label>Circle name (exact)</label><input type="text" id="bulkGrantCircleName" style="max-width:200px;">
+            <label>Circle</label><select id="bulkGrantCircleName" style="max-width:220px;"></select>
           </div>
           <div class="field"><label>Amount each</label><input type="number" id="bulkGrantAmount" style="max-width:120px;"></div>
           <div class="field"><label>Reason (optional)</label><input type="text" id="bulkGrantReason" style="max-width:200px;"></div>
@@ -589,7 +588,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <h2>Grant currency to a Circle's shared balance</h2>
         <p class="hint">Adjusts one Circle's own shared balance (like Devotion) directly — not a per-member fan-out, since a Circle-scope currency is a single pooled number. Same effect as the Circles tab's balance control, kept here too since gifting work now starts from this tab.</p>
         <div class="form-row">
-          <div class="field"><label>Circle name (exact)</label><input type="text" id="grantCircleName" style="max-width:200px;"></div>
+          <div class="field"><label>Circle</label><select id="grantCircleName" style="max-width:220px;"></select></div>
           <div class="field"><label>Currency</label><select id="grantCircleCurrency" style="max-width:160px;"></select></div>
           <div class="field"><label>Mode</label>
             <select id="grantCircleMode" style="max-width:120px;"><option value="delta">Add</option><option value="set">Set to</option></select>
@@ -645,7 +644,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <select id="newPromoScope" style="max-width:140px;"><option value="sitewide">Everyone</option><option value="circle">One Circle</option></select>
           </div>
           <div class="field" id="newPromoCircleField" style="display:none;">
-            <label>Circle name (exact)</label><input type="text" id="newPromoCircleName" style="max-width:200px;">
+            <label>Circle</label><select id="newPromoCircleName" style="max-width:220px;"></select>
           </div>
           <div class="field"><label>Starts (optional)</label><input type="datetime-local" id="newPromoStarts" style="max-width:200px;"></div>
           <div class="field"><label>Ends (optional)</label><input type="datetime-local" id="newPromoEnds" style="max-width:200px;"></div>
@@ -765,8 +764,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <select id="grantEmail" style="max-width:280px;"></select>
           </div>
           <div class="field" id="grantCircleNameField" style="display:none;">
-            <label>Circle name (exact)</label>
-            <input type="text" id="grantTargetCircleName" style="max-width:200px;">
+            <label>Circle</label>
+            <select id="grantTargetCircleName" style="max-width:220px;"></select>
           </div>
           <div class="field">
             <label>Grant what</label>
@@ -825,8 +824,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <select id="broadcastTargetEmail" style="max-width:260px;"></select>
           </div>
           <div class="field" id="broadcastTargetCircleField" style="display:none;">
-            <label>Circle name (exact)</label>
-            <input type="text" id="broadcastTargetCircleName" style="max-width:200px;">
+            <label>Circle</label>
+            <select id="broadcastTargetCircleName" style="max-width:220px;"></select>
           </div>
         </div>
         <div class="form-row">
@@ -3478,6 +3477,38 @@ function refreshAllPlayerPickers(){
   });
 }
 
+// Direct feedback (round 2): "you are still making me look people and
+// circles up by email and name i want a full list to pick from in all
+// situations of that nature." The player-picker pass above only ever
+// covered PLAYERS — every "Circle name (exact)" free-text field (Circles
+// governance search, Grant currency to a Circle, Bulk grant to one
+// Circle, Grant/revoke access to one Circle, Broadcasts to one Circle,
+// Promo events scoped to one Circle) was still a typed exact-match name
+// box. Same pattern as PLAYER_LIST/loadAllPlayers above: a small cached
+// catalog loaded once at boot, so a brand-new Circle won't appear until
+// the next page load — same staleness window every other boot-time
+// catalog here already accepts.
+let CIRCLE_LIST = [];
+async function loadAllCircles(){
+  const { data, error } = await supabaseClient.from('circles').select('id, name').order('name');
+  if(error){ console.error('circle list load failed', error); return; }
+  CIRCLE_LIST = data || [];
+}
+// Dropdown value is the Circle's id (not its name) — every call site that
+// used to resolve a typed name to an id via findCircleIdByName() now
+// already has the id straight from the selection.
+function circleOptionsHtml(selected, placeholder){
+  const opts = CIRCLE_LIST.map(c => `<option value="${esc(c.id)}" ${c.id === selected ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+  return `<option value="">${esc(placeholder || '— pick a circle —')}</option>` + opts;
+}
+function refreshAllCirclePickers(){
+  ['circleSearchInput', 'bulkGrantCircleName', 'grantCircleName', 'grantTargetCircleName',
+   'broadcastTargetCircleName', 'newPromoCircleName'].forEach(id => {
+    const sel = document.getElementById(id);
+    if(sel) sel.innerHTML = circleOptionsHtml(sel.value, id === 'circleSearchInput' ? '— pick a circle —' : null);
+  });
+}
+
 let supabaseClient = null;
 let deitySettings = {};
 let pantheonSettings = {};
@@ -3586,12 +3617,6 @@ async function callAdmin(action, payload){
   }
 }
 
-async function findCircleIdByName(name){
-  const { data, error } = await supabaseClient.from('circles').select('id, name').ilike('name', name.trim()).maybeSingle();
-  if(error || !data) return null;
-  return data.id;
-}
-
 async function findUserIdByEmail(email){
   const { data, error } = await supabaseClient.from('profiles').select('id').eq('email', email.trim()).maybeSingle();
   if(error || !data) return null;
@@ -3605,9 +3630,11 @@ async function findUserIdByEmail(email){
 // the Circle's current member emails, then run the flow's existing
 // single-player call once per member. Everything downstream (idempotency,
 // RLS, audit logging) is exactly what already runs for "One player".
-async function circleMemberEmails(circleName){
-  const circleId = await findCircleIdByName(circleName);
-  if(!circleId) return { error: 'No Circle found with that exact name.' };
+// Takes the Circle's id directly (every caller now gets it straight from a
+// circleOptionsHtml() dropdown selection, not a typed name needing a
+// lookup).
+async function circleMemberEmails(circleId){
+  if(!circleId) return { error: 'Pick a Circle first.' };
   const { data: members, error: mErr } = await supabaseClient.from('circle_members').select('user_id').eq('circle_id', circleId);
   if(mErr) return { error: mErr.message };
   const userIds = (members || []).map(m => m.user_id);
@@ -3697,6 +3724,25 @@ function updateGrantTargetVisibility(){
   document.getElementById('grantCircleNameField').style.display = (type === 'circle') ? '' : 'none';
 }
 
+// Bug fix: direct feedback was "the circle banner presets do not load into
+// view" — traced to handleSession()'s boot sequence below being one long
+// chain of `await`-ed catalog loaders with no error handling at all. If
+// any ONE of those awaited calls throws (a real Supabase/RLS error) or
+// simply never resolves (a stalled request — no visible console error at
+// all in that case), every single load*() call written after it in this
+// function silently never runs — including Banner Presets, which sits
+// well past several of them, left forever on its hardcoded "Loading…"
+// placeholder with nothing in the console to explain why. Wrapping each
+// awaited step with a timeout + catch means one bad catalog can no longer
+// take every other one down with it — everything else in boot() still
+// loads even if, say, Giftable Rewards is having a bad day.
+function withBootTimeout(promise, label, ms = 12000){
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise((_, reject) => setTimeout(() => reject(new Error(label + ' timed out after ' + ms + 'ms')), ms))
+  ]).catch(e => { console.error('[boot] ' + label + ' failed — continuing with the rest of the page:', e); });
+}
+
 async function handleSession(session){
   const gateMsg = document.getElementById('gateMsg');
   const loginModal = document.getElementById('loginModal');
@@ -3751,15 +3797,15 @@ async function handleSession(session){
   loadSiteSettings();
   loadMapHotspots();
   loadSubscriptionTiers();
-  await loadCurrencyDefinitions();
-  await loadGiftableRewards();
-  await loadRewardBundles();
+  await withBootTimeout(loadCurrencyDefinitions(), 'loadCurrencyDefinitions');
+  await withBootTimeout(loadGiftableRewards(), 'loadGiftableRewards');
+  await withBootTimeout(loadRewardBundles(), 'loadRewardBundles');
   loadStoreItems();
-  await loadCustomPantheonsIntoCatalog();
+  await withBootTimeout(loadCustomPantheonsIntoCatalog(), 'loadCustomPantheonsIntoCatalog');
   loadPantheonSettings();
   loadCustomPantheonsList();
   populateNewGodPantheonOptions();
-  await loadCustomDeitiesIntoCatalog();
+  await withBootTimeout(loadCustomDeitiesIntoCatalog(), 'loadCustomDeitiesIntoCatalog');
   loadDeitySettings();
   loadCustomGodsList();
   // CATALOG/FLAT_DEITIES now include any admin-added gods/pantheons — this
@@ -3769,6 +3815,7 @@ async function handleSession(session){
   // own initial populate ran earlier (before login), so refresh it here too.
   refreshAllScopePickers();
   loadAllPlayers().then(refreshAllPlayerPickers);
+  loadAllCircles().then(refreshAllCirclePickers);
   loadSeasonSettings();
   loadSeasonPool();
   loadEntitlements();
@@ -3805,14 +3852,14 @@ async function handleSession(session){
   loadPersonalAltarDecorationCatalog();
   loadGauntletOpponents();
   loadBannerPresets();
-  await loadStatusEffectsAdmin(); // must populate CUSTOM_STATUS_EFFECTS before Move/Blessing/Guardian-Item catalogs render their effect-key dropdowns below
-  await loadMoveCatalog();
+  await withBootTimeout(loadStatusEffectsAdmin(), 'loadStatusEffectsAdmin'); // must populate CUSTOM_STATUS_EFFECTS before Move/Blessing/Guardian-Item catalogs render their effect-key dropdowns below
+  await withBootTimeout(loadMoveCatalog(), 'loadMoveCatalog');
   loadCreaturesList();
   loadAffinityWheel();
   loadSpeciesCatalog();
   loadMageArts();
   loadMageGear();
-  await loadMageReagents(); // awaited — loadMagePotions()'s recipe select needs mageReagentCatalogCache populated first
+  await withBootTimeout(loadMageReagents(), 'loadMageReagents'); // awaited — loadMagePotions()'s recipe select needs mageReagentCatalogCache populated first
   loadMagePotions();
   loadNarratorSettingsAdmin();
   loadGuideStepsAdmin();
@@ -3832,8 +3879,8 @@ async function handleSession(session){
   loadPvpPayoutRules();
   loadLeaderboards();
 
-  await loadCampaignChapters();
-  await loadCampaignCreatures();
+  await withBootTimeout(loadCampaignChapters(), 'loadCampaignChapters');
+  await withBootTimeout(loadCampaignCreatures(), 'loadCampaignCreatures');
   loadCampaignLevels();
   loadCampaignEncounters();
 }
@@ -5662,10 +5709,10 @@ async function grantAccess(){
     if(!email){ status.className = 'status err'; status.textContent = 'Enter an email.'; return; }
     emails = [email];
   } else if(targetType === 'circle'){
-    const name = document.getElementById('grantTargetCircleName').value.trim();
-    if(!name){ status.className = 'status err'; status.textContent = 'Enter a Circle name.'; return; }
+    const circleId = document.getElementById('grantTargetCircleName').value;
+    if(!circleId){ status.className = 'status err'; status.textContent = 'Pick a Circle.'; return; }
     status.className = 'status'; status.textContent = 'Looking up Circle…';
-    const result = await circleMemberEmails(name);
+    const result = await circleMemberEmails(circleId);
     if(result.error){ status.className = 'status err'; status.textContent = result.error; return; }
     emails = result.emails;
   } else {
@@ -5763,7 +5810,7 @@ async function postBroadcast(){
   const giftType = document.getElementById('broadcastGiftType').value;
   const targetType = document.getElementById('broadcastTargetType').value;
   const targetEmail = document.getElementById('broadcastTargetEmail').value.trim();
-  const targetCircleName = document.getElementById('broadcastTargetCircleName').value.trim();
+  const targetCircleId = document.getElementById('broadcastTargetCircleName').value;
 
   if(!message){
     status.className = 'status err';
@@ -5775,9 +5822,9 @@ async function postBroadcast(){
     status.textContent = 'Enter the player\'s email, or switch back to Everyone.';
     return;
   }
-  if(targetType === 'circle' && !targetCircleName){
+  if(targetType === 'circle' && !targetCircleId){
     status.className = 'status err';
-    status.textContent = 'Enter a Circle name.';
+    status.textContent = 'Pick a Circle.';
     return;
   }
 
@@ -5829,7 +5876,7 @@ async function postBroadcast(){
   let resultText;
   if(targetType === 'circle'){
     status.textContent = 'Looking up Circle…';
-    const lookup = await circleMemberEmails(targetCircleName);
+    const lookup = await circleMemberEmails(targetCircleId);
     if(lookup.error){ status.className = 'status err'; status.textContent = lookup.error; return; }
     if(!lookup.emails.length){ status.className = 'status err'; status.textContent = 'That Circle has no members yet.'; return; }
     status.textContent = `Posting to ${lookup.emails.length} member(s)…`;
@@ -5838,11 +5885,12 @@ async function postBroadcast(){
       const { error } = await postOne(email);
       if(error) failed++;
     }
+    const circleName = CIRCLE_LIST.find(c => c.id === targetCircleId)?.name || 'that Circle';
     if(failed && failed === lookup.emails.length){ status.className = 'status err'; status.textContent = 'Failed for every member.'; return; }
     status.className = failed ? 'status err' : 'status ok';
     resultText = failed
       ? `Sent to ${lookup.emails.length - failed}/${lookup.emails.length} members — ${failed} failed.`
-      : `Sent to all ${lookup.emails.length} member(s) of ${targetCircleName}.`;
+      : `Sent to all ${lookup.emails.length} member(s) of ${circleName}.`;
   } else {
     status.textContent = 'Posting…';
     const { error } = await postOne(targetType === 'one' ? targetEmail : null);
@@ -6287,22 +6335,12 @@ function renderGuardianLeaderboard(sortKey){
 let selectedCircleId = null;
 
 async function searchCircles(){
-  const q = document.getElementById('circleSearchInput').value.trim();
+  const circleId = document.getElementById('circleSearchInput').value;
   const status = document.getElementById('circleSearchStatus');
-  const list = document.getElementById('circleSearchResults');
-  if(!q){ status.className = 'status err'; status.textContent = 'Enter at least part of a Circle name.'; return; }
+  if(!circleId){ status.className = 'status err'; status.textContent = 'Pick a Circle first.'; return; }
   status.className = 'status';
-  status.textContent = 'Searching…';
-  const { data, error } = await supabaseClient.from('circles').select('id, name, rank_score').ilike('name', '%' + q + '%').limit(10);
-  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
-  if(!data.length){
-    status.className = 'status';
-    status.textContent = 'No Circles matched.';
-    list.innerHTML = '';
-    return;
-  }
   status.textContent = '';
-  list.innerHTML = data.map(c => `<li><button onclick="loadCircleDetail('${esc(c.id)}')">${esc(c.name)} <span class="dim" style="float:right;">rank ${c.rank_score}</span></button></li>`).join('');
+  await loadCircleDetail(circleId);
 }
 
 async function loadCircleDetail(circleId){
@@ -6417,7 +6455,12 @@ async function saveCircleEdit(){
   });
   status.className = result.ok ? 'status ok' : 'status err';
   status.textContent = result.ok ? 'Saved.' : ('Failed: ' + result.error);
-  if(result.ok){ loadCircleDetail(selectedCircleId); loadLeaderboards(); }
+  if(result.ok){
+    loadCircleDetail(selectedCircleId);
+    loadLeaderboards();
+    await loadAllCircles(); // a rename must show up in every Circle picker on the page
+    refreshAllCirclePickers();
+  }
 }
 
 async function disbandCircleAction(){
@@ -6425,8 +6468,9 @@ async function disbandCircleAction(){
   const result = await callAdmin('disband-circle', { circleId: selectedCircleId });
   if(!result.ok){ alert('Failed: ' + result.error); return; }
   document.getElementById('circleDetail').innerHTML = '<p class="empty">Circle disbanded.</p>';
-  document.getElementById('circleSearchResults').innerHTML = '';
   selectedCircleId = null;
+  await loadAllCircles(); // the disbanded Circle must drop out of every Circle picker on the page
+  refreshAllCirclePickers();
   loadLeaderboards();
 }
 
@@ -6621,20 +6665,16 @@ async function grantToPlayer(){
 
 async function grantToCircle(){
   const status = document.getElementById('grantCircleStatus');
-  const name = document.getElementById('grantCircleName').value.trim();
+  const targetId = document.getElementById('grantCircleName').value;
   const currencyKey = document.getElementById('grantCircleCurrency').value;
   const mode = document.getElementById('grantCircleMode').value;
   const amount = Number(document.getElementById('grantCircleAmount').value);
   const reason = document.getElementById('grantCircleReason').value.trim();
 
-  if(!name){ status.className = 'status err'; status.textContent = 'Enter a Circle name.'; return; }
+  if(!targetId){ status.className = 'status err'; status.textContent = 'Pick a Circle.'; return; }
   if(!Number.isFinite(amount)){ status.className = 'status err'; status.textContent = 'Enter a valid amount.'; return; }
 
   status.className = 'status';
-  status.textContent = 'Looking up Circle…';
-  const targetId = await findCircleIdByName(name);
-  if(!targetId){ status.className = 'status err'; status.textContent = 'No Circle found with that exact name.'; return; }
-
   status.textContent = 'Granting…';
   const result = await callAdmin('grant-currency', { currencyKey, targetType: 'circle', targetId, mode, amount, reason });
   status.className = result.ok ? 'status ok' : 'status err';
@@ -6663,12 +6703,8 @@ async function sendBulkGrant(){
 
   let circleId = null;
   if(scope === 'circle'){
-    const name = document.getElementById('bulkGrantCircleName').value.trim();
-    if(!name){ status.className = 'status err'; status.textContent = 'Enter a Circle name.'; return; }
-    status.className = 'status';
-    status.textContent = 'Looking up Circle…';
-    circleId = await findCircleIdByName(name);
-    if(!circleId){ status.className = 'status err'; status.textContent = 'No Circle found with that exact name.'; return; }
+    circleId = document.getElementById('bulkGrantCircleName').value;
+    if(!circleId){ status.className = 'status err'; status.textContent = 'Pick a Circle.'; return; }
   }
 
   status.className = 'status';
@@ -7167,12 +7203,8 @@ async function createPromoEvent(){
 
   let circleId = null;
   if(scope === 'circle'){
-    const circleName = document.getElementById('newPromoCircleName').value.trim();
-    if(!circleName){ status.className = 'status err'; status.textContent = 'Enter a Circle name.'; return; }
-    status.className = 'status';
-    status.textContent = 'Looking up Circle…';
-    circleId = await findCircleIdByName(circleName);
-    if(!circleId){ status.className = 'status err'; status.textContent = 'No Circle found with that exact name.'; return; }
+    circleId = document.getElementById('newPromoCircleName').value;
+    if(!circleId){ status.className = 'status err'; status.textContent = 'Pick a Circle.'; return; }
   }
 
   status.className = 'status';
