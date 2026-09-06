@@ -1759,7 +1759,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
       <div class="card">
         <h2>Guardian item catalog</h2>
-        <p class="hint">What God Shards can be crafted into. A stat boost applies immediately at craft time. A cosmetic is owned forever — ownership is the effect. A consumable sits in inventory until a player uses it, then applies the picked effect: essence_surge/bond_surge/favor_surge grant Consumable amount of that currency, heal_hp restores that much Guardian HP, stat_buff uses Stat key + Consumable amount + Buff duration for a temporary combat boost (Guardian's own item shop — Craft tab), and cure_status clears a poisoned/weakened/vulnerable status mid-fight from the battle screen (needs no Stat key/amount/duration — it just cures). An enchantment is owned forever like a cosmetic, but grants a real passive combat ability for as long as it's owned (same wired vocabulary and all-fight behavior as Deity Blessings' Effect key).</p>
+        <p class="hint">What God Shards can be crafted into. A stat boost applies immediately at craft time. A cosmetic is owned forever — ownership is the effect. A consumable sits in inventory until a player uses it, then applies the picked effect: essence_surge/bond_surge/favor_surge grant Consumable amount of that currency, heal_hp restores that much Guardian HP, stat_buff uses Stat key + Consumable amount + Buff duration for a temporary combat boost (Guardian's own item shop — Craft tab), cure_status clears a poisoned/weakened/vulnerable status mid-fight from the battle screen (needs no Stat key/amount/duration — it just cures), and pass_petition_trial (Petition Clear) instantly resolves the guardian's current Petition trial as a full mark, skipping judging entirely (also needs no Stat key/amount/duration; wired only in petition/index.ts's own "use-clear-item" action — using it from the Backpack's generic Use button is explicitly rejected, not silently wasted). An enchantment is owned forever like a cosmetic, but grants a real passive combat ability for as long as it's owned (same wired vocabulary and all-fight behavior as Deity Blessings' Effect key). Any guardian item created here is automatically also added to Giftable Rewards under the same key — that's what makes it pickable as a Store item's Reward package, i.e. purchasable with real money without any extra setup.</p>
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr>
@@ -2353,6 +2353,62 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <button id="saveDeityImagesBtn">Save changes</button>
           <div class="status" id="deityImageStatus"></div>
         </div>
+      </div>
+
+      <div class="card">
+        <h2>Deity Lore Encyclopedia</h2>
+        <!-- 0129/0130 — direct feedback: "we need to expand the history
+             and mythology to each and every deity... essentially have a
+             onboard encyclopedia for them to pull from that we can store
+             in the database" — this is that pool's editor. Loaded ONE
+             DEITY AT A TIME (pick below) rather than one flat table of
+             everything, since a deity can carry 20+ facts each and the
+             pool is meant to grow into the thousands — a single
+             load-everything table would only get slower and riskier to
+             bulk-save as more pantheons get added.
+             Mature facts (checkbox below) are NOT a separate opt-in flow:
+             direct decision this session was to reuse the SAME
+             age_restricted flag already on this tab's own deities (and on
+             Pantheons, under Pricing & Store) that gates a real purchase
+             behind a click-through warning — a mature fact only ever
+             reaches a player through a deity that's already flagged
+             age-restricted there. Flag the deity (or its whole pantheon)
+             age-restricted first if you want its mature facts to actually
+             surface. -->
+        <p class="hint">Small, discrete, real facts (never a paragraph blob) that chat, petition trials, and expedition Q&A pull from instead of improvising. Pick a deity to see and edit its facts. A "Mature" fact only ever reaches a player if that deity (or its pantheon, under Pricing &amp; Store) is flagged age-restricted — check the deity's own row above, or the Pantheons table, to control that.</p>
+        <div class="form-row">
+          <div class="field">
+            <label>Deity</label>
+            <select id="loreFactsDeitySelect" style="max-width:280px;">
+              <option value="">— pick a deity —</option>
+            </select>
+          </div>
+        </div>
+        <div class="scroll-table" style="max-height:380px;">
+          <table>
+            <thead><tr><th>Category</th><th>Fact</th><th>Source note</th><th>Mature</th><th>Active</th></tr></thead>
+            <tbody id="loreFactRows"><tr><td colspan="5">Pick a deity above.</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveLoreFactsBtn">Save changes</button>
+          <div class="status" id="loreFactStatus"></div>
+        </div>
+        <h3>Add a fact</h3>
+        <div class="form-row">
+          <div class="field"><label>Category</label><select id="newLoreFactCategory"></select></div>
+          <div class="field"><label>Mature</label><input type="checkbox" id="newLoreFactMature"></div>
+          <button id="addLoreFactBtn">Add fact</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Fact text</label>
+          <textarea id="newLoreFactText" rows="2" style="max-width:none;" placeholder="A single self-contained fact, 1-3 sentences."></textarea>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Source note (optional)</label>
+          <input type="text" id="newLoreFactSource" style="max-width:none;" placeholder="e.g. Hesiod, Theogony">
+        </div>
+        <div class="status" id="newLoreFactStatus"></div>
       </div>
     </div>
 
@@ -3194,6 +3250,11 @@ Object.keys(CATALOG).forEach(pid => {
   });
 });
 
+// Deity Lore Encyclopedia (0129/0130) — must match the check constraint
+// on deity_lore_facts.category exactly (server-side is the real
+// enforcement; this is just what the "Add a fact" dropdown offers).
+const LORE_FACT_CATEGORIES = ['myth_story', 'historical_worship', 'symbol_iconography', 'etymology', 'related_deity', 'cultural_context'];
+
 // ---- Shared "god or pantheon" scope picker --------------------------------
 // Six unrelated tabs (Gifting, Broadcasts, Giftable Rewards, Expeditions,
 // Subscription Tiers, Store Items) each need to reference an existing deity
@@ -3262,6 +3323,12 @@ function refreshAllScopePickers(){
   const artD = document.getElementById('newArtifactDeity');
   if(artP) artP.innerHTML = pantheonOptionsHtml(artP.value);
   if(artD) artD.innerHTML = deityOptionsHtml(artD.value);
+  // Deity Lore Encyclopedia's own deity picker (0129/0130) — a plain
+  // "pick one god" select, not a type+id pair like the others above, so
+  // it keeps its own leading placeholder option rather than going through
+  // populateScopeIdSelect().
+  const loreSel = document.getElementById('loreFactsDeitySelect');
+  if(loreSel) loreSel.innerHTML = '<option value="">— pick a deity —</option>' + deityOptionsHtml(loreSel.value);
 }
 
 // Affinity catalog (0077) — was a hardcoded fixed 8; now the shipped list
@@ -4646,6 +4713,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('personalitySearch').addEventListener('input', filterPersonalityRows);
   document.getElementById('deityImageSearch').addEventListener('input', filterDeityImageRows);
   document.getElementById('saveDeityImagesBtn').addEventListener('click', saveDeityImageOverrides);
+
+  document.getElementById('newLoreFactCategory').innerHTML = LORE_FACT_CATEGORIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  document.getElementById('loreFactsDeitySelect').addEventListener('change', loadLoreFacts);
+  document.getElementById('saveLoreFactsBtn').addEventListener('click', saveLoreFacts);
+  document.getElementById('addLoreFactBtn').addEventListener('click', addLoreFact);
 });
 
 /* ---------------- pantheons ---------------- */
@@ -10221,6 +10293,7 @@ const CONSUMABLE_EFFECT_OPTIONS = [
   { value: 'heal_hp', label: 'heal_hp - restores that much Guardian HP immediately' },
   { value: 'stat_buff', label: 'stat_buff - temporary +Stat amount to Stat key for Duration minutes (combat)' },
   { value: 'cure_status', label: 'cure_status - clears poison/weaken/vulnerable mid-fight (battle screen only)' },
+  { value: 'pass_petition_trial', label: 'pass_petition_trial - Petition Clear: instantly passes the guardian\'s current Petition trial as a full mark (needs no Stat key/amount/duration; wired in petition/index.ts only — using it anywhere else is rejected)' },
 ];
 // Wired by pvp/index.ts's shop-buy + respond actions.
 const ARENA_EFFECT_OPTIONS = [
@@ -10411,6 +10484,12 @@ async function addGuardianItem(){
   const imageUrl = document.getElementById('newGuardianItemImageUrl').value.trim();
   const isStatBuff = itemType === 'consumable' && effect === 'stat_buff';
   const isCureStatus = itemType === 'consumable' && effect === 'cure_status';
+  // pass_petition_trial (Petition Clear) is a one-shot "instantly resolve
+  // the current trial" effect, same "no Consumable amount needed" shape
+  // as cure_status — there's no numeric amount for petition/index.ts's
+  // use-clear-item action to read.
+  const isPassPetitionTrial = itemType === 'consumable' && effect === 'pass_petition_trial';
+  const needsNoAmount = isCureStatus || isPassPetitionTrial;
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
@@ -10418,7 +10497,7 @@ async function addGuardianItem(){
   if(itemType === 'stat_boost' && (!statKey || !statAmountVal || parseInt(statAmountVal, 10) < 1)){
     status.className = 'status err'; status.textContent = 'Stat boosts need a stat key and an amount greater than 0.'; return;
   }
-  if(itemType === 'consumable' && !isCureStatus && (!effect || !amountVal || parseFloat(amountVal) <= 0)){
+  if(itemType === 'consumable' && !needsNoAmount && (!effect || !amountVal || parseFloat(amountVal) <= 0)){
     status.className = 'status err'; status.textContent = 'Consumables need an effect and an amount greater than 0.'; return;
   }
   if(isStatBuff && (!statKey || !durationVal || parseInt(durationVal, 10) < 1)){
@@ -10435,7 +10514,7 @@ async function addGuardianItem(){
     stat_key: (itemType === 'stat_boost' || isStatBuff) ? statKey : null,
     stat_amount: itemType === 'stat_boost' ? parseInt(statAmountVal, 10) : null,
     consumable_effect: itemType === 'consumable' ? effect : null,
-    consumable_amount: (itemType === 'consumable' && !isCureStatus) ? parseFloat(amountVal) : null,
+    consumable_amount: (itemType === 'consumable' && !needsNoAmount) ? parseFloat(amountVal) : null,
     consumable_duration_minutes: isStatBuff ? parseInt(durationVal, 10) : null,
     effect_key: itemType === 'enchantment' ? enchantKey : null,
     effect_amount: itemType === 'enchantment' ? (enchantAmountVal === '' ? null : parseFloat(enchantAmountVal)) : null,
@@ -11935,6 +12014,108 @@ async function saveDeityImageOverrides(){
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies the next time a player opens gate.html, no redeploy needed.';
   if(!error) loadDeityImageOverrides();
+}
+
+/* =====================================================================
+   DEITY LORE ENCYCLOPEDIA (0129/0130) — unlike Personality Overrides and
+   Deity Pictures above, this is NOT one row per god: a deity can carry
+   20+ facts, and the pool is meant to grow into the thousands as more
+   pantheons get batched in. So this loads/saves ONE DEITY AT A TIME
+   (whichever is picked in loreFactsDeitySelect) rather than a single
+   flat table of everything — the only pattern that stays fast and safe
+   to bulk-save no matter how large the total pool gets.
+   ===================================================================== */
+
+let loreFactsCurrentDeityId = '';
+let loreFactsCurrentPantheonId = '';
+
+async function loadLoreFacts(){
+  const sel = document.getElementById('loreFactsDeitySelect');
+  const rows = document.getElementById('loreFactRows');
+  loreFactsCurrentDeityId = sel.value;
+  const deity = FLAT_DEITIES.find(d => d.id === loreFactsCurrentDeityId);
+  loreFactsCurrentPantheonId = deity ? deity.pantheonId : '';
+  if(!loreFactsCurrentDeityId){
+    rows.innerHTML = '<tr><td colspan="5">Pick a deity above.</td></tr>';
+    return;
+  }
+  rows.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
+  const { data, error } = await supabaseClient
+    .from('deity_lore_facts')
+    .select('id, category, fact_text, source_note, maturity, active')
+    .eq('deity_id', loreFactsCurrentDeityId)
+    .order('category', { ascending: true });
+  if(error){
+    rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = (data || []).map(f => `<tr data-id="${esc(f.id)}">
+    <td>
+      <select id="loreFactCat_${esc(f.id)}">${LORE_FACT_CATEGORIES.map(c => `<option value="${esc(c)}"${c === f.category ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select>
+    </td>
+    <td><textarea id="loreFactText_${esc(f.id)}" rows="2" style="width:100%;min-width:280px;">${esc(f.fact_text)}</textarea></td>
+    <td><input type="text" id="loreFactSource_${esc(f.id)}" value="${esc(f.source_note || '')}" style="width:100%;min-width:160px;"></td>
+    <td><input type="checkbox" id="loreFactMature_${esc(f.id)}" ${f.maturity === 'mature' ? 'checked' : ''}></td>
+    <td><input type="checkbox" id="loreFactActive_${esc(f.id)}" ${f.active !== false ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="5">No facts yet for this deity — add one below.</td></tr>';
+}
+
+async function saveLoreFacts(){
+  const status = document.getElementById('loreFactStatus');
+  const trs = document.querySelectorAll('#loreFactRows tr[data-id]');
+  if(!trs.length){ status.className = 'status'; status.textContent = 'Nothing to save.'; return; }
+  const rows = Array.from(trs).map(tr => {
+    const id = tr.getAttribute('data-id');
+    return {
+      id,
+      category: document.getElementById('loreFactCat_' + id).value,
+      fact_text: document.getElementById('loreFactText_' + id).value.trim(),
+      source_note: document.getElementById('loreFactSource_' + id).value.trim() || null,
+      maturity: document.getElementById('loreFactMature_' + id).checked ? 'mature' : 'general',
+      active: document.getElementById('loreFactActive_' + id).checked
+    };
+  });
+  const badRow = rows.find(r => !r.fact_text);
+  if(badRow){ status.className = 'status err'; status.textContent = 'Every fact needs its text — a row is empty.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('deity_lore_facts').upsert(rows, { onConflict: 'id' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadLoreFacts();
+}
+
+async function addLoreFact(){
+  const status = document.getElementById('newLoreFactStatus');
+  if(!loreFactsCurrentDeityId){ status.className = 'status err'; status.textContent = 'Pick a deity above first.'; return; }
+  const category = document.getElementById('newLoreFactCategory').value;
+  const factText = document.getElementById('newLoreFactText').value.trim();
+  const sourceNote = document.getElementById('newLoreFactSource').value.trim();
+  const mature = document.getElementById('newLoreFactMature').checked;
+  if(!factText){ status.className = 'status err'; status.textContent = 'Fact text is required.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('deity_lore_facts').insert({
+    pantheon_id: loreFactsCurrentPantheonId,
+    deity_id: loreFactsCurrentDeityId,
+    category,
+    fact_text: factText,
+    source_note: sourceNote || null,
+    maturity: mature ? 'mature' : 'general'
+  });
+  if(error){
+    status.className = 'status err';
+    status.textContent = error.code === '23505' ? 'That exact fact already exists for this deity.' : ('Failed: ' + error.message);
+    return;
+  }
+  status.className = 'status ok';
+  status.textContent = 'Fact added.';
+  document.getElementById('newLoreFactText').value = '';
+  document.getElementById('newLoreFactSource').value = '';
+  document.getElementById('newLoreFactMature').checked = false;
+  loadLoreFacts();
 }
 
 init();
