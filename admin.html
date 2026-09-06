@@ -504,6 +504,23 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <button id="saveCheckinNewPlayerBtn">Save changes</button>
           <div class="status" id="checkinNewPlayerStatus"></div>
         </div>
+
+        <!-- 0132 — direct feedback: the "7 day isn't showing" report turned
+             out to be a fully-completed track, not a bug, which surfaced
+             that there was no way to deliberately run it again for one
+             account (re-testing, or a support gesture). Admin-only,
+             one guardian at a time — this does NOT turn the track into a
+             recurring thing for everyone, it just rewinds one account back
+             to day 0 so their next Claim click starts the track over. -->
+        <div class="pantheon-group" style="text-align:left;margin-top:14px;">
+          <h3>Reset a player's track</h3>
+          <p class="hint">Sets one player's new-player day back to 0, so their next login shows the Day 1 popup again and they can click through the track from the start. Does not claw back rewards already granted — it only lets the track run again.</p>
+          <div class="form-row">
+            <div class="field"><label>Player email</label><input type="email" id="resetNewPlayerEmail" style="max-width:240px;"></div>
+            <button id="resetNewPlayerBtn">Reset to Day 0</button>
+          </div>
+          <div class="status" id="resetNewPlayerStatus"></div>
+        </div>
       </div>
 
       <div class="card">
@@ -4543,6 +4560,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveCheckinCalendarBtn').addEventListener('click', saveCheckinCalendar);
   document.getElementById('saveCheckinNewPlayerBtn').addEventListener('click', saveCheckinNewPlayerCatalog);
   document.getElementById('saveCheckinBackdayBtn').addEventListener('click', saveCheckinBackdayPricing);
+  document.getElementById('resetNewPlayerBtn').addEventListener('click', resetPlayerNewPlayerCheckin);
   document.getElementById('saveEventTriggersBtn').addEventListener('click', saveEventTriggersCatalog);
   document.getElementById('saveSecurityBtn').addEventListener('click', saveSecuritySettings);
   document.getElementById('refreshActivityLogBtn').addEventListener('click', loadAdminActivityLog);
@@ -6684,6 +6702,23 @@ async function saveCheckinNewPlayerCatalog(){
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Applies the next time a new player logs in on that day.';
   if(!error) loadCheckinNewPlayerCatalog();
+}
+
+// 0132 — admin escape hatch for the new-player 7-day track: rewinds one
+// player's guardians.new_player_checkin_last_day back to 0 via the
+// admin_reset_new_player_checkin RPC (guardians has no owner-UPDATE
+// grant for a plain authenticated client to do this directly — see
+// 0010). Does not touch anything already granted; the player just gets
+// to click through Day 1-7 again starting from their next login.
+async function resetPlayerNewPlayerCheckin(){
+  const status = document.getElementById('resetNewPlayerStatus');
+  const email = document.getElementById('resetNewPlayerEmail').value.trim();
+  if(!email){ status.className = 'status err'; status.textContent = 'Enter an email.'; return; }
+  status.className = 'status'; status.textContent = 'Resetting…';
+  const { data, error } = await supabaseClient.rpc('admin_reset_new_player_checkin', { p_target_email: email });
+  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+  status.className = 'status ok';
+  status.textContent = `Reset — was on day ${data.previousDay}, now back to 0. They'll see Day 1 again next login.`;
 }
 
 // #135 — the generic auto-delivery event-trigger catalog (event_triggers,
