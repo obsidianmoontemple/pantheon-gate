@@ -348,7 +348,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <h2>Player battle stats</h2>
         <p class="hint">Look up one player by email to view and directly edit their Guardian's and Mage's combat stats — the same five numbers (Vitality/Might/Ward/Swiftness/Cunning) everything in Combat, World Boss, Circle Dragons, and Mage Duels reads. For currency/item grants, use the Gifting tab instead — this is stats only.</p>
         <div class="form-row">
-          <div class="field"><label>Player email</label><input type="email" id="playerStatsEmail" style="max-width:240px;"></div>
+          <div class="field"><label>Player</label><select id="playerStatsEmail" style="max-width:280px;"></select></div>
           <button id="playerStatsSearchBtn">Look up</button>
         </div>
         <div class="status" id="playerStatsStatus"></div>
@@ -516,7 +516,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <h3>Reset a player's track</h3>
           <p class="hint">Sets one player's new-player day back to 0, so their next login shows the Day 1 popup again and they can click through the track from the start. Does not claw back rewards already granted — it only lets the track run again.</p>
           <div class="form-row">
-            <div class="field"><label>Player email</label><input type="email" id="resetNewPlayerEmail" style="max-width:240px;"></div>
+            <div class="field"><label>Player</label><select id="resetNewPlayerEmail" style="max-width:280px;"></select></div>
             <button id="resetNewPlayerBtn">Reset to Day 0</button>
           </div>
           <div class="status" id="resetNewPlayerStatus"></div>
@@ -555,7 +555,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <h2>Grant currency to a player</h2>
         <p class="hint">Comp a player directly. They must have signed in (and, for a personal currency, have a guardian) already.</p>
         <div class="form-row">
-          <div class="field"><label>Their email</label><input type="email" id="grantPlayerEmail" style="max-width:220px;"></div>
+          <div class="field"><label>Player</label><select id="grantPlayerEmail" style="max-width:260px;"></select></div>
           <div class="field"><label>Currency</label><select id="grantPlayerCurrency" style="max-width:160px;"></select></div>
           <div class="field"><label>Mode</label>
             <select id="grantPlayerMode" style="max-width:120px;"><option value="delta">Add</option><option value="set">Set to</option></select>
@@ -711,7 +711,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <h2>Redemption log</h2>
         <p class="hint">Every reward, currency, unlock, or bonus a player has actually received — from mail/broadcasts, promo events, signup codes, store purchases, admin grants, and check-ins — in one filterable place. This started tracking automatically the moment this feature shipped; rows from before that were backfilled from whatever each old system already had on hand, and are marked "Backfilled" below. A few backfilled promo-event rows only ever recorded a headcount and total, never who specifically got it — those show as "Aggregate only" and can't be broken out by player, no matter the filter.</p>
         <div class="form-row">
-          <div class="field"><label>Player email</label><input type="email" id="rglFilterEmail" placeholder="leave blank for everyone" style="max-width:220px;"></div>
+          <div class="field"><label>Player</label><select id="rglFilterEmail" style="max-width:260px;"></select></div>
           <div class="field"><label>Source</label>
             <select id="rglFilterSource" style="max-width:160px;">
               <option value="">All sources</option>
@@ -762,7 +762,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           </div>
           <div class="field" id="grantEmailField">
             <label>Their email</label>
-            <input type="email" id="grantEmail" style="max-width:240px;">
+            <select id="grantEmail" style="max-width:280px;"></select>
           </div>
           <div class="field" id="grantCircleNameField" style="display:none;">
             <label>Circle name (exact)</label>
@@ -822,7 +822,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           </div>
           <div class="field" id="broadcastTargetEmailField" style="display:none;">
             <label>Their email</label>
-            <input type="email" id="broadcastTargetEmail" placeholder="player@example.com" style="max-width:220px;">
+            <select id="broadcastTargetEmail" style="max-width:260px;"></select>
           </div>
           <div class="field" id="broadcastTargetCircleField" style="display:none;">
             <label>Circle name (exact)</label>
@@ -1975,8 +1975,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
              Optional, blank by default. -->
         <div class="scroll-table" style="max-height:300px;">
           <table>
-            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Deity's voice (intro)</th><th>Total fragments</th><th>Unlock pantheon</th><th>Unlock deity</th><th>Active</th></tr></thead>
-            <tbody id="artifactRows"><tr><td colspan="8">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Deity's voice (intro)</th><th>Total fragments</th><th>Unlock pantheon</th><th>Unlock deity</th><th>Image URL</th><th>Active</th></tr></thead>
+            <tbody id="artifactRows"><tr><td colspan="9">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -2011,8 +2011,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         </div>
         <div class="scroll-table" style="max-height:420px;">
           <table>
-            <thead><tr><th>#</th><th>Region</th><th>Clue</th><th>Choices (one per line)</th><th>Correct #</th><th>Fun fact</th><th>Deity's voice hint</th><th>Travel hrs</th><th>Active</th></tr></thead>
-            <tbody id="fragmentRows"><tr><td colspan="9">Pick an artifact above.</td></tr></tbody>
+            <thead><tr><th>#</th><th>Region</th><th>Clue</th><th>Choices (one per line)</th><th>Correct #</th><th>Fun fact</th><th>Deity's voice hint</th><th>Travel hrs</th><th>Image URL</th><th>Active</th></tr></thead>
+            <tbody id="fragmentRows"><tr><td colspan="10">Pick an artifact above.</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -2058,8 +2058,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <p class="hint">Completing an artifact earns a unique Altar Item. The player then chooses where it goes — their own Personal Altar (Essence bonus, a self boon) or their Circle's Altar (Devotion bonus, a circle boon) — never both. Bonus % stacks with existing Deity Blessing / Circle Patron Bonus percentages, same as any other altar decoration.</p>
         <div class="scroll-table" style="max-height:300px;">
           <table>
-            <thead><tr><th>Artifact</th><th>Item name</th><th>Description</th><th>Essence bonus % (personal)</th><th>Devotion bonus % (circle)</th><th>Active</th></tr></thead>
-            <tbody id="expAltarItemRows"><tr><td colspan="6">Loading…</td></tr></tbody>
+            <thead><tr><th>Artifact</th><th>Item name</th><th>Description</th><th>Essence bonus % (personal)</th><th>Devotion bonus % (circle)</th><th>Image URL</th><th>Active</th></tr></thead>
+            <tbody id="expAltarItemRows"><tr><td colspan="7">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -2077,6 +2077,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="field" style="max-width:none;">
           <label>Description</label>
           <input type="text" id="newExpAltarItemDescription" style="max-width:none;">
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Image URL (optional)</label>
+          <input type="text" id="newExpAltarItemImage" style="max-width:none;">
         </div>
         <div class="status" id="newExpAltarItemStatus"></div>
       </div>
@@ -2891,8 +2895,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <p class="hint">Same voice as the walkthrough above, but for ongoing progression instead of onboarding — direct feedback: "we need milestone guidance." A row fires as a one-time popup the first time a player's own progress crosses it (Guardian stage reached, Mage level reached, or Campaign chapter count reached), and every row also shows on the player-facing "Ganymede's Guidance" roadmap (reachable from its own Map Hub hotspot) as either earned or still locked. Only Stage key (for a Guardian stage row) or Level threshold (for a Mage level / Campaign level row) matters — leave the other blank.</p>
         <div class="scroll-table" style="max-height:460px;">
           <table>
-            <thead><tr><th>Key</th><th>Category</th><th>Stage key</th><th>Level threshold</th><th>Title</th><th>Body</th><th>Sort</th><th>Active</th></tr></thead>
-            <tbody id="milestoneRows"><tr><td colspan="8">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Category</th><th>Stage key</th><th>Level threshold</th><th>Title</th><th>Body</th><th>Sort</th><th>Image URL</th><th>Active</th></tr></thead>
+            <tbody id="milestoneRows"><tr><td colspan="9">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -2925,6 +2929,10 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="field" style="max-width:none;">
           <label>Body (Ganymede's words, shown on the popup and the roadmap)</label>
           <textarea id="newMilestoneBody" rows="3" style="max-width:none;width:100%;"></textarea>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Image URL (optional — shown on the popup in place of Ganymede's portrait)</label>
+          <input type="text" id="newMilestoneImage" style="max-width:none;">
         </div>
         <div class="status" id="newMilestoneStatus"></div>
       </div>
@@ -3014,7 +3022,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="form-row">
           <div class="field">
             <label>Player email</label>
-            <input type="text" id="fgoTargetEmail" placeholder="player@example.com">
+            <select id="fgoTargetEmail" style="max-width:260px;"></select>
           </div>
           <div class="field">
             <label>Area</label>
@@ -3373,6 +3381,52 @@ const fmt2 = n => (n == null ? '' : (n / 100).toFixed(2));
 const fmtUsd = n => '$' + fmt2(n);
 const ownerLabel = p => (p?.display_name || p?.email || '(unknown)');
 
+// 0133 — direct feedback: "no more searching players by email as i do
+// not always have that info available so please make ALL of those
+// places have a dd list." Every single-player target field across the
+// page (Player battle stats, Reset new-player track, Grant currency,
+// Redemption log filter, Grant/revoke access, Broadcasts' "one player",
+// Feature Gate Override) used to be a free-text email box the admin had
+// to already know by heart. Loaded once at boot (same "small public
+// catalog, cache client-side, look up by key" pattern as bannerPresetCache
+// above) — a brand-new signup won't appear in these pickers until the
+// admin reloads the page, same staleness window every other boot-time
+// catalog here already has. Deliberately NOT touched: the login form's own
+// emailInput (that's the admin's OWN credential, not a lookup), and
+// adminAddEmail on the Admin Access card, which explicitly has to work
+// for someone who HASN'T signed up yet — a dropdown of existing accounts
+// can't offer that.
+let PLAYER_LIST = [];
+async function loadAllPlayers(){
+  const { data, error } = await supabaseClient.from('profiles').select('id, email, display_name').not('email', 'is', null).order('email');
+  if(error){ console.error('player list load failed', error); return; }
+  PLAYER_LIST = data || [];
+}
+// `selected` re-selects whatever email was already chosen (if it's still
+// in the list) so refreshing the cache never silently resets a field the
+// admin already filled in. `placeholder` is the leading blank option's
+// label — most fields want "pick a player", the Redemption log filter
+// wants "everyone" since blank there means "don't filter".
+function playerOptionsHtml(selected, placeholder){
+  const opts = PLAYER_LIST.map(p => {
+    const label = p.display_name ? `${p.display_name} — ${p.email}` : p.email;
+    return `<option value="${esc(p.email)}" ${p.email === selected ? 'selected' : ''}>${esc(label)}</option>`;
+  }).join('');
+  return `<option value="">${esc(placeholder || '— pick a player —')}</option>` + opts;
+}
+// One pass over every player-picker <select> on the page, called once
+// the cache first loads and again any time an admin action could have
+// changed who exists (e.g. Admin Access adding a brand-new account).
+// Each entry's second element is that field's own placeholder wording.
+function refreshAllPlayerPickers(){
+  [['playerStatsEmail', null], ['resetNewPlayerEmail', null], ['grantPlayerEmail', null],
+   ['rglFilterEmail', '— everyone —'], ['grantEmail', null], ['broadcastTargetEmail', null],
+   ['fgoTargetEmail', null]].forEach(([id, placeholder]) => {
+    const sel = document.getElementById(id);
+    if(sel) sel.innerHTML = playerOptionsHtml(sel.value, placeholder);
+  });
+}
+
 let supabaseClient = null;
 let deitySettings = {};
 let pantheonSettings = {};
@@ -3663,6 +3717,7 @@ async function handleSession(session){
   // Store Items) can be built with the full, current list. grantScopeType's
   // own initial populate ran earlier (before login), so refresh it here too.
   refreshAllScopePickers();
+  loadAllPlayers().then(refreshAllPlayerPickers);
   loadSeasonSettings();
   loadSeasonPool();
   loadEntitlements();
@@ -9731,7 +9786,7 @@ function updateNewMilestoneCategoryFields(){
 async function loadMilestonesAdmin(){
   const { data, error } = await supabaseClient.from('milestone_catalog').select('*').order('sort_order', { ascending: true });
   const rows = document.getElementById('milestoneRows');
-  if(error){ rows.innerHTML = '<tr><td colspan="8">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  if(error){ rows.innerHTML = '<tr><td colspan="9">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
   rows.innerHTML = (data || []).map(m => `<tr data-key="${esc(m.key)}">
     <td class="dim">${esc(m.key)}</td>
     <td>
@@ -9751,8 +9806,9 @@ async function loadMilestonesAdmin(){
     <td><input type="text" id="msTitle_${esc(m.key)}" value="${esc(m.title)}" style="max-width:160px;"></td>
     <td><textarea id="msBody_${esc(m.key)}" rows="2" style="max-width:320px;width:100%;">${esc(m.body)}</textarea></td>
     <td><input type="number" id="msSort_${esc(m.key)}" value="${m.sort_order}" style="max-width:70px;"></td>
+    <td><input type="text" id="msImg_${esc(m.key)}" value="${esc(m.image_url || '')}" style="max-width:160px;" placeholder="Image URL"></td>
     <td><input type="checkbox" id="msActive_${esc(m.key)}" ${m.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="8">No milestones yet — run migration 0081.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="9">No milestones yet — run migration 0081.</td></tr>';
 }
 
 async function saveMilestones(){
@@ -9769,6 +9825,7 @@ async function saveMilestones(){
       title: document.getElementById('msTitle_' + key).value.trim(),
       body: document.getElementById('msBody_' + key).value.trim(),
       sort_order: parseInt(document.getElementById('msSort_' + key).value, 10) || 0,
+      image_url: document.getElementById('msImg_' + key).value.trim() || null,
       active: document.getElementById('msActive_' + key).checked,
       updated_at: new Date().toISOString()
     };
@@ -9789,6 +9846,7 @@ async function addMilestone(){
   const title = document.getElementById('newMilestoneTitle').value.trim();
   const body = document.getElementById('newMilestoneBody').value.trim();
   const sortOrder = parseInt(document.getElementById('newMilestoneSort').value, 10) || 0;
+  const imageUrl = document.getElementById('newMilestoneImage').value.trim();
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
   if(!title){ status.className = 'status err'; status.textContent = 'Title is required.'; return; }
@@ -9797,13 +9855,13 @@ async function addMilestone(){
 
   status.className = 'status'; status.textContent = 'Adding…';
   const { error } = await supabaseClient.from('milestone_catalog').insert({
-    key, category, title, body, sort_order: sortOrder, active: true,
+    key, category, title, body, sort_order: sortOrder, active: true, image_url: imageUrl || null,
     stage_key: category === 'guardian_stage' ? stageKey : null,
     level_threshold: category === 'guardian_stage' ? null : parseInt(levelVal, 10),
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
   status.className = 'status ok'; status.textContent = title + ' added.';
-  ['newMilestoneKey','newMilestoneTitle','newMilestoneBody','newMilestoneLevel'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newMilestoneKey','newMilestoneTitle','newMilestoneBody','newMilestoneLevel','newMilestoneImage'].forEach(fid => { document.getElementById(fid).value = ''; });
   document.getElementById('newMilestoneSort').value = '120';
   loadMilestonesAdmin();
 }
@@ -11015,7 +11073,7 @@ async function loadExpeditionArtifacts(){
   const { data, error } = await supabaseClient.from('expedition_artifacts').select('*').order('key', { ascending: true });
   const rows = document.getElementById('artifactRows');
   if(error){
-    rows.innerHTML = '<tr><td colspan="8">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="9">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = (data || []).map(a => `<tr data-key="${esc(a.key)}">
@@ -11026,8 +11084,9 @@ async function loadExpeditionArtifacts(){
     <td><input type="number" min="1" id="artTotal_${esc(a.key)}" value="${a.total_fragments}" style="max-width:80px;"></td>
     <td><select id="artPantheon_${esc(a.key)}" style="max-width:130px;">${pantheonOptionsHtml(a.unlock_pantheon_id)}</select></td>
     <td><select id="artDeity_${esc(a.key)}" style="max-width:150px;">${deityOptionsHtml(a.unlock_deity_id)}</select></td>
+    <td><input type="text" id="artImg_${esc(a.key)}" value="${esc(a.image_url || '')}" style="max-width:180px;" placeholder="Image URL"></td>
     <td><input type="checkbox" id="artActive_${esc(a.key)}" ${a.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="8">No artifacts yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="9">No artifacts yet.</td></tr>';
 
   // Keep the fragment-editor's and Altar Items' artifact pickers in sync.
   const sel = document.getElementById('fragmentArtifactSelect');
@@ -11057,6 +11116,7 @@ async function saveExpeditionArtifacts(){
       total_fragments: parseInt(document.getElementById('artTotal_' + key).value, 10),
       unlock_pantheon_id: document.getElementById('artPantheon_' + key).value.trim(),
       unlock_deity_id: document.getElementById('artDeity_' + key).value.trim(),
+      image_url: document.getElementById('artImg_' + key).value.trim() || null,
       active: document.getElementById('artActive_' + key).checked
     };
   });
@@ -11103,7 +11163,7 @@ async function loadExpeditionFragments(){
 
   const { data, error } = await supabaseClient.from('expedition_fragments').select('*').eq('artifact_key', artifactKey).order('fragment_index', { ascending: true });
   if(error){
-    rows.innerHTML = '<tr><td colspan="9">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="10">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = (data || []).map(f => {
@@ -11118,9 +11178,10 @@ async function loadExpeditionFragments(){
       <td><input type="text" id="fragFact_${rowId}" value="${esc(f.fun_fact || '')}" style="max-width:220px;"></td>
       <td><input type="text" id="fragVoiceHint_${rowId}" value="${esc(f.deity_voice_hint || '')}" style="max-width:220px;"></td>
       <td><input type="number" min="0.5" step="0.5" id="fragHours_${rowId}" value="${f.travel_hours}" style="max-width:80px;"></td>
+      <td><input type="text" id="fragImg_${rowId}" value="${esc(f.image_url || '')}" style="max-width:180px;" placeholder="Image URL"></td>
       <td><input type="checkbox" id="fragActive_${rowId}" ${f.active ? 'checked' : ''}></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="9">No fragments yet for this artifact.</td></tr>';
+  }).join('') || '<tr><td colspan="10">No fragments yet for this artifact.</td></tr>';
 }
 
 async function saveExpeditionFragments(){
@@ -11141,6 +11202,7 @@ async function saveExpeditionFragments(){
       fun_fact: document.getElementById('fragFact_' + rowId).value.trim(),
       deity_voice_hint: document.getElementById('fragVoiceHint_' + rowId).value.trim(),
       travel_hours: parseFloat(document.getElementById('fragHours_' + rowId).value),
+      image_url: document.getElementById('fragImg_' + rowId).value.trim() || null,
       active: document.getElementById('fragActive_' + rowId).checked,
       updated_at: new Date().toISOString()
     };
@@ -11201,7 +11263,7 @@ async function loadExpAltarItems(){
   const { data, error } = await supabaseClient.from('expedition_altar_item_catalog').select('*').order('artifact_key', { ascending: true });
   const rows = document.getElementById('expAltarItemRows');
   if(error){
-    rows.innerHTML = '<tr><td colspan="6">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="7">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   rows.innerHTML = (data || []).map(a => `<tr data-artifact-key="${esc(a.artifact_key)}">
@@ -11210,23 +11272,28 @@ async function loadExpAltarItems(){
     <td><input type="text" id="expAltarDesc_${esc(a.artifact_key)}" value="${esc(a.description || '')}" style="max-width:260px;"></td>
     <td><input type="number" min="0.1" step="0.1" id="expAltarEssencePct_${esc(a.artifact_key)}" value="${a.essence_bonus_pct}" style="max-width:100px;"></td>
     <td><input type="number" min="0.1" step="0.1" id="expAltarDevotionPct_${esc(a.artifact_key)}" value="${a.devotion_bonus_pct}" style="max-width:100px;"></td>
+    <td><input type="text" id="expAltarImg_${esc(a.artifact_key)}" value="${esc(a.image_url || '')}" style="max-width:180px;" placeholder="Image URL"></td>
     <td><input type="checkbox" id="expAltarActive_${esc(a.artifact_key)}" ${a.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="6">No Altar Items yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="7">No Altar Items yet.</td></tr>';
 }
 
 // Keeps the two real, placeable altar decoration catalogs (Personal and
 // Circle) in sync with one Altar Item row — that's what actually makes an
 // earned item placeable, so the admin never has to touch those catalogs
 // directly for these. Mirrors the same-shaped insert the 0123 migration
-// itself runs for the starting set.
-async function syncExpAltarItemMirrors(artifactKey, name, description, essenceBonusPct, devotionBonusPct){
+// itself runs for the starting set. imageUrl (0134) flows into both
+// mirror rows too, so the admin only has to enter the picture once here
+// and it's already in place by the time the item is actually placed on
+// an altar — the pre-placement preview (expedition_altar_item_catalog's
+// own image_url) and the final placed decoration use the same picture.
+async function syncExpAltarItemMirrors(artifactKey, name, description, essenceBonusPct, devotionBonusPct, imageUrl){
   await Promise.all([
     supabaseClient.from('personal_altar_decoration_catalog').upsert({
-      key: 'exalt_' + artifactKey, name, description, source: 'expedition',
+      key: 'exalt_' + artifactKey, name, description, source: 'expedition', image_url: imageUrl || null,
       effect_key: 'essence_bonus_pct', effect_amount: essenceBonusPct
     }, { onConflict: 'key' }),
     supabaseClient.from('altar_decoration_catalog').upsert({
-      key: 'exdec_' + artifactKey, name, description, source: 'expedition',
+      key: 'exdec_' + artifactKey, name, description, source: 'expedition', image_url: imageUrl || null,
       effect_key: 'devotion_bonus_pct', effect_amount: devotionBonusPct
     }, { onConflict: 'key' })
   ]);
@@ -11243,6 +11310,7 @@ async function saveExpAltarItems(){
       description: document.getElementById('expAltarDesc_' + artifactKey).value.trim(),
       essence_bonus_pct: parseFloat(document.getElementById('expAltarEssencePct_' + artifactKey).value),
       devotion_bonus_pct: parseFloat(document.getElementById('expAltarDevotionPct_' + artifactKey).value),
+      image_url: document.getElementById('expAltarImg_' + artifactKey).value.trim() || null,
       active: document.getElementById('expAltarActive_' + artifactKey).checked
     };
   });
@@ -11256,7 +11324,7 @@ async function saveExpAltarItems(){
   status.textContent = 'Saving…';
   const { error } = await supabaseClient.from('expedition_altar_item_catalog').upsert(rows, { onConflict: 'artifact_key' });
   if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
-  await Promise.all(rows.map(r => syncExpAltarItemMirrors(r.artifact_key, r.name, r.description, r.essence_bonus_pct, r.devotion_bonus_pct)));
+  await Promise.all(rows.map(r => syncExpAltarItemMirrors(r.artifact_key, r.name, r.description, r.essence_bonus_pct, r.devotion_bonus_pct, r.image_url)));
   status.className = 'status ok';
   status.textContent = 'Saved.';
   loadExpAltarItems();
@@ -11269,6 +11337,7 @@ async function addExpAltarItem(){
   const description = document.getElementById('newExpAltarItemDescription').value.trim();
   const essencePct = parseFloat(document.getElementById('newExpAltarItemEssencePct').value);
   const devotionPct = parseFloat(document.getElementById('newExpAltarItemDevotionPct').value);
+  const imageUrl = document.getElementById('newExpAltarItemImage').value.trim();
 
   if(!artifactKey){ status.className = 'status err'; status.textContent = 'Pick an artifact above first — add it in Expedition artifacts if it is not listed.'; return; }
   if(!name){ status.className = 'status err'; status.textContent = 'Item name is required.'; return; }
@@ -11279,14 +11348,14 @@ async function addExpAltarItem(){
   status.className = 'status';
   status.textContent = 'Adding…';
   const { error } = await supabaseClient.from('expedition_altar_item_catalog').insert({
-    artifact_key: artifactKey, name, description, essence_bonus_pct: essencePct, devotion_bonus_pct: devotionPct
+    artifact_key: artifactKey, name, description, essence_bonus_pct: essencePct, devotion_bonus_pct: devotionPct, image_url: imageUrl || null
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That artifact already has an Altar Item.' : ('Failed: ' + error.message); return; }
-  await syncExpAltarItemMirrors(artifactKey, name, description, essencePct, devotionPct);
+  await syncExpAltarItemMirrors(artifactKey, name, description, essencePct, devotionPct, imageUrl);
 
   status.className = 'status ok';
   status.textContent = name + ' added for ' + artifactKey + '.';
-  ['newExpAltarItemName','newExpAltarItemDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newExpAltarItemName','newExpAltarItemDescription','newExpAltarItemImage'].forEach(fid => { document.getElementById(fid).value = ''; });
   document.getElementById('newExpAltarItemEssencePct').value = '5';
   document.getElementById('newExpAltarItemDevotionPct').value = '5';
   loadExpAltarItems();
