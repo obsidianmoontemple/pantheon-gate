@@ -1618,6 +1618,57 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
     <div class="tab-content" id="tab-moves">
       <div class="card">
+        <h2>Custom Status Effects (0135)</h2>
+        <p class="hint">Direct feedback: "I need the ability to create new status effects and buffs and boons." The 15 built-in effect keys below (lifesteal_pct, poison_pct, etc.) are still there and unchanged — this is for inventing a brand-new NAMED one without needing any code changes. Pick a mechanical Archetype (the underlying pattern) and parametrize it, then the new effect's Key shows up automatically in every Effect key dropdown below (Move Catalog, Deity Blessings, Guardian Item enchantments) and in Deity Blessings' Defender effect dropdown, wherever that archetype makes sense. Archetypes: <code>dot</code> (damage over time, ticks every round, rest of the fight), <code>stat_mod</code> (a persistent % buff/debuff — or this-hit-only if Stat is "crit_chance" on a move), <code>shield</code> (self-buff absorb pool), <code>stun_chance</code> (% chance to skip the target's next action), <code>lifesteal</code> (heal off damage dealt), <code>heal</code> (replaces the attack with a heal), <code>resource_bonus</code> (a bonus on Essence/Devotion, aura or altar decoration only), <code>power_multiplier</code> (Circle invasion defender/attacker power, Deity Blessing's Defender effect only). Target/Stat/Magnitude mode/Resource/Role only matter for certain archetypes — leave the ones that don't apply blank, they're ignored.</p>
+        <div class="scroll-table" style="max-height:360px;">
+          <table>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Archetype</th><th>Target</th><th>Stat (stat_mod)</th><th>Magnitude mode</th><th>Resource</th><th>Role</th><th>Active</th></tr></thead>
+            <tbody id="statusEffectRows"><tr><td colspan="10">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveStatusEffectsBtn">Save changes</button>
+          <div class="status" id="statusEffectStatus"></div>
+        </div>
+        <h3>Create a new status effect</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newStatusEffectKey" placeholder="e.g. frostbite" style="max-width:150px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newStatusEffectName" placeholder="e.g. Frostbite" style="max-width:160px;"></div>
+          <div class="field"><label>Archetype</label>
+            <select id="newStatusEffectArchetype" style="max-width:150px;">
+              <option value="dot">dot</option>
+              <option value="stat_mod">stat_mod</option>
+              <option value="shield">shield</option>
+              <option value="stun_chance">stun_chance</option>
+              <option value="lifesteal">lifesteal</option>
+              <option value="heal">heal</option>
+              <option value="resource_bonus">resource_bonus</option>
+              <option value="power_multiplier">power_multiplier</option>
+            </select>
+          </div>
+          <div class="field"><label>Target</label>
+            <select id="newStatusEffectTarget" style="max-width:110px;"><option value="opponent">opponent</option><option value="self">self</option></select>
+          </div>
+          <div class="field"><label>Stat (stat_mod only)</label><input type="text" id="newStatusEffectStat" placeholder="e.g. own_might, incoming_damage, crit_chance" style="max-width:200px;"></div>
+          <div class="field"><label>Magnitude mode (dot/heal only)</label>
+            <select id="newStatusEffectMode" style="max-width:130px;"><option value="flat">flat</option><option value="pct_max_hp">pct_max_hp</option></select>
+          </div>
+          <div class="field"><label>Resource (resource_bonus only)</label>
+            <select id="newStatusEffectResource" style="max-width:130px;"><option value="essence">essence</option><option value="devotion">devotion</option></select>
+          </div>
+          <div class="field"><label>Role (power_multiplier only)</label>
+            <select id="newStatusEffectRole" style="max-width:130px;"><option value="defender">defender</option><option value="attacker">attacker</option></select>
+          </div>
+          <button id="addStatusEffectBtn">Create effect</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (admin-facing notes only, never shown to players)</label>
+          <input type="text" id="newStatusEffectDescription" style="max-width:none;">
+        </div>
+        <div class="status" id="newStatusEffectStatus"></div>
+      </div>
+
+      <div class="card">
         <h2>Move Catalog</h2>
         <p class="hint">13-point update item 13: every individual move in the game, defined once here — edit a move's stats and it updates everywhere it's assigned below (an affinity baseline, a species's signature move, or a deity's signature override), no more hunting down the same move in three tables. Kind picks the slot a move can fill: Power (no swiftness shave) or Control (hits softer, shaves the defender's Swiftness for the rest of the fight) need an Affinity (used by the Element Wheel); Basic is the universal fallback strike and has none. Archetype (0086) tags what the move is FOR, independent of Kind: Damage (the default — deals its Power as a hit), Support (heals/buffs the caster — set Power to 0 for a pure heal that deals no damage at all), or Tank (defensive — <code>shield_flat</code> works standalone now instead of only riding on a damage roll). A move can also carry a real triggered effect on top of its damage: <code>lifesteal_pct</code> (heal this % of the hit's damage), <code>stun_pct</code> (this % chance to skip the target's next action), <code>crit_bonus_pct</code> (+this many points of crit chance on this hit), <code>burn_flat</code> (ongoing damage/round for the rest of the fight), <code>poison_pct</code> (a second, independent DoT — this % of the target's max Vitality/round), <code>weaken_pct</code> (cuts the target's own Might by this % for the rest of the fight), <code>vulnerability_pct</code> (the target takes this % more damage from everything for the rest of the fight), <code>shield_flat</code> (self-buff — absorbs your own next this-much total damage taken), <code>heal_flat</code> (0086 — heal the caster this flat amount, no damage dealt), or <code>heal_pct</code> (0086 — heal the caster this % of their own max Vitality, no damage dealt). Role is just a label for where a move is meant to be used — nothing reads it, so any move (including a brand new "custom" one) can be assigned anywhere a dropdown below lets you pick one. Particle (0070) picks which burst sprite plays when this move lands in Campaign, Gauntlet, and PvP — leave it "— affinity default —" to keep the automatic look every other move of that affinity already has, or pick a specific one to make this move stand out.</p>
         <input class="search-box" type="text" id="moveCatalogSearch" placeholder="Search by name or key…">
@@ -3754,6 +3805,7 @@ async function handleSession(session){
   loadPersonalAltarDecorationCatalog();
   loadGauntletOpponents();
   loadBannerPresets();
+  await loadStatusEffectsAdmin(); // must populate CUSTOM_STATUS_EFFECTS before Move/Blessing/Guardian-Item catalogs render their effect-key dropdowns below
   await loadMoveCatalog();
   loadCreaturesList();
   loadAffinityWheel();
@@ -4717,6 +4769,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('saveBannerPresetsBtn').addEventListener('click', saveBannerPresets);
   document.getElementById('addBannerPresetBtn').addEventListener('click', addBannerPresetRow);
+
+  document.getElementById('saveStatusEffectsBtn').addEventListener('click', saveStatusEffects);
+  document.getElementById('addStatusEffectBtn').addEventListener('click', addStatusEffect);
 
   document.getElementById('saveMoveCatalogBtn').addEventListener('click', saveMoveCatalog);
   document.getElementById('addMoveCatalogBtn').addEventListener('click', addMoveCatalogEntry);
@@ -8686,7 +8741,7 @@ async function loadMoveCatalog(){
   const affSel = document.getElementById('newMoveAffinity');
   if(affSel && !affSel.options.length) affSel.innerHTML = AFFINITIES.map(a => `<option value="${a}">${a}</option>`).join('');
   const effSel = document.getElementById('newMoveEffectKey');
-  if(effSel && !effSel.options.length) effSel.innerHTML = effectKeyOptionsHtml(MOVE_EFFECT_OPTIONS, '');
+  if(effSel && !effSel.options.length) effSel.innerHTML = effectKeyOptionsHtml(MOVE_EFFECT_OPTIONS.concat(customEffectOptionsFor('move')), '');
   const particleSel = document.getElementById('newMoveParticleKey');
   if(particleSel && !particleSel.options.length) particleSel.innerHTML = particleKeyOptionsHtml('');
 
@@ -8719,7 +8774,7 @@ async function loadMoveCatalog(){
     </td>
     <td><input type="number" step="0.01" min="0" id="mcPower_${esc(m.key)}" value="${m.power}" style="max-width:90px;"></td>
     <td><input type="number" min="1" id="mcShave_${esc(m.key)}" value="${m.swiftness_shave ?? ''}" style="max-width:90px;"></td>
-    <td><select id="mcEffectKey_${esc(m.key)}" style="max-width:200px;">${effectKeyOptionsHtml(MOVE_EFFECT_OPTIONS, m.effect_key)}</select></td>
+    <td><select id="mcEffectKey_${esc(m.key)}" style="max-width:200px;">${effectKeyOptionsHtml(MOVE_EFFECT_OPTIONS.concat(customEffectOptionsFor('move')), m.effect_key)}</select></td>
     <td><input type="number" step="0.01" id="mcEffectAmt_${esc(m.key)}" value="${m.effect_amount ?? ''}" style="max-width:90px;"></td>
     <td><select id="mcParticleKey_${esc(m.key)}" style="max-width:160px;">${particleKeyOptionsHtml(m.particle_key)}</select></td>
     <td><input type="checkbox" id="mcActive_${esc(m.key)}" ${m.active ? 'checked' : ''}></td>
@@ -10225,9 +10280,9 @@ async function loadDeityBlessings(){
         </select>
       </td>
       <td><input type="number" min="1" id="blsStatAmount_${d.id}" value="${o.stat_amount ?? ''}" style="max-width:90px;"></td>
-      <td><select id="blsEffectKey_${d.id}" style="max-width:220px;">${effectKeyOptionsHtml(AURA_EFFECT_OPTIONS, o.effect_key)}</select></td>
+      <td><select id="blsEffectKey_${d.id}" style="max-width:220px;">${effectKeyOptionsHtml(AURA_EFFECT_OPTIONS.concat(customEffectOptionsFor('aura')), o.effect_key)}</select></td>
       <td><input type="number" step="0.01" id="blsEffectAmount_${d.id}" value="${o.effect_amount ?? ''}" style="max-width:100px;"></td>
-      <td><select id="blsDefenderEffectKey_${d.id}" style="max-width:220px;">${effectKeyOptionsHtml(DEFENDER_EFFECT_OPTIONS, o.defender_effect_key)}</select></td>
+      <td><select id="blsDefenderEffectKey_${d.id}" style="max-width:220px;">${effectKeyOptionsHtml(DEFENDER_EFFECT_OPTIONS.concat(customEffectOptionsFor('defender')), o.defender_effect_key)}</select></td>
       <td><input type="number" step="0.01" id="blsDefenderEffectAmount_${d.id}" value="${o.defender_effect_amount ?? ''}" style="max-width:100px;"></td>
       <td><input type="checkbox" id="blsActive_${d.id}" ${o.active ? 'checked' : ''}></td>
     </tr>`;
@@ -10298,6 +10353,142 @@ function effectKeyOptionsHtml(options, current){
   const known = options.some(o => o.value === cur);
   const all = [{ value: '', label: '(none)' }].concat(options, cur && !known ? [{ value: cur, label: cur + ' (unrecognized)' }] : []);
   return all.map(o => `<option value="${esc(o.value)}" ${o.value === cur ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
+}
+
+// Custom status effects (0135) — "true custom effects": status_effect_catalog
+// rows show up automatically in the fixed-key dropdowns above, filtered to
+// whichever archetypes actually make sense in that context (matches
+// exactly what the edge functions were wired to interpret — see each
+// file's loadStatusEffectCatalog()/applyAuraEffect() comments). Loaded
+// once at boot; effectKeyOptionsForContext() re-derives the merged list
+// live so a freshly-created effect appears everywhere the moment it's
+// saved, without a page reload.
+let CUSTOM_STATUS_EFFECTS = [];
+async function loadStatusEffectsAdmin(){
+  const { data, error } = await supabaseClient.from('status_effect_catalog').select('*').order('key', { ascending: true });
+  const rows = document.getElementById('statusEffectRows');
+  if(error){ if(rows) rows.innerHTML = '<tr><td colspan="10">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  CUSTOM_STATUS_EFFECTS = data || [];
+  if(!rows) return;
+  rows.innerHTML = CUSTOM_STATUS_EFFECTS.map(e => { const p = e.params || {}; return `<tr data-key="${esc(e.key)}">
+    <td class="dim">${esc(e.key)}</td>
+    <td><input type="text" id="seName_${esc(e.key)}" value="${esc(e.name)}" style="max-width:150px;"></td>
+    <td><input type="text" id="seDesc_${esc(e.key)}" value="${esc(e.description || '')}" style="max-width:220px;"></td>
+    <td>
+      <select id="seArchetype_${esc(e.key)}" style="max-width:140px;">
+        ${['dot','stat_mod','shield','stun_chance','lifesteal','heal','resource_bonus','power_multiplier'].map(a => `<option value="${a}" ${a === e.archetype ? 'selected' : ''}>${a}</option>`).join('')}
+      </select>
+    </td>
+    <td><select id="seTarget_${esc(e.key)}" style="max-width:100px;"><option value="opponent" ${p.target !== 'self' ? 'selected' : ''}>opponent</option><option value="self" ${p.target === 'self' ? 'selected' : ''}>self</option></select></td>
+    <td><input type="text" id="seStat_${esc(e.key)}" value="${esc(p.stat || '')}" style="max-width:150px;"></td>
+    <td><select id="seMode_${esc(e.key)}" style="max-width:110px;"><option value="flat" ${p.magnitude_mode !== 'pct_max_hp' && p.mode !== 'pct_max_hp' ? 'selected' : ''}>flat</option><option value="pct_max_hp" ${p.magnitude_mode === 'pct_max_hp' || p.mode === 'pct_max_hp' ? 'selected' : ''}>pct_max_hp</option></select></td>
+    <td><select id="seResource_${esc(e.key)}" style="max-width:110px;"><option value="essence" ${p.resource !== 'devotion' ? 'selected' : ''}>essence</option><option value="devotion" ${p.resource === 'devotion' ? 'selected' : ''}>devotion</option></select></td>
+    <td><select id="seRole_${esc(e.key)}" style="max-width:100px;"><option value="defender" ${p.role !== 'attacker' ? 'selected' : ''}>defender</option><option value="attacker" ${p.role === 'attacker' ? 'selected' : ''}>attacker</option></select></td>
+    <td><input type="checkbox" id="seActive_${esc(e.key)}" ${e.active ? 'checked' : ''}></td>
+  </tr>`; }).join('') || '<tr><td colspan="10">No custom effects yet.</td></tr>';
+}
+
+// Builds this row's params object from its own inputs, keeping only the
+// keys that archetype actually reads (see the edge functions) so a saved
+// row's params stay clean rather than accumulating every field regardless
+// of archetype.
+function buildStatusEffectParams(key, archetype){
+  const target = document.getElementById('seTarget_' + key).value;
+  const stat = document.getElementById('seStat_' + key).value.trim();
+  const mode = document.getElementById('seMode_' + key).value;
+  const resource = document.getElementById('seResource_' + key).value;
+  const role = document.getElementById('seRole_' + key).value;
+  if(archetype === 'dot') return { target, magnitude_mode: mode };
+  if(archetype === 'stat_mod') return { target, stat: stat || undefined };
+  if(archetype === 'heal') return { mode };
+  if(archetype === 'resource_bonus') return { resource };
+  if(archetype === 'power_multiplier') return { role };
+  return {};
+}
+
+async function saveStatusEffects(){
+  const status = document.getElementById('statusEffectStatus');
+  const trs = document.querySelectorAll('#statusEffectRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    const archetype = document.getElementById('seArchetype_' + key).value;
+    return {
+      key,
+      name: document.getElementById('seName_' + key).value.trim(),
+      description: document.getElementById('seDesc_' + key).value.trim(),
+      archetype,
+      params: buildStatusEffectParams(key, archetype),
+      active: document.getElementById('seActive_' + key).checked,
+      updated_at: new Date().toISOString(),
+    };
+  });
+  const badRow = rows.find(r => !r.name);
+  if(badRow){ status.className = 'status err'; status.textContent = `${badRow.key}: name is required.`; return; }
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('status_effect_catalog').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error){ await loadStatusEffectsAdmin(); refreshAllEffectKeyPickers(); }
+}
+
+async function addStatusEffect(){
+  const status = document.getElementById('newStatusEffectStatus');
+  const key = document.getElementById('newStatusEffectKey').value.trim().toLowerCase();
+  const name = document.getElementById('newStatusEffectName').value.trim();
+  const description = document.getElementById('newStatusEffectDescription').value.trim();
+  const archetype = document.getElementById('newStatusEffectArchetype').value;
+  const target = document.getElementById('newStatusEffectTarget').value;
+  const stat = document.getElementById('newStatusEffectStat').value.trim();
+  const mode = document.getElementById('newStatusEffectMode').value;
+  const resource = document.getElementById('newStatusEffectResource').value;
+  const role = document.getElementById('newStatusEffectRole').value;
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+
+  let params = {};
+  if(archetype === 'dot') params = { target, magnitude_mode: mode };
+  else if(archetype === 'stat_mod') params = { target, stat: stat || undefined };
+  else if(archetype === 'heal') params = { mode };
+  else if(archetype === 'resource_bonus') params = { resource };
+  else if(archetype === 'power_multiplier') params = { role };
+
+  status.className = 'status'; status.textContent = 'Creating…';
+  const { error } = await supabaseClient.from('status_effect_catalog').insert({ key, name, description, archetype, params, active: true });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+  status.className = 'status ok'; status.textContent = name + ' created — it now shows up in the matching Effect key dropdowns.';
+  ['newStatusEffectKey','newStatusEffectName','newStatusEffectDescription','newStatusEffectStat'].forEach(fid => { document.getElementById(fid).value = ''; });
+  await loadStatusEffectsAdmin();
+  refreshAllEffectKeyPickers();
+}
+
+// Filters the loaded custom catalog down to whichever archetypes the
+// matching edge function actually interprets in that context (see each
+// file's comments — combat/index.ts's loadStatusEffectCatalog() and
+// applyAuraEffect() lay out exactly which archetype applies where).
+function customEffectOptionsFor(context){
+  const archetypesFor = {
+    move: ['dot', 'stat_mod', 'shield', 'stun_chance', 'lifesteal', 'heal'],
+    aura: ['stat_mod', 'lifesteal', 'resource_bonus'],
+    defender: ['power_multiplier'],
+  }[context] || [];
+  return CUSTOM_STATUS_EFFECTS.filter(e => e.active && archetypesFor.includes(e.archetype))
+    .map(e => ({ value: e.key, label: `${e.key} - ${e.name} (custom ${e.archetype})` }));
+}
+// Re-renders every already-drawn Effect key dropdown in place (used right
+// after a custom effect is created/edited so it appears without a full
+// page reload) — mirrors refreshAllPlayerPickers()'s "preserve current
+// selection" convention.
+function refreshAllEffectKeyPickers(){
+  document.querySelectorAll('select[id^="mcEffectKey_"], #newMoveEffectKey').forEach(sel => {
+    sel.innerHTML = effectKeyOptionsHtml(MOVE_EFFECT_OPTIONS.concat(customEffectOptionsFor('move')), sel.value);
+  });
+  document.querySelectorAll('select[id^="blsEffectKey_"], select[id^="giEnchantKey_"], #newGuardianItemEnchantKey').forEach(sel => {
+    sel.innerHTML = effectKeyOptionsHtml(AURA_EFFECT_OPTIONS.concat(customEffectOptionsFor('aura')), sel.value);
+  });
+  document.querySelectorAll('select[id^="blsDefenderEffectKey_"]').forEach(sel => {
+    sel.innerHTML = effectKeyOptionsHtml(DEFENDER_EFFECT_OPTIONS.concat(customEffectOptionsFor('defender')), sel.value);
+  });
 }
 
 // Same shape as effectKeyOptionsHtml, but the empty option reads as
@@ -10459,7 +10650,7 @@ function updateNewGuardianItemTypeFields(){
   const effectSelect = document.getElementById('newGuardianItemEffect');
   if(!effectSelect.options.length) effectSelect.innerHTML = effectKeyOptionsHtml(CONSUMABLE_EFFECT_OPTIONS, '');
   const enchantSelect = document.getElementById('newGuardianItemEnchantKey');
-  if(!enchantSelect.options.length) enchantSelect.innerHTML = effectKeyOptionsHtml(AURA_EFFECT_OPTIONS, '');
+  if(!enchantSelect.options.length) enchantSelect.innerHTML = effectKeyOptionsHtml(AURA_EFFECT_OPTIONS.concat(customEffectOptionsFor('aura')), '');
 }
 
 // Universal Loot (0103) — a single-row settings table, same singleton
@@ -10518,7 +10709,7 @@ async function loadGuardianItemCatalog(){
     <td><select id="giEffect_${esc(i.key)}" style="max-width:200px;">${effectKeyOptionsHtml(CONSUMABLE_EFFECT_OPTIONS, i.consumable_effect)}</select></td>
     <td><input type="number" step="0.01" min="0.01" id="giConsumableAmount_${esc(i.key)}" value="${i.consumable_amount ?? ''}" style="max-width:100px;"></td>
     <td><input type="number" min="1" id="giDuration_${esc(i.key)}" value="${i.consumable_duration_minutes ?? ''}" style="max-width:100px;"></td>
-    <td><select id="giEnchantKey_${esc(i.key)}" style="max-width:200px;">${effectKeyOptionsHtml(AURA_EFFECT_OPTIONS, i.effect_key)}</select></td>
+    <td><select id="giEnchantKey_${esc(i.key)}" style="max-width:200px;">${effectKeyOptionsHtml(AURA_EFFECT_OPTIONS.concat(customEffectOptionsFor('aura')), i.effect_key)}</select></td>
     <td><input type="number" step="0.01" id="giEnchantAmount_${esc(i.key)}" value="${i.effect_amount ?? ''}" style="max-width:100px;"></td>
     <td><input type="number" min="1" id="giCost_${esc(i.key)}" value="${i.shard_cost}" style="max-width:90px;"></td>
     <td><input type="text" id="giImg_${esc(i.key)}" value="${esc(i.image_url || '')}" style="max-width:180px;"></td>
