@@ -340,6 +340,38 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
   border-radius:6px;padding:8px;
 }
 
+/* Shop grid redesign (0132) — direct feedback: "the shop should be
+   changed from a dropdown to a actual grid that shows what is included
+   in everything from packs to subscription and so we can show the
+   pictures of the deities they are purchasing." Sits inside one of
+   shopPickerBox()'s already-invisible-until-clicked boxes exactly like
+   the old <select> did, so nothing about the reveal mechanic changes —
+   only what's inside once revealed. .shop-tile-wide (Subscriptions,
+   Packs & items — few enough rows to afford a roomier tile with an
+   "includes" line) and the plain .shop-tile (individual gods — a denser
+   grid since there can be many) share the same base look. */
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px;width:100%;}
+.shop-grid.shop-grid-wide{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
+.shop-tile{
+  display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;
+  padding:6px;border:1px solid var(--line);border-radius:6px;
+  background:rgba(10,8,16,0.4);cursor:pointer;
+}
+.shop-tile:hover{border-color:var(--gold-bright,#e6c777);background:rgba(10,8,16,0.6);}
+.shop-tile .stname{font-size:11px;color:var(--parchment,#e8dcc0);line-height:1.2;}
+.shop-tile .stmeta{font-size:9.5px;color:var(--parchment-dim);line-height:1.2;}
+.shop-tile .stprice{font-size:11px;color:var(--gold-bright,#e6c777);font-weight:600;}
+/* Letter-sigil fallback for a deity with no portrait art yet — same
+   "monogram instead of a broken image" idea as gate.html's own .sigil,
+   just scoped to the Shop's own tile markup instead of sharing that
+   class (gate.html's .sigil assumes its own medallion/portrait-frame
+   ancestor sizing; this one takes its size inline per-call instead). */
+.shop-sigil{
+  display:flex;align-items:center;justify-content:center;border-radius:6px;flex-shrink:0;
+  background:rgba(10,8,16,0.6);border:1px solid var(--line);
+  color:var(--gold-bright,#e6c777);font-weight:600;
+}
+
 /* Shop's click-to-reveal pickers (0130) — direct feedback: "those should
    remain invisible unless triggered by my art button." Sits INSIDE an
    already-positioned .map-hotspot-dropdown box (see shopPickerBox()), so
@@ -1444,6 +1476,23 @@ const AFFINITY_COLORS = {
    page doesn't need. Admin-added pantheons/gods get folded in at init. */
 const CATALOG = {"greek": {"label": "Greek", "deities": [["zeus", "Zeus"], ["hera", "Hera"], ["poseidon", "Poseidon"], ["demeter", "Demeter"], ["athena", "Athena"], ["apollo", "Apollo"], ["artemis", "Artemis"], ["ares", "Ares"], ["hephaestus", "Hephaestus"], ["aphrodite", "Aphrodite"], ["hermes", "Hermes"], ["hestia", "Hestia"], ["dionysus", "Dionysus"], ["hades", "Hades"], ["persephone", "Persephone"], ["hecate", "Hecate"], ["nemesis", "Nemesis"], ["morpheus", "Morpheus"]]}, "norse": {"label": "Norse", "deities": [["odin", "Odin"], ["frigg", "Frigg"], ["thor", "Thor"], ["sif", "Sif"], ["loki", "Loki"], ["baldr", "Baldr"], ["tyr", "Tyr"], ["heimdall", "Heimdall"], ["bragi", "Bragi"], ["idunn", "Idunn"], ["vidar", "Vidar"], ["njord", "Njord"], ["freyr", "Freyr"], ["freyja", "Freyja"], ["skadi", "Skadi"], ["hel", "Hel"]]}, "egyptian": {"label": "Egyptian", "deities": [["ra", "Ra"], ["amun", "Amun"], ["ptah", "Ptah"], ["thoth", "Thoth"], ["maat", "Maat"], ["osiris", "Osiris"], ["isis", "Isis"], ["set", "Set"], ["nephthys", "Nephthys"], ["horus", "Horus"], ["anubis", "Anubis"], ["sekhmet", "Sekhmet"], ["hathor", "Hathor"], ["bastet", "Bastet"], ["sobek", "Sobek"], ["nut", "Nut"], ["geb", "Geb"], ["taweret", "Taweret"]]}, "yoruba": {"label": "Yoruba / Orisha", "deities": [["obatala", "Obatala"], ["oduduwa", "Oduduwa"], ["esu", "Esu"], ["ogun", "Ogun"], ["sango", "Sango"], ["oya", "Oya"], ["osun", "Osun"], ["yemoja", "Yemoja"], ["orunmila", "Orunmila"], ["ososi", "Ososi"], ["osanyin", "Osanyin"], ["obaluaye", "Obaluaye"], ["olokun", "Olokun"], ["aganju", "Aganju"], ["ibeji", "Ibeji"], ["osumare", "Osumare"]]}, "celtic": {"label": "Celtic", "deities": [["dagda", "Dagda"], ["morrigan", "Morrigan"], ["brigid", "Brigid"], ["lugh", "Lugh"], ["nuada", "Nuada"], ["airmid", "Airmid"], ["manannan", "Manannan"], ["aengus", "Aengus"], ["oghma", "Oghma"], ["eriu", "Eriu"], ["rhiannon", "Rhiannon"], ["arawn", "Arawn"], ["cerridwen", "Cerridwen"], ["arianrhod", "Arianrhod"], ["gwydion", "Gwydion"], ["math", "Math"], ["bran", "Bran"], ["orddu", "Orddu"], ["cernunnos", "Cernunnos"], ["epona", "Epona"], ["matres", "Matres"], ["taranis", "Taranis"], ["merlin", "Merlin"], ["queenmab", "Queen Mab"]]}, "chinese": {"label": "Chinese", "deities": [["pangu", "Pangu"], ["nuwa", "Nuwa"], ["fuxi", "Fuxi"], ["jadeemperor", "Jade Emperor"], ["xiwangmu", "Xiwangmu"], ["laojun", "Taishang Laojun"], ["shennong", "Shennong"], ["houyi", "Houyi"], ["change", "Chang'e"], ["guanyin", "Guanyin"], ["mazu", "Mazu"], ["guanyu", "Guan Yu"], ["zaojun", "Zao Jun"], ["yanluo", "Yanluo Wang"], ["zhongkui", "Zhong Kui"], ["nezha", "Nezha"], ["wukong", "Sun Wukong"], ["lvdongbin", "Lu Dongbin"], ["zhongliquan", "Zhongli Quan"], ["zhangguolao", "Zhang Guolao"], ["hanxiangzi", "Han Xiangzi"], ["caoguojiu", "Cao Guojiu"], ["litieguai", "Li Tieguai"], ["lancaihe", "Lan Caihe"], ["hexiangu", "He Xiangu"]]}, "dragons": {"label": "Great Dragons", "deities": [["tiamat", "Tiamat"], ["kingu", "Kingu"], ["mushussu", "Mushussu"], ["apep", "Apep"], ["typhon", "Typhon"], ["echidna", "Echidna"], ["python", "Python"], ["ladon", "Ladon"], ["draco", "Draco"], ["colchian", "Colchian Dragon"], ["hydra", "Hydra"], ["jormungandr", "Jormungandr"], ["fafnir", "Fafnir"], ["nidhogg", "Nidhogg"], ["ddraiggoch", "Y Ddraig Goch"], ["barrowwyrm", "Barrow Wyrm"], ["zmey", "Zmey Gorynych"], ["azidahaka", "Azi Dahaka"], ["vritra", "Vritra"], ["vasuki", "Vasuki"], ["shesha", "Shesha"], ["aoguang", "Ao Guang"], ["yinglong", "Yinglong"], ["ryujin", "Ryujin"], ["orochi", "Yamata no Orochi"], ["quetzalcoatl", "Quetzalcoatl"], ["leviathan", "Leviathan"]]}, "lhp": {"label": "Left-Hand Path", "deities": [["lucifer", "Lucifer"], ["satan", "Satan"], ["lilith", "Lilith"], ["samael", "Samael"], ["naamah", "Naamah"], ["belial", "Belial"], ["beelzebub", "Beelzebub"], ["asmodeus", "Asmodeus"], ["astaroth", "Astaroth"], ["azazel", "Azazel"], ["baphomet", "Baphomet"], ["mammon", "Mammon"], ["belphegor", "Belphegor"], ["bael", "Bael"], ["paimon", "Paimon"], ["leviathan", "Leviathan"], ["moloch", "Moloch"], ["adramelech", "Adramelech"], ["lucifuge", "Lucifuge Rofocale"], ["choronzon", "Choronzon"], ["nachash", "Nachash"], ["cain", "Cain"], ["prometheus", "Prometheus"], ["ahriman", "Ahriman"], ["set", "Set"]]}};
 
+// Shop grid redesign (0132) — deity_id -> portrait filename, for the same
+// flat PNGs gate.html's own PANTHEONS blob already points at (art("Name.png"),
+// ART_PATH === "" there so it's just the bare filename). Only includes an
+// entry where that PNG file is actually committed in this repo today —
+// deliberately NOT all 169 CATALOG ids. Right now that's every Greek/
+// Norse/Egyptian/Yoruba deity (the four pantheons with real portrait art)
+// and none of Celtic/Chinese/Dragons/Left-Hand Path, which have never had
+// portrait PNGs added on either page — gate.html's own art() calls for
+// those ids already 404 today and fall back to its onerror sigil, so this
+// is an existing, pre-existing asset gap, not a regression introduced
+// here. shopDeityPortraitUrl() below checks deity_image_overrides (0127)
+// first, so the admin can plug any gap — including these four pantheons —
+// per-deity without touching this map. A missing id here just means
+// shopPortraitHtml() renders the initial-letter sigil immediately instead
+// of the onerror fallback firing after a wasted 404 request.
+const DEITY_PORTRAIT_MAP = {"zeus":"Zeus.png","hera":"Hera.png","poseidon":"Poseidon.png","demeter":"Demeter.png","athena":"Athena.png","apollo":"Apollo.png","artemis":"Artemis.png","ares":"Ares.png","hephaestus":"Hephaestus.png","aphrodite":"Aphrodite.png","hermes":"Hermes.png","hestia":"Hestia.png","dionysus":"Dionysus.png","hades":"Hades.png","persephone":"Persephone.png","hecate":"Hecate.png","nemesis":"Nemesis.png","morpheus":"Morpheus.png","odin":"Odin.png","frigg":"Frigg.png","thor":"Thor.png","sif":"Sif.png","loki":"Loki.png","baldr":"Baldr.png","tyr":"Tyr.png","heimdall":"Heimdall.png","bragi":"Bragi.png","idunn":"Idunn.png","vidar":"Vidar.png","njord":"Njord.png","freyr":"Freyr.png","freyja":"Freyja.png","skadi":"Skadi.png","hel":"Hel.png","ra":"Ra.png","amun":"Amun.png","ptah":"Ptah.png","thoth":"Thoth.png","maat":"Maat.png","osiris":"Osiris.png","isis":"Isis.png","set":"Set.png","nephthys":"Nephthys.png","horus":"Horus.png","anubis":"Anubis.png","sekhmet":"Sekhmet.png","hathor":"Hathor.png","bastet":"Bastet.png","sobek":"Sobek.png","nut":"Nut.png","geb":"Geb.png","taweret":"Taweret.png","obatala":"Obatala.png","oduduwa":"Oduduwa.png","esu":"Esu.png","ogun":"Ogun.png","sango":"Sango.png","oya":"Oya.png","osun":"Osun.png","yemoja":"Yemoja.png","orunmila":"Orunmila.png","ososi":"Ososi.png","osanyin":"Osanyin.png","obaluaye":"Obaluaye.png","olokun":"Olokun.png","aganju":"Aganju.png","ibeji":"Ibeji.png","osumare":"Osumare.png"};
+
 async function loadCustomDeitiesIntoCatalog(){
   const { data: pantheonRows } = await supabaseClient.from('custom_pantheons').select('id, label').eq('active', true);
   (pantheonRows || []).forEach(row => { if(!CATALOG[row.id]) CATALOG[row.id] = { label: row.label, deities: [] }; });
@@ -1996,6 +2045,7 @@ let shopDeitySettings = {};     // deity id -> {price_cents, is_free, for_sale, 
 let shopPantheonSettings = {};  // pantheon id -> {price_cents, for_sale, age_restricted, age_warning}
 let shopStoreItems = [];        // active store_items — message/gift packs
 let shopSubscriptionTiers = []; // active subscription_tiers
+let shopDeityImageOverrides = {}; // 0132 — deity_id -> image_url, from deity_image_overrides (0127), same admin escape hatch gate.html's applyDeityImageOverrides() already uses
 // 0120 — key+name only, just enough for renderMail()'s gift description
 // (describeBroadcastGift()) to name a reward_key/bundle_key gift instead
 // of the old generic "(gift)" tag. Loaded once at login, same "small
@@ -6161,12 +6211,24 @@ async function checkNewPlayerGiftPopup(){
   if(!guardian) return;
   try{
     const { data, error } = await supabaseClient.rpc('checkin_status', { p_guardian_id: guardian.id });
-    if(error || !data || !data.newPlayer) return;
+    // Direct feedback: "the 7 day is still not showing" — this used to
+    // silently return on a real query failure with zero console trace,
+    // the exact same "swallowed DB error looks identical to nothing to
+    // show" bug that turned out to be the actual root cause of the whole
+    // Expeditions location-guessing saga (a missing migration column).
+    // Logging here doesn't fix an underlying DB problem by itself, but it
+    // means a REAL failure is now visible in the console instead of
+    // looking indistinguishable from "this account just isn't eligible
+    // today" — check the browser console after this deploys if the card
+    // still doesn't appear; a message starting with "checkin_status"
+    // means the real bug is server-side, not in this popup's own logic.
+    if(error){ console.error('checkin_status RPC failed', error); return; }
+    if(!data || !data.newPlayer){ console.error('checkin_status returned no newPlayer data', data); return; }
     const np = data.newPlayer;
-    if(!np.active) return; // day 7 already claimed — track is done, never pops again
+    if(!np.active){ console.log('new-player gift track: inactive (day 7 already claimed, or lastGrantedDay >= 7)', np); return; }
     const reachedDay = Math.min(7, np.daysSinceSignup);
     const nextDay = np.lastGrantedDay + 1;
-    if(nextDay > reachedDay) return; // tomorrow's day isn't here yet
+    if(nextDay > reachedDay){ console.log('new-player gift track: next day not reached yet', { nextDay, reachedDay, np }); return; }
     if(newPlayerGiftDismissedDay === nextDay) return; // already closed today's popup this session
     // This RPC round-trip lands after afterLogin()'s own synchronous
     // render() call, so on a brand-new player's very first login,
@@ -6175,14 +6237,15 @@ async function checkNewPlayerGiftPopup(){
     // onboarding walkthrough. Day 1 is still fully claimable; it'll pop
     // normally on this player's next login instead of fighting the Guide
     // for attention on their very first one.
-    if(guideView) return;
+    if(guideView){ console.log('new-player gift track: deferring, the Guide walkthrough is open'); return; }
+    console.log('new-player gift track: showing day', nextDay);
     showNewPlayerGiftPopup(nextDay, np.lastGrantedDay);
   }catch(e){ console.error('new-player gift check failed', e); }
 }
 
 function showNewPlayerGiftPopup(day, lastGrantedDay){
   const el = document.getElementById('newPlayerGiftPopup');
-  if(!el) return;
+  if(!el){ console.error('newPlayerGiftPopup element missing from the DOM'); return; }
   newPlayerGiftShownDay = day;
   document.getElementById('npGiftDay').textContent = day;
   const dots = [];
@@ -6587,6 +6650,50 @@ function shopThumb(url){
 function altarPlotStyle(url){
   return url ? ` style="background-image:linear-gradient(rgba(16,14,22,0.45),rgba(16,14,22,0.72)),url('${esc(url)}');background-size:cover;background-position:center;"` : '';
 }
+// Shop grid redesign (0132) — resolves a deity's portrait the same way
+// gate.html's applyDeityImageOverrides() does: an active deity_image_overrides
+// row wins, else the bare-filename map above, else null (caller shows the
+// letter sigil). Returns a plain filename/URL, not markup.
+function shopDeityPortraitUrl(deityId){
+  return shopDeityImageOverrides[deityId] || DEITY_PORTRAIT_MAP[deityId] || null;
+}
+// Renders either an <img> (with gate.html's same onerror->sigil fallback,
+// using the &quot; HTML-entity trick so the quotes inside the attribute
+// don't collide with the attribute's own delimiters) or, when there's no
+// url at all, the sigil directly — skips a guaranteed-404 request for the
+// many deities (Celtic/Chinese/Dragons/LHP) with no portrait art yet.
+function shopPortraitHtml(url, name, sizePx){
+  const initial = esc((name || '?').trim().charAt(0).toUpperCase() || '?');
+  const size = sizePx || 56;
+  const sigil = `<div class="shop-sigil" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.42)}px;">${initial}</div>`;
+  if(!url) return sigil;
+  return `<img src="${esc(url)}" alt="${esc(name || '')}" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:6px;flex-shrink:0;" onerror="this.outerHTML='<div class=&quot;shop-sigil&quot; style=&quot;width:${size}px;height:${size}px;font-size:${Math.round(size * 0.42)}px;&quot;>${initial}</div>'">`;
+}
+// Same "what does this actually grant" phrasing describeBroadcastGift()
+// already uses for mail gift previews (findDeityNameAnywhere/CATALOG),
+// reused here so a subscription tier's or pack's tile reads consistently
+// with how a gifted version of the same scope already reads elsewhere.
+function shopScopeIncludesLabel(scopeType, scopeId){
+  if(!scopeType || scopeType === 'all') return 'Full site access';
+  if(scopeType === 'pantheon') return (CATALOG[scopeId] ? CATALOG[scopeId].label : scopeId) + ' pantheon access';
+  if(scopeType === 'deity') return findDeityNameAnywhere(scopeId) + ' access';
+  return '';
+}
+// One buy-able tile — subscription tiers and store/message packs share this
+// shape (portrait/icon, name, what's-included line, price, single click to
+// checkout — no separate select+confirm step now that each tile IS the
+// choice). scopeId may be null (the flat "Full site access" plan, the
+// hardcoded message pack) — shopStartCheckout() already treats null as
+// "no specific scope", unchanged from the old select-driven flow.
+function shopBuyTileHtml(type, scopeId, name, priceCents, imageUrl, includesLabel, priceSuffix){
+  const scopeArg = scopeId ? `'${esc(scopeId)}'` : 'null';
+  return `<div class="shop-tile shop-tile-wide" onclick="shopStartCheckout('${esc(type)}', ${scopeArg})">
+    ${shopPortraitHtml(imageUrl, name, 48)}
+    <div class="stname">${esc(name)}</div>
+    ${includesLabel ? `<div class="stmeta">${esc(includesLabel)}</div>` : ''}
+    <div class="stprice">${shopFmtUsd(priceCents)}${priceSuffix || ''}</div>
+  </div>`;
+}
 function shopIsFree(deityId){ const s = shopDeitySettings[deityId]; return s ? s.is_free : false; }
 function shopDeityForSale(deityId){ const s = shopDeitySettings[deityId]; return s ? s.for_sale : true; }
 function shopPantheonForSale(pid){ const s = shopPantheonSettings[pid]; return s ? s.for_sale : true; }
@@ -6630,12 +6737,13 @@ function backFromShop(){
 }
 
 async function loadShopCatalog(){
-  const [{ data: priceRow }, { data: deityRows }, { data: pantheonRows }, { data: items, error: itemsErr }, { data: tiers, error: tiersErr }] = await Promise.all([
+  const [{ data: priceRow }, { data: deityRows }, { data: pantheonRows }, { data: items, error: itemsErr }, { data: tiers, error: tiersErr }, { data: imageOverrides, error: imgErr }] = await Promise.all([
     supabaseClient.from('pricing_settings').select('deity_price_cents, pantheon_price_cents, subscription_price_cents, included_messages_per_month, message_pack_size, message_pack_price_cents').eq('id', 1).maybeSingle(),
     supabaseClient.from('deity_settings').select('deity_id, price_cents, is_free, for_sale, age_restricted, age_warning'),
     supabaseClient.from('pantheon_settings').select('pantheon_id, price_cents, for_sale, age_restricted, age_warning'),
-    supabaseClient.from('store_items').select('id, name, description, price_cents, image_url').eq('active', true).order('sort_order', { ascending: true }),
-    supabaseClient.from('subscription_tiers').select('id, name, description, price_cents, image_url').eq('active', true).order('sort_order', { ascending: true })
+    supabaseClient.from('store_items').select('id, name, description, price_cents, image_url, gift_bonus_messages, gift_scope_type, gift_scope_id').eq('active', true).order('sort_order', { ascending: true }),
+    supabaseClient.from('subscription_tiers').select('id, name, description, price_cents, image_url, grant_scope_type, grant_scope_id').eq('active', true).order('sort_order', { ascending: true }),
+    supabaseClient.from('deity_image_overrides').select('deity_id, image_url, active').eq('active', true)
   ]);
   if(priceRow){
     shopPricing = {
@@ -6649,8 +6757,11 @@ async function loadShopCatalog(){
   (pantheonRows || []).forEach(r => { shopPantheonSettings[r.pantheon_id] = r; });
   if(itemsErr) console.error('store_items fetch failed', itemsErr);
   if(tiersErr) console.error('subscription_tiers fetch failed', tiersErr);
+  if(imgErr) console.error('deity_image_overrides fetch failed', imgErr);
   shopStoreItems = items || [];
   shopSubscriptionTiers = tiers || [];
+  shopDeityImageOverrides = {};
+  (imageOverrides || []).forEach(r => { if(r.image_url) shopDeityImageOverrides[r.deity_id] = r.image_url; });
 }
 
 // 0120 — mail's gift description (describeBroadcastGift()) needs a name
@@ -6791,44 +6902,51 @@ function renderShopBrowse(){
   const app = document.getElementById('app');
   const search = shopDeitySearch.trim().toLowerCase();
 
-  // Subscriptions — the fixed "Full site access" option folded in
-  // alongside admin-authored tiers, one dropdown.
-  const subsOpts = [
-    `<option value="all::">Full site access — ${shopFmtUsd(shopPricing.subscription)}/mo</option>`,
-    ...shopSubscriptionTiers.map(t => `<option value="tier::${esc(t.id)}">${esc(t.name)} — ${shopFmtUsd(t.price_cents)}/mo</option>`)
+  // Subscriptions (0132 — grid, replacing the old dropdown): the fixed
+  // "Full site access" option folded in alongside admin-authored tiers,
+  // each a clickable tile showing its image (or sigil), what it grants,
+  // and its price — one click straight to checkout, no separate confirm
+  // step, same as an individual god's tile already was.
+  const subsTilesHtml = [
+    shopBuyTileHtml('all', null, 'Full site access', shopPricing.subscription, null, 'Every pantheon, every god', '/mo'),
+    ...shopSubscriptionTiers.map(t => shopBuyTileHtml('tier', t.id, t.name, t.price_cents, t.image_url, shopScopeIncludesLabel(t.grant_scope_type, t.grant_scope_id), '/mo'))
   ].join('');
   const subsPickerMarkup = hotspotDropdownMarkup(SHOP_AREAS, shopPickerBox('subs', 'Subscriptions', `
-    <select class="picker-select" id="shopSubsSelect">${subsOpts}</select>
-    <button type="button" onclick="shopBuySelectedSubscription()">Subscribe</button>
+    <div class="shop-grid shop-grid-wide" style="max-height:30vh;overflow-y:auto;">${subsTilesHtml}</div>
   `), 'subsPicker', 'shop');
 
-  // Packs & items — the fixed message pack folded in alongside store
-  // items, one dropdown.
-  const packsOpts = [
-    `<option value="messages::">Message pack — ${shopPricing.packSize} messages — ${shopFmtUsd(shopPricing.packPrice)}</option>`,
-    ...shopStoreItems.map(i => `<option value="store_item::${esc(i.id)}">${esc(i.name)} — ${shopFmtUsd(i.price_cents)}</option>`)
+  // Packs & items (0132 — grid): the fixed message pack folded in
+  // alongside store items, same tile shape as Subscriptions above —
+  // "what's included" here is bonus messages and/or a scope unlock.
+  const packsTilesHtml = [
+    shopBuyTileHtml('messages', null, 'Message pack', shopPricing.packPrice, null, `+${shopPricing.packSize} messages`),
+    ...shopStoreItems.map(i => shopBuyTileHtml('store_item', i.id, i.name, i.price_cents, i.image_url,
+      [i.gift_bonus_messages ? `+${i.gift_bonus_messages} messages` : '', shopScopeIncludesLabel(i.gift_scope_type, i.gift_scope_id) || ''].filter(Boolean).join(' · ') || i.description))
   ].join('');
   const packsPickerMarkup = hotspotDropdownMarkup(SHOP_AREAS, shopPickerBox('packs', 'Packs & items', `
-    <select class="picker-select" id="shopPacksSelect">${packsOpts}</select>
-    <button type="button" onclick="shopBuySelectedPack()">Buy</button>
+    <div class="shop-grid shop-grid-wide" style="max-height:30vh;overflow-y:auto;">${packsTilesHtml}</div>
   `), 'packsPicker', 'shop');
 
-  // Individual gods — the locked live-search exception, same shape as
-  // PvP Browse: a visible text box + scrolling results as one box,
-  // since a <select> can't search-as-you-type. Per-row Buy stays inline
-  // in the results, same as PvP Browse's per-row Challenge.
-  const deityRows = Object.keys(CATALOG).flatMap(pid => CATALOG[pid].deities
+  // Individual gods (0132 — grid, replacing the old scrolling roster
+  // list): still the locked live-search exception, same shape as PvP
+  // Browse — a visible text box + scrolling results as one box, since a
+  // grid can't search-as-you-type either. Each result is now a portrait
+  // tile instead of a text row; per-tile Buy (shopBuyDeity, unchanged —
+  // still runs the age-gate check first) stays a click on the tile.
+  const deityTiles = Object.keys(CATALOG).flatMap(pid => CATALOG[pid].deities
     .filter(([id, name]) => !search || name.toLowerCase().includes(search))
     .filter(([id]) => !isDeityUnlocked(pid, id))
     .filter(([id]) => shopIsFree(id) === false && shopDeityForSale(id) !== false)
-    .map(([id, name]) => `<div class="roster-row">
-      <div><div class="rname">${esc(name)}</div><div class="cblurb">${esc(CATALOG[pid].label)}</div></div>
-      <button class="secondary" onclick="shopBuyDeity('${esc(id)}','${esc(name)}','${esc(pid)}')">${shopFmtUsd(shopDeityPrice(id))}</button>
+    .map(([id, name]) => `<div class="shop-tile" onclick="shopBuyDeity('${esc(id)}','${esc(name)}','${esc(pid)}')">
+      ${shopPortraitHtml(shopDeityPortraitUrl(id), name, 56)}
+      <div class="stname">${esc(name)}</div>
+      <div class="stmeta">${esc(CATALOG[pid].label)}</div>
+      <div class="stprice">${shopFmtUsd(shopDeityPrice(id))}</div>
     </div>`)
   ).join('') || '<p class="hint">No matching gods — everything shown is already unlocked, free, or not currently for sale.</p>';
   const deitySearchMarkup = hotspotDropdownMarkup(SHOP_AREAS, shopPickerBox('deitySearch', 'Search for a god', `
     <input type="text" id="shopDeitySearchInput" placeholder="Search by name…" value="${esc(shopDeitySearch)}" oninput="filterShopDeities(this.value)">
-    <div style="max-height:26vh;overflow-y:auto;width:100%;">${deityRows}</div>
+    <div class="shop-grid" style="max-height:32vh;overflow-y:auto;width:100%;">${deityTiles}</div>
   `), 'deitySearch', 'shop');
 
   // No .hub-overlay panel any more (0129) — direct feedback: "fix the
@@ -6853,19 +6971,10 @@ function renderShopBrowse(){
   `;
 }
 
-function shopBuySelectedSubscription(){
-  const sel = document.getElementById('shopSubsSelect');
-  if(!sel || !sel.value) return;
-  const [type, scopeId] = sel.value.split('::');
-  shopStartCheckout(type, scopeId || null);
-}
-
-function shopBuySelectedPack(){
-  const sel = document.getElementById('shopPacksSelect');
-  if(!sel || !sel.value) return;
-  const [type, scopeId] = sel.value.split('::');
-  shopStartCheckout(type, scopeId || null);
-}
+// shopBuySelectedSubscription()/shopBuySelectedPack() (read a <select>'s
+// value, then checkout) were removed in 0132 — each subscription/pack
+// tile now calls shopStartCheckout() directly from its own onclick,
+// same as an individual god's tile already did via shopBuyDeity().
 
 /* ---------------- campaign (Map hub's "The Divine Realms" title hotspot, Phase 4) ----------------
    Chapters made of encounters — combat (reuses the existing Gauntlet
@@ -11102,76 +11211,93 @@ function renderExpedition(){
   // WRONG place). Direct feedback: "the mage must select from a dropdown
   // list of locations and choose where to journey based on the clue...
   // yes I expect them to travel to the wrong places from time to time."
-  let travelCard = '';
-  if(expeditionStatus){
-    const artifactForStatus = (expeditionCatalog.artifacts || []).find(a => a.key === expeditionStatus.artifactKey);
-    const deityNameForStatus = artifactForStatus ? deityDisplayName(artifactForStatus.unlock_pantheon_id, artifactForStatus.unlock_deity_id) : 'The deity';
-
-    if(expeditionStatus.phase === 'choosing'){
-      const opts = expeditionStatus.options || [];
-      travelCard = `
-        <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
-          <h2>${esc(deityNameForStatus)} speaks</h2>
-          ${expeditionStatus.whisper ? `<p class="hint" style="font-style:italic;">"${esc(expeditionStatus.whisper)}"</p>` : ''}
+  //
+  // Direct follow-up feedback: "when I click consult my quest is at the
+  // bottom of the page and the question is way at the top ... it can be
+  // confusing I feel like consultation should be linked to the same card
+  // no scrolling to find it." This used to be one global "travelCard"
+  // rendered once at the very top of the whole screen, wherever the
+  // artifact list happened to scroll to. Pulled out into a function so it
+  // can instead be built once and then attached directly under the
+  // SPECIFIC artifact row it belongs to, in the artifactCards loop below —
+  // no more hunting between two ends of the page for one expedition.
+  function buildActiveExpeditionCard(status, deityName){
+    if(status.phase === 'choosing'){
+      const opts = status.options || [];
+      return `
+        <div class="card" style="margin-top:6px;text-align:center;">
+          <h2>${esc(deityName)} speaks</h2>
+          ${status.whisper ? `<p class="hint" style="font-style:italic;">"${esc(status.whisper)}"</p>` : ''}
           <p class="hint">Where should the familiar go?</p>
           <select id="expeditionLocationChoice" style="max-width:320px;margin:0 auto;display:block;">
             ${opts.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}
           </select>
           <button class="secondary" style="margin-top:10px;" onclick="doChooseLocation()">Send familiar</button>
         </div>`;
-    } else if(expeditionStatus.phase === 'traveling'){
-      const readyDate = new Date(expeditionStatus.readyAt);
-      travelCard = `
-        <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+    }
+    if(status.phase === 'traveling'){
+      const readyDate = new Date(status.readyAt);
+      return `
+        <div class="card" style="margin-top:6px;text-align:center;">
           <h2>Away following the story</h2>
           <p class="hint">Your familiar is out following the deity's story to the site. It'll be ready to report back at ${readyDate.toLocaleString()}.</p>
           <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
         </div>`;
-    } else if(expeditionStatus.phase === 'trivia'){
-      const choices = expeditionStatus.choices || [];
-      travelCard = `
-        <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
-          <h2>${esc(expeditionStatus.regionName || 'Your familiar has arrived')}</h2>
+    }
+    if(status.phase === 'trivia'){
+      const choices = status.choices || [];
+      return `
+        <div class="card" style="margin-top:6px;text-align:center;">
+          <h2>${esc(status.regionName || 'Your familiar has arrived')}</h2>
           <p class="hint" style="font-style:italic;">The whisper led true.</p>
-          <p>${esc(expeditionStatus.clueText || '')}</p>
+          <p>${esc(status.clueText || '')}</p>
           <div style="display:flex;flex-direction:column;gap:8px;max-width:420px;margin:10px auto 0;">
             ${choices.map((c, i) => `<button class="secondary" onclick="doAnswerExpedition(${i})">${esc(c)}</button>`).join('')}
           </div>
         </div>`;
-    } else if(expeditionStatus.phase === 'wrong-location'){
-      const recoverDate = expeditionStatus.recoversAt ? new Date(expeditionStatus.recoversAt) : null;
-      travelCard = `
-        <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+    }
+    if(status.phase === 'wrong-location'){
+      const recoverDate = status.recoversAt ? new Date(status.recoversAt) : null;
+      return `
+        <div class="card" style="margin-top:6px;text-align:center;">
           <h2>Nothing here</h2>
-          <p class="hint">Your familiar arrives at ${esc(expeditionStatus.chosenLocationName || 'the wrong place')} — the trail led elsewhere. It needs time to recover${recoverDate ? ` before it can travel again, until ${recoverDate.toLocaleString()}` : ''}.</p>
+          <p class="hint">Your familiar arrives at ${esc(status.chosenLocationName || 'the wrong place')} — the trail led elsewhere. It needs time to recover${recoverDate ? ` before it can travel again, until ${recoverDate.toLocaleString()}` : ''}.</p>
           <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
         </div>`;
-    } else if(expeditionStatus.phase === 'recovering'){
-      const recoverDate = expeditionStatus.recoversAt ? new Date(expeditionStatus.recoversAt) : null;
-      travelCard = `
-        <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+    }
+    if(status.phase === 'recovering'){
+      const recoverDate = status.recoversAt ? new Date(status.recoversAt) : null;
+      return `
+        <div class="card" style="margin-top:6px;text-align:center;">
           <h2>Still recovering</h2>
           <p class="hint">Your familiar is still recovering from its last wrong turn${recoverDate ? ` — try again after ${recoverDate.toLocaleString()}` : ''}.</p>
           <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
         </div>`;
-    } else {
-      // Direct feedback: "consult does nothing... it doesnt show the
-      // selection box for locations to travel to." expeditionStatus being
-      // truthy already disables every "Consult" button below (see
-      // hasActiveTrip) — if none of the phases above match (an
-      // unrecognized/unexpected value, e.g. a server response shape this
-      // build doesn't know about yet), that used to silently render
-      // nothing at all: buttons look dead with zero explanation. Surface
-      // it instead so a mismatch like this is visible and reportable
-      // rather than looking like the feature just doesn't work.
-      travelCard = `
-        <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
-          <h2>Your familiar is busy</h2>
-          <p class="hint">This expedition is in an unrecognized state ("${esc(expeditionStatus.phase || 'unknown')}"). Try Check now — if that doesn't clear it, this is worth reporting.</p>
-          <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
-        </div>`;
     }
+    // Direct feedback: "consult does nothing... it doesnt show the
+    // selection box for locations to travel to." expeditionStatus being
+    // truthy already disables every other "Consult" button (see
+    // hasActiveTrip) — if none of the phases above match (an
+    // unrecognized/unexpected value, e.g. a server response shape this
+    // build doesn't know about yet), that used to silently render nothing
+    // at all: buttons look dead with zero explanation. Surface it instead
+    // so a mismatch like this is visible and reportable rather than
+    // looking like the feature just doesn't work.
+    return `
+      <div class="card" style="margin-top:6px;text-align:center;">
+        <h2>Your familiar is busy</h2>
+        <p class="hint">This expedition is in an unrecognized state ("${esc(status.phase || 'unknown')}"). Try Check now — if that doesn't clear it, this is worth reporting.</p>
+        <button class="secondary" onclick="refreshExpeditionStatus()">Check now</button>
+      </div>`;
   }
+
+  // A trip with no artifactKey can't be anchored to a specific card —
+  // every phase the server sends now includes one, but stay defensive
+  // (an older cached response shape, say) rather than silently dropping a
+  // real active expedition on the floor.
+  const unanchoredActiveCard = (expeditionStatus && !expeditionStatus.artifactKey)
+    ? buildActiveExpeditionCard(expeditionStatus, 'Your deity')
+    : '';
 
   const hasActiveTrip = !!expeditionStatus;
   const capReached = expeditionCatalog.expeditionsRemainingToday <= 0;
@@ -11189,10 +11315,21 @@ function renderExpedition(){
       </div>`).join('')}
     </div>` : '';
 
+  // Direct feedback: "when I click consult my quest is at the bottom of
+  // the page and the question is way at the top ... consultation should
+  // be linked to the same card." Find which artifact (if any) the current
+  // trip belongs to, once, so the loop below can attach the live card
+  // directly under that one artifact's row instead of everyone having to
+  // scroll up to a single global card.
+  const activeArtifact = expeditionStatus
+    ? (expeditionCatalog.artifacts || []).find(a => a.key === expeditionStatus.artifactKey)
+    : null;
+
   const artifactCards = (expeditionCatalog.artifacts || []).map(a => {
     const owned = new Set(a.fragmentsOwned || []);
     const complete = owned.size >= a.total_fragments;
     const deityName = deityDisplayName(a.unlock_pantheon_id, a.unlock_deity_id);
+    const isActiveArtifact = !!(expeditionStatus && expeditionStatus.artifactKey === a.key);
     // 0125 — no more picking a fragment number directly: consulting the
     // deity is what starts an attempt, and which fragment it's actually
     // for stays hidden until you either guess right or wrong.
@@ -11201,18 +11338,15 @@ function renderExpedition(){
     // zero explanation for why, so clicking it really does look like
     // nothing happened. Same familiar/same daily cap applies across every
     // artifact, so this reason is identical no matter which artifact's
-    // button it's attached to.
+    // button it's attached to — except when another artifact is the one
+    // actually holding the trip, where naming it directly is clearer than
+    // vague phase text (there's no longer a single "above" card position
+    // every reason text could safely point at).
     let consultDisabledReason = '';
-    if(consultDisabled){
+    if(consultDisabled && !isActiveArtifact){
       if(capReached) consultDisabledReason = `You've used all ${expeditionCatalog.expeditionsPerDay} expeditions for today — try again after the day turns over.`;
-      else {
-        const phase = expeditionStatus && expeditionStatus.phase;
-        if(phase === 'choosing') consultDisabledReason = 'Your familiar is already weighing where to go — pick a destination above.';
-        else if(phase === 'traveling') consultDisabledReason = 'Your familiar is already away on an expedition.';
-        else if(phase === 'trivia') consultDisabledReason = 'Your familiar has arrived — answer its question above.';
-        else if(phase === 'wrong-location' || phase === 'recovering') consultDisabledReason = 'Your familiar is still recovering from its last wrong turn.';
-        else consultDisabledReason = 'Your familiar is already busy with an expedition.';
-      }
+      else if(activeArtifact) consultDisabledReason = `Your familiar is busy with ${esc(activeArtifact.name)} right now.`;
+      else consultDisabledReason = 'Your familiar is already busy with an expedition.';
     }
     const consultButton = complete ? '' : `<button class="secondary" style="margin:2px;" ${consultDisabled ? 'disabled' : ''} onclick="doRequestClue('${esc(a.key)}')">Consult ${esc(deityName)}</button>${consultDisabledReason ? `<div class="hint" style="width:100%;margin:2px 0 0;">${esc(consultDisabledReason)}</div>` : ''}`;
     const statusLabel = complete ? (a.deityAlreadyUnlocked ? 'Unlocked' : 'Complete!') : `${owned.size}/${a.total_fragments} fragments`;
@@ -11223,24 +11357,28 @@ function renderExpedition(){
     const askDeityButton = (owned.size > 0 && !complete)
       ? `<button class="secondary" style="margin:2px;" onclick="openDeityQA('${esc(a.key)}')">Ask ${esc(deityName)} a question</button>`
       : '';
-    return `<div class="roster-row">
-      <div><div class="rname">${esc(a.name)} — ${esc(statusLabel)}</div>
-      <div class="cblurb">${esc(a.description || '')}</div>
-      ${a.deity_voice_intro && !complete ? `<div class="cblurb" style="font-style:italic;margin-top:4px;">"${esc(a.deity_voice_intro)}"</div>` : ''}</div>
-      <div class="ractions" style="flex-wrap:wrap;">${consultButton}${askDeityButton}</div>
+    // When this artifact's Consult button is the one that started the
+    // live trip, the button itself steps aside for the active card below,
+    // attached right here instead of floating elsewhere on the page.
+    const activeCard = isActiveArtifact ? buildActiveExpeditionCard(expeditionStatus, deityName) : '';
+    return `<div style="margin-bottom:6px;">
+      <div class="roster-row">
+        <div><div class="rname">${esc(a.name)} — ${esc(statusLabel)}</div>
+        <div class="cblurb">${esc(a.description || '')}</div>
+        ${a.deity_voice_intro && !complete ? `<div class="cblurb" style="font-style:italic;margin-top:4px;">"${esc(a.deity_voice_intro)}"</div>` : ''}</div>
+        <div class="ractions" style="flex-wrap:wrap;">${isActiveArtifact ? '' : consultButton}${askDeityButton}</div>
+      </div>
+      ${activeCard}
     </div>`;
   }).join('') || '<p class="hint">No expeditions are available right now — check back later.</p>';
 
-  // Direct feedback: "the current expedition should be on the top not
-  // bottom" — travelCard (whatever's actually happening right now: a
-  // clue waiting to be acted on, a familiar traveling, a trivia question,
-  // a wrong-turn recovery) now leads the whole screen, ahead of even the
-  // static intro text, instead of being sandwiched between it and the
-  // artifact list. pendingAltarItems (already-earned, not-yet-placed
-  // rewards) stay grouped right after it — also something to act on now,
-  // not background reading.
+  // pendingAltarItems (already-earned, not-yet-placed rewards) stay near
+  // the top — something to act on now, not background reading.
+  // unanchoredActiveCard is the defensive fallback for the (should no
+  // longer happen) case where a trip is active but couldn't be matched to
+  // any artifact row above.
   app.innerHTML = `
-    ${travelCard}
+    ${unanchoredActiveCard}
     ${pendingAltarCard}
     <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
       <h2>Expeditions</h2>
