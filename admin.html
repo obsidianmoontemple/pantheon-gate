@@ -1148,11 +1148,11 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>Circle Altar — decorations</h2>
-        <p class="hint">source governs how a Circle gets one: buy (spend Devotion here), find (a harvest can drop it — no cost), unlock (a milestone — set Unlock rule to <code>members_10</code>, <code>members_20</code>, <code>members_30</code>, <code>devotion_1000</code>, or <code>devotion_2500</code>, the only rules the edge function currently checks), or dragon (won from a dragon fight — set this decoration as a dragon's "Deco key" over in Big Baddies). Effect % is optional — while this decoration is PLACED on the Circle Altar (not just owned), it adds that many percentage points to the Circle's Devotion yield on every harvest, on top of any Patron Bonus. Leave blank for a purely cosmetic decoration.</p>
+        <p class="hint">source governs how a Circle gets one: buy (spend Devotion here), find (a harvest can drop it — no cost), unlock (a milestone — set Unlock rule to <code>members_10</code>, <code>members_20</code>, <code>members_30</code>, <code>devotion_1000</code>, or <code>devotion_2500</code>, the only rules the edge function currently checks), or dragon (won from a dragon fight — set this decoration as a dragon's "Deco key" over in Big Baddies). Effect key + Effect % are optional together — while this decoration is PLACED on the Circle Altar (not just owned), it adds that many percentage points to the Circle's Devotion yield on every harvest, on top of any Patron Bonus. Effect key defaults to the built-in Devotion bonus; create a custom "resource_bonus" (devotion) status effect under Moves → Custom Status Effects if you want a differently-named/described boon here. Leave the Effect % blank for a purely cosmetic decoration.</p>
         <div class="scroll-table" style="max-height:320px;">
           <table>
-            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Source</th><th>Cost Devotion</th><th>Unlock rule</th><th>Image URL</th><th>Effect %</th><th>Active</th></tr></thead>
-            <tbody id="altarDecorationRows"><tr><td colspan="9">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Source</th><th>Cost Devotion</th><th>Unlock rule</th><th>Image URL</th><th>Effect key</th><th>Effect %</th><th>Active</th></tr></thead>
+            <tbody id="altarDecorationRows"><tr><td colspan="10">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -1173,6 +1173,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           </div>
           <div class="field" id="newAltarDecoCostField"><label>Cost Devotion</label><input type="number" min="1" id="newAltarDecoCost" style="max-width:110px;"></div>
           <div class="field" id="newAltarDecoRuleField" style="display:none;"><label>Unlock rule</label><input type="text" id="newAltarDecoRule" placeholder="e.g. members_10" style="max-width:150px;"></div>
+          <div class="field"><label>Effect key (optional)</label><select id="newAltarDecoEffectKey" style="max-width:200px;"></select></div>
           <div class="field"><label>Effect % (optional)</label><input type="number" step="0.1" min="0" id="newAltarDecoEffectAmount" style="max-width:110px;" placeholder="e.g. 5"></div>
           <button id="addAltarDecoBtn">Add decoration</button>
         </div>
@@ -1220,11 +1221,11 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>Personal Altar — decorations</h2>
-        <p class="hint">Same source vocabulary as the Circle Altar, minus dragon (dragon fights stay Circle-scoped). Unlock rule options the edge function checks: <code>marks_3</code>, <code>marks_6</code> (full Deity Marks), <code>streak_14</code> (check-in streak), <code>essence_500</code> (current Essence balance). Effect % is optional — while this decoration is PLACED on the guardian's Personal Altar (not just owned), it adds that many percentage points to their Essence yield on every harvest, on top of any deity-blessing bonus. Leave blank for a purely cosmetic decoration.</p>
+        <p class="hint">Same source vocabulary as the Circle Altar, minus dragon (dragon fights stay Circle-scoped). Unlock rule options the edge function checks: <code>marks_3</code>, <code>marks_6</code> (full Deity Marks), <code>streak_14</code> (check-in streak), <code>essence_500</code> (current Essence balance). Effect key + Effect % are optional together — while this decoration is PLACED on the guardian's Personal Altar (not just owned), it adds that many percentage points to their Essence yield on every harvest, on top of any deity-blessing bonus. Effect key defaults to the built-in Essence bonus; create a custom "resource_bonus" (essence) status effect under Moves → Custom Status Effects if you want a differently-named/described boon here. Leave the Effect % blank for a purely cosmetic decoration.</p>
         <div class="scroll-table" style="max-height:320px;">
           <table>
-            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Source</th><th>Cost Essence</th><th>Unlock rule</th><th>Image URL</th><th>Effect %</th><th>Active</th></tr></thead>
-            <tbody id="personalAltarDecorationRows"><tr><td colspan="9">Loading…</td></tr></tbody>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Source</th><th>Cost Essence</th><th>Unlock rule</th><th>Image URL</th><th>Effect key</th><th>Effect %</th><th>Active</th></tr></thead>
+            <tbody id="personalAltarDecorationRows"><tr><td colspan="10">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -1244,6 +1245,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           </div>
           <div class="field" id="newPersonalAltarDecoCostField"><label>Cost Essence</label><input type="number" min="1" id="newPersonalAltarDecoCost" style="max-width:110px;"></div>
           <div class="field" id="newPersonalAltarDecoRuleField" style="display:none;"><label>Unlock rule</label><input type="text" id="newPersonalAltarDecoRule" placeholder="e.g. marks_3" style="max-width:150px;"></div>
+          <div class="field"><label>Effect key (optional)</label><select id="newPersonalAltarDecoEffectKey" style="max-width:200px;"></select></div>
           <div class="field"><label>Effect % (optional)</label><input type="number" step="0.1" min="0" id="newPersonalAltarDecoEffectAmount" style="max-width:110px;" placeholder="e.g. 5"></div>
           <button id="addPersonalAltarDecoBtn">Add decoration</button>
         </div>
@@ -3847,12 +3849,12 @@ async function handleSession(session){
   loadDragonCatalog();
   loadWorldBoss();
   loadAltarSeedCatalog();
-  loadAltarDecorationCatalog();
   loadPersonalAltarSeedCatalog();
-  loadPersonalAltarDecorationCatalog();
   loadGauntletOpponents();
   loadBannerPresets();
-  await withBootTimeout(loadStatusEffectsAdmin(), 'loadStatusEffectsAdmin'); // must populate CUSTOM_STATUS_EFFECTS before Move/Blessing/Guardian-Item catalogs render their effect-key dropdowns below
+  await withBootTimeout(loadStatusEffectsAdmin(), 'loadStatusEffectsAdmin'); // must populate CUSTOM_STATUS_EFFECTS before Move/Blessing/Guardian-Item/Altar-Decoration catalogs render their effect-key dropdowns below
+  loadAltarDecorationCatalog();
+  loadPersonalAltarDecorationCatalog();
   await withBootTimeout(loadMoveCatalog(), 'loadMoveCatalog');
   loadCreaturesList();
   loadAffinityWheel();
@@ -8339,9 +8341,11 @@ function updateNewAltarDecoSourceFields(){
 }
 
 async function loadAltarDecorationCatalog(){
+  const newEffSel = document.getElementById('newAltarDecoEffectKey');
+  if(newEffSel && !newEffSel.options.length) newEffSel.innerHTML = effectKeyOptionsHtml(CIRCLE_DECORATION_EFFECT_OPTIONS.concat(customEffectOptionsFor('circle_decoration')), '');
   const { data, error } = await supabaseClient.from('altar_decoration_catalog').select('*').order('key', { ascending: true });
   const rows = document.getElementById('altarDecorationRows');
-  if(error){ rows.innerHTML = '<tr><td colspan="7">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  if(error){ rows.innerHTML = '<tr><td colspan="10">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
   rows.innerHTML = (data || []).map(d => `<tr data-key="${esc(d.key)}">
     <td class="dim">${esc(d.key)}</td>
     <td><input type="text" id="addName_${esc(d.key)}" value="${esc(d.name)}" style="max-width:150px;"></td>
@@ -8357,9 +8361,10 @@ async function loadAltarDecorationCatalog(){
     <td><input type="number" min="1" id="addCost_${esc(d.key)}" value="${d.cost_devotion ?? ''}" style="max-width:90px;"></td>
     <td><input type="text" id="addRule_${esc(d.key)}" value="${esc(d.unlock_rule || '')}" style="max-width:130px;"></td>
     <td><input type="text" id="addImg_${esc(d.key)}" value="${esc(d.image_url || '')}" style="max-width:170px;" placeholder="https://…"></td>
+    <td><select id="addEffectKey_${esc(d.key)}" style="max-width:200px;">${effectKeyOptionsHtml(CIRCLE_DECORATION_EFFECT_OPTIONS.concat(customEffectOptionsFor('circle_decoration')), d.effect_key)}</select></td>
     <td><input type="number" step="0.1" min="0" id="addEffectAmount_${esc(d.key)}" value="${d.effect_amount ?? ''}" style="max-width:80px;" placeholder="e.g. 5"></td>
     <td><input type="checkbox" id="addActive_${esc(d.key)}" ${d.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="9">No decorations yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="10">No decorations yet.</td></tr>';
 }
 
 async function saveAltarDecorationCatalog(){
@@ -8369,6 +8374,7 @@ async function saveAltarDecorationCatalog(){
     const key = tr.getAttribute('data-key');
     const costVal = document.getElementById('addCost_' + key).value;
     const effectVal = document.getElementById('addEffectAmount_' + key).value;
+    const effectKey = document.getElementById('addEffectKey_' + key).value;
     return {
       key,
       name: document.getElementById('addName_' + key).value.trim(),
@@ -8377,7 +8383,7 @@ async function saveAltarDecorationCatalog(){
       cost_devotion: costVal === '' ? null : parseInt(costVal, 10),
       unlock_rule: document.getElementById('addRule_' + key).value.trim() || null,
       image_url: document.getElementById('addImg_' + key).value.trim() || null,
-      effect_key: effectVal === '' ? null : 'devotion_bonus_pct',
+      effect_key: effectVal === '' ? null : (effectKey || 'devotion_bonus_pct'),
       effect_amount: effectVal === '' ? null : parseFloat(effectVal),
       active: document.getElementById('addActive_' + key).checked
     };
@@ -8398,6 +8404,7 @@ async function addAltarDecoration(){
   const costVal = document.getElementById('newAltarDecoCost').value;
   const rule = document.getElementById('newAltarDecoRule').value.trim();
   const imageUrl = document.getElementById('newAltarDecoImageUrl').value.trim();
+  const effectKey = document.getElementById('newAltarDecoEffectKey').value;
   const effectVal = document.getElementById('newAltarDecoEffectAmount').value;
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
@@ -8411,12 +8418,13 @@ async function addAltarDecoration(){
     cost_devotion: source === 'buy' ? parseInt(costVal, 10) : null,
     unlock_rule: source === 'unlock' ? rule : null,
     image_url: imageUrl || null,
-    effect_key: effectVal === '' ? null : 'devotion_bonus_pct',
+    effect_key: effectVal === '' ? null : (effectKey || 'devotion_bonus_pct'),
     effect_amount: effectVal === '' ? null : parseFloat(effectVal)
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
   status.className = 'status ok'; status.textContent = name + ' added to the Circle Altar decoration catalog.';
   ['newAltarDecoKey','newAltarDecoName','newAltarDecoCost','newAltarDecoRule','newAltarDecoDescription','newAltarDecoImageUrl','newAltarDecoEffectAmount'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newAltarDecoEffectKey').value = '';
   loadAltarDecorationCatalog();
 }
 
@@ -8497,9 +8505,11 @@ function updateNewPersonalAltarDecoSourceFields(){
 }
 
 async function loadPersonalAltarDecorationCatalog(){
+  const newEffSel = document.getElementById('newPersonalAltarDecoEffectKey');
+  if(newEffSel && !newEffSel.options.length) newEffSel.innerHTML = effectKeyOptionsHtml(PERSONAL_DECORATION_EFFECT_OPTIONS.concat(customEffectOptionsFor('personal_decoration')), '');
   const { data, error } = await supabaseClient.from('personal_altar_decoration_catalog').select('*').order('key', { ascending: true });
   const rows = document.getElementById('personalAltarDecorationRows');
-  if(error){ rows.innerHTML = '<tr><td colspan="7">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  if(error){ rows.innerHTML = '<tr><td colspan="10">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
   rows.innerHTML = (data || []).map(d => `<tr data-key="${esc(d.key)}">
     <td class="dim">${esc(d.key)}</td>
     <td><input type="text" id="paddName_${esc(d.key)}" value="${esc(d.name)}" style="max-width:150px;"></td>
@@ -8514,9 +8524,10 @@ async function loadPersonalAltarDecorationCatalog(){
     <td><input type="number" min="1" id="paddCost_${esc(d.key)}" value="${d.cost_essence ?? ''}" style="max-width:90px;"></td>
     <td><input type="text" id="paddRule_${esc(d.key)}" value="${esc(d.unlock_rule || '')}" style="max-width:130px;"></td>
     <td><input type="text" id="paddImg_${esc(d.key)}" value="${esc(d.image_url || '')}" style="max-width:170px;" placeholder="https://…"></td>
+    <td><select id="paddEffectKey_${esc(d.key)}" style="max-width:200px;">${effectKeyOptionsHtml(PERSONAL_DECORATION_EFFECT_OPTIONS.concat(customEffectOptionsFor('personal_decoration')), d.effect_key)}</select></td>
     <td><input type="number" step="0.1" min="0" id="paddEffectAmount_${esc(d.key)}" value="${d.effect_amount ?? ''}" style="max-width:80px;" placeholder="e.g. 5"></td>
     <td><input type="checkbox" id="paddActive_${esc(d.key)}" ${d.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="9">No decorations yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="10">No decorations yet.</td></tr>';
 }
 
 async function savePersonalAltarDecorationCatalog(){
@@ -8526,6 +8537,7 @@ async function savePersonalAltarDecorationCatalog(){
     const key = tr.getAttribute('data-key');
     const costVal = document.getElementById('paddCost_' + key).value;
     const effectVal = document.getElementById('paddEffectAmount_' + key).value;
+    const effectKey = document.getElementById('paddEffectKey_' + key).value;
     return {
       key,
       name: document.getElementById('paddName_' + key).value.trim(),
@@ -8534,7 +8546,7 @@ async function savePersonalAltarDecorationCatalog(){
       cost_essence: costVal === '' ? null : parseInt(costVal, 10),
       unlock_rule: document.getElementById('paddRule_' + key).value.trim() || null,
       image_url: document.getElementById('paddImg_' + key).value.trim() || null,
-      effect_key: effectVal === '' ? null : 'essence_bonus_pct',
+      effect_key: effectVal === '' ? null : (effectKey || 'essence_bonus_pct'),
       effect_amount: effectVal === '' ? null : parseFloat(effectVal),
       active: document.getElementById('paddActive_' + key).checked
     };
@@ -8555,6 +8567,7 @@ async function addPersonalAltarDecoration(){
   const costVal = document.getElementById('newPersonalAltarDecoCost').value;
   const rule = document.getElementById('newPersonalAltarDecoRule').value.trim();
   const imageUrl = document.getElementById('newPersonalAltarDecoImageUrl').value.trim();
+  const effectKey = document.getElementById('newPersonalAltarDecoEffectKey').value;
   const effectVal = document.getElementById('newPersonalAltarDecoEffectAmount').value;
 
   if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
@@ -8568,12 +8581,13 @@ async function addPersonalAltarDecoration(){
     cost_essence: source === 'buy' ? parseInt(costVal, 10) : null,
     unlock_rule: source === 'unlock' ? rule : null,
     image_url: imageUrl || null,
-    effect_key: effectVal === '' ? null : 'essence_bonus_pct',
+    effect_key: effectVal === '' ? null : (effectKey || 'essence_bonus_pct'),
     effect_amount: effectVal === '' ? null : parseFloat(effectVal)
   });
   if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
   status.className = 'status ok'; status.textContent = name + ' added to the Personal Altar decoration catalog.';
   ['newPersonalAltarDecoKey','newPersonalAltarDecoName','newPersonalAltarDecoCost','newPersonalAltarDecoRule','newPersonalAltarDecoDescription','newPersonalAltarDecoImageUrl','newPersonalAltarDecoEffectAmount'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newPersonalAltarDecoEffectKey').value = '';
   loadPersonalAltarDecorationCatalog();
 }
 
@@ -10494,17 +10508,28 @@ async function addStatusEffect(){
   refreshAllEffectKeyPickers();
 }
 
-// Filters the loaded custom catalog down to whichever archetypes the
-// matching edge function actually interprets in that context (see each
-// file's comments — combat/index.ts's loadStatusEffectCatalog() and
-// applyAuraEffect() lay out exactly which archetype applies where).
+// Filters the loaded custom catalog down to whichever effects the matching
+// edge function actually interprets in that context (see each file's
+// comments — combat/index.ts's loadStatusEffectCatalog() and
+// applyAuraEffect() lay out exactly which archetype applies where). Most
+// contexts only care about archetype; resource_bonus additionally needs
+// checking WHICH resource (essence vs devotion) — an aura only ever folds
+// essence into aura.essenceBonusPct (personal-altar path), and a Circle
+// Altar decoration only ever folds devotion into the Circle's own yield,
+// so a devotion-flavored custom effect showing up in the Aura dropdown (or
+// an essence-flavored one in the Circle Decoration dropdown) would just
+// silently do nothing if picked there — filtered out here instead.
 function customEffectOptionsFor(context){
-  const archetypesFor = {
-    move: ['dot', 'stat_mod', 'shield', 'stun_chance', 'lifesteal', 'heal'],
-    aura: ['stat_mod', 'lifesteal', 'resource_bonus'],
-    defender: ['power_multiplier'],
-  }[context] || [];
-  return CUSTOM_STATUS_EFFECTS.filter(e => e.active && archetypesFor.includes(e.archetype))
+  const resourceOf = e => e.params?.resource || 'essence';
+  const predicates = {
+    move: e => ['dot', 'stat_mod', 'shield', 'stun_chance', 'lifesteal', 'heal'].includes(e.archetype),
+    aura: e => ['stat_mod', 'lifesteal'].includes(e.archetype) || (e.archetype === 'resource_bonus' && resourceOf(e) === 'essence'),
+    defender: e => e.archetype === 'power_multiplier',
+    circle_decoration: e => e.archetype === 'resource_bonus' && resourceOf(e) === 'devotion',
+    personal_decoration: e => e.archetype === 'resource_bonus' && resourceOf(e) === 'essence',
+  };
+  const pred = predicates[context] || (() => false);
+  return CUSTOM_STATUS_EFFECTS.filter(e => e.active && pred(e))
     .map(e => ({ value: e.key, label: `${e.key} - ${e.name} (custom ${e.archetype})` }));
 }
 // Re-renders every already-drawn Effect key dropdown in place (used right
@@ -10520,6 +10545,19 @@ function refreshAllEffectKeyPickers(){
   });
   document.querySelectorAll('select[id^="blsDefenderEffectKey_"]').forEach(sel => {
     sel.innerHTML = effectKeyOptionsHtml(DEFENDER_EFFECT_OPTIONS.concat(customEffectOptionsFor('defender')), sel.value);
+  });
+  // Direct feedback: "alter [altar] items are showing effect percentage but
+  // nowhere to set the bonus effect" — the Effect % column on both Altar
+  // Decoration catalogs was always secretly hardcoded to one fixed key
+  // (devotion_bonus_pct / essence_bonus_pct) with no visible control at
+  // all. Now an actual Effect key dropdown, same pattern as everywhere
+  // else — the one built-in option plus any matching custom resource_bonus
+  // effects.
+  document.querySelectorAll('select[id^="addEffectKey_"], #newAltarDecoEffectKey').forEach(sel => {
+    sel.innerHTML = effectKeyOptionsHtml(CIRCLE_DECORATION_EFFECT_OPTIONS.concat(customEffectOptionsFor('circle_decoration')), sel.value);
+  });
+  document.querySelectorAll('select[id^="paddEffectKey_"], #newPersonalAltarDecoEffectKey').forEach(sel => {
+    sel.innerHTML = effectKeyOptionsHtml(PERSONAL_DECORATION_EFFECT_OPTIONS.concat(customEffectOptionsFor('personal_decoration')), sel.value);
   });
 }
 
@@ -10595,6 +10633,20 @@ const CIRCLE_PATRON_EFFECT_OPTIONS = [
 const DEFENDER_EFFECT_OPTIONS = [
   { value: 'defense_power_pct', label: 'defense_power_pct - N% more total defending power, this invasion only' },
   { value: 'attacker_power_penalty_pct', label: 'attacker_power_penalty_pct - N% less total attacking power, this invasion only' },
+];
+// Wired by circle/index.ts's placedCircleDecorationBonusPct — the ONE
+// built-in option every Circle Altar decoration's Effect % has always
+// secretly meant. A custom resource_bonus (devotion) effect can be picked
+// instead — see customEffectOptionsFor('circle_decoration').
+const CIRCLE_DECORATION_EFFECT_OPTIONS = [
+  { value: 'devotion_bonus_pct', label: 'devotion_bonus_pct - N% more Devotion on Circle Altar harvests, while placed' },
+];
+// Wired by personal-altar/index.ts's placedDecorationBonusPct — the ONE
+// built-in option every Personal Altar decoration's Effect % has always
+// secretly meant. A custom resource_bonus (essence) effect can be picked
+// instead — see customEffectOptionsFor('personal_decoration').
+const PERSONAL_DECORATION_EFFECT_OPTIONS = [
+  { value: 'essence_bonus_pct', label: 'essence_bonus_pct - N% more Essence on Personal Altar harvests, while placed' },
 ];
 // Wired by craft/index.ts's use-item action — grants Consumable amount of
 // that currency immediately, no separate step. heal_hp (13-point update
