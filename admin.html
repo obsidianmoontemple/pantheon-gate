@@ -8903,6 +8903,18 @@ async function addGauntletOpponent(){
 
 let bannerPresetCache = [];
 
+// The Preview column below calls shopThumb() to render a small image
+// thumbnail — that helper already exists in index.html (the Shop grid
+// uses it the same way) but was never actually copied into this file,
+// which is the real reason this card stayed stuck on "Loading…": the
+// data loaded fine, but building each row's HTML threw a plain
+// ReferenceError before rows.innerHTML was ever assigned, and — until
+// this call was wrapped in withBootTimeout() — that failure had nowhere
+// to surface, not even a console error. Same rendering, copied in.
+function shopThumb(url){
+  return url ? `<img src="${esc(url)}" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:4px;border:1px solid var(--line);flex-shrink:0;">` : '';
+}
+
 async function loadBannerPresets(){
   const { data, error } = await supabaseClient.from('circle_banner_presets').select('*').order('sort_order', { ascending: true });
   const rows = document.getElementById('bannerPresetRows');
