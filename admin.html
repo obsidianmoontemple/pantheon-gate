@@ -602,11 +602,11 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
 
       <div class="card">
         <h2>Promo events</h2>
-        <p class="hint">A named, time-boxed campaign — set it up ahead of time as a draft, flip it active, then run it (possibly more than once, e.g. once a day of an event week). Distribution reuses the same currency handlers as the grant forms.</p>
+        <p class="hint">A named, time-boxed campaign — set it up ahead of time as a draft, then flip it to active. Players claim it themselves on the Promo page once it's active and inside its start/end window (each person can only claim it once) — there's no admin "run" step anymore, so nothing here can double-grant. Flip a still-active event to "ended" (or set an end date) once you want claims to stop.</p>
         <div class="scroll-table" style="max-height:340px;">
           <table>
-            <thead><tr><th>Event</th><th>Currency / amount</th><th>Scope</th><th>Status</th><th>Runs</th><th></th></tr></thead>
-            <tbody id="promoRows"><tr><td colspan="6">Loading…</td></tr></tbody>
+            <thead><tr><th>Event</th><th>Currency / amount</th><th>Scope</th><th>Status</th><th>Claimed by</th></tr></thead>
+            <tbody id="promoRows"><tr><td colspan="5">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="status" id="promoStatus"></div>
@@ -1258,6 +1258,46 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <input type="text" id="newPersonalAltarDecoImageUrl" style="max-width:none;" placeholder="https://…">
         </div>
         <div class="status" id="newPersonalAltarDecoStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Altar expansions (purchasable slot tiers)</h2>
+        <p class="hint">A stackable ladder of extra plots on top of each altar's base grid (12 for Personal, 20 for Circle) — players buy tiers in order, lowest Tier order first within a scope, and each purchase is permanent. Payment type currency spends Essence (Personal) or Devotion (Circle) directly in-app; real_money tiers aren't priced here at all — leave Cost blank and instead create a matching store item over in Pricing &amp; Store, using its "Also grant an altar expansion tier?" picker to link back to this tier (the Store item column below shows the link once that's done, but is read-only from this side).</p>
+        <div class="scroll-table" style="max-height:340px;">
+          <table>
+            <thead><tr><th>Altar</th><th>Tier order</th><th>Name</th><th>Description</th><th>Slots granted</th><th>Payment type</th><th>Cost</th><th>Store item</th><th>Active</th></tr></thead>
+            <tbody id="altarExpansionTierRows"><tr><td colspan="9">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveAltarExpansionTiersBtn">Save changes</button>
+          <div class="status" id="altarExpansionTierStatus"></div>
+        </div>
+        <h3>Add a new tier</h3>
+        <div class="form-row">
+          <div class="field"><label>Altar</label>
+            <select id="newExpansionTierScope" style="max-width:140px;">
+              <option value="personal">Personal Altar</option>
+              <option value="circle">Circle Altar</option>
+            </select>
+          </div>
+          <div class="field"><label>Tier order</label><input type="number" min="1" id="newExpansionTierOrder" value="1" style="max-width:100px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newExpansionTierName" style="max-width:160px;"></div>
+          <div class="field"><label>Slots granted</label><input type="number" min="1" id="newExpansionTierSlots" style="max-width:110px;"></div>
+          <div class="field"><label>Payment type</label>
+            <select id="newExpansionTierPaymentType" style="max-width:140px;" onchange="updateNewExpansionTierPaymentFields();">
+              <option value="currency">currency</option>
+              <option value="real_money">real_money</option>
+            </select>
+          </div>
+          <div class="field" id="newExpansionTierCostField"><label>Cost (Essence/Devotion)</label><input type="number" min="1" id="newExpansionTierCost" style="max-width:140px;"></div>
+          <button id="addExpansionTierBtn">Add tier</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (shown to players)</label>
+          <input type="text" id="newExpansionTierDescription" style="max-width:none;">
+        </div>
+        <div class="status" id="newExpansionTierStatus"></div>
       </div>
     </div>
 
@@ -2623,6 +2663,12 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <label>Also hand out a reward bundle? (optional)</label>
             <select id="newItemGiftBundleKey" style="max-width:220px;"><option value="">Nothing — no reward bundle</option></select>
           </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Also grant an altar expansion tier? (optional)</label>
+            <select id="newItemAltarExpansionTierId" style="max-width:260px;"><option value="">Nothing — no altar expansion</option></select>
+          </div>
           <div class="field">
             <label>Image URL (optional)</label>
             <input type="text" id="newItemImageUrl" placeholder="https://…" style="max-width:280px;">
@@ -3516,6 +3562,7 @@ let deitySettings = {};
 let pantheonSettings = {};
 let currencyDefs = {}; // key -> row, refreshed by loadCurrencyDefinitions()
 let storeItemsCache = []; // active store_items rows, refreshed by loadStoreItems() — also feeds the broadcast "give away a store item" picker
+let altarExpansionTiersCache = []; // all altar_expansion_tiers rows (active + inactive), refreshed by loadAltarExpansionTiers() — feeds the Store Items "also grant an altar expansion tier" picker
 let giftableRewardsCache = []; // active giftable_rewards rows, refreshed by loadGiftableRewards() — feeds the "Reward package" pickers in broadcasts, store items, and the check-in calendar
 let giftableRewardBundlesCache = []; // active+inactive giftable_reward_bundles rows, refreshed by loadRewardBundles() — feeds the "Reward bundle" pickers in broadcasts, store items, and the check-in calendar
 
@@ -3802,7 +3849,13 @@ async function handleSession(session){
   await withBootTimeout(loadCurrencyDefinitions(), 'loadCurrencyDefinitions');
   await withBootTimeout(loadGiftableRewards(), 'loadGiftableRewards');
   await withBootTimeout(loadRewardBundles(), 'loadRewardBundles');
-  loadStoreItems();
+  await withBootTimeout(loadAltarExpansionTiers(), 'loadAltarExpansionTiers'); // must populate altarExpansionTiersCache before loadStoreItems() renders its "Altar expansion: X" row labels
+  // loadAltarExpansionTiers()'s own row rendering wants storeItemsCache too (to
+  // show which store item currently sells a real_money tier) -- a mutual
+  // dependency, same shape as the earlier CUSTOM_STATUS_EFFECTS/Altar-Decoration
+  // boot-ordering issue. Re-render it once storeItemsCache exists so that column
+  // is accurate on first load instead of only after the next manual refresh.
+  loadStoreItems().then(loadAltarExpansionTiers);
   await withBootTimeout(loadCustomPantheonsIntoCatalog(), 'loadCustomPantheonsIntoCatalog');
   loadPantheonSettings();
   loadCustomPantheonsList();
@@ -4752,6 +4805,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addPersonalAltarDecoBtn').addEventListener('click', addPersonalAltarDecoration);
   document.getElementById('newPersonalAltarDecoSource').addEventListener('change', updateNewPersonalAltarDecoSourceFields);
   updateNewPersonalAltarDecoSourceFields();
+  document.getElementById('saveAltarExpansionTiersBtn').addEventListener('click', saveAltarExpansionTiers);
+  document.getElementById('addExpansionTierBtn').addEventListener('click', addAltarExpansionTier);
+  updateNewExpansionTierPaymentFields();
 
   document.getElementById('saveSpeciesCatalogBtn').addEventListener('click', saveSpeciesCatalog);
   document.getElementById('addSpeciesBtn').addEventListener('click', addSpeciesCatalogEntry);
@@ -5455,7 +5511,7 @@ async function loadStoreItems(){
   const rows = document.getElementById('itemRows');
   const { data, error } = await supabaseClient
     .from('store_items')
-    .select('id, name, price_cents, gift_bonus_messages, gift_scope_type, gift_scope_id, gift_currency_key, gift_currency_amount, gift_reward_key, gift_bundle_key, active')
+    .select('id, name, price_cents, gift_bonus_messages, gift_scope_type, gift_scope_id, gift_currency_key, gift_currency_amount, gift_reward_key, gift_bundle_key, gift_altar_expansion_tier_id, active')
     .eq('active', true)
     .order('sort_order', { ascending: true });
   if(error){
@@ -5475,6 +5531,10 @@ async function loadStoreItems(){
     if(i.gift_currency_key) parts.push('+' + i.gift_currency_amount + ' ' + (currencyDefs[i.gift_currency_key]?.name || i.gift_currency_key));
     if(i.gift_reward_key) parts.push(giftableRewardsCache.find(r => r.key === i.gift_reward_key)?.name || i.gift_reward_key);
     if(i.gift_bundle_key) parts.push('Bundle: ' + (giftableRewardBundlesCache.find(b => b.bundle_key === i.gift_bundle_key)?.name || i.gift_bundle_key));
+    if(i.gift_altar_expansion_tier_id){
+      const tier = altarExpansionTiersCache.find(t => t.id === i.gift_altar_expansion_tier_id);
+      parts.push(tier ? `Altar expansion: ${tier.scope === 'personal' ? 'Personal' : 'Circle'} — ${tier.name} (+${tier.slots_granted} slots)` : 'Altar expansion (tier no longer exists)');
+    }
     return `<tr>
       <td>${esc(i.name)}</td>
       <td class="dim">${fmtUsd(i.price_cents)}</td>
@@ -5497,6 +5557,7 @@ async function addStoreItem(){
   const giftAmountVal = document.getElementById('newItemGiftAmount').value.trim();
   const giftRewardKey = document.getElementById('newItemRewardKey').value;
   const giftBundleKey = document.getElementById('newItemGiftBundleKey').value;
+  const giftAltarExpansionTierId = document.getElementById('newItemAltarExpansionTierId').value;
   const imageUrl = document.getElementById('newItemImageUrl').value.trim();
 
   if(!/^[a-z0-9]+$/.test(id)){
@@ -5522,9 +5583,9 @@ async function addStoreItem(){
       return;
     }
   }
-  if(!bonus && !grantType && !giftCurrency && !giftRewardKey && !giftBundleKey){
+  if(!bonus && !grantType && !giftCurrency && !giftRewardKey && !giftBundleKey && !giftAltarExpansionTierId){
     status.className = 'status err';
-    status.textContent = 'Give it bonus messages, an unlock, a currency grant, a reward package/bundle, or some combination — it needs to grant something.';
+    status.textContent = 'Give it bonus messages, an unlock, a currency grant, a reward package/bundle, an altar expansion, or some combination — it needs to grant something.';
     return;
   }
 
@@ -5539,6 +5600,7 @@ async function addStoreItem(){
     gift_currency_amount: giftAmount,
     gift_reward_key: giftRewardKey || null,
     gift_bundle_key: giftBundleKey || null,
+    gift_altar_expansion_tier_id: giftAltarExpansionTierId || null,
     image_url: imageUrl || null
   });
   if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
@@ -5550,6 +5612,7 @@ async function addStoreItem(){
   document.getElementById('newItemGiftCurrency').value = '';
   document.getElementById('newItemRewardKey').value = '';
   document.getElementById('newItemGiftBundleKey').value = '';
+  document.getElementById('newItemAltarExpansionTierId').value = '';
   updateNewItemGrantField();
   updateNewItemGiftCurrencyField();
   loadStoreItems();
@@ -7086,38 +7149,36 @@ async function saveCheckinBackdayPricing(){
 }
 
 let promoEvents = [];
-let promoRuns = {};
+let promoClaimCounts = {}; // event_id -> number of players who've claimed it
 
 async function loadPromoEvents(){
-  const [{ data: events, error: evErr }, { data: runs, error: runErr }] = await Promise.all([
+  // 0137 — Promo Events moved from admin-push ("Run now") to player claim
+  // (claim_promo_event(), own Promo page). promo_event_runs is retired
+  // (dormant, left in place for old history — see 0137's migration note);
+  // "Claimed by" here reads the new promo_claims table instead.
+  const [{ data: events, error: evErr }, { data: claims, error: claimErr }] = await Promise.all([
     supabaseClient.from('promo_events').select('*').order('created_at', { ascending: false }),
-    supabaseClient.from('promo_event_runs').select('event_id, recipient_count, total_granted, run_at').order('run_at', { ascending: false })
+    supabaseClient.from('promo_claims').select('promo_event_id')
   ]);
 
   const rows = document.getElementById('promoRows');
   if(evErr){
-    rows.innerHTML = '<tr><td colspan="6">Failed to load: ' + esc(evErr.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(evErr.message) + '</td></tr>';
     return;
   }
   promoEvents = events || [];
-  promoRuns = {};
-  (runs || []).forEach(r => {
-    if(!promoRuns[r.event_id]) promoRuns[r.event_id] = [];
-    promoRuns[r.event_id].push(r);
-  });
+  promoClaimCounts = {};
+  if(!claimErr){
+    (claims || []).forEach(c => { promoClaimCounts[c.promo_event_id] = (promoClaimCounts[c.promo_event_id] || 0) + 1; });
+  }
 
   if(!promoEvents.length){
-    rows.innerHTML = '<tr><td colspan="6">No promo events yet.</td></tr>';
+    rows.innerHTML = '<tr><td colspan="5">No promo events yet.</td></tr>';
     return;
   }
 
   rows.innerHTML = promoEvents.map(ev => {
     const cur = currencyDefs[ev.currency_key];
-    const runsForEvent = promoRuns[ev.id] || [];
-    const lastRun = runsForEvent[0];
-    const runsSummary = runsForEvent.length
-      ? `${runsForEvent.length} run(s), last ${new Date(lastRun.run_at).toLocaleDateString()} (${lastRun.recipient_count} recipients, ${lastRun.total_granted} total)`
-      : 'Never run';
     // An event can carry a currency, a reward package, a reward bundle, or
     // any combination — show whichever are actually set instead of
     // assuming currency is always present.
@@ -7141,8 +7202,7 @@ async function loadPromoEvents(){
         </select>
         <button class="small" onclick="updatePromoStatus('${esc(ev.id)}')">Save</button>
       </td>
-      <td class="dim">${esc(runsSummary)}</td>
-      <td><button class="small" onclick="runPromoEventAction('${esc(ev.id)}')">Run now</button></td>
+      <td class="dim">${promoClaimCounts[ev.id] || 0}</td>
     </tr>`;
   }).join('');
 }
@@ -7155,17 +7215,6 @@ async function updatePromoStatus(eventId){
   const result = await callAdmin('update-promo-event', { eventId, status: newStatus });
   status.className = result.ok ? 'status ok' : 'status err';
   status.textContent = result.ok ? 'Updated.' : ('Failed: ' + result.error);
-  if(result.ok) loadPromoEvents();
-}
-
-async function runPromoEventAction(eventId){
-  if(!confirm('Run this event now and distribute its reward?')) return;
-  const status = document.getElementById('promoStatus');
-  status.className = 'status';
-  status.textContent = 'Running…';
-  const result = await callAdmin('run-promo-event', { eventId });
-  status.className = result.ok ? 'status ok' : 'status err';
-  status.textContent = result.ok ? `Distributed to ${result.recipientCount} recipient(s), ${result.totalGranted} total.` : ('Failed: ' + result.error);
   if(result.ok) loadPromoEvents();
 }
 
@@ -8589,6 +8638,123 @@ async function addPersonalAltarDecoration(){
   ['newPersonalAltarDecoKey','newPersonalAltarDecoName','newPersonalAltarDecoCost','newPersonalAltarDecoRule','newPersonalAltarDecoDescription','newPersonalAltarDecoImageUrl','newPersonalAltarDecoEffectAmount'].forEach(fid => { document.getElementById(fid).value = ''; });
   document.getElementById('newPersonalAltarDecoEffectKey').value = '';
   loadPersonalAltarDecorationCatalog();
+}
+
+/* =====================================================================
+   ALTAR EXPANSION TIERS — purchasable stackable slot ladders for both
+   altars. Real-money tiers aren't priced or linked here (payment_type =
+   'real_money' leaves cost_amount null); a real-money tier is priced and
+   fulfilled by a Store Item that lists it as "Also grant an altar
+   expansion tier?" in Pricing & Store — same relationship as a store item
+   granting a reward package or bundle. This card is read-only about that
+   link (shows which store item currently sells a given tier, if any) so
+   an admin doesn't have to jump tabs to check.
+   ===================================================================== */
+
+function updateNewExpansionTierPaymentFields(){
+  const isCurrency = document.getElementById('newExpansionTierPaymentType').value === 'currency';
+  document.getElementById('newExpansionTierCostField').style.display = isCurrency ? '' : 'none';
+}
+
+async function loadAltarExpansionTiers(){
+  const { data, error } = await supabaseClient.from('altar_expansion_tiers').select('*').order('scope', { ascending: true }).order('tier_order', { ascending: true });
+  altarExpansionTiersCache = data || [];
+  populateStoreItemAltarExpansionTierSelect();
+  const rows = document.getElementById('altarExpansionTierRows');
+  if(error){ rows.innerHTML = '<tr><td colspan="9">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  rows.innerHTML = altarExpansionTiersCache.map(t => {
+    const linkedItem = storeItemsCache.find(i => i.gift_altar_expansion_tier_id === t.id);
+    return `<tr data-id="${esc(t.id)}">
+    <td class="dim">${t.scope === 'personal' ? 'Personal Altar' : 'Circle Altar'}</td>
+    <td><input type="number" min="1" id="etOrder_${esc(t.id)}" value="${t.tier_order}" style="max-width:70px;"></td>
+    <td><input type="text" id="etName_${esc(t.id)}" value="${esc(t.name)}" style="max-width:150px;"></td>
+    <td><input type="text" id="etDesc_${esc(t.id)}" value="${esc(t.description || '')}" style="max-width:200px;"></td>
+    <td><input type="number" min="1" id="etSlots_${esc(t.id)}" value="${t.slots_granted}" style="max-width:80px;"></td>
+    <td>
+      <select id="etPayment_${esc(t.id)}" onchange="document.getElementById('etCostField_${esc(t.id)}').style.display = this.value === 'currency' ? '' : 'none';">
+        <option value="currency" ${t.payment_type === 'currency' ? 'selected' : ''}>currency</option>
+        <option value="real_money" ${t.payment_type === 'real_money' ? 'selected' : ''}>real_money</option>
+      </select>
+    </td>
+    <td id="etCostField_${esc(t.id)}" style="display:${t.payment_type === 'currency' ? '' : 'none'};"><input type="number" min="1" id="etCost_${esc(t.id)}" value="${t.cost_amount ?? ''}" style="max-width:100px;" placeholder="${t.scope === 'personal' ? 'Essence' : 'Devotion'}"></td>
+    <td class="dim">${linkedItem ? esc(linkedItem.name) + ' (' + fmtUsd(linkedItem.price_cents) + ')' : (t.payment_type === 'real_money' ? '— none yet, add one in Pricing & Store —' : '—')}</td>
+    <td><input type="checkbox" id="etActive_${esc(t.id)}" ${t.active ? 'checked' : ''}></td>
+  </tr>`;
+  }).join('') || '<tr><td colspan="9">No altar expansion tiers yet.</td></tr>';
+}
+
+async function saveAltarExpansionTiers(){
+  const status = document.getElementById('altarExpansionTierStatus');
+  const trs = document.querySelectorAll('#altarExpansionTierRows tr[data-id]');
+  const rows = Array.from(trs).map(tr => {
+    const id = tr.getAttribute('data-id');
+    const tier = altarExpansionTiersCache.find(t => t.id === id);
+    const paymentType = document.getElementById('etPayment_' + id).value;
+    const costVal = document.getElementById('etCost_' + id).value;
+    return {
+      id,
+      scope: tier.scope, // scope isn't editable in place — a tier can't hop altars once created
+      tier_order: parseInt(document.getElementById('etOrder_' + id).value, 10) || 1,
+      name: document.getElementById('etName_' + id).value.trim(),
+      description: document.getElementById('etDesc_' + id).value.trim(),
+      slots_granted: parseInt(document.getElementById('etSlots_' + id).value, 10) || 1,
+      payment_type: paymentType,
+      cost_amount: paymentType === 'currency' ? (parseInt(costVal, 10) || null) : null,
+      active: document.getElementById('etActive_' + id).checked
+    };
+  });
+  if(rows.some(r => r.payment_type === 'currency' && !r.cost_amount)){
+    status.className = 'status err'; status.textContent = 'Every currency tier needs a Cost greater than 0.'; return;
+  }
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('altar_expansion_tiers').upsert(rows, { onConflict: 'id' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadAltarExpansionTiers();
+}
+
+async function addAltarExpansionTier(){
+  const status = document.getElementById('newExpansionTierStatus');
+  const scope = document.getElementById('newExpansionTierScope').value;
+  const orderVal = document.getElementById('newExpansionTierOrder').value;
+  const name = document.getElementById('newExpansionTierName').value.trim();
+  const description = document.getElementById('newExpansionTierDescription').value.trim();
+  const slotsVal = document.getElementById('newExpansionTierSlots').value;
+  const paymentType = document.getElementById('newExpansionTierPaymentType').value;
+  const costVal = document.getElementById('newExpansionTierCost').value;
+
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  const tierOrder = parseInt(orderVal, 10);
+  if(isNaN(tierOrder) || tierOrder < 1){ status.className = 'status err'; status.textContent = 'Tier order must be 1 or higher.'; return; }
+  const slotsGranted = parseInt(slotsVal, 10);
+  if(isNaN(slotsGranted) || slotsGranted < 1){ status.className = 'status err'; status.textContent = 'Slots granted must be greater than 0.'; return; }
+  let costAmount = null;
+  if(paymentType === 'currency'){
+    costAmount = parseInt(costVal, 10);
+    if(isNaN(costAmount) || costAmount < 1){ status.className = 'status err'; status.textContent = 'Enter a Cost greater than 0 for a currency tier.'; return; }
+  }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('altar_expansion_tiers').insert({
+    scope, tier_order: tierOrder, name, description, slots_granted: slotsGranted,
+    payment_type: paymentType, cost_amount: costAmount
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That scope + tier order is already taken.' : ('Failed: ' + error.message); return; }
+  status.className = 'status ok';
+  status.textContent = name + ' added' + (paymentType === 'real_money' ? ' — now go to Pricing & Store to create the store item that sells it.' : '.');
+  ['newExpansionTierOrder','newExpansionTierName','newExpansionTierDescription','newExpansionTierSlots','newExpansionTierCost'].forEach(fid => { document.getElementById(fid).value = ''; });
+  loadAltarExpansionTiers();
+}
+
+function populateStoreItemAltarExpansionTierSelect(){
+  const sel = document.getElementById('newItemAltarExpansionTierId');
+  if(!sel) return;
+  const current = sel.value;
+  const options = altarExpansionTiersCache.filter(t => t.active && t.payment_type === 'real_money').map(t =>
+    `<option value="${esc(t.id)}">${t.scope === 'personal' ? 'Personal' : 'Circle'} — ${esc(t.name)} (+${t.slots_granted} slots)</option>`
+  ).join('');
+  sel.innerHTML = '<option value="">Nothing — no altar expansion</option>' + options;
+  if(current && altarExpansionTiersCache.some(t => t.id === current)) sel.value = current;
 }
 
 /* =====================================================================
