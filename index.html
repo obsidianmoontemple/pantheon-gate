@@ -85,11 +85,11 @@ body.map-screen .wrap{max-width:none;margin:0;padding:0;}
 
 /* Phone feedback: "the map hub is a small rectangle in the middle of the
    screen." The math is exact — .map-hub is locked to width:min(100vw,
-   100vh*1408/768) because its hotspot percentages are measured against
-   that precise art ratio (see the comment above .map-hub below); it
-   can't crop or reflow to fill a tall portrait screen without every
-   button drifting off the location it's supposed to sit on. On a
-   portrait phone 100vh is short, so 100vw wins that min() and the whole
+   100dvh*1408/768) (dvh since — see the comment above .map-hub below)
+   because its hotspot percentages are measured against that precise art
+   ratio; it can't crop or reflow to fill a tall portrait screen without
+   every button drifting off the location it's supposed to sit on. On a
+   portrait phone 100dvh is short, so 100vw wins that min() and the whole
    map shrinks to a thin landscape strip vertically centered in a lot of
    empty space — exactly the "small rectangle" being described.
    Rather than shrink it further or crop it, ask portrait touch screens
@@ -256,8 +256,18 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
      art's exact 1408x768 ratio — the hotspot percentages below were
      measured against that ratio, so this can't crop/stretch to fill the
      screen the way a plain background-size:cover would; it has to grow
-     within it instead. Whichever dimension is the tighter fit wins. */
-  width:min(100vw, calc(100vh * 1408 / 768));
+     within it instead. Whichever dimension is the tighter fit wins.
+     dvh (not vh): direct feedback: "the address bars and cell control
+     bars really get in the way and sometimes block the back to map
+     buttons." Static 100vh is measured against the browser's maximum
+     possible viewport (chrome hidden), not the currently-visible one —
+     so whenever the address bar/toolbar is actually showing, a box sized
+     off 100vh is taller than the real visible area and its lower portion
+     ends up underneath that chrome. dvh tracks the real, currently-
+     visible viewport instead and shrinks/grows live as the chrome
+     shows/hides, so the map always fits inside what's actually on
+     screen. */
+  width:min(100vw, calc(100dvh * 1408 / 768));
   aspect-ratio:1408/768;
   background:url('https://static.wixstatic.com/media/d6c75e_11a7f28595a041d49639dce6f72788d7~mv2.jpg') center/cover no-repeat;
 }
@@ -276,7 +286,7 @@ button.secondary{background:transparent;border:1px solid var(--gold);color:var(-
    rules, that explicit z-index always paints .hub-overlay ON TOP of a
    z-index:auto sibling wherever the two overlap, regardless of whether
    real art has been painted. .hub-overlay is position:fixed and grows
-   up to max-height:80vh, so any screen with enough read-only content
+   up to max-height:80dvh, so any screen with enough read-only content
    (a guestbook, a catalog, recent history) grows tall/wide enough to
    physically cover a hotspot positioned in the same region — literally
    a card covering the control. Explicit z-index here, higher than
@@ -540,7 +550,13 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
 }
 .hub-box{
   position:relative;overflow:hidden;
-  width:min(100vw, calc(100vh * 1408 / 768));
+  /* dvh, not vh — see the matching comment on .map-hub above. Same fix,
+     same reason: a hub-box sized off static 100vh runs taller than the
+     real visible area whenever the address bar/toolbar is showing, which
+     is exactly what was clipping .hub-loose-back (anchored to this box's
+     top-left corner) and the fixed-bottom .hub-overlay/.hub-loose-panel
+     underneath the browser's own chrome. */
+  width:min(100vw, calc(100dvh * 1408 / 768));
   aspect-ratio:1408/768;
   /* Bug fix: this box was never given a background-size at all, so
      bgAttrPlain()'s inline `background-image` rendered at the image's
@@ -560,7 +576,7 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
 }
 /* position:fixed (not absolute) is deliberate: on a tall/narrow phone
    screen, .hub-box gets letterboxed down to a short strip to keep the
-   1408:768 art ratio (width:min(100vw, 100vh*1408/768) — see above), and
+   1408:768 art ratio (width:min(100vw, 100dvh*1408/768) — see above), and
    an absolutely-positioned overlay is clipped to that same short strip by
    hub-box's overflow:hidden with no way to scroll to the clipped part.
    Fixed positioning sizes/scrolls against the real viewport instead —
@@ -580,11 +596,18 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
    now calls its action directly (see renderGuardianHome/renderWorldBoss/
    renderCheckin) — cursor:pointer namesake below. */
 .hub-overlay{
-  position:fixed;left:50%;bottom:calc(3vh + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;
+  /* dvh, not vh, for both bottom and max-height — see the .map-hub/
+     .hub-box comments above for the root cause. A "bottom:3vh" measured
+     against the maximum (chrome-hidden) viewport sits too low whenever
+     the address bar/toolbar is actually showing, pushing this panel (and
+     its "back to map" link) down underneath that chrome instead of
+     stopping just above it; dvh keeps it pinned just above whatever the
+     real, currently-visible bottom edge is. */
+  position:fixed;left:50%;bottom:calc(3dvh + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;
   background:rgba(10,8,16,0.72);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
   border:1px solid var(--line);border-radius:6px;padding:14px 22px;
   text-align:center;max-width:92vw;
-  max-height:80vh;overflow-y:auto;
+  max-height:80dvh;overflow-y:auto;
 }
 .hub-overlay .stat-grid{margin:10px 0 2px;}
 .hub-overlay .art{margin:0 auto 10px;filter:drop-shadow(0 0 22px rgba(200,162,74,0.22));}
@@ -602,9 +625,10 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
    straight on the art. text-shadow keeps it legible now that there's no
    dark panel behind it dimming the art. */
 .hub-loose-panel{
-  position:fixed;left:50%;bottom:calc(3vh + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;
+  /* dvh, not vh — same fix, same reason as .hub-overlay above. */
+  position:fixed;left:50%;bottom:calc(3dvh + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;
   text-align:center;max-width:92vw;
-  max-height:80vh;overflow-y:auto;
+  max-height:80dvh;overflow-y:auto;
   text-shadow:0 1px 4px rgba(0,0,0,0.85);
 }
 .hub-loose-panel .stat-grid{margin:10px 0 2px;}
@@ -1851,14 +1875,18 @@ function hasUnreadChat(kind){
 // Direct feedback: "notification dot will not leave the Promo" — there
 // was no per-player "seen" concept for promos at all (auto-granted,
 // nothing to claim), so the dot just stayed lit forever once anything
-// was active. Same seen-timestamp pattern as chat above: latest active
+// was active. Same seen-timestamp pattern as chat above: latest claimable
 // promo's start time vs. the last time this player opened the Promo
 // screen (stamped by openPromo() below), so it clears on open and only
-// relights when a genuinely new promo goes active afterward.
+// relights when a genuinely new promo goes active (or a new one becomes
+// claimable) afterward. 0137 — now keys off `claimable` (something this
+// player can actually go get) rather than bare `status === 'active'`, so
+// the dot doesn't relight for an active promo this player already claimed
+// or isn't eligible for.
 function hasUnseenPromo(){
-  const active = promoEvents.filter(e => e.status === 'active');
-  if(!active.length) return false;
-  const latestMs = active.reduce((max, e) => {
+  const claimable = promoEvents.filter(e => e.claimable);
+  if(!claimable.length) return false;
+  const latestMs = claimable.reduce((max, e) => {
     const t = new Date(e.starts_at || e.created_at || 0).getTime();
     return t > max ? t : max;
   }, 0);
@@ -1985,9 +2013,9 @@ let checkinCalendarStatus = null;
 // claiming, so it doesn't keep re-popping every re-render for the rest
 // of this session — purely in-memory, resets on next login/reload.
 let newPlayerGiftDismissedDay = null;
-let promoView = null;      // null | {step:'home'} — top-level (Map hub's "Promo" hotspot): read-only list of active/recent promo_events via list_visible_promo_events() — separate from Mail
+let promoView = null;      // null | {step:'home'} — top-level (Map hub's "Promo" hotspot): claimable list of active/recent promo_events via list_visible_promo_events() (0137: now returns per-user claimed/claimable flags) — separate from Mail
 let worldBossView = null;  // null | {step:'home'} — top-level (Map hub's "World Boss" hotspot, top-right dark corner): shared HP pool every player attacks together, admin-spawned via world-boss/index.ts
-let promoEvents = [];      // cached list for renderPromo()
+let promoEvents = [];      // cached list for renderPromo() — each row also carries `claimed`/`claimable` (0137)
 let currencyDefs = [];     // currency_definitions cache, shared by renderPromo() for currency name/icon lookup
 
 let campaignView = null;   // null | {step:'browse'} | {step:'choice', encounterKey, name, prompt, choices} | {step:'choiceResult', ...} — top-level (Map hub's "The Divine Realms" title hotspot, Phase 4)
@@ -4810,7 +4838,7 @@ function todayStr(){
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-const CHECKIN_CURRENCY_LABELS = { essence: 'Essence', favor: 'Favor', god_shards: 'God Shards', god_tokens: 'God Tokens', key_of_night: 'Key of Night', petition_credits: 'Petition Credits' };
+const CHECKIN_CURRENCY_LABELS = { essence: 'Essence', favor: 'Favor', god_shards: 'God Shards', god_tokens: 'God Tokens', key_of_night: 'Key of Night', petition_credits: 'Petition Credits', devotion: 'Devotion' };
 
 async function tendGuardian(){
   // tend_guardian is the once-a-day Check-in mechanic (streak +
@@ -5195,7 +5223,7 @@ function backFromCredits(){
 
 // Converted to the full-bleed hub pattern along with the rest of Tier 1
 // — art MUST supersede the old card layout. Long credits text can run
-// past the overlay's own max-height:80vh, which is fine: .hub-overlay
+// past the overlay's own max-height:80dvh, which is fine: .hub-overlay
 // already scrolls internally rather than growing past the art (same
 // safety the old check-in calendar list relied on before it was removed
 // entirely — this content is admin-authored and expected to be a
@@ -6084,7 +6112,7 @@ function renderBackpackExpeditions(){
 // know what they are playing for." Removed (0068) per a later reversal
 // once real calendar art existed for the background instead: "I have an
 // actual calendar designed for the background and do not need the
-// giant scroll screen." The hub-overlay's max-height:80vh scroll was a
+// giant scroll screen." The hub-overlay's max-height:80dvh scroll was a
 // real problem with a growing rewards list behind it; dropping the list
 // entirely (not just shrinking it) is what the art now makes redundant.
 // #123 brought a real grid back on top of that background art — see
@@ -6344,22 +6372,63 @@ async function loadPromoEvents(){
   promoEvents = data || [];
 }
 
-// Read-only feed (nothing to pick or act on — rewards are auto-granted),
-// so this becomes a positioned scrollable panel rather than a dropdown:
-// a <select> is for choosing one thing, and there's nothing here to
-// choose. .hub-overlay already scrolls internally past its max-height,
+// 0137 — Promo Events moved from admin-push auto-grant to a real
+// player-claim flow, same "empty like Mail" treatment as broadcasts: a
+// claimed promo simply never appears in this list again (list_visible_
+// promo_events() already tells us `claimed` per row, no extra query
+// needed). .hub-overlay already scrolls internally past its max-height,
 // same safety net the old check-in calendar list relied on.
+function describePromoGift(e){
+  const parts = [];
+  if(e.currency_key){
+    const cur = currencyDefs.find(c => c.key === e.currency_key);
+    const curLabel = cur ? `${cur.icon || ''} ${cur.name}`.trim() : e.currency_key;
+    parts.push(`${e.amount} ${curLabel}`);
+  }
+  if(e.entitlement_scope_type === 'all') parts.push('full site access');
+  else if(e.entitlement_scope_type === 'pantheon') parts.push((CATALOG[e.entitlement_scope_id] ? CATALOG[e.entitlement_scope_id].label : e.entitlement_scope_id) + ' pantheon access');
+  else if(e.entitlement_scope_type === 'deity') parts.push(findDeityNameAnywhere(e.entitlement_scope_id) + ' access');
+  if(e.reward_key){
+    const r = giftableRewardsCatalog.find(x => x.key === e.reward_key);
+    parts.push(r ? r.name : 'a special reward');
+  }
+  if(e.gift_bundle_key){
+    const bundle = giftableBundlesCatalog.find(x => x.bundle_key === e.gift_bundle_key);
+    parts.push(bundle ? bundle.name + ' bundle' : 'a gift bundle');
+  }
+  return parts.join(' · ');
+}
+
+function setPromoStatus(text, ok){
+  const el = document.getElementById('promoStatusLine');
+  if(!el) return;
+  el.className = 'hub-loose-status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
 function renderPromo(){
   document.body.classList.add('hub-active');
   const app = document.getElementById('app');
-  const rows = promoEvents.map(e => {
-    const cur = currencyDefs.find(c => c.key === e.currency_key);
-    const curLabel = cur ? `${cur.icon || ''} ${cur.name}`.trim() : e.currency_key;
-    const when = e.starts_at ? new Date(e.starts_at).toLocaleDateString() : '';
+  // Claimed promos vanish from the list entirely, same as a read letter
+  // does in Mail (renderMail's own `visible` filter, same idea).
+  const visible = promoEvents.filter(e => !e.claimed);
+  const rows = visible.map(e => {
     const scopeNote = e.scope === 'circle' ? 'Your Circle' : 'Sitewide';
+    const gift = describePromoGift(e) || 'A promotional reward';
+    let action;
+    if(e.claimable){
+      action = `<button class="secondary" onclick="doClaimPromo('${esc(e.id)}')">Claim</button>`;
+    } else if(e.status === 'ended' || (e.ends_at && new Date(e.ends_at) < new Date())){
+      action = `<span class="hint" style="margin:0;">Ended</span>`;
+    } else if(e.starts_at && new Date(e.starts_at) > new Date()){
+      action = `<span class="hint" style="margin:0;">Starts ${new Date(e.starts_at).toLocaleDateString()}</span>`;
+    } else {
+      action = `<span class="hint" style="margin:0;">Not available</span>`;
+    }
     return `<div class="roster-row">
-      <div><div class="rname">${esc(e.name)}${e.status === 'ended' ? ' (ended)' : ''}</div>
-      <div class="cblurb">${esc(e.description || '')} — ${e.amount} ${esc(curLabel)} · ${esc(scopeNote)}${when ? ' · ' + esc(when) : ''}</div></div>
+      <div style="display:flex;align-items:center;gap:8px;">${e.image_url ? shopThumb(e.image_url) : ''}<div><div class="rname">${esc(e.name)}</div>
+      <div class="cblurb">${esc(e.description || '')} — ${esc(gift)} · ${esc(scopeNote)}</div></div></div>
+      <div>${action}</div>
     </div>`;
   }).join('') || '<p class="hint">No promotions running right now — check back later.</p>';
 
@@ -6369,12 +6438,28 @@ function renderPromo(){
         <div class="hub-overlay">
           <button type="button" class="hub-back" onclick="backFromPromo()">‹ Back to Map</button>
           <h2 style="text-align:center;">Promotions</h2>
-          <p class="hint" style="text-align:center;">Active and recent site events. Rewards here are granted automatically — nothing to claim.</p>
+          <p class="hint" style="text-align:center;">Active and recent site events — claim one below while it's running, and it disappears from this list once you have.</p>
           ${rows}
+          <div id="promoStatusLine" class="hub-loose-status"></div>
         </div>
       </div>
     </div>
   `;
+}
+
+async function doClaimPromo(promoEventId){
+  setPromoStatus('Claiming…');
+  const event = promoEvents.find(e => e.id === promoEventId);
+  const { data, error } = await supabaseClient.rpc('claim_promo_event', { p_promo_event_id: promoEventId });
+  if(error){ setPromoStatus(error.message, false); return; }
+  await Promise.all([loadPromoEvents(), loadGuardian()]);
+  if(promoView) render();
+  const already = !!(data && data.already_claimed);
+  setPromoStatus(already ? 'Already claimed.' : 'Claimed — that promotion is gone from this list now.', true);
+  if(data && !already){
+    const detail = rewardsToDetailLine(data.rewards) || 'Just a promotion, no reward attached.';
+    showRewardBanner(event ? event.name : 'Promotion claimed!', detail, '🎉');
+  }
 }
 
 /* ---------------- World Boss (Map hub's "World Boss" hotspot) ----------------
@@ -9868,6 +9953,23 @@ async function doClaimUnlock(key){
   if(data.ok) await refreshAltar();
 }
 
+async function doBuyExpansion(tierId){
+  const data = await circleFetch('altar-buy-expansion', { tierId });
+  setAltarStatus(data.ok ? `Altar expanded by ${data.slotsGranted} plots!` : (data.error || 'Could not buy.'), data.ok);
+  if(data.ok){ await refreshAltar(); showRewardBanner('Altar expanded!', `+${data.slotsGranted} plots added.`, '⛩️'); }
+}
+
+// A real-money expansion tier is bought as a Store item, not in-place here
+// (see stripe-webhook's grantStoreItem) — clear whichever altar view is
+// currently active (same "null the sibling view before switching" pattern
+// used everywhere else top-level views change) so the Shop actually shows
+// instead of losing the render() dispatch race to the still-set altar view.
+function doGoToStoreForExpansion(){
+  circleView = null;
+  personalAltarView = null;
+  openShop();
+}
+
 // Picks a placed decoration back up into an empty plot — still owned,
 // can be placed again elsewhere. Addresses the altar's original
 // "no rearrange/remove yet" limitation.
@@ -9915,7 +10017,7 @@ function renderCircleAltar(){
   const seedByKey = {};
   (altarData.seedCatalog || []).forEach(s => { seedByKey[s.key] = s; });
 
-  const gridCells = Array.from({ length: 20 }, (_, i) => {
+  const gridCells = Array.from({ length: altarData.plotCount || 20 }, (_, i) => {
     const plot = plots.find(p => p.plot_index === i) || { plot_index: i, content_type: 'empty' };
     let cls = 'altar-plot ' + plot.content_type;
     let label = '';
@@ -9986,6 +10088,27 @@ function renderCircleAltar(){
     catalogBlock = `<h2 style="margin-top:26px;">Decoration Catalog</h2>${rows}`;
   }
 
+  let expansionBlock = '';
+  if(isOwn){
+    const owned = new Set(altarData.ownedExpansionTierIds || []);
+    const nextTier = (altarData.expansionTiers || []).find(t => !owned.has(t.id));
+    if(nextTier){
+      let action;
+      if(nextTier.payment_type === 'currency'){
+        action = `<button class="secondary" ${c.devotion_balance < nextTier.cost_amount ? 'disabled' : ''} onclick="doBuyExpansion('${esc(nextTier.id)}')">Buy — ${nextTier.cost_amount} Devotion</button>`;
+      }else{
+        action = `<button class="secondary" onclick="doGoToStoreForExpansion()">Available in the Store</button>`;
+      }
+      expansionBlock = `
+        <h2 style="margin-top:26px;">Expand the Altar</h2>
+        <div class="altar-catalog-row">
+          <div><div class="aname">${esc(nextTier.name)} (+${nextTier.slots_granted} plots)</div><div class="adesc">${esc(nextTier.description || '')}</div></div>
+          <div>${action}</div>
+        </div>
+      `;
+    }
+  }
+
   const guestbookRows = (altarData.offerings || []).map(o => `
     <div class="roster-row"><div class="rname">${esc(o.visitorName)} left ${o.amount} Essence</div><div class="cblurb">${new Date(o.created_at).toLocaleString()}</div></div>
   `).join('') || '<p class="hint">No offerings yet — be the first to visit.</p>';
@@ -10015,6 +10138,7 @@ function renderCircleAltar(){
       ${pickerBlock}
       <div class="status" id="altarStatus"></div>
       ${catalogBlock}
+      ${expansionBlock}
       <h2 style="margin-top:26px;">Guestbook</h2>
       ${guestbookRows}
       ${offerForm}
@@ -10143,6 +10267,15 @@ async function doPalClaimUnlock(key){
   if(data.ok) await refreshPersonalAltar();
 }
 
+async function doPalBuyExpansion(tierId){
+  const data = await personalAltarFetch('buy-expansion', { tierId });
+  setPalStatus(data.ok ? `Altar expanded by ${data.slotsGranted} plots!` : (data.error || 'Could not buy.'), data.ok);
+  if(data.ok){
+    await loadGuardian(); await refreshPersonalAltar();
+    showRewardBanner('Altar expanded!', `+${data.slotsGranted} plots added.`, '⛩️');
+  }
+}
+
 async function doPalRemoveDecoration(plotIndex){
   const data = await personalAltarFetch('remove', { plotIndex });
   setPalStatus(data.ok ? 'Picked up — place it wherever you like.' : (data.error || 'Could not pick up.'), data.ok);
@@ -10163,7 +10296,7 @@ function renderPersonalAltar(){
   const seedByKey = {};
   (palData.seedCatalog || []).forEach(s => { seedByKey[s.key] = s; });
 
-  const gridCells = Array.from({ length: 12 }, (_, i) => {
+  const gridCells = Array.from({ length: palData.plotCount || 12 }, (_, i) => {
     const plot = plots.find(p => p.plot_index === i) || { plot_index: i, content_type: 'empty' };
     let cls = 'altar-plot ' + plot.content_type;
     let label = '';
@@ -10230,6 +10363,27 @@ function renderPersonalAltar(){
     </div>`;
   }).join('');
 
+  let palExpansionBlock = '';
+  {
+    const owned = new Set(palData.ownedExpansionTierIds || []);
+    const nextTier = (palData.expansionTiers || []).find(t => !owned.has(t.id));
+    if(nextTier){
+      let action;
+      if(nextTier.payment_type === 'currency'){
+        action = `<button class="secondary" ${palData.guardian.essence < nextTier.cost_amount ? 'disabled' : ''} onclick="doPalBuyExpansion('${esc(nextTier.id)}')">Buy — ${nextTier.cost_amount} Essence</button>`;
+      }else{
+        action = `<button class="secondary" onclick="doGoToStoreForExpansion()">Available in the Store</button>`;
+      }
+      palExpansionBlock = `
+        <h2 style="margin-top:26px;">Expand the Altar</h2>
+        <div class="altar-catalog-row">
+          <div><div class="aname">${esc(nextTier.name)} (+${nextTier.slots_granted} plots)</div><div class="adesc">${esc(nextTier.description || '')}</div></div>
+          <div>${action}</div>
+        </div>
+      `;
+    }
+  }
+
   const palBg = bgAttr('personalAltar');
   app.innerHTML = `
     <div class="card"${bgAttr('personalAltar', 'text-align:center;')}>
@@ -10246,6 +10400,7 @@ function renderPersonalAltar(){
       <div class="status" id="palStatus"></div>
       <h2 style="margin-top:26px;">Decoration Catalog</h2>
       ${rows}
+      ${palExpansionBlock}
       <div style="text-align:center;margin-top:20px;">
         <button class="secondary" onclick="backFromPersonalAltar()">Back</button>
       </div>
