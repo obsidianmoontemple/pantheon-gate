@@ -3765,19 +3765,23 @@ function renderGuardianFamiliarTab(){
 // already uses, just surfaced here too so a player training their
 // familiar doesn't have to leave the page to use a held potion first.
 function guardianFamiliarUseItemHtml(){
-  if(!craftInventory.length) return '';
+  // Direct feedback: this used to return '' entirely whenever there was
+  // nothing usable (empty inventory, or nothing that passed the filter
+  // below) — which looks identical to the feature not existing at all.
+  // Always render the "Your Items" section now, with a plain empty-state
+  // line when there's nothing to use, so the panel is visibly present
+  // (and visibly working) even on a fresh account with no items yet.
   const usable = craftInventory.filter(it => {
     const cat = craftCatalog.find(c => c.key === it.item_key);
     return cat && cat.item_type === 'consumable' && !it.consumed_at && cat.consumable_effect !== 'cure_status';
   });
-  if(!usable.length) return '';
-  const rows = usable.map(it => {
+  const rows = usable.length ? usable.map(it => {
     const cat = craftCatalog.find(c => c.key === it.item_key);
     return `<div class="roster-row">
       <div class="rname">${esc(cat ? cat.name : it.item_key)}</div>
       <div class="ractions"><button class="secondary" onclick="doUseItem('${esc(it.id)}', null, 'guardianTrainStatus')">Use</button></div>
     </div>`;
-  }).join('');
+  }).join('') : '<p class="hint">Nothing usable in your inventory right now.</p>';
   return `
     <h3 style="margin-top:18px;">Your Items</h3>
     ${rows}
