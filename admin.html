@@ -3873,6 +3873,18 @@ async function handleSession(session){
   loadSiteSettings();
   loadMapHotspots();
   loadSubscriptionTiers();
+  // Bug fix (round 2): the comment above `withBootTimeout()` blamed exactly
+  // this symptom — Banner Presets stuck on "Loading…" with nothing in the
+  // console — but the actual `loadBannerPresets()` call further down this
+  // function was never wrapped in it, and sat after ~30 other bare load*()
+  // calls including a couple of *synchronous* (non-async) ones. A plain
+  // synchronous throw in any of those (e.g. a null element reference) halts
+  // this whole function immediately — no promise, nothing to catch — which
+  // permanently prevents every call written after it, Banner Presets
+  // included, from ever running. Moving it up here, wrapped, means it
+  // reliably loads (or visibly fails) before anything later in boot gets a
+  // chance to take the rest of the function down with it.
+  await withBootTimeout(loadBannerPresets(), 'loadBannerPresets');
   await withBootTimeout(loadCurrencyDefinitions(), 'loadCurrencyDefinitions');
   await withBootTimeout(loadGiftableRewards(), 'loadGiftableRewards');
   await withBootTimeout(loadRewardBundles(), 'loadRewardBundles');
@@ -3931,7 +3943,6 @@ async function handleSession(session){
   loadAltarSeedCatalog();
   loadPersonalAltarSeedCatalog();
   loadGauntletOpponents();
-  loadBannerPresets();
   await withBootTimeout(loadStatusEffectsAdmin(), 'loadStatusEffectsAdmin'); // must populate CUSTOM_STATUS_EFFECTS before Move/Blessing/Guardian-Item/Altar-Decoration catalogs render their effect-key dropdowns below
   loadAltarDecorationCatalog();
   loadPersonalAltarDecorationCatalog();
@@ -5319,6 +5330,7 @@ async function saveSeasonPool(){
 
 function populateNewGodPantheonOptions(){
   const sel = document.getElementById('newGodPantheon');
+  if(!sel) return; // defensive, matching every sibling refresh*Pickers() helper — a missing element here used to throw synchronously and silently kill the rest of the boot sequence (see the loadBannerPresets fix above)
   sel.innerHTML = Object.keys(CATALOG).map(pid =>
     `<option value="${esc(pid)}">${esc(CATALOG[pid].label)}</option>`
   ).join('');
