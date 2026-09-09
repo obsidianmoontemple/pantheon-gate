@@ -1267,6 +1267,79 @@ function applyStaticBranding(){
 }
 applyStaticBranding();
 
+// ---- LICENSE — this copy is licensed to run on specific domain(s) only.
+// The key below is issued per-sale and cryptographically signed; this same
+// block (public key + LICENSE_KEY) must be identical across index.html,
+// gate.html, and admin.html. This check runs entirely in the browser using
+// the Web Crypto API already built into every modern browser — no server
+// call, no phone-home. Got this file without a license key filled in?
+// Contact whoever provided you this software to get one.
+const LICENSE_PUBLIC_KEY_JWK = {"key_ops":["verify"],"ext":true,"kty":"EC","x":"OclmqPOvPEZIIB2wLrN55_oI_nTClpH9OTZ79E5guNY","y":"z8xwWA_SvUvpARQrPb47CIioBip_lvtEWlLDBV1oFDE","crv":"P-256"};
+const LICENSE_KEY = ""; // ← paste the license key you were given here, between the quotes
+
+function _licenseB64UrlToBytes(b64url){
+  let s = b64url.replace(/-/g,'+').replace(/_/g,'/');
+  while(s.length % 4) s += '=';
+  const bin = atob(s);
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+async function checkLicense(){
+  try{
+    const host = location.hostname.toLowerCase().replace(/^www\./,'');
+    if(!host || host === 'localhost' || host === '127.0.0.1') return { ok:true, local:true };
+
+    if(!LICENSE_KEY || LICENSE_KEY.indexOf('.') === -1) return { ok:false, reason:'missing' };
+    const dot = LICENSE_KEY.indexOf('.');
+    const payloadB64 = LICENSE_KEY.slice(0, dot);
+    const sigB64 = LICENSE_KEY.slice(dot + 1);
+
+    const payloadJson = new TextDecoder().decode(_licenseB64UrlToBytes(payloadB64));
+    const payload = JSON.parse(payloadJson);
+    const sigBytes = _licenseB64UrlToBytes(sigB64);
+
+    const key = await crypto.subtle.importKey('jwk', LICENSE_PUBLIC_KEY_JWK, {name:'ECDSA', namedCurve:'P-256'}, false, ['verify']);
+    const valid = await crypto.subtle.verify({name:'ECDSA', hash:'SHA-256'}, key, sigBytes, new TextEncoder().encode(payloadB64));
+    if(!valid) return { ok:false, reason:'invalid' };
+
+    const domains = Array.isArray(payload.domains) ? payload.domains : [];
+    if(!domains.includes(host)) return { ok:false, reason:'domain', payload };
+
+    if(payload.expires){
+      const exp = new Date(payload.expires + 'T23:59:59Z');
+      if(!isNaN(exp) && exp.getTime() < Date.now()) return { ok:false, reason:'expired', payload };
+    }
+    return { ok:true, payload };
+  }catch(e){
+    return { ok:false, reason:'error' };
+  }
+}
+
+function showLicenseBlockScreen(result){
+  const reasons = {
+    missing: 'This copy is missing a license key.',
+    invalid: 'This copy’s license key is not valid.',
+    domain: 'This copy is not licensed to run on this domain (' + location.hostname + ').',
+    expired: 'This copy’s license has expired.',
+    error: 'This copy’s license could not be checked.'
+  };
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#0b0b12;color:#f2e9d8;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:24px;';
+  el.innerHTML = '<div style="max-width:460px;"><div style="font-size:2.2rem;margin-bottom:14px;">🔒</div>' +
+    '<h1 style="font-size:1.25rem;margin:0 0 12px;font-weight:600;">Unlicensed copy</h1>' +
+    '<p style="opacity:.85;line-height:1.55;margin:0;">' + (reasons[result.reason] || reasons.error) + ' If you believe this is a mistake, contact whoever provided you this software.</p></div>';
+  document.documentElement.appendChild(el);
+}
+
+async function licenseGate(bootFn){
+  const result = await checkLicense();
+  if(result.ok){ bootFn(); }
+  else { showLicenseBlockScreen(result); }
+}
+// ---- end license check --------------------------------------------------
+
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 /* Real illustrated art, five stages each (egg/hatchling/fledged/ascendant/
@@ -3773,7 +3846,15 @@ function guardianFamiliarUseItemHtml(){
   // (and visibly working) even on a fresh account with no items yet.
   const usable = craftInventory.filter(it => {
     const cat = craftCatalog.find(c => c.key === it.item_key);
-    return cat && cat.item_type === 'consumable' && !it.consumed_at && cat.consumable_effect !== 'cure_status';
+    // Also exclude pass_petition_trial ("Petition Clear") for the same
+    // reason cure_status is excluded — it only means anything against a
+    // pending petition_attempts row, which this generic doUseItem() path
+    // (craft/index.ts's use-item action) has no notion of and always
+    // rejects. Direct feedback: this button showed here anyway and always
+    // failed with "This can only be used from an active Petition trial,
+    // not from here" — the real control is on the petition trial's own
+    // challenge screen (renderPetitionChallenge() -> usePetitionClearItem()).
+    return cat && cat.item_type === 'consumable' && !it.consumed_at && cat.consumable_effect !== 'cure_status' && cat.consumable_effect !== 'pass_petition_trial';
   });
   const rows = usable.length ? usable.map(it => {
     const cat = craftCatalog.find(c => c.key === it.item_key);
@@ -11823,8 +11904,18 @@ function renderCraft(){
     // columns, so it isn't offered here — the battle screen surfaces it
     // instead (0080, direct follow-up "cures... mid-fight").
     const isCureItem = catalogItem && catalogItem.consumable_effect === 'cure_status';
-    const statusLabel = it.consumed_at ? (type === 'consumable' ? 'Used' : 'Applied') : (isCureItem ? 'Held — use during a fight' : 'Held');
-    const canUse = type === 'consumable' && !it.consumed_at && !isCureItem;
+    // Same story for pass_petition_trial (the "Petition Clear" item) —
+    // it only means anything against a pending petition_attempts row, so
+    // craft/index.ts's generic use-item action always rejects it ("This
+    // can only be used from an active Petition trial, not from here.").
+    // Direct feedback: this button used to show here anyway, so clicking
+    // it produced exactly that confusing rejection even though the item
+    // genuinely was usable — just not from this screen. The real control
+    // for it lives on the petition trial's own challenge screen
+    // (renderPetitionChallenge() -> usePetitionClearItem()).
+    const isPetitionClearItem = catalogItem && catalogItem.consumable_effect === 'pass_petition_trial';
+    const statusLabel = it.consumed_at ? (type === 'consumable' ? 'Used' : 'Applied') : (isCureItem ? 'Held — use during a fight' : (isPetitionClearItem ? 'Held — use from a pending Petition trial' : 'Held'));
+    const canUse = type === 'consumable' && !it.consumed_at && !isCureItem && !isPetitionClearItem;
     return `<div class="roster-row">
       <div><div class="rname">${esc(name)}</div><div class="cblurb">${statusLabel}</div></div>
       ${canUse ? `<div class="ractions"><button class="secondary" onclick="doUseItem('${esc(it.id)}')">Use</button></div>` : ''}
@@ -12536,7 +12627,7 @@ function renderPvpLeaderboard(){
   `;
 }
 
-boot();
+licenseGate(boot);
 </script>
 </body>
 </html>
