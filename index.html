@@ -1671,10 +1671,17 @@ let marks = [];          // [{deity_id, pantheon_id, mark_type}]
 let currentPhase = null; // {cycle_id, phase, phase_index} — flavor + gating text only, edge function re-checks server-side
 let petitionView = null; // null | {step:'pick'} | {step:'challenge', ...} | {step:'verdict', ...}
 let answerDraft = '';
-// Kept in sync with petition/index.ts's own copy of this constant and
-// admin.html's CONSUMABLE_EFFECT_OPTIONS entry — the one guardian_item_catalog
-// key the trial screen offers a "use this to pass instantly" button for.
-const PETITION_CLEAR_ITEM_KEY = 'petition_clear';
+// Direct feedback: an admin-created custom item ("Silk Scarf") with the
+// Petition Clear effect never showed a "use this to pass instantly"
+// button on the trial screen. Root cause — this used to hardcode ONE
+// specific guardian_item_catalog key as "the" Petition Clear item, so
+// any other item sharing the same consumable_effect but a different
+// key/name was invisible to this screen even though petition/index.ts's
+// use-clear-item action (once fixed alongside this) and the Backpack's
+// own exclusion filter both already recognize it correctly by effect.
+// Fixed: no more single hardcoded key — the trial screen now looks for
+// ANY unconsumed inventory item whose catalog row has consumable_effect
+// "pass_petition_trial", the same way the rest of the system does.
 let combatView = null;    // null | {step:'pick'} | {step:'loadout', ...} | {step:'battle', ...} | {step:'result', ...}
 let loadoutPicks = [];    // [{pantheonId, deityId}, ...] up to 5, chosen from full marks
 
@@ -7512,8 +7519,10 @@ function renderPetitionChallenge(){
   // guardian actually owns an unconsumed one — craftInventory/craftCatalog
   // were refreshed by beginPetition() right before this screen first
   // rendered, and again by usePetitionClearItem() itself on success.
-  const clearItem = craftInventory.find(it => it.item_key === PETITION_CLEAR_ITEM_KEY && !it.consumed_at);
-  const clearItemName = (craftCatalog.find(c => c.key === PETITION_CLEAR_ITEM_KEY) || {}).name || 'Petition Clear';
+  const clearItemKeys = craftCatalog.filter(c => c.consumable_effect === 'pass_petition_trial').map(c => c.key);
+  const clearItem = craftInventory.find(it => clearItemKeys.includes(it.item_key) && !it.consumed_at);
+  const clearItemCatalogEntry = clearItem ? craftCatalog.find(c => c.key === clearItem.item_key) : null;
+  const clearItemName = (clearItemCatalogEntry || {}).name || 'Petition Clear';
   const clearItemBlock = clearItem ? `
     <p class="hint">You're holding ${esc(clearItemName)}. Use it to skip answering and pass this trial instantly, with a full mark.</p>
     <button class="secondary" id="clearItemBtn" style="margin-bottom:10px;" onclick="usePetitionClearItem('${esc(clearItem.id)}')">Use ${esc(clearItemName)}</button>` : '';
