@@ -7287,8 +7287,22 @@ function renderCampaignBrowse(){
         : (e.cleared ? `<span class="mark-badge full">cleared ×${e.clearCount}</span>` : `<span class="mark-badge">new</span>`);
       const xpNote = e.cleared ? `+${e.replayXpReward} XP replay` : `+${e.xpReward} XP`;
       const actionLabel = e.encounterType === 'combat' ? 'Fight' : 'Choose';
+      // Bug fix: this used to also pass e.name as a second literal argument
+      // (selectCampaignEncounter(key, name)). esc() HTML-escapes an
+      // apostrophe to &#39;, which is correct for sitting inside the
+      // double-quoted onclick="" attribute — but the browser HTML-decodes
+      // the attribute text back to a literal ' before handing it to the JS
+      // parser as the inline handler's source. Any encounter name with an
+      // apostrophe (e.g. "...the Dragon's Teeth", "Aeetes's Betrayal...")
+      // then broke the inline JS string literal, throwing a silent
+      // SyntaxError — the button existed and looked clickable but clicking
+      // it did nothing, with no visible error to the player. Fixed by only
+      // ever passing the key (which is always a plain [a-z0-9_]+ slug, safe
+      // in any quoting) and having selectCampaignEncounter look its own
+      // display name up from campaignData, same pattern openCampaignChoice
+      // already used for narrative encounters one line below.
       const onclick = e.encounterType === 'combat'
-        ? `selectCampaignEncounter('${esc(e.key)}','${esc(e.name)}')`
+        ? `selectCampaignEncounter('${esc(e.key)}')`
         : `openCampaignChoice('${esc(e.key)}')`;
       const actionHtml = e.locked
         ? `<span class="hint">Clear the earlier encounters first</span>`
@@ -7338,8 +7352,10 @@ function renderCampaignBrowse(){
   `;
 }
 
-function selectCampaignEncounter(encounterKey, encounterName){
-  combatView = { step: 'loadout', source: 'campaign', encounterKey, encounterName };
+function selectCampaignEncounter(encounterKey){
+  const encounter = campaignData.chapters.flatMap(c => c.encounters).find(e => e.key === encounterKey);
+  if(!encounter) return;
+  combatView = { step: 'loadout', source: 'campaign', encounterKey, encounterName: encounter.name };
   loadoutPicks = [];
   render();
 }
