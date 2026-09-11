@@ -2856,6 +2856,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <select id="newItemGrantId" style="max-width:200px;"></select>
           </div>
           <button id="addItemBtn">Add item</button>
+          <button id="cancelEditItemBtn" class="secondary" type="button" style="display:none;" onclick="cancelEditStoreItem()">Cancel edit</button>
         </div>
         <div class="form-row">
           <div class="field">
@@ -5749,7 +5750,7 @@ async function loadStoreItems(){
   const rows = document.getElementById('itemRows');
   const { data, error } = await supabaseClient
     .from('store_items')
-    .select('id, name, price_cents, gift_bonus_messages, gift_scope_type, gift_scope_id, gift_currency_key, gift_currency_amount, gift_reward_key, gift_bundle_key, gift_altar_expansion_tier_id, active')
+    .select('id, name, description, price_cents, gift_bonus_messages, gift_scope_type, gift_scope_id, gift_currency_key, gift_currency_amount, gift_reward_key, gift_bundle_key, gift_altar_expansion_tier_id, image_url, active')
     .eq('active', true)
     .order('sort_order', { ascending: true });
   if(error){
@@ -5777,14 +5778,72 @@ async function loadStoreItems(){
       <td>${esc(i.name)}</td>
       <td class="dim">${fmtUsd(i.price_cents)}</td>
       <td class="dim">${esc(parts.join(', ') || '—')}</td>
-      <td><button class="small danger" onclick="removeStoreItem('${esc(i.id)}')">Remove</button></td>
+      <td><button class="small" onclick="editStoreItem('${esc(i.id)}')">Edit</button> <button class="small danger" onclick="removeStoreItem('${esc(i.id)}')">Remove</button></td>
     </tr>`;
   }).join('');
 }
 
+// Edit-in-place (direct feedback: "I would also like the ability to edit
+// entries that are in the store already instead of having to remove and
+// restart") — store_items previously only had insert (addStoreItem) and a
+// soft-delete (removeStoreItem), unlike every other catalog tab this
+// session that already supports bulk-save editing. Rather than turn this
+// table into a wide inline-edit grid (it has too many optional grant
+// fields for that to read cleanly), Edit repopulates the same "add item"
+// form used to create one and flips addStoreItem() into update mode via
+// editingStoreItemId. Cancel edit clears that state and empties the form.
+let editingStoreItemId = null;
+
+function editStoreItem(id){
+  const i = storeItemsCache.find(x => x.id === id);
+  if(!i) return;
+  editingStoreItemId = id;
+  document.getElementById('newItemId').value = i.id;
+  document.getElementById('newItemId').disabled = true; // the id is the primary key — not editable once created
+  document.getElementById('newItemName').value = i.name || '';
+  document.getElementById('newItemPrice').value = ((i.price_cents || 0) / 100).toFixed(2);
+  document.getElementById('newItemBonus').value = i.gift_bonus_messages ?? '';
+  document.getElementById('newItemDescription').value = i.description || '';
+  document.getElementById('newItemGrantType').value = i.gift_scope_type || '';
+  updateNewItemGrantField();
+  document.getElementById('newItemGrantId').value = i.gift_scope_id || '';
+  document.getElementById('newItemGiftCurrency').value = i.gift_currency_key || '';
+  updateNewItemGiftCurrencyField();
+  document.getElementById('newItemGiftAmount').value = i.gift_currency_amount ?? '';
+  document.getElementById('newItemRewardKey').value = i.gift_reward_key || '';
+  document.getElementById('newItemGiftBundleKey').value = i.gift_bundle_key || '';
+  document.getElementById('newItemAltarExpansionTierId').value = i.gift_altar_expansion_tier_id || '';
+  document.getElementById('newItemImageUrl').value = i.image_url || '';
+  document.getElementById('addItemBtn').textContent = 'Save changes';
+  document.getElementById('cancelEditItemBtn').style.display = '';
+  const status = document.getElementById('newItemStatus');
+  status.className = 'status';
+  status.textContent = 'Editing "' + i.name + '" — change fields above and Save, or Cancel edit.';
+  document.getElementById('newItemId').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function cancelEditStoreItem(){
+  editingStoreItemId = null;
+  document.getElementById('newItemId').disabled = false;
+  ['newItemId','newItemName','newItemPrice','newItemBonus','newItemDescription','newItemGrantId','newItemGiftAmount','newItemImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newItemGrantType').value = '';
+  document.getElementById('newItemGiftCurrency').value = '';
+  document.getElementById('newItemRewardKey').value = '';
+  document.getElementById('newItemGiftBundleKey').value = '';
+  document.getElementById('newItemAltarExpansionTierId').value = '';
+  updateNewItemGrantField();
+  updateNewItemGiftCurrencyField();
+  document.getElementById('addItemBtn').textContent = 'Add item';
+  document.getElementById('cancelEditItemBtn').style.display = 'none';
+  const status = document.getElementById('newItemStatus');
+  status.className = 'status';
+  status.textContent = '';
+}
+
 async function addStoreItem(){
   const status = document.getElementById('newItemStatus');
-  const id = document.getElementById('newItemId').value.trim().toLowerCase();
+  const editingId = editingStoreItemId;
+  const id = editingId || document.getElementById('newItemId').value.trim().toLowerCase();
   const name = document.getElementById('newItemName').value.trim();
   const priceVal = document.getElementById('newItemPrice').value;
   const bonusVal = document.getElementById('newItemBonus').value.trim();
@@ -5798,7 +5857,7 @@ async function addStoreItem(){
   const giftAltarExpansionTierId = document.getElementById('newItemAltarExpansionTierId').value;
   const imageUrl = document.getElementById('newItemImageUrl').value.trim();
 
-  if(!/^[a-z0-9]+$/.test(id)){
+  if(!editingId && !/^[a-z0-9]+$/.test(id)){
     status.className = 'status err';
     status.textContent = 'Id must be lowercase letters/numbers only, no spaces (e.g. starterpack).';
     return;
@@ -5828,9 +5887,9 @@ async function addStoreItem(){
   }
 
   status.className = 'status';
-  status.textContent = 'Adding…';
-  const { error } = await supabaseClient.from('store_items').insert({
-    id, name, description, price_cents: price,
+  status.textContent = editingId ? 'Saving…' : 'Adding…';
+  const payload = {
+    name, description, price_cents: price,
     gift_bonus_messages: bonus,
     gift_scope_type: grantType || null,
     gift_scope_id: (grantType === 'pantheon' || grantType === 'deity') ? grantId : null,
@@ -5840,11 +5899,18 @@ async function addStoreItem(){
     gift_bundle_key: giftBundleKey || null,
     gift_altar_expansion_tier_id: giftAltarExpansionTierId || null,
     image_url: imageUrl || null
-  });
+  };
+  const { error } = editingId
+    ? await supabaseClient.from('store_items').update(payload).eq('id', editingId)
+    : await supabaseClient.from('store_items').insert({ id, ...payload });
   if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
 
   status.className = 'status ok';
-  status.textContent = name + ' is live in the shop.';
+  status.textContent = editingId ? (name + ' saved.') : (name + ' is live in the shop.');
+  editingStoreItemId = null;
+  document.getElementById('newItemId').disabled = false;
+  document.getElementById('addItemBtn').textContent = 'Add item';
+  document.getElementById('cancelEditItemBtn').style.display = 'none';
   ['newItemId','newItemName','newItemPrice','newItemBonus','newItemDescription','newItemGrantId','newItemGiftAmount','newItemImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   document.getElementById('newItemGrantType').value = '';
   document.getElementById('newItemGiftCurrency').value = '';
