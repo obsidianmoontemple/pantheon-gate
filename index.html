@@ -7274,12 +7274,31 @@ function renderCampaignBrowse(){
     app.innerHTML = `<div class="card"${bgAttr('campaign', 'text-align:center;')}><h2>The Divine Realms</h2><p class="hint">Loading…</p></div>`;
     return;
   }
-  // Locked chapters are fully hidden, not just greyed out — clear/level
-  // up to reveal the next one. Within an unlocked chapter, encounters must
-  // now be cleared in order (0104) — a `locked` encounter shows a badge
-  // in place of its Fight/Choose button instead of being hidden, so a
-  // player can see what's coming without being able to jump ahead to it.
-  const chapters = campaignData.chapters.filter(c => c.unlocked).map(c => {
+  // One campaign at a time (direct feedback: "you should only be able to
+  // see the one campaign at a time please and as they complete one the
+  // next will show up") — campaign/index.ts's "list" action now only ever
+  // sends: every already-completed chapter, plus exactly one more (the
+  // current one) — nothing further out is even in the payload, so there's
+  // no client-side filtering left to do for visibility. A completed
+  // chapter renders collapsed (its encounters are still reachable inside,
+  // so replaying an old fight for its replay XP/reward stays possible);
+  // the one remaining chapter renders fully expanded if it's level-
+  // unlocked, or as a level-gated preview (name/description only, no
+  // encounter list) if the player hasn't reached its required level yet —
+  // "the next will show up" as soon as the prior chapter is cleared, even
+  // before they're high enough level to actually start it, so they can
+  // see what's coming. Within an unlocked chapter, encounters must still
+  // be cleared in order (0104) — a `locked` encounter shows a badge in
+  // place of its Fight/Choose button instead of being hidden, so a player
+  // can see what's coming without being able to jump ahead to it.
+  const chapters = campaignData.chapters.map(c => {
+    if(!c.completed && !c.unlocked){
+      return `<div class="pantheon-group">
+        <h3>${esc(c.name)}</h3>
+        <p class="hint" style="margin:-4px 0 8px;">${esc(c.description || '')}</p>
+        <p class="hint">Reach Guardian Level ${c.requiredLevel} to begin this campaign.</p>
+      </div>`;
+    }
     const rows = c.encounters.map(e => {
       const icon = e.encounterType === 'combat' ? '⚔️' : '📜';
       const statusBadge = e.locked
@@ -7325,8 +7344,14 @@ function renderCampaignBrowse(){
         <div class="ractions">${statusBadge}${actionHtml}</div>
       </div>`;
     }).join('') || '<p class="hint">Nothing here yet.</p>';
-    const completedNote = c.completed ? `<p class="hint" style="margin:-4px 0 8px;color:#7a9e6f;">Chapter complete!</p>` : '';
-    return `<div class="pantheon-group"><h3>${esc(c.name)}</h3><p class="hint" style="margin:-4px 0 8px;">${esc(c.description || '')}</p>${completedNote}${rows}</div>`;
+    if(c.completed){
+      // Completed chapters stay visible but collapsed, above the current
+      // one — a player can still reopen one to replay an encounter, but
+      // the browse screen isn't a wall of every chapter at once.
+      return `<details class="pantheon-group"><summary style="cursor:pointer;"><h3 style="display:inline;">${esc(c.name)} <span class="mark-badge full" style="font-size:11px;">complete</span></h3></summary>
+        <p class="hint" style="margin:6px 0 8px;">${esc(c.description || '')}</p>${rows}</details>`;
+    }
+    return `<div class="pantheon-group"><h3>${esc(c.name)}</h3><p class="hint" style="margin:-4px 0 8px;">${esc(c.description || '')}</p>${rows}</div>`;
   }).join('') || '<p class="hint">No chapters yet — check back soon.</p>';
 
   const campaignBg = bgAttr('campaign', 'text-align:center;');
@@ -7454,9 +7479,15 @@ function campaignXpSummary(data){
   const rewardNames = (xp.rewards || []).filter(r => r.type === 'reward').map(r => r.name).filter(Boolean);
   if(rewardNames.length) msg += ' ' + rewardNames.join(', ') + '!';
   if(data.encounterReward && data.encounterReward.granted) msg += ` Also received ${data.encounterReward.name || 'a reward'}.`;
+  // encounterBundleReward/chapterBundleReward (0138) — grant_reward_bundle
+  // returns {granted, bundle: <name>, items}; this was never actually
+  // surfaced to the player before now (no chapter had a gift_bundle_key
+  // set, so it always came back null and the gap went unnoticed).
+  if(data.encounterBundleReward && data.encounterBundleReward.granted) msg += ` Bundle received: ${data.encounterBundleReward.bundle || 'a bundle of rewards'}.`;
   if(data.chapterCompleted){
     msg += ' Chapter complete!';
     if(data.chapterReward && data.chapterReward.granted) msg += ` Received ${data.chapterReward.name || 'a reward'} for finishing it.`;
+    if(data.chapterBundleReward && data.chapterBundleReward.granted) msg += ` Plus a bundle: ${data.chapterBundleReward.bundle || 'a bundle of rewards'}.`;
   }
   return msg;
 }
