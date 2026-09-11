@@ -236,6 +236,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="expeditions" data-group="creatures" onclick="showTab('expeditions')">Expeditions</button>
       <button class="tab-btn" data-tab="altars" data-group="creatures" onclick="showTab('altars')">Altars</button>
       <button class="tab-btn" data-tab="wheel" data-group="creatures" onclick="showTab('wheel')">Element Wheel</button>
+      <button class="tab-btn" data-tab="battlesettings" data-group="creatures" onclick="showTab('battlesettings')">Battle Settings</button>
       <button class="tab-btn" data-tab="moves" data-group="creatures" onclick="showTab('moves')">Moves</button>
       <button class="tab-btn" data-tab="blessings" data-group="creatures" onclick="showTab('blessings')">Deity Blessings</button>
       <button class="tab-btn" data-tab="species" data-group="guardian" onclick="showTab('species')">Guardian Species</button>
@@ -1860,6 +1861,98 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
     </div>
 
+    <!-- ============================== BATTLE SETTINGS ============================== -->
+    <div class="tab-content" id="tab-battlesettings">
+      <div class="card">
+        <h2>Battle Settings (0145)</h2>
+        <p class="hint">Every number below used to be a hardcoded constant duplicated (often with slightly different values) across the combat, pvp, world-boss, circle, and mage edge functions — five different crit formulas, the same multiplier typed out ten separate times, no admin control at all. Now they're one shared, admin-editable row every one of those functions reads fresh on each fight. Saving here changes live gameplay immediately, no redeploy needed. Deliberately NOT included: the Element Wheel (its own tab above), Moves/Blessings/Gear stat bonuses (their own tabs), Energy &amp; Tickets and Invasion Settings' economy fields (their own tabs), and the Circle roster's cosmetic Power Rating display formula, which is intentionally kept separate from the real invasion combat formula below so a display feature can never silently shift invasion balance.</p>
+
+        <h3>Crit &amp; Ward — the core resolveHit() formula (Gauntlet, PvP, World Boss, Circle Dragon)</h3>
+        <p class="hint">Crit chance = min(Global cap, min(Base cap, Cunning ÷ Cunning divisor) + any aura crit bonus%). A crit multiplies raw damage by the Crit multiplier; every hit then subtracts Defender Ward × Ward mitigation coefficient, floored at Min damage floor.</p>
+        <div class="form-row">
+          <div class="field"><label>Cunning divisor</label><input type="number" min="1" id="bsCritCunningDivisor" style="max-width:130px;"></div>
+          <div class="field"><label>Base crit cap (0–1)</label><input type="number" step="0.01" min="0" max="1" id="bsCritChanceBaseCap" style="max-width:140px;"></div>
+          <div class="field"><label>Global crit cap (0–1)</label><input type="number" step="0.01" min="0" max="1" id="bsCritChanceGlobalCap" style="max-width:140px;"></div>
+          <div class="field"><label>Crit multiplier</label><input type="number" step="0.1" min="1" id="bsCritDamageMultiplier" style="max-width:130px;"></div>
+          <div class="field"><label>Ward mitigation coefficient</label><input type="number" step="0.01" min="0" id="bsWardMitigationCoefficient" style="max-width:160px;"></div>
+          <div class="field"><label>Min damage floor</label><input type="number" min="0" id="bsMinDamageFloor" style="max-width:130px;"></div>
+        </div>
+
+        <h3>Status-effect caps (auras)</h3>
+        <p class="hint">Dodge and Damage Reduction are each capped by their own %. Weaken caps how much of the target's effective Might a weaken_pct stack can strip. Vulnerability has no cap in the shipped defaults — leave blank to keep it uncapped, or set a number to cap it for the first time.</p>
+        <div class="form-row">
+          <div class="field"><label>Dodge cap %</label><input type="number" min="0.01" max="100" id="bsDodgeCapPct" style="max-width:120px;"></div>
+          <div class="field"><label>Damage reduction cap %</label><input type="number" min="0.01" max="100" id="bsDamageReductionCapPct" style="max-width:160px;"></div>
+          <div class="field"><label>Weaken cap %</label><input type="number" min="0.01" max="100" id="bsWeakenCapPct" style="max-width:130px;"></div>
+          <div class="field"><label>Vulnerability cap % (blank = uncapped)</label><input type="number" min="0.01" max="500" id="bsVulnerabilityCapPct" style="max-width:170px;" placeholder="uncapped"></div>
+        </div>
+
+        <h3>Shared opponent-AI move-selection heuristic</h3>
+        <p class="hint">Used by every NPC-controlled side (Gauntlet foes, PvP, World Boss, Circle Dragon) when picking a move each turn: below this HP% it will consider healing, at this chance it actually does; otherwise it falls back to a Basic Strike at this flat chance before scoring its remaining options.</p>
+        <div class="form-row">
+          <div class="field"><label>Heal below HP% (0–1)</label><input type="number" step="0.01" min="0" max="1" id="bsAiHealHpThresholdPct" style="max-width:150px;"></div>
+          <div class="field"><label>Heal chance (0–1)</label><input type="number" step="0.01" min="0" max="1" id="bsAiHealChance" style="max-width:140px;"></div>
+          <div class="field"><label>Basic Strike fallback chance (0–1)</label><input type="number" step="0.01" min="0" max="1" id="bsAiBasicStrikeFallbackChance" style="max-width:170px;"></div>
+        </div>
+
+        <h3>Round caps</h3>
+        <div class="form-row">
+          <div class="field"><label>Gauntlet</label><input type="number" min="1" id="bsRoundCapGauntlet" style="max-width:100px;"></div>
+          <div class="field"><label>PvP</label><input type="number" min="1" id="bsRoundCapPvp" style="max-width:100px;"></div>
+          <div class="field"><label>Mage Duel</label><input type="number" min="1" id="bsRoundCapMageDuel" style="max-width:110px;"></div>
+        </div>
+
+        <h3>Flat reward amounts</h3>
+        <p class="hint">Not already covered by a dedicated payout table (pvp_payout_rules, Universal Loot, etc.) — just the flat XP/Essence-per-win amounts.</p>
+        <div class="form-row">
+          <div class="field"><label>Gauntlet win XP</label><input type="number" min="0" id="bsGauntletWinXp" style="max-width:120px;"></div>
+          <div class="field"><label>Gauntlet win Essence</label><input type="number" min="0" id="bsGauntletWinEssence" style="max-width:140px;"></div>
+          <div class="field"><label>PvP win XP</label><input type="number" min="0" id="bsPvpWinXp" style="max-width:110px;"></div>
+        </div>
+
+        <h3>World Boss &amp; Circle Dragon</h3>
+        <p class="hint">Shared cooldown after either shared-pool boss defeats your guardian. The three kinds of opponent with no real Cunning stat each get their own counter-crit knob instead: World Boss is a flat chance; Circle Dragon scales with the dragon's own Tier (chance = min(Cap, Tier × Coefficient)); Mage Duel's monster is flat too.</p>
+        <div class="form-row">
+          <div class="field"><label>Attack cooldown (minutes)</label><input type="number" min="0" id="bsBossDragonAttackCooldownMinutes" style="max-width:150px;"></div>
+          <div class="field"><label>World Boss counter-crit (0–1)</label><input type="number" step="0.01" min="0" max="1" id="bsWorldBossCounterCritChance" style="max-width:170px;"></div>
+          <div class="field"><label>Dragon counter-crit tier coefficient</label><input type="number" step="0.01" min="0" id="bsCircleDragonCounterCritTierCoefficient" style="max-width:190px;"></div>
+          <div class="field"><label>Dragon counter-crit cap (0–1)</label><input type="number" step="0.01" min="0" max="1" id="bsCircleDragonCounterCritCap" style="max-width:170px;"></div>
+          <div class="field"><label>Mage Duel monster counter-crit (0–1)</label><input type="number" step="0.01" min="0" max="1" id="bsMageDuelMonsterCounterCritChance" style="max-width:190px;"></div>
+        </div>
+
+        <h3>Mage Duel's own damage formula</h3>
+        <p class="hint">Structurally separate from every other system's Might × move.power shape: raw = (Might × Might weight + Swiftness × Swiftness weight + Cunning × Cunning weight) × Baseline multiplier × the shared ± variance roll below × the Element Wheel multiplier. The Art lean (e.g. Pyromancy leans Might) adds this Leaned-stat bonus % on top of whichever stat it favors, before this formula runs.</p>
+        <div class="form-row">
+          <div class="field"><label>Leaned-stat bonus %</label><input type="number" min="0" id="bsMageDuelLeanedStatBonusPct" style="max-width:140px;"></div>
+          <div class="field"><label>Might weight</label><input type="number" step="0.1" min="0" id="bsMageDuelMightWeight" style="max-width:120px;"></div>
+          <div class="field"><label>Swiftness weight</label><input type="number" step="0.1" min="0" id="bsMageDuelSwiftnessWeight" style="max-width:130px;"></div>
+          <div class="field"><label>Cunning weight</label><input type="number" step="0.1" min="0" id="bsMageDuelCunningWeight" style="max-width:130px;"></div>
+          <div class="field"><label>Baseline multiplier</label><input type="number" step="0.1" min="0" id="bsMageDuelBaselineMultiplier" style="max-width:140px;"></div>
+        </div>
+
+        <h3>Shared ± variance RNG roll</h3>
+        <p class="hint">Circle invasion's power roll and Mage Duel's own and its monster's damage roll all independently hardcoded the same "±15%" shape — this is that one shared knob (e.g. 15 = ±15%, rolling somewhere between 85% and 115% of the base value).</p>
+        <div class="form-row">
+          <div class="field"><label>Variance %</label><input type="number" min="0" max="99" id="bsRngRollVariancePct" style="max-width:110px;"></div>
+        </div>
+
+        <h3>Circle invasion's real combat formula</h3>
+        <p class="hint">guardianPowerScore() — the formula that actually decides who wins an invasion: Might × Might weight + Ward × Ward weight + Cunning × Cunning weight + Swiftness × Swiftness weight + Vitality × Vitality weight (Vitality's weight ships at 0, i.e. unused, but is here in case you ever want it counted). This is deliberately separate from the Circle roster's cosmetic Power Rating display formula, which is NOT on this page and NOT affected by anything below.</p>
+        <div class="form-row">
+          <div class="field"><label>Might weight</label><input type="number" step="0.1" min="0" id="bsInvasionPowerWeightMight" style="max-width:120px;"></div>
+          <div class="field"><label>Ward weight</label><input type="number" step="0.1" min="0" id="bsInvasionPowerWeightWard" style="max-width:120px;"></div>
+          <div class="field"><label>Cunning weight</label><input type="number" step="0.1" min="0" id="bsInvasionPowerWeightCunning" style="max-width:130px;"></div>
+          <div class="field"><label>Swiftness weight</label><input type="number" step="0.1" min="0" id="bsInvasionPowerWeightSwiftness" style="max-width:130px;"></div>
+          <div class="field"><label>Vitality weight</label><input type="number" step="0.1" min="0" id="bsInvasionPowerWeightVitality" style="max-width:130px;"></div>
+        </div>
+
+        <div class="save-bar">
+          <button id="saveBattleSettingsBtn">Save changes</button>
+          <div class="status" id="battleSettingsStatus"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ============================== DEITY BLESSINGS ============================== -->
     <div class="tab-content" id="tab-blessings">
       <div class="card">
@@ -1951,6 +2044,60 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         </div>
         <div class="status" id="newGuardianItemStatus"></div>
       </div>
+
+      <div class="card">
+        <h2>Guardian gear catalog (0141)</h2>
+        <p class="hint">Direct feedback: "I want the familiar to be able to equip stuff too just like the mage can." Same shape as Mage Gear above — one of three slots (weapon/armor/accessory), crafted with God Shards from the Guardian's own Craft screen, equipped/unequipped separately from crafting so swapping gear is free and instant. Unlike Mage Gear, a piece here can ALSO (instead of, or alongside, a stat bonus) grant access to a move from the Move Catalog for as long as it's equipped — swap the gear out mid-loadout planning and the move goes with it. At least one of Stat key or Grants move is required; both can be set on the same piece.</p>
+        <div class="scroll-table" style="max-height:420px;">
+          <table>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Slot</th><th>Stat key</th><th>Stat amount</th><th>Grants move</th><th>Shard cost</th><th>Image URL</th><th>Active</th></tr></thead>
+            <tbody id="guardianGearRows"><tr><td colspan="10">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveGuardianGearBtn">Save changes</button>
+          <div class="status" id="guardianGearStatus"></div>
+        </div>
+        <h3>Add a new piece</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newGuardianGearKey" style="max-width:150px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newGuardianGearName" style="max-width:160px;"></div>
+          <div class="field"><label>Slot</label>
+            <select id="newGuardianGearSlot" style="max-width:120px;">
+              <option value="weapon">weapon</option>
+              <option value="armor">armor</option>
+              <option value="accessory">accessory</option>
+            </select>
+          </div>
+          <div class="field"><label>Shard cost</label><input type="number" min="1" id="newGuardianGearCost" style="max-width:110px;"></div>
+          <button id="addGuardianGearBtn">Add piece</button>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Stat key (optional)</label>
+            <select id="newGuardianGearStatKey" style="max-width:140px;">
+              <option value="">— none —</option>
+              <option value="vitality">vitality</option>
+              <option value="might">might</option>
+              <option value="ward">ward</option>
+              <option value="swiftness">swiftness</option>
+              <option value="cunning">cunning</option>
+            </select>
+          </div>
+          <div class="field"><label>Stat amount</label><input type="number" min="1" id="newGuardianGearStatAmount" style="max-width:110px;"></div>
+          <div class="field"><label>Grants move (optional)</label>
+            <select id="newGuardianGearMoveKey" style="max-width:260px;"></select>
+          </div>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (shown to players)</label>
+          <input type="text" id="newGuardianGearDescription" style="max-width:none;">
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Image URL (optional)</label>
+          <input type="text" id="newGuardianGearImageUrl" placeholder="https://…" style="max-width:400px;">
+        </div>
+        <div class="status" id="newGuardianGearStatus"></div>
+      </div>
     </div>
 
     <!-- ============================== GIFTABLE REWARDS ============================== -->
@@ -1961,9 +2108,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="scroll-table" style="max-height:420px;">
           <table>
             <thead><tr>
-              <th>Key</th><th>Name</th><th>Description</th><th>Type</th><th>Currency</th><th>Amount</th><th>Scope type</th><th>Scope id</th><th>Guardian item</th><th>Artifact</th><th>Fragment #</th><th>Bonus msgs</th><th>Mage gear</th><th>Mage reagent</th><th>Reagent qty</th><th>Mage potion</th><th>Potion qty</th><th>Image URL</th><th>Active</th>
+              <th>Key</th><th>Name</th><th>Description</th><th>Type</th><th>Currency</th><th>Amount</th><th>Scope type</th><th>Scope id</th><th>Guardian item</th><th>Artifact</th><th>Fragment #</th><th>Bonus msgs</th><th>Mage gear</th><th>Mage reagent</th><th>Reagent qty</th><th>Mage potion</th><th>Potion qty</th><th>Guardian gear</th><th>Image URL</th><th>Active</th>
             </tr></thead>
-            <tbody id="giftableRewardRows"><tr><td colspan="19">Loading…</td></tr></tbody>
+            <tbody id="giftableRewardRows"><tr><td colspan="20">Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="save-bar">
@@ -1984,6 +2131,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
               <option value="mage_gear_item">Mage gear</option>
               <option value="mage_reagent">Mage reagent</option>
               <option value="mage_potion">Mage potion</option>
+              <option value="guardian_gear_item">Guardian gear</option>
             </select>
           </div>
           <button id="addRewardBtn">Add reward</button>
@@ -2020,6 +2168,9 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <select id="newRewardMagePotion" style="max-width:200px;"></select>
           </div>
           <div class="field" id="newRewardMagePotionAmountField" style="display:none;"><label>Potion amount</label><input type="number" min="1" id="newRewardMagePotionAmount" style="max-width:130px;"></div>
+          <div class="field" id="newRewardGuardianGearField" style="display:none;"><label>Guardian gear</label>
+            <select id="newRewardGuardianGear" style="max-width:200px;"></select>
+          </div>
           <div class="field"><label>Image URL (optional)</label><input type="text" id="newRewardImageUrl" placeholder="https://…" style="max-width:280px;"></div>
         </div>
         <div class="field" style="max-width:none;">
@@ -3937,6 +4088,7 @@ async function handleSession(session){
   loadGuardianProgression();
   loadMageProgression();
   loadStaminaSettings();
+  loadBattleSettingsAdmin();
   loadAffinitiesList().then(() => { loadAffinityWheel(); renderAffinityList(); });
   loadDragonCatalog();
   loadWorldBoss();
@@ -3952,6 +4104,7 @@ async function handleSession(session){
   loadSpeciesCatalog();
   loadMageArts();
   loadMageGear();
+  loadGuardianGear();
   await withBootTimeout(loadMageReagents(), 'loadMageReagents'); // awaited — loadMagePotions()'s recipe select needs mageReagentCatalogCache populated first
   loadMagePotions();
   loadNarratorSettingsAdmin();
@@ -4821,6 +4974,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveProgressionBtn').addEventListener('click', saveGuardianProgression);
   document.getElementById('saveMageProgressionBtn').addEventListener('click', saveMageProgression);
   document.getElementById('saveStaminaSettingsBtn').addEventListener('click', saveStaminaSettings);
+  document.getElementById('saveBattleSettingsBtn').addEventListener('click', saveBattleSettingsAdmin);
 
   document.getElementById('saveDragonsBtn').addEventListener('click', saveDragonCatalog);
   document.getElementById('addDragonBtn').addEventListener('click', addDragon);
@@ -4941,6 +5095,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('newGuardianItemType').addEventListener('change', updateNewGuardianItemTypeFields);
   document.getElementById('newGuardianItemEffect').addEventListener('change', updateNewGuardianItemTypeFields);
   updateNewGuardianItemTypeFields();
+  document.getElementById('saveGuardianGearBtn').addEventListener('click', saveGuardianGear);
+  document.getElementById('addGuardianGearBtn').addEventListener('click', addGuardianGear);
 
   document.getElementById('saveGiftableRewardsBtn').addEventListener('click', saveGiftableRewardCatalog);
   document.getElementById('addRewardBtn').addEventListener('click', addGiftableReward);
@@ -7806,6 +7962,140 @@ async function saveStaminaSettings(){
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Existing balances are unaffected — new caps/costs apply the next time each is checked.';
 }
 
+// Battle Settings (0145) — same "id=1 singleton settings row" shape as
+// stamina_settings/mage_progression_settings above; combat/pvp/world-boss/
+// circle/mage all read this fresh at the start of every fight, so a save
+// here changes live gameplay the instant it lands, no redeploy needed.
+// Vulnerability cap is the one nullable field — an empty box means
+// "uncapped" (the shipped default), a number caps it for the first time.
+async function loadBattleSettingsAdmin(){
+  const { data, error } = await supabaseClient.from('battle_settings').select('*').eq('id', 1).maybeSingle();
+  const status = document.getElementById('battleSettingsStatus');
+  if(!status) return; // this tab's markup isn't on the page (e.g. mid-deploy) — nothing to fill in
+  if(error || !data){
+    status.textContent = 'Could not load: ' + (error?.message || 'no row found');
+    return;
+  }
+  document.getElementById('bsCritCunningDivisor').value = data.crit_cunning_divisor;
+  document.getElementById('bsCritChanceBaseCap').value = data.crit_chance_base_cap;
+  document.getElementById('bsCritChanceGlobalCap').value = data.crit_chance_global_cap;
+  document.getElementById('bsCritDamageMultiplier').value = data.crit_damage_multiplier;
+  document.getElementById('bsWardMitigationCoefficient').value = data.ward_mitigation_coefficient;
+  document.getElementById('bsMinDamageFloor').value = data.min_damage_floor;
+  document.getElementById('bsDodgeCapPct').value = data.dodge_cap_pct;
+  document.getElementById('bsDamageReductionCapPct').value = data.damage_reduction_cap_pct;
+  document.getElementById('bsWeakenCapPct').value = data.weaken_cap_pct;
+  document.getElementById('bsVulnerabilityCapPct').value = data.vulnerability_cap_pct ?? '';
+  document.getElementById('bsAiHealHpThresholdPct').value = data.ai_heal_hp_threshold_pct;
+  document.getElementById('bsAiHealChance').value = data.ai_heal_chance;
+  document.getElementById('bsAiBasicStrikeFallbackChance').value = data.ai_basic_strike_fallback_chance;
+  document.getElementById('bsRoundCapGauntlet').value = data.round_cap_gauntlet;
+  document.getElementById('bsRoundCapPvp').value = data.round_cap_pvp;
+  document.getElementById('bsRoundCapMageDuel').value = data.round_cap_mage_duel;
+  document.getElementById('bsGauntletWinXp').value = data.gauntlet_win_xp;
+  document.getElementById('bsGauntletWinEssence').value = data.gauntlet_win_essence;
+  document.getElementById('bsPvpWinXp').value = data.pvp_win_xp;
+  document.getElementById('bsBossDragonAttackCooldownMinutes').value = data.boss_dragon_attack_cooldown_minutes;
+  document.getElementById('bsWorldBossCounterCritChance').value = data.world_boss_counter_crit_chance;
+  document.getElementById('bsCircleDragonCounterCritTierCoefficient').value = data.circle_dragon_counter_crit_tier_coefficient;
+  document.getElementById('bsCircleDragonCounterCritCap').value = data.circle_dragon_counter_crit_cap;
+  document.getElementById('bsMageDuelMonsterCounterCritChance').value = data.mage_duel_monster_counter_crit_chance;
+  document.getElementById('bsMageDuelLeanedStatBonusPct').value = data.mage_duel_leaned_stat_bonus_pct;
+  document.getElementById('bsMageDuelMightWeight').value = data.mage_duel_might_weight;
+  document.getElementById('bsMageDuelSwiftnessWeight').value = data.mage_duel_swiftness_weight;
+  document.getElementById('bsMageDuelCunningWeight').value = data.mage_duel_cunning_weight;
+  document.getElementById('bsMageDuelBaselineMultiplier').value = data.mage_duel_baseline_multiplier;
+  document.getElementById('bsRngRollVariancePct').value = data.rng_roll_variance_pct;
+  document.getElementById('bsInvasionPowerWeightMight').value = data.invasion_power_weight_might;
+  document.getElementById('bsInvasionPowerWeightWard').value = data.invasion_power_weight_ward;
+  document.getElementById('bsInvasionPowerWeightCunning').value = data.invasion_power_weight_cunning;
+  document.getElementById('bsInvasionPowerWeightSwiftness').value = data.invasion_power_weight_swiftness;
+  document.getElementById('bsInvasionPowerWeightVitality').value = data.invasion_power_weight_vitality;
+}
+
+async function saveBattleSettingsAdmin(){
+  const status = document.getElementById('battleSettingsStatus');
+  const f = id => parseFloat(document.getElementById(id).value);
+  const i = id => parseInt(document.getElementById(id).value, 10);
+
+  const critCunningDivisor = f('bsCritCunningDivisor'), critChanceBaseCap = f('bsCritChanceBaseCap'), critChanceGlobalCap = f('bsCritChanceGlobalCap');
+  const critDamageMultiplier = f('bsCritDamageMultiplier'), wardMitigationCoefficient = f('bsWardMitigationCoefficient'), minDamageFloor = i('bsMinDamageFloor');
+  const dodgeCapPct = f('bsDodgeCapPct'), damageReductionCapPct = f('bsDamageReductionCapPct'), weakenCapPct = f('bsWeakenCapPct');
+  const vulnRaw = document.getElementById('bsVulnerabilityCapPct').value;
+  const vulnerabilityCapPct = vulnRaw === '' ? null : parseFloat(vulnRaw);
+  const aiHealHpThresholdPct = f('bsAiHealHpThresholdPct'), aiHealChance = f('bsAiHealChance'), aiBasicStrikeFallbackChance = f('bsAiBasicStrikeFallbackChance');
+  const roundCapGauntlet = i('bsRoundCapGauntlet'), roundCapPvp = i('bsRoundCapPvp'), roundCapMageDuel = i('bsRoundCapMageDuel');
+  const gauntletWinXp = i('bsGauntletWinXp'), gauntletWinEssence = i('bsGauntletWinEssence'), pvpWinXp = i('bsPvpWinXp');
+  const bossDragonAttackCooldownMinutes = i('bsBossDragonAttackCooldownMinutes');
+  const worldBossCounterCritChance = f('bsWorldBossCounterCritChance'), circleDragonCounterCritTierCoefficient = f('bsCircleDragonCounterCritTierCoefficient');
+  const circleDragonCounterCritCap = f('bsCircleDragonCounterCritCap'), mageDuelMonsterCounterCritChance = f('bsMageDuelMonsterCounterCritChance');
+  const mageDuelLeanedStatBonusPct = f('bsMageDuelLeanedStatBonusPct'), mageDuelMightWeight = f('bsMageDuelMightWeight');
+  const mageDuelSwiftnessWeight = f('bsMageDuelSwiftnessWeight'), mageDuelCunningWeight = f('bsMageDuelCunningWeight'), mageDuelBaselineMultiplier = f('bsMageDuelBaselineMultiplier');
+  const rngRollVariancePct = f('bsRngRollVariancePct');
+  const invasionPowerWeightMight = f('bsInvasionPowerWeightMight'), invasionPowerWeightWard = f('bsInvasionPowerWeightWard');
+  const invasionPowerWeightCunning = f('bsInvasionPowerWeightCunning'), invasionPowerWeightSwiftness = f('bsInvasionPowerWeightSwiftness'), invasionPowerWeightVitality = f('bsInvasionPowerWeightVitality');
+
+  const requiredValues = [
+    critCunningDivisor, critChanceBaseCap, critChanceGlobalCap, critDamageMultiplier, wardMitigationCoefficient, minDamageFloor,
+    dodgeCapPct, damageReductionCapPct, weakenCapPct,
+    aiHealHpThresholdPct, aiHealChance, aiBasicStrikeFallbackChance,
+    roundCapGauntlet, roundCapPvp, roundCapMageDuel,
+    gauntletWinXp, gauntletWinEssence, pvpWinXp, bossDragonAttackCooldownMinutes,
+    worldBossCounterCritChance, circleDragonCounterCritTierCoefficient, circleDragonCounterCritCap, mageDuelMonsterCounterCritChance,
+    mageDuelLeanedStatBonusPct, mageDuelMightWeight, mageDuelSwiftnessWeight, mageDuelCunningWeight, mageDuelBaselineMultiplier,
+    rngRollVariancePct,
+    invasionPowerWeightMight, invasionPowerWeightWard, invasionPowerWeightCunning, invasionPowerWeightSwiftness, invasionPowerWeightVitality,
+  ];
+  if(requiredValues.some(n => isNaN(n) || n < 0)){
+    status.className = 'status err';
+    status.textContent = 'Every field must be a non-negative number (Vulnerability cap may be left blank for uncapped).';
+    return;
+  }
+  if(vulnerabilityCapPct !== null && isNaN(vulnerabilityCapPct)){
+    status.className = 'status err';
+    status.textContent = 'Vulnerability cap must be a number, or left blank for uncapped.';
+    return;
+  }
+  if(critCunningDivisor < 1 || minDamageFloor < 0 || roundCapGauntlet < 1 || roundCapPvp < 1 || roundCapMageDuel < 1 || critDamageMultiplier < 1){
+    status.className = 'status err';
+    status.textContent = 'Cunning divisor, round caps, and Crit multiplier must each be at least 1.';
+    return;
+  }
+  const pctFields = { critChanceBaseCap, critChanceGlobalCap, aiHealHpThresholdPct, aiHealChance, aiBasicStrikeFallbackChance, worldBossCounterCritChance, circleDragonCounterCritCap, mageDuelMonsterCounterCritChance };
+  if(Object.values(pctFields).some(n => n > 1)){
+    status.className = 'status err';
+    status.textContent = 'Crit caps and AI-heuristic chances are stored 0–1 (e.g. 0.35 = 35%), not 0–100.';
+    return;
+  }
+  if(dodgeCapPct > 100 || damageReductionCapPct > 100 || weakenCapPct > 100 || (vulnerabilityCapPct !== null && vulnerabilityCapPct > 500)){
+    status.className = 'status err';
+    status.textContent = 'Dodge/Damage Reduction/Weaken caps must be 0–100; Vulnerability cap (if set) must be 0–500.';
+    return;
+  }
+
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('battle_settings').update({
+    crit_cunning_divisor: critCunningDivisor, crit_chance_base_cap: critChanceBaseCap, crit_chance_global_cap: critChanceGlobalCap,
+    crit_damage_multiplier: critDamageMultiplier, ward_mitigation_coefficient: wardMitigationCoefficient, min_damage_floor: minDamageFloor,
+    dodge_cap_pct: dodgeCapPct, damage_reduction_cap_pct: damageReductionCapPct, weaken_cap_pct: weakenCapPct, vulnerability_cap_pct: vulnerabilityCapPct,
+    ai_heal_hp_threshold_pct: aiHealHpThresholdPct, ai_heal_chance: aiHealChance, ai_basic_strike_fallback_chance: aiBasicStrikeFallbackChance,
+    round_cap_gauntlet: roundCapGauntlet, round_cap_pvp: roundCapPvp, round_cap_mage_duel: roundCapMageDuel,
+    gauntlet_win_xp: gauntletWinXp, gauntlet_win_essence: gauntletWinEssence, pvp_win_xp: pvpWinXp,
+    boss_dragon_attack_cooldown_minutes: bossDragonAttackCooldownMinutes,
+    world_boss_counter_crit_chance: worldBossCounterCritChance, circle_dragon_counter_crit_tier_coefficient: circleDragonCounterCritTierCoefficient,
+    circle_dragon_counter_crit_cap: circleDragonCounterCritCap, mage_duel_monster_counter_crit_chance: mageDuelMonsterCounterCritChance,
+    mage_duel_leaned_stat_bonus_pct: mageDuelLeanedStatBonusPct, mage_duel_might_weight: mageDuelMightWeight,
+    mage_duel_swiftness_weight: mageDuelSwiftnessWeight, mage_duel_cunning_weight: mageDuelCunningWeight, mage_duel_baseline_multiplier: mageDuelBaselineMultiplier,
+    rng_roll_variance_pct: rngRollVariancePct,
+    invasion_power_weight_might: invasionPowerWeightMight, invasion_power_weight_ward: invasionPowerWeightWard,
+    invasion_power_weight_cunning: invasionPowerWeightCunning, invasion_power_weight_swiftness: invasionPowerWeightSwiftness, invasion_power_weight_vitality: invasionPowerWeightVitality,
+    updated_at: new Date().toISOString()
+  }).eq('id', 1);
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Every fight in the game reads this fresh — changes apply to the very next attack, no redeploy needed.';
+}
+
 // Circle Invasion Settings (0090) — same "id=1 singleton settings row"
 // shape as stamina_settings above; the `circle` edge function reads this
 // directly (loadInvasionSettings()) so a change here applies to the very
@@ -8996,7 +9286,12 @@ function moveOptionsHtml(kind, currentKey, emptyLabel){
   // swiftness-shave mechanic, which support/tank moves don't use
   // either), so the dropdown needs to offer those too, not just
   // kind==='power' rows.
-  const options = kind === 'power_or_support'
+  // 0141 — 'any' is another special filter (not a real kind value), for
+  // the Guardian Gear catalog's "grants a move" picker: a piece of gear
+  // can grant any move at all (Power, Control, or even Basic), unlike
+  // the Power-only / Control-only pickers above.
+  const options = kind === 'any' ? moveCatalogCache
+    : kind === 'power_or_support'
     ? moveCatalogCache.filter(m => m.kind === 'power' || m.archetype === 'support' || m.archetype === 'tank')
     : moveCatalogCache.filter(m => m.kind === kind);
   return `<option value="">${esc(emptyLabel)}</option>` +
@@ -9734,6 +10029,115 @@ async function addMageGear(){
   ['newMageGearKey','newMageGearName','newMageGearStatAmount','newMageGearCost','newMageGearDescription','newMageGearImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
   loadMageGear();
   autoWrapAsGiftableReward({ key, name, description, reward_type: 'mage_gear_item', mage_gear_key: key });
+}
+
+/* =========================================================================
+   GUARDIAN GEAR (0141) — "I want the familiar to be able to equip stuff
+   too just like the mage can." Same bulk-save-plus-add-new pattern as
+   Mage Gear above, with two differences: Stat key/amount is OPTIONAL
+   here (a piece can be pure move-granting), and there's a third optional
+   column, Grants move — a pointer into the Move Catalog (moveCatalogCache,
+   loaded by loadMoveCatalog() at boot, same source deity_moves' pickers
+   above use). At least one of the two must be set; enforced client-side
+   here and by a check constraint in 0141 itself.
+   ===================================================================== */
+
+async function loadGuardianGear(){
+  const { data, error } = await supabaseClient.from('guardian_gear_catalog').select('*').order('sort_order', { ascending: true });
+  const rows = document.getElementById('guardianGearRows');
+  if(error){ rows.innerHTML = '<tr><td colspan="10">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  const moveSel = document.getElementById('newGuardianGearMoveKey');
+  if(moveSel && !moveSel.options.length) moveSel.innerHTML = moveOptionsHtml('any', '', '— none —');
+  rows.innerHTML = (data || []).map(g => `<tr data-key="${esc(g.key)}">
+    <td class="dim">${esc(g.key)}</td>
+    <td><input type="text" id="ggName_${esc(g.key)}" value="${esc(g.name)}" style="max-width:140px;"></td>
+    <td><input type="text" id="ggDesc_${esc(g.key)}" value="${esc(g.description || '')}" style="max-width:220px;"></td>
+    <td><select id="ggSlot_${esc(g.key)}">
+      <option value="weapon" ${g.slot === 'weapon' ? 'selected' : ''}>weapon</option>
+      <option value="armor" ${g.slot === 'armor' ? 'selected' : ''}>armor</option>
+      <option value="accessory" ${g.slot === 'accessory' ? 'selected' : ''}>accessory</option>
+    </select></td>
+    <td><select id="ggStatKey_${esc(g.key)}">
+      <option value="">— none —</option>
+      ${['vitality','might','ward','swiftness','cunning'].map(k => `<option value="${k}" ${k === g.stat_key ? 'selected' : ''}>${k}</option>`).join('')}
+    </select></td>
+    <td><input type="number" min="1" id="ggStatAmount_${esc(g.key)}" value="${g.stat_amount ?? ''}" style="max-width:80px;"></td>
+    <td><select id="ggMoveKey_${esc(g.key)}" style="max-width:220px;">${moveOptionsHtml('any', g.grants_move_key || '', '— none —')}</select></td>
+    <td><input type="number" min="1" id="ggCost_${esc(g.key)}" value="${g.shard_cost}" style="max-width:80px;"></td>
+    <td><input type="text" id="ggImageUrl_${esc(g.key)}" value="${esc(g.image_url || '')}" style="max-width:170px;" placeholder="https://…"></td>
+    <td><input type="checkbox" id="ggActive_${esc(g.key)}" ${g.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="10">No Guardian gear yet — run migration 0141.</td></tr>';
+}
+
+async function saveGuardianGear(){
+  const status = document.getElementById('guardianGearStatus');
+  const trs = document.querySelectorAll('#guardianGearRows tr[data-key]');
+  const rows = [];
+  for(const tr of trs){
+    const key = tr.getAttribute('data-key');
+    const statKey = document.getElementById('ggStatKey_' + key).value || null;
+    const statAmountRaw = document.getElementById('ggStatAmount_' + key).value;
+    const statAmount = statKey && statAmountRaw ? (parseInt(statAmountRaw, 10) || null) : null;
+    const moveKey = document.getElementById('ggMoveKey_' + key).value || null;
+    if(!statKey && !moveKey){
+      status.className = 'status err';
+      status.textContent = key + ' needs at least a Stat key or a Grants move — pick one before saving.';
+      return;
+    }
+    rows.push({
+      key,
+      name: document.getElementById('ggName_' + key).value.trim(),
+      description: document.getElementById('ggDesc_' + key).value.trim(),
+      slot: document.getElementById('ggSlot_' + key).value,
+      stat_key: statKey && statAmount ? statKey : null,
+      stat_amount: statKey && statAmount ? statAmount : null,
+      grants_move_key: moveKey,
+      shard_cost: parseInt(document.getElementById('ggCost_' + key).value, 10) || 1,
+      image_url: document.getElementById('ggImageUrl_' + key).value.trim() || null,
+      active: document.getElementById('ggActive_' + key).checked,
+    });
+  }
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('guardian_gear_catalog').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadGuardianGear();
+}
+
+async function addGuardianGear(){
+  const status = document.getElementById('newGuardianGearStatus');
+  const key = document.getElementById('newGuardianGearKey').value.trim().toLowerCase();
+  const name = document.getElementById('newGuardianGearName').value.trim();
+  const description = document.getElementById('newGuardianGearDescription').value.trim();
+  const slot = document.getElementById('newGuardianGearSlot').value;
+  const statKey = document.getElementById('newGuardianGearStatKey').value || null;
+  const statAmountRaw = document.getElementById('newGuardianGearStatAmount').value;
+  const statAmount = statKey && statAmountRaw ? (parseInt(statAmountRaw, 10) || null) : null;
+  const moveKey = document.getElementById('newGuardianGearMoveKey').value || null;
+  const shardCost = parseInt(document.getElementById('newGuardianGearCost').value, 10);
+  const imageUrl = document.getElementById('newGuardianGearImageUrl').value.trim() || null;
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  if(!shardCost || shardCost < 1){ status.className = 'status err'; status.textContent = 'Shard cost must be at least 1.'; return; }
+  if(statKey && !statAmount){ status.className = 'status err'; status.textContent = 'Stat amount must be at least 1 when a Stat key is picked.'; return; }
+  if(!statKey && !moveKey){ status.className = 'status err'; status.textContent = 'Pick at least a Stat key or a Grants move.'; return; }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('guardian_gear_catalog').insert({
+    key, name, description, slot,
+    stat_key: statKey && statAmount ? statKey : null,
+    stat_amount: statKey && statAmount ? statAmount : null,
+    grants_move_key: moveKey,
+    shard_cost: shardCost, image_url: imageUrl, active: true
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+  status.className = 'status ok'; status.textContent = name + ' added, and is now pickable as a Reward package in Broadcasts/Store/Check-ins/Event Triggers.';
+  ['newGuardianGearKey','newGuardianGearName','newGuardianGearStatAmount','newGuardianGearCost','newGuardianGearDescription','newGuardianGearImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newGuardianGearStatKey').value = '';
+  document.getElementById('newGuardianGearMoveKey').value = '';
+  loadGuardianGear();
+  autoWrapAsGiftableReward({ key, name, description, reward_type: 'guardian_gear_item', guardian_gear_key: key });
 }
 
 /* =========================================================================
@@ -11143,6 +11547,7 @@ let giftableArtifactsList = []; // [{key,name}], refreshed by loadGiftableReward
 let giftableMageGearList = []; // [{key,name}], refreshed by loadGiftableRewards()
 let giftableMageReagentsList = []; // [{key,name}], refreshed by loadGiftableRewards()
 let giftableMagePotionsList = []; // [{key,name}], refreshed by loadGiftableRewards()
+let giftableGuardianGearList = []; // [{key,name}], refreshed by loadGiftableRewards()
 
 function updateNewRewardTypeFields(){
   const type = document.getElementById('newRewardType').value;
@@ -11160,6 +11565,7 @@ function updateNewRewardTypeFields(){
   document.getElementById('newRewardMageReagentAmountField').style.display = type === 'mage_reagent' ? '' : 'none';
   document.getElementById('newRewardMagePotionField').style.display = type === 'mage_potion' ? '' : 'none';
   document.getElementById('newRewardMagePotionAmountField').style.display = type === 'mage_potion' ? '' : 'none';
+  document.getElementById('newRewardGuardianGearField').style.display = type === 'guardian_gear_item' ? '' : 'none';
 }
 
 function populateRewardPackagePickers(){
@@ -11177,23 +11583,25 @@ function populateRewardPackagePickers(){
 }
 
 async function loadGiftableRewards(){
-  const [{ data, error }, { data: items }, { data: artifacts }, { data: mageGear }, { data: mageReagents }, { data: magePotions }] = await Promise.all([
+  const [{ data, error }, { data: items }, { data: artifacts }, { data: mageGear }, { data: mageReagents }, { data: magePotions }, { data: guardianGear }] = await Promise.all([
     supabaseClient.from('giftable_rewards').select('*').order('key', { ascending: true }),
     supabaseClient.from('guardian_item_catalog').select('key, name').order('key', { ascending: true }),
     supabaseClient.from('expedition_artifacts').select('key, name').order('key', { ascending: true }),
     supabaseClient.from('mage_gear_catalog').select('key, name').order('key', { ascending: true }),
     supabaseClient.from('mage_reagent_catalog').select('key, name').order('key', { ascending: true }),
-    supabaseClient.from('mage_potion_catalog').select('key, name').order('key', { ascending: true })
+    supabaseClient.from('mage_potion_catalog').select('key, name').order('key', { ascending: true }),
+    supabaseClient.from('guardian_gear_catalog').select('key, name').order('key', { ascending: true })
   ]);
   giftableGuardianItemsList = items || [];
   giftableArtifactsList = artifacts || [];
   giftableMageGearList = mageGear || [];
   giftableMageReagentsList = mageReagents || [];
   giftableMagePotionsList = magePotions || [];
+  giftableGuardianGearList = guardianGear || [];
 
   const rows = document.getElementById('giftableRewardRows');
   if(error){
-    rows.innerHTML = '<tr><td colspan="19">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="20">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   // Keep the full list (active and inactive) so a day/broadcast/item that
@@ -11217,11 +11625,14 @@ async function loadGiftableRewards(){
     giftableMageReagentsList.map(r => `<option value="${esc(r.key)}">${esc(r.name)}</option>`).join('') || '<option value="">No reagents yet</option>';
   document.getElementById('newRewardMagePotion').innerHTML =
     giftableMagePotionsList.map(p => `<option value="${esc(p.key)}">${esc(p.name)}</option>`).join('') || '<option value="">No potions yet</option>';
+  document.getElementById('newRewardGuardianGear').innerHTML =
+    giftableGuardianGearList.map(g => `<option value="${esc(g.key)}">${esc(g.name)}</option>`).join('') || '<option value="">No Guardian gear yet</option>';
 
   const typeOptions = [
     ['currency', 'currency'], ['entitlement', 'entitlement'], ['guardian_item', 'guardian_item'],
     ['expedition_fragment', 'expedition_fragment'], ['bonus_messages', 'bonus_messages'],
-    ['mage_gear_item', 'mage_gear_item'], ['mage_reagent', 'mage_reagent'], ['mage_potion', 'mage_potion']
+    ['mage_gear_item', 'mage_gear_item'], ['mage_reagent', 'mage_reagent'], ['mage_potion', 'mage_potion'],
+    ['guardian_gear_item', 'guardian_gear_item']
   ];
   rows.innerHTML = (data || []).map(r => `<tr data-key="${esc(r.key)}">
     <td class="dim">${esc(r.key)}</td>
@@ -11282,9 +11693,15 @@ async function loadGiftableRewards(){
       </select>
     </td>
     <td><input type="number" min="1" id="grMagePotionAmount_${esc(r.key)}" value="${r.mage_potion_amount ?? ''}" style="max-width:90px;"></td>
+    <td>
+      <select id="grGuardianGear_${esc(r.key)}">
+        <option value="">—</option>
+        ${giftableGuardianGearList.map(g => `<option value="${esc(g.key)}" ${g.key === r.guardian_gear_key ? 'selected' : ''}>${esc(g.key)}</option>`).join('')}
+      </select>
+    </td>
     <td><input type="text" id="grImg_${esc(r.key)}" value="${esc(r.image_url || '')}" style="max-width:180px;"></td>
     <td><input type="checkbox" id="grActive_${esc(r.key)}" ${r.active ? 'checked' : ''}></td>
-  </tr>`).join('') || '<tr><td colspan="19">No reward packages yet.</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="20">No reward packages yet.</td></tr>';
 }
 
 async function saveGiftableRewardCatalog(){
@@ -11315,6 +11732,7 @@ async function saveGiftableRewardCatalog(){
       mage_reagent_amount: reagentAmountVal === '' ? null : parseInt(reagentAmountVal, 10),
       mage_potion_key: document.getElementById('grMagePotion_' + key).value || null,
       mage_potion_amount: potionAmountVal === '' ? null : parseInt(potionAmountVal, 10),
+      guardian_gear_key: document.getElementById('grGuardianGear_' + key).value || null,
       image_url: document.getElementById('grImg_' + key).value.trim() || null,
       active: document.getElementById('grActive_' + key).checked
     };
@@ -11403,6 +11821,10 @@ async function addGiftableReward(){
     if(!potionKey || isNaN(amount) || amount < 1){ status.className = 'status err'; status.textContent = 'Pick a potion and an amount greater than 0.'; return; }
     payload.mage_potion_key = potionKey;
     payload.mage_potion_amount = amount;
+  } else if(rewardType === 'guardian_gear_item'){
+    const gearKey = document.getElementById('newRewardGuardianGear').value;
+    if(!gearKey){ status.className = 'status err'; status.textContent = 'Pick a Guardian gear piece, or add one first in Guardian Items.'; return; }
+    payload.guardian_gear_key = gearKey;
   }
 
   status.className = 'status';
