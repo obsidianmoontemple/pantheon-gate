@@ -1818,6 +1818,10 @@ let arenaInventory = [];      // this guardian's guardian_arena_items, reloaded 
 let craftView = null;         // null | {step:'home'} — top-level, NOT circle-scoped (Shard crafting, new economy layer)
 let craftCatalog = [];        // guardian_item_catalog, public catalog — loaded once and cached
 let craftInventory = [];      // this guardian's guardian_items, reloaded each time Craft opens
+let craftCatalogFilter = 'all'; // 'all'|'stat_boost'|'consumable'|'enchantment'|'cosmetic' — direct feedback:
+                                 // "the crafting area needs to be cleaned up... add some dropdowns... so
+                                 // you don't have to just keep scrolling." Persists across re-renders of
+                                 // this screen the same way PROVING_TIERS-style module state does.
 let guardianGearCatalog = []; // guardian_gear_catalog (0141), public catalog — loaded once and cached, like mageGearCatalog
 let guardianGearOwned = [];   // this guardian's guardian_gear_items, reloaded alongside craftInventory
 
@@ -7997,16 +8001,22 @@ function renderServerChat(){
 
 /* ---------------- combat (the Proving) ---------------- */
 
-/* Admin-editable roster (gauntlet_opponents) — display only, same as
-   circleShopItems: loaded once and cached. The server (combat/index.ts)
-   reads this same table fresh on every request and is the only place
-   stats or outcomes are actually decided; this copy just needs the
-   key/name/affinity/tier to draw the picker correctly. */
+/* Admin-editable roster (public.creatures, kind='gauntlet') — display
+   only, same as circleShopItems: loaded once and cached. The server
+   (combat/index.ts) reads this same table fresh on every request and is
+   the only place stats or outcomes are actually decided; this copy just
+   needs the key/name/affinity/tier to draw the picker correctly.
+   Previously this queried the old gauntlet_opponents table, which was
+   superseded by the unified `creatures` table (0078) on the server side
+   but never updated here — any tier added after that migration (via
+   admin.html's Creatures tab, the only live editor) was fightable but
+   invisible on this picker. Fixed to read the same table combat/index.ts
+   actually does. */
 let PROVING_TIERS = [];
 
 async function loadGauntletOpponents(){
   if(PROVING_TIERS.length) return;
-  const { data, error } = await supabaseClient.from('gauntlet_opponents').select('key, name, affinity, tier, required_level, image_url').eq('active', true).order('tier', { ascending: true });
+  const { data, error } = await supabaseClient.from('creatures').select('key, name, affinity, tier, required_level, image_url').eq('kind', 'gauntlet').eq('active', true).order('tier', { ascending: true });
   if(error){ console.error('gauntlet opponents load failed', error); return; }
   PROVING_TIERS = data || [];
 }
@@ -11999,20 +12009,37 @@ async function doUseItem(itemId, battleId, statusElId){
   }
 }
 
+function setCraftCatalogFilter(value){
+  craftCatalogFilter = value;
+  if(craftView) render();
+}
+
 function renderCraft(){
   const app = document.getElementById('app');
 
-  const catalogRows = craftCatalog.map(item => {
+  const CRAFT_TYPE_LABELS = { all: 'All types', stat_boost: 'Stat Boost', consumable: 'Consumable', enchantment: 'Enchantment', cosmetic: 'Cosmetic' };
+  const catalogFilterOptions = Object.keys(CRAFT_TYPE_LABELS).map(k =>
+    `<option value="${k}" ${craftCatalogFilter === k ? 'selected' : ''}>${CRAFT_TYPE_LABELS[k]}</option>`
+  ).join('');
+  const filteredCatalog = craftCatalogFilter === 'all' ? craftCatalog : craftCatalog.filter(i => i.item_type === craftCatalogFilter);
+  const catalogRows = filteredCatalog.map(item => {
     const affordable = (guardian.god_shards || 0) >= item.shard_cost;
+    // Cosmetics carry a small combat effect now (direct feedback: "I love
+    // the idea cosmetics should do something small as they cant actually
+    // be seen yet") — surfaced here the same way an enchantment's effect
+    // already is, so the catalog line explains what owning it actually
+    // does rather than just labeling it "Cosmetic."
     const typeNote = item.item_type === 'stat_boost' ? `+${item.stat_amount} ${item.stat_key}`
       : item.item_type === 'consumable' && item.consumable_effect === 'stat_buff' ? `+${item.consumable_amount} ${item.stat_key} for ${item.consumable_duration_minutes}m`
       : item.item_type === 'consumable' && item.consumable_effect === 'cure_status' ? 'Cures poison/weaken/vulnerable mid-fight'
-      : item.item_type === 'consumable' ? 'Consumable' : 'Cosmetic';
+      : item.item_type === 'consumable' ? 'Consumable'
+      : (item.item_type === 'enchantment' || item.item_type === 'cosmetic') && item.effect_key ? `+${item.effect_amount}% ${item.effect_key.replace(/_pct$/, '').replace(/_/g, ' ')}`
+      : 'Cosmetic';
     return `<div class="roster-row">
-      <div><div class="rname">${esc(item.name)}</div><div class="cblurb">${esc(item.description || '')} — ${esc(typeNote)} — ${item.shard_cost} Shards</div></div>
+      <span style="display:flex;align-items:center;gap:8px;flex:1;">${shopThumb(item.image_url)}<div><div class="rname">${esc(item.name)}</div><div class="cblurb">${esc(item.description || '')} — ${esc(typeNote)} — ${item.shard_cost} Shards</div></div></span>
       <div class="ractions"><button class="secondary" ${affordable ? '' : 'disabled'} onclick="doCraftItem('${esc(item.key)}')">Craft</button></div>
     </div>`;
-  }).join('') || '<p class="hint">Nothing craftable yet — check back later.</p>';
+  }).join('') || '<p class="hint">Nothing craftable in this category yet — try a different filter.</p>';
 
   const inventoryRows = craftInventory.map(it => {
     const catalogItem = craftCatalog.find(c => c.key === it.item_key);
@@ -12056,11 +12083,8 @@ function renderCraft(){
         <div class="ractions"><button class="secondary" ${affordable ? '' : 'disabled'} onclick="doCraftMageGearFromCraft('${esc(item.key)}')">Craft</button></div>
       </div>`;
     }).join('') || '<p class="hint">No gear catalog set up yet.</p>';
-    return `<div class="card"${bgAttr('craft')}>
-      <h2>${esc(mage.name)}'s Gear</h2>
-      ${mageCatalogRows}
-      <p class="hint" style="margin-top:10px;">Equip what you craft from the Mage tab on the Guardian Page.</p>
-    </div>`;
+    return `${mageCatalogRows}
+      <p class="hint" style="margin-top:10px;">Equip what you craft from the Mage tab on the Guardian Page.</p>`;
   })() : '';
 
   // Guardian gear (0141) — "I want the familiar to be able to equip
@@ -12081,11 +12105,8 @@ function renderCraft(){
         <div class="ractions"><button class="secondary" ${affordable ? '' : 'disabled'} onclick="doCraftGuardianGearFromCraft('${esc(item.key)}')">Craft</button></div>
       </div>`;
     }).join('') || '<p class="hint">No gear catalog set up yet.</p>';
-    return `<div class="card"${bgAttr('craft')}>
-      <h2>${esc(guardian.name)}'s Gear</h2>
-      ${guardianGearCatalogRows}
-      <p class="hint" style="margin-top:10px;">Equip what you craft from the Familiar tab on the Guardian Page.</p>
-    </div>`;
+    return `${guardianGearCatalogRows}
+      <p class="hint" style="margin-top:10px;">Equip what you craft from the Familiar tab on the Guardian Page.</p>`;
   })();
 
   // 0069 — reagents (buy only — no direct "craft a reagent" action
@@ -12121,14 +12142,11 @@ function renderCraft(){
       </div>`;
     }).join('') || '<p class="hint">No potions set up yet.</p>';
 
-    return `<div class="card"${bgAttr('craft')}>
-      <h2>${esc(mage.name)}'s Alchemy</h2>
-      <h3 style="margin-top:0;">Reagents</h3>
+    return `<h3 style="margin-top:0;">Reagents</h3>
       ${reagentRows}
       <h3>Potions</h3>
       ${potionRows}
-      <p class="hint" style="margin-top:10px;">Use a brewed or bought potion from the Mage tab on the Guardian Page.</p>
-    </div>`;
+      <p class="hint" style="margin-top:10px;">Use a brewed or bought potion from the Mage tab on the Guardian Page.</p>`;
   })() : '';
 
   const craftBg = bgAttr('craft');
@@ -12139,13 +12157,23 @@ function renderCraft(){
       <div class="essence-row"><span class="essence-label">God Shards</span><span class="essence-value">${guardian.god_shards || 0}</span></div>
       <div class="status" id="craftStatus"></div>
     </div>
-    <div class="card"${craftBg}>
-      <h2>Catalog</h2>
+    <details class="card"${craftBg} open>
+      <summary style="cursor:pointer;"><h2 style="display:inline;">Catalog</h2></summary>
+      <div style="margin:10px 0;"><label class="hint" style="margin-right:6px;">Show:</label><select onchange="setCraftCatalogFilter(this.value)">${catalogFilterOptions}</select></div>
       ${catalogRows}
-    </div>
-    ${guardianGearSection}
-    ${mageGearSection}
-    ${mageAlchemySection}
+    </details>
+    <details class="card"${craftBg}>
+      <summary style="cursor:pointer;"><h2 style="display:inline;">${esc(guardian.name)}'s Gear</h2></summary>
+      ${guardianGearSection}
+    </details>
+    ${mageGearSection ? `<details class="card"${craftBg}>
+      <summary style="cursor:pointer;"><h2 style="display:inline;">${esc(mage.name)}'s Gear</h2></summary>
+      ${mageGearSection}
+    </details>` : ''}
+    ${mageAlchemySection ? `<details class="card"${craftBg}>
+      <summary style="cursor:pointer;"><h2 style="display:inline;">${esc(mage.name)}'s Alchemy</h2></summary>
+      ${mageAlchemySection}
+    </details>` : ''}
     <div class="card"${craftBg}>
       <h2>Bonus Petition Credit</h2>
       <p class="hint">Costs a set number of Shards, decided by the gods — if you can't afford it, the attempt will tell you the price.</p>
