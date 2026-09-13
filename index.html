@@ -1178,37 +1178,128 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
 @keyframes npGiftGlow{0%,100%{box-shadow:0 10px 40px rgba(0,0,0,0.6), 0 0 30px rgba(230,199,119,0.45);}50%{box-shadow:0 10px 40px rgba(0,0,0,0.6), 0 0 52px rgba(230,199,119,0.85);}}
 
 /* ============================= CAVE RUN (0152) =============================
-   Direct feedback: "I really want this to feel like an old cave run game
-   with proper elemental graphics and particle effects." Tile-based/
-   deterministic underneath (see cave-run/index.ts's header comment for
-   the full design), rendered here as one descending marker per hazard/
-   loot tile falling toward a fixed 3-lane player row — smooth CSS
-   animation on top of a simple, verifiable state machine. Theme color
-   comes from the run's themeAffinityKey via the EXISTING --p-color/
-   --p-sprite particle system (hitColor()/hitSprite()), not new assets. */
+   v2 rewrite — direct feedback: "way too fast, completely unattractive,
+   doesn't show you anything on the invisible grid, nothing to dodge or
+   jump, needs better imagery." Two root causes fixed:
+     1. The old renderer showed exactly one tile at a time, popping in and
+        resolving almost immediately — there was never anything to look
+        at or react to, and pressing a control blew away the whole screen
+        (a full innerHTML replace) mid-animation. Now a constant-speed
+        conveyor of CR_LOOKAHEAD tiles is always on screen at once,
+        gliding toward a fixed player row on a steady beat (see the JS
+        engine below) — you can see a rock or chasm coming several beats
+        before you have to react to it, and lane/jump input only ever
+        patches the player token in place, never rebuilds the track.
+     2. Tiles were bare text glyphs (⚠/✦) on a flat gradient. Rebuilt as
+        actual elemental shapes (a jagged lit rock, a glowing chasm, a
+        spinning gem, a pulsing rune fork) drawn in CSS and tinted by the
+        run's theme color, layered over a real cave-wall backdrop, using
+        the EXISTING --p-color/--p-sprite particle system (hitColor()/
+        hitSprite()) for hit/dodge/collect bursts — no new asset files. */
 .cr-screen{max-width:480px;margin:0 auto;text-align:center;}
 .cr-progress{font-family:'Cinzel',serif;letter-spacing:0.05em;color:var(--gold-bright,#e6c777);font-size:13px;margin-bottom:8px;}
 .cr-progress-bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;margin-bottom:14px;}
 .cr-progress-fill{height:100%;background:var(--cr-theme-color,#e6c777);transition:width .3s ease;}
-.cr-track{position:relative;height:220px;border-radius:14px;background:linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.25));border:1px solid rgba(255,255,255,0.08);overflow:hidden;margin-bottom:10px;}
-.cr-track::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%, var(--cr-theme-color,#e6c777) 0%, transparent 65%);opacity:0.12;pointer-events:none;}
-.cr-lanes{position:absolute;inset:0;display:flex;}
-.cr-lane-col{flex:1;border-right:1px dashed rgba(255,255,255,0.07);}
-.cr-lane-col:last-child{border-right:none;}
-.cr-marker{position:absolute;top:6px;width:calc(100%/var(--cr-lanes,3) - 10px);height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;transition:top 1.1s linear;}
-.cr-marker.cr-obstacle{background:rgba(200,40,40,0.85);box-shadow:0 0 14px rgba(200,40,40,0.6);}
-.cr-marker.cr-gap{width:calc(100% - 10px) !important;left:5px !important;background:repeating-linear-gradient(45deg, rgba(0,0,0,0.7), rgba(0,0,0,0.7) 8px, rgba(60,20,20,0.7) 8px, rgba(60,20,20,0.7) 16px);border:1px solid rgba(255,120,120,0.5);}
-.cr-marker.cr-loot{background:rgba(230,199,119,0.85);box-shadow:0 0 14px rgba(230,199,119,0.7);}
-.cr-marker.cr-landed{top:calc(100% - 46px) !important;}
-.cr-player-row{position:relative;display:flex;height:44px;margin-top:4px;}
-.cr-player-lane{flex:1;display:flex;align-items:center;justify-content:center;position:relative;}
-.cr-player-token{width:30px;height:30px;border-radius:50%;background:var(--cr-theme-color,#e6c777);box-shadow:0 0 16px var(--cr-theme-color,#e6c777);transition:transform .18s ease;}
+
+/* The scrolling viewport. Height is set inline from JS (CR_ROW_PX *
+   CR_LOOKAHEAD) so the two constants can never drift out of sync with
+   this CSS — see caveRunBuildRunningShell(). */
+.cr-viewport{position:relative;overflow:hidden;border-radius:14px 14px 0 0;border:2px solid rgba(255,255,255,0.12);border-bottom:3px solid var(--cr-theme-color,#e6c777);
+  background:linear-gradient(180deg, #0c0805 0%, #1c130a 55%, #0a0603 100%);
+  box-shadow:inset 0 0 60px rgba(0,0,0,0.8), inset 0 6px 30px rgba(0,0,0,0.6);}
+.cr-viewport::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:radial-gradient(ellipse at 50% 100%, var(--cr-theme-color,#e6c777) 0%, transparent 62%);opacity:0.18;}
+.cr-viewport::after{content:'';position:absolute;left:0;right:0;top:0;height:64px;pointer-events:none;z-index:5;
+  background:linear-gradient(180deg, #000 0%, transparent 100%);opacity:0.7;}
+.cr-lane-guides{position:absolute;inset:0;display:flex;pointer-events:none;z-index:2;}
+.cr-lane-guide{flex:1;border-right:1px dashed rgba(255,255,255,0.09);}
+.cr-lane-guide:last-child{border-right:none;}
+.cr-reel{position:absolute;inset:0;z-index:3;}
+
+/* One row per tile, absolutely positioned by `top` (animated — see
+   --cr-beat-ms, set once on #caveRunReel) so a whole conveyor of tiles
+   glides down together at a constant, predictable rhythm. */
+.cr-row{position:absolute;left:0;right:0;display:flex;transition:top var(--cr-beat-ms,950ms) linear, opacity .35s ease, transform .35s ease;}
+.cr-row.cr-row-clear{opacity:0;transform:scale(0.6);}
+.cr-cell{flex:1;position:relative;display:flex;align-items:center;justify-content:center;}
+
+.cr-tile-entrance .cr-entrance-glow{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 100%, rgba(255,255,255,0.18), transparent 70%);}
+
+.cr-floor-glint{width:64%;height:2px;background:rgba(255,255,255,0.07);border-radius:1px;}
+
+/* Obstacle — a jagged, lit rock, one lane wide. */
+.cr-rock{position:relative;width:64%;height:64%;
+  background:radial-gradient(circle at 32% 28%, rgba(255,255,255,0.3), transparent 45%), linear-gradient(150deg, #7a6551, #372b1e 72%);
+  clip-path:polygon(20% 0%, 55% 8%, 85% 0%, 100% 35%, 92% 70%, 100% 100%, 60% 92%, 25% 100%, 0% 75%, 8% 40%);
+  box-shadow:inset 0 0 10px rgba(0,0,0,0.55), 0 0 10px rgba(0,0,0,0.6);
+  border:1px solid rgba(0,0,0,0.4);}
+.cr-rock::after{content:'';position:absolute;inset:0;clip-path:inherit;mix-blend-mode:overlay;opacity:0.4;
+  background:radial-gradient(circle at 50% 45%, var(--cr-theme-color,#e6c777), transparent 70%);}
+.cr-rock-glow{position:absolute;inset:-14px;border-radius:50%;filter:blur(5px);opacity:0.32;
+  background:radial-gradient(circle, var(--cr-theme-color,#e6c777), transparent 65%);}
+
+/* Gap — a full-width glowing chasm; no lane, spans the whole row. */
+.cr-tile-gap .cr-chasm{position:absolute;inset:6px;border-radius:8px;overflow:hidden;
+  background:linear-gradient(180deg, #000 0%, #1a0704 50%, #000 100%);
+  box-shadow:inset 0 0 26px rgba(0,0,0,0.9), inset 0 0 18px rgba(255,100,60,0.28);
+  border:1px solid rgba(255,120,90,0.35);}
+.cr-tile-gap .cr-chasm::before{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(100deg, transparent 0 10px, rgba(255,110,70,0.14) 10px 12px);
+  animation:crChasmDrift 2.6s linear infinite;}
+@keyframes crChasmDrift{from{transform:translateX(0);}to{transform:translateX(-60px);}}
+
+/* Loot — a spinning faceted gem with a soft pulsing halo. */
+.cr-gem{position:relative;width:38%;height:56%;
+  background:conic-gradient(from 45deg, var(--cr-theme-color,#e6c777), #fff9, var(--cr-theme-color,#e6c777));
+  clip-path:polygon(50% 0%, 100% 38%, 78% 100%, 22% 100%, 0% 38%);
+  box-shadow:0 0 16px var(--cr-theme-color,#e6c777);
+  animation:crGemSpin 2.1s ease-in-out infinite;}
+@keyframes crGemSpin{0%,100%{transform:rotate(-7deg) scale(1);}50%{transform:rotate(7deg) scale(1.1);}}
+.cr-gem-halo{position:absolute;inset:-16px;border-radius:50%;opacity:0.35;
+  background:radial-gradient(circle, var(--cr-theme-color,#e6c777), transparent 70%);
+  animation:crHaloPulse 1.5s ease-in-out infinite;}
+@keyframes crHaloPulse{0%,100%{opacity:0.22;transform:scale(0.88);}50%{opacity:0.5;transform:scale(1.15);}}
+
+/* Branch — a pulsing rune inside a dashed fork arch; the trivia's own
+   full-screen card only appears once this row reaches the resolve line. */
+.cr-tile-branch .cr-fork{position:absolute;inset:4px;border-radius:8px;border:1px dashed var(--cr-theme-color,#e6c777);
+  background:linear-gradient(180deg, rgba(230,199,119,0.16), transparent);}
+.cr-tile-branch .cr-fork-rune{position:absolute;top:50%;left:50%;width:34px;height:34px;border-radius:50%;
+  transform:translate(-50%,-50%);box-shadow:0 0 18px var(--cr-theme-color,#e6c777);
+  background:radial-gradient(circle, #fff, var(--cr-theme-color,#e6c777) 60%, transparent 75%);
+  animation:crRunePulse 1.05s ease-in-out infinite;}
+@keyframes crRunePulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:0.85;}50%{transform:translate(-50%,-50%) scale(1.24);opacity:1;}}
+
+/* A brief flash on whichever row just resolved, so a dodge/hit/jump/
+   pickup/branch reads clearly before the row fades and is removed. */
+.cr-resolve-flash{position:absolute;inset:0;border-radius:6px;pointer-events:none;opacity:0;}
+.cr-row.cr-flash-hit .cr-resolve-flash{background:#c82828;animation:crFlashPop .4s ease;}
+.cr-row.cr-flash-dodge .cr-resolve-flash,
+.cr-row.cr-flash-jump .cr-resolve-flash,
+.cr-row.cr-flash-collect .cr-resolve-flash,
+.cr-row.cr-flash-branch .cr-resolve-flash{background:var(--cr-theme-color,#e6c777);animation:crFlashPop .4s ease;}
+@keyframes crFlashPop{0%{opacity:0.75;}100%{opacity:0;}}
+
+/* Player row — sits just under the viewport, a small cloaked-mage
+   silhouette that slides left/right (`left`, set from JS) instead of
+   living in per-lane wrapper divs, so hit/dodge/jump animations always
+   apply to one persistent element. */
+.cr-player-row{position:relative;height:58px;border-radius:0 0 14px 14px;border:2px solid rgba(255,255,255,0.12);border-top:none;
+  background:linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.55));margin-bottom:10px;overflow:hidden;}
+.cr-player-token{position:absolute;top:0;height:100%;transition:left .18s ease;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:6px;}
+.cr-player-token .cr-head{width:16px;height:16px;border-radius:50%;margin-bottom:-3px;
+  background:radial-gradient(circle at 35% 30%, #fff9, var(--cr-theme-color,#e6c777) 60%);box-shadow:0 0 10px var(--cr-theme-color,#e6c777);}
+.cr-player-token .cr-body{width:26px;height:30px;clip-path:polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%);
+  background:linear-gradient(180deg, var(--cr-theme-color,#e6c777), #6b4f1a);box-shadow:0 0 14px var(--cr-theme-color,#e6c777);}
+.cr-player-token.cr-airborne{transform:translateY(-28px) scale(1.05);}
 .cr-player-token.cr-hit{animation:crHitFlash .45s ease;}
-.cr-player-token.cr-dodge{animation:crDodgePulse .45s ease;}
-.cr-player-token.cr-jump{animation:crJumpHop .5s ease;}
-@keyframes crHitFlash{0%,100%{background:var(--cr-theme-color,#e6c777);}40%{background:#c82828;box-shadow:0 0 20px #c82828;}}
-@keyframes crDodgePulse{0%,100%{transform:scale(1);}45%{transform:scale(1.28);}}
-@keyframes crJumpHop{0%,100%{transform:translateY(0);}45%{transform:translateY(-26px);}}
+.cr-player-token.cr-dodge,
+.cr-player-token.cr-collect{animation:crDodgePulse .4s ease;}
+.cr-player-token.cr-jumping{animation:crJumpHop .5s ease;}
+@keyframes crHitFlash{0%,100%{filter:none;}40%{filter:brightness(2) saturate(2) hue-rotate(-40deg);}}
+@keyframes crDodgePulse{0%,100%{transform:scale(1);}45%{transform:scale(1.24);}}
+@keyframes crJumpHop{0%,100%{transform:translateY(0);}45%{transform:translateY(-30px);}}
+
 .cr-controls{display:flex;gap:10px;justify-content:center;margin:14px 0 6px;}
 .cr-controls button{min-width:76px;}
 .cr-controls button.cr-jump-btn.cr-armed{background:var(--cr-theme-color,#e6c777);color:#1a1408;}
@@ -1221,7 +1312,7 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
 .cr-trivia-choices button{flex:1;white-space:normal;height:auto;padding:12px 8px;line-height:1.3;}
 .cr-summary-list{text-align:left;max-width:340px;margin:0 auto 14px;font-size:14px;color:var(--parchment,#e8dcc0);}
 .cr-summary-list div{padding:3px 0;}
-@media (max-width:480px){ .cr-track{height:190px;} }
+@media (max-width:480px){ .cr-hint-line{padding:0 6px;} }
 </style>
 </head>
 <body>
@@ -9008,21 +9099,51 @@ async function claimCampaignVictory(){
 }
 
 /* =============================================================================
-   CAVE RUN (0152) — replaces the old flat Train buttons on both the
-   Guardian Page and the Mage screen. See cave-run/index.ts's header
-   comment for the full design writeup. Client responsibilities:
-     1. Regenerate the exact same hazard/loot tile sequence the server
-        used to issue this run's trivia (mulberry32Port/generateTrackClient
-        below — MUST stay byte-for-byte identical to the server's copy in
-        cave-run/index.ts, including the two "wasted" rng() draws at every
-        branch tile, or the two sides desync past the first branch).
-     2. Play it as a real-time-feeling tile runner (one descending marker
-        per hazard/loot tile, CSS-animated) while recording exactly what
-        the player actually did.
-     3. Report those recordings to cave-run/index.ts's "complete" action,
-        which is the only thing that actually decides what was dodged,
-        what was answered correctly, and what gets granted — this client
-        code never computes or trusts its own reward numbers.
+   CAVE RUN (0152) — v2 rewrite. Replaces the old flat Train buttons on
+   both the Guardian Page and the Mage screen. See cave-run/index.ts's
+   header comment for the full backend design (server-issued seed,
+   server-authoritative replay verification at "complete", hidden
+   battles on a wrong trivia branch). This file is purely the client
+   presentation layer; nothing about the wire protocol below changed
+   from the first version — hazardReports/branchReports/reachedTileIndex
+   are the exact same shapes the server already verifies.
+
+   Direct feedback on the first version: "way too fast, completely
+   unattractive, doesn't show you anything on the invisible grid,
+   nothing to dodge or jump, needs better imagery." Root causes and
+   fixes:
+     1. The old renderer showed exactly one tile at a time, appearing
+        and resolving almost immediately, and every render() call (in
+        particular, every single lane/jump button press) replaced the
+        WHOLE screen's innerHTML — tearing down and restarting any
+        in-flight CSS animation on every input. That's why it read as
+        "too fast" and "broken": there was nothing to anticipate, and
+        moving to dodge something reset the very screen showing it.
+        Fixed with a real conveyor: CR_LOOKAHEAD tiles are always
+        visible at once, gliding toward the player row on a constant
+        beat (CR_BEAT_MS) built with real DOM nodes that persist across
+        renders — see caveRunBuildRunningShell()/caveRunAdvanceBeat().
+        Lane/jump input (caveRunSetLane/caveRunJumpNow) now only ever
+        patches the player token's position/animation directly; it
+        never touches the track DOM or calls render().
+     2. Tiles were bare text glyphs (⚠/✦) on a flat gradient — "needs
+        better imagery." Rebuilt as actual elemental shapes drawn in
+        CSS (a jagged lit rock, a glowing chasm, a spinning gem, a
+        pulsing rune fork) tinted by the run's theme color, over a real
+        cave-wall backdrop, using the EXISTING --p-color/--p-sprite
+        particle system (hitColor()/hitSprite()) for hit/dodge/collect
+        bursts — no new asset pipeline, per the original design intent.
+
+   Client responsibilities, unchanged from v1:
+     1. Regenerate the exact same hazard/loot/branch tile sequence the
+        server used (caveRunMulberry32/caveRunBranchPositions/
+        caveRunGenerateTrack below — MUST stay byte-for-byte identical
+        to cave-run/index.ts's copy, including the two "wasted" rng()
+        draws at every branch tile, or the two sides desync).
+     2. Play it back with real-time-feeling controls while recording
+        exactly what the player actually did.
+     3. Report those recordings to "complete", which alone decides what
+        was dodged, what was answered correctly, and what gets granted.
    ========================================================================= */
 
 // mulberry32, ported line-for-line from combat/index.ts / cave-run/index.ts.
@@ -9082,14 +9203,15 @@ async function caveRunFetch(action, extra){
   return await resp.json();
 }
 
-function setCaveRunStatus(text, ok){
-  const el = document.getElementById('caveRunStatus');
-  if(!el) return;
-  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
-  el.textContent = text || '';
-}
+// ---- Pacing constants — the game's whole rhythm lives here. ----
+const CR_ROW_PX = 84;       // px height of one tile row; the viewport is exactly CR_ROW_PX * CR_LOOKAHEAD tall
+const CR_LOOKAHEAD = 5;     // how many tile-rows are visible/gliding at once — this is your reaction window
+const CR_BEAT_MS = 950;     // ms for the whole conveyor to glide down by one row; every tile gets exactly one beat
+const CR_JUMP_MS = 850;     // how long a Jump press keeps the player airborne (long enough to clear whichever gap is at the line)
 
 async function openCaveRun(){
+  if(caveRunView && caveRunView.tickTimer) clearTimeout(caveRunView.tickTimer);
+  caveRunRemoveTriviaLayer();
   caveRunView = { phase: 'loading' };
   render();
   const data = await caveRunFetch('start');
@@ -9109,104 +9231,258 @@ async function openCaveRun(){
     trackLength: data.trackLength, laneCount: data.laneCount, branchCount: data.branchCount,
     themeAffinityKey: data.themeAffinityKey,
     track, branchByTile,
-    tileIndex: 0,
+    // Starts negative: the first CR_LOOKAHEAD-1 beats are a harmless
+    // "cave mouth" runway so real tile 0 enters at the FAR edge and gets
+    // the same full reaction window as every tile after it, instead of
+    // landing at the resolve line with zero warning on beat one.
+    tileIndex: -(CR_LOOKAHEAD - 1),
     lane: Math.floor(data.laneCount / 2),
-    jumpArmed: false,
+    jumpUntil: 0,
     hazardReports: [], branchReports: [],
     hiddenBattles: [], hiddenBattleIndex: 0,
     summary: null,
+    currentBranch: null,
     tickTimer: null,
+    shellBuilt: false,
+    rowNodes: {},
   };
   render();
 }
 
 function backFromCaveRun(){
   if(caveRunView && caveRunView.tickTimer) clearTimeout(caveRunView.tickTimer);
+  caveRunRemoveTriviaLayer();
   caveRunView = null;
   render();
 }
 
-const CAVE_RUN_DECISION_MS = 1500; // how long a hazard/loot marker takes to "fall" to the player row
-const CAVE_RUN_EMPTY_MS = 380;     // fast filler beat for an empty tile — keeps pacing brisk
-
 function caveRunBegin(){
   if(!caveRunView) return;
   caveRunView.phase = 'running';
-  render();
-  caveRunAdvanceTile();
+  render(); // shellBuilt is false, so this builds the track shell fresh
+  caveRunView.tickTimer = setTimeout(caveRunAdvanceBeat, CR_BEAT_MS);
 }
 
-// The heart of the run — looks at the current tile, decides how to
-// present it, and (for anything but a branch) schedules its own
-// resolution after CAVE_RUN_DECISION_MS/CAVE_RUN_EMPTY_MS. Branches pause
-// entirely and are resumed by caveRunAnswerBranch() instead of a timer.
-function caveRunAdvanceTile(){
-  const v = caveRunView;
-  if(!v || v.phase !== 'running') return;
-  if(v.tileIndex >= v.trackLength){ caveRunFinishRun(); return; }
-
-  const branch = v.branchByTile.get(v.tileIndex);
-  if(branch){ caveRunShowTrivia(branch); return; }
-
-  const hazard = v.track.hazards.find(h => h.tileIndex === v.tileIndex);
-  const lootHere = v.track.loot.find(l => l.tileIndex === v.tileIndex);
-  v.currentTile = hazard || (lootHere ? { tileIndex: v.tileIndex, kind: 'loot', lane: lootHere.lane } : { tileIndex: v.tileIndex, kind: 'empty', lane: null });
-  v.jumpArmed = false;
-  render();
-
-  const ms = v.currentTile.kind === 'empty' ? CAVE_RUN_EMPTY_MS : CAVE_RUN_DECISION_MS;
-  v.tickTimer = setTimeout(() => caveRunResolveCurrentTile(), ms);
+// Classifies whatever's at a given absolute tile index — negative
+// indices are the harmless entrance runway, indices >= trackLength are
+// harmless "cave floor" past the finish line the reel can keep showing
+// while the last real beats settle.
+function caveRunTileAt(v, tileIndex){
+  if(tileIndex < 0) return { kind: 'entrance' };
+  if(tileIndex >= v.trackLength) return { kind: 'empty' };
+  const branch = v.branchByTile.get(tileIndex);
+  if(branch) return { kind: 'branch', branch };
+  const hazard = v.track.hazards.find(h => h.tileIndex === tileIndex);
+  if(hazard) return { kind: hazard.kind, lane: hazard.lane };
+  const loot = v.track.loot.find(l => l.tileIndex === tileIndex);
+  if(loot) return { kind: 'loot', lane: loot.lane };
+  return { kind: 'empty' };
 }
 
-function caveRunResolveCurrentTile(){
-  const v = caveRunView;
-  if(!v || v.phase !== 'running' || !v.currentTile) return;
-  const tile = v.currentTile;
-  const token = document.getElementById('caveRunPlayerToken');
+// relativeIndex 0 = the row currently at the resolve line (bottom of the
+// viewport, flush with the player row below it); larger = farther away
+// (higher up, smaller `top`). Viewport height is exactly
+// CR_ROW_PX * CR_LOOKAHEAD, so relativeIndex (CR_LOOKAHEAD-1) sits at
+// top:0 and relativeIndex 0 sits flush with the bottom edge.
+function caveRunRowTop(relativeIndex){
+  return (CR_LOOKAHEAD - 1 - relativeIndex) * CR_ROW_PX;
+}
 
-  if(tile.kind === 'obstacle'){
-    const avoided = v.lane !== tile.lane;
-    v.hazardReports.push({ tileIndex: tile.tileIndex, lane: v.lane, jumped: v.jumpArmed });
-    if(token){
-      token.classList.remove('cr-hit', 'cr-dodge');
-      void token.offsetWidth;
-      token.classList.add(avoided ? 'cr-dodge' : 'cr-hit');
-    }
-    const laneWrap = document.querySelector(`.cr-player-lane[data-lane="${v.lane}"]`);
-    if(laneWrap) spawnParticles(laneWrap, avoided
-      ? { count: 5, distance: 24, duration: 450, color: hitColor(v.themeAffinityKey), size: 16, sprite: hitSprite(v.themeAffinityKey) }
-      : { count: 8, distance: 30, duration: 500, color: '#c82828', size: 18, sprite: 'particle-fx/fx_impact.png' });
-  } else if(tile.kind === 'gap'){
-    const avoided = v.jumpArmed;
-    v.hazardReports.push({ tileIndex: tile.tileIndex, lane: v.lane, jumped: v.jumpArmed });
-    if(token){
-      token.classList.remove('cr-hit', 'cr-jump');
-      void token.offsetWidth;
-      token.classList.add(avoided ? 'cr-jump' : 'cr-hit');
-    }
-  } else if(tile.kind === 'loot'){
-    const laneWrap = document.querySelector(`.cr-player-lane[data-lane="${tile.lane}"]`);
-    if(laneWrap) spawnParticles(laneWrap, { count: 6, distance: 22, duration: 500, color: hitColor(v.themeAffinityKey), size: 16, sprite: hitSprite(v.themeAffinityKey) });
+function caveRunLaneCellsHtml(laneCount, cellFn){
+  let html = '';
+  for(let i = 0; i < laneCount; i++) html += '<div class="cr-cell">' + cellFn(i) + '</div>';
+  return html;
+}
+
+function caveRunMakeRowEl(tileIndex){
+  const v = caveRunView;
+  const info = caveRunTileAt(v, tileIndex);
+  const row = document.createElement('div');
+  row.className = 'cr-row cr-tile-' + info.kind;
+  row.dataset.tileIndex = String(tileIndex);
+  row.style.height = CR_ROW_PX + 'px';
+  if(info.kind === 'obstacle'){
+    row.innerHTML = caveRunLaneCellsHtml(v.laneCount, lane => lane === info.lane ? '<div class="cr-rock-glow"></div><div class="cr-rock"></div>' : '<div class="cr-floor-glint"></div>');
+  } else if(info.kind === 'gap'){
+    row.innerHTML = '<div class="cr-chasm"></div>';
+  } else if(info.kind === 'loot'){
+    row.innerHTML = caveRunLaneCellsHtml(v.laneCount, lane => lane === info.lane ? '<div class="cr-gem-halo"></div><div class="cr-gem"></div>' : '<div class="cr-floor-glint"></div>');
+  } else if(info.kind === 'branch'){
+    row.innerHTML = '<div class="cr-fork"></div><div class="cr-fork-rune"></div>';
+  } else if(info.kind === 'entrance'){
+    row.innerHTML = '<div class="cr-entrance-glow"></div>';
+  } else {
+    row.innerHTML = caveRunLaneCellsHtml(v.laneCount, () => '<div class="cr-floor-glint"></div>');
   }
-
-  v.tileIndex += 1;
-  v.currentTile = null;
-  render();
-  v.tickTimer = setTimeout(() => caveRunAdvanceTile(), tile.kind === 'empty' ? 60 : 260);
+  const flash = document.createElement('div');
+  flash.className = 'cr-resolve-flash';
+  row.appendChild(flash);
+  return row;
 }
 
+// Builds the initial CR_LOOKAHEAD rows with transitions disabled (so
+// they appear at rest, not gliding in from nowhere on first paint), then
+// re-enables transitions on the next frame so every beat after this one
+// animates normally.
+function caveRunSpawnInitialRows(){
+  const v = caveRunView;
+  const reel = document.getElementById('caveRunReel');
+  if(!reel) return;
+  reel.style.setProperty('--cr-beat-ms', CR_BEAT_MS + 'ms');
+  v.rowNodes = {};
+  for(let r = 0; r < CR_LOOKAHEAD; r++){
+    const tileIndex = v.tileIndex + r;
+    const el = caveRunMakeRowEl(tileIndex);
+    el.style.transition = 'none';
+    el.style.top = caveRunRowTop(r) + 'px';
+    reel.appendChild(el);
+    v.rowNodes[tileIndex] = el;
+  }
+  requestAnimationFrame(() => { requestAnimationFrame(() => {
+    Object.values(v.rowNodes).forEach(el => { el.style.transition = ''; });
+  }); });
+}
+
+function caveRunPositionToken(){
+  const v = caveRunView;
+  const token = document.getElementById('caveRunPlayerToken');
+  if(!token) return;
+  token.style.width = (100 / v.laneCount) + '%';
+  token.style.left = (v.lane * (100 / v.laneCount)) + '%';
+}
+
+function caveRunUpdateHud(){
+  const v = caveRunView;
+  if(!v) return;
+  const shownStep = Math.max(0, Math.min(v.tileIndex, v.trackLength));
+  const progressText = document.getElementById('caveRunProgressText');
+  if(progressText) progressText.textContent = 'Step ' + shownStep + ' / ' + v.trackLength;
+  const fill = document.getElementById('caveRunProgressFill');
+  if(fill) fill.style.width = Math.round((shownStep / v.trackLength) * 100) + '%';
+  caveRunPositionToken();
+  const jumpBtn = document.getElementById('caveRunJumpBtn');
+  if(jumpBtn) jumpBtn.classList.toggle('cr-armed', Date.now() < (v.jumpUntil || 0));
+}
+
+// Live, real-time controls — these deliberately never call render() or
+// touch the reel; they only patch the player token, which is exactly
+// why moving/jumping no longer resets the track's in-flight animation.
 function caveRunSetLane(delta){
   const v = caveRunView;
   if(!v || v.phase !== 'running') return;
   v.lane = Math.max(0, Math.min(v.laneCount - 1, v.lane + delta));
-  render();
+  caveRunUpdateHud();
 }
 
-function caveRunToggleJump(){
+function caveRunPulsePlayer(kind){
+  const token = document.getElementById('caveRunPlayerToken');
+  if(!token) return;
+  token.classList.remove('cr-hit', 'cr-dodge', 'cr-jumping', 'cr-collect');
+  void token.offsetWidth;
+  if(kind === 'hit') token.classList.add('cr-hit');
+  else if(kind === 'dodge') token.classList.add('cr-dodge');
+  else if(kind === 'jump') token.classList.add('cr-jumping');
+  else if(kind === 'collect') token.classList.add('cr-collect');
+}
+
+function caveRunJumpNow(){
   const v = caveRunView;
   if(!v || v.phase !== 'running') return;
-  v.jumpArmed = !v.jumpArmed;
-  render();
+  v.jumpUntil = Date.now() + CR_JUMP_MS;
+  caveRunPulsePlayer('jump');
+  const token = document.getElementById('caveRunPlayerToken');
+  if(token){
+    token.classList.add('cr-airborne');
+    setTimeout(() => { token.classList.remove('cr-airborne'); }, CR_JUMP_MS);
+  }
+  caveRunUpdateHud();
+}
+
+// Resolves everything except a branch tile (branches pause the beat
+// loop entirely — see caveRunAdvanceBeat()). Returns the flash class to
+// apply to the row that just reached the line, or '' for no flash.
+function caveRunResolveNonBranch(info){
+  const v = caveRunView;
+  if(info.kind === 'entrance' || info.kind === 'empty') return '';
+  const airborne = Date.now() < (v.jumpUntil || 0);
+  const token = document.getElementById('caveRunPlayerToken');
+  if(info.kind === 'obstacle'){
+    const avoided = v.lane !== info.lane;
+    v.hazardReports.push({ tileIndex: v.tileIndex, lane: v.lane, jumped: airborne });
+    caveRunPulsePlayer(avoided ? 'dodge' : 'hit');
+    if(token) spawnParticles(token, avoided
+      ? { count: 5, distance: 20, duration: 420, color: hitColor(v.themeAffinityKey), size: 14, sprite: hitSprite(v.themeAffinityKey) }
+      : { count: 8, distance: 26, duration: 480, color: '#c82828', size: 16, sprite: 'particle-fx/fx_impact.png' });
+    return avoided ? 'cr-flash-dodge' : 'cr-flash-hit';
+  }
+  if(info.kind === 'gap'){
+    const avoided = airborne;
+    v.hazardReports.push({ tileIndex: v.tileIndex, lane: v.lane, jumped: airborne });
+    caveRunPulsePlayer(avoided ? 'jump' : 'hit');
+    return avoided ? 'cr-flash-jump' : 'cr-flash-hit';
+  }
+  if(info.kind === 'loot'){
+    if(info.lane === v.lane){
+      caveRunPulsePlayer('collect');
+      if(token) spawnParticles(token, { count: 6, distance: 22, duration: 480, color: hitColor(v.themeAffinityKey), size: 16, sprite: hitSprite(v.themeAffinityKey) });
+      return 'cr-flash-collect';
+    }
+    return '';
+  }
+  return '';
+}
+
+// Shared tail end of resolving any tile (hazard/loot/empty/entrance, or
+// a branch once answered): flash+remove the row that reached the line,
+// glide every remaining row one slot closer, spawn the newly revealed
+// far row, and refresh the HUD.
+function caveRunAdvanceAfterResolve(resolvingIndex, flashClass){
+  const v = caveRunView;
+  const resolvedEl = v.rowNodes[resolvingIndex];
+  if(resolvedEl){
+    if(flashClass) resolvedEl.classList.add(flashClass);
+    resolvedEl.classList.add('cr-row-clear');
+    delete v.rowNodes[resolvingIndex];
+    setTimeout(() => { if(resolvedEl.parentNode) resolvedEl.parentNode.removeChild(resolvedEl); }, 380);
+  }
+  Object.keys(v.rowNodes).forEach(key => {
+    const idx = Number(key);
+    v.rowNodes[idx].style.top = caveRunRowTop(idx - (resolvingIndex + 1)) + 'px';
+  });
+  v.tileIndex = resolvingIndex + 1;
+  const newIndex = v.tileIndex + CR_LOOKAHEAD - 1;
+  const reel = document.getElementById('caveRunReel');
+  if(reel && !v.rowNodes[newIndex]){
+    const el = caveRunMakeRowEl(newIndex);
+    el.style.transition = 'none';
+    el.style.top = caveRunRowTop(CR_LOOKAHEAD) + 'px'; // starts one slot beyond the top edge, off-screen
+    reel.appendChild(el);
+    v.rowNodes[newIndex] = el;
+    requestAnimationFrame(() => { requestAnimationFrame(() => {
+      el.style.transition = '';
+      el.style.top = caveRunRowTop(CR_LOOKAHEAD - 1) + 'px'; // glides into the top visible slot along with everything else
+    }); });
+  }
+  caveRunUpdateHud();
+}
+
+// The main beat — called once every CR_BEAT_MS while running.
+function caveRunAdvanceBeat(){
+  const v = caveRunView;
+  if(!v || v.phase !== 'running') return;
+  const resolvingIndex = v.tileIndex;
+  const info = caveRunTileAt(v, resolvingIndex);
+  if(info.kind === 'branch'){
+    caveRunShowTrivia(info.branch); // pauses the beat loop entirely — see caveRunAnswerBranch() for how it resumes
+    return;
+  }
+  const flashClass = caveRunResolveNonBranch(info);
+  caveRunAdvanceAfterResolve(resolvingIndex, flashClass);
+  if(v.tileIndex >= v.trackLength){
+    v.tickTimer = setTimeout(() => caveRunFinishRun(), CR_BEAT_MS);
+    return;
+  }
+  v.tickTimer = setTimeout(caveRunAdvanceBeat, CR_BEAT_MS);
 }
 
 function caveRunShowTrivia(branch){
@@ -9216,19 +9492,54 @@ function caveRunShowTrivia(branch){
   render();
 }
 
+// The trivia card is appended straight to <body> as its own fixed-
+// position layer rather than going through the generic app.innerHTML
+// render path — the running track's shell sits frozen underneath,
+// completely untouched, so answering just resumes exactly where the
+// beat loop left off instead of having to rebuild the whole scene.
+function caveRunShowTriviaLayer(branch){
+  caveRunRemoveTriviaLayer();
+  if(!branch) return;
+  const themeColor = hitColor((caveRunView && caveRunView.themeAffinityKey) || 'earth');
+  const layer = document.createElement('div');
+  layer.id = 'caveRunTriviaLayer';
+  layer.className = 'cr-trivia-overlay';
+  layer.innerHTML = `
+    <div class="cr-trivia-card" style="--cr-theme-color:${themeColor};">
+      <div class="cr-trivia-culture">${esc(branch.cultureKey)}</div>
+      <div class="cr-trivia-question">${esc(branch.question)}</div>
+      <div class="cr-trivia-choices">
+        <button onclick="caveRunAnswerBranch('left')">${esc(branch.leftAnswer)}</button>
+        <button onclick="caveRunAnswerBranch('right')">${esc(branch.rightAnswer)}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(layer);
+}
+
+function caveRunRemoveTriviaLayer(){
+  const layer = document.getElementById('caveRunTriviaLayer');
+  if(layer && layer.parentNode) layer.parentNode.removeChild(layer);
+}
+
 function caveRunAnswerBranch(side){
   const v = caveRunView;
   if(!v || v.phase !== 'trivia' || !v.currentBranch) return;
-  v.branchReports.push({ tileIndex: v.currentBranch.tileIndex, chosenSide: side });
+  const resolvingIndex = v.currentBranch.tileIndex;
+  v.branchReports.push({ tileIndex: resolvingIndex, chosenSide: side });
+  caveRunRemoveTriviaLayer();
   v.currentBranch = null;
-  v.tileIndex += 1;
   v.phase = 'running';
-  render();
-  v.tickTimer = setTimeout(() => caveRunAdvanceTile(), 200);
+  caveRunAdvanceAfterResolve(resolvingIndex, 'cr-flash-branch');
+  if(v.tileIndex >= v.trackLength){
+    v.tickTimer = setTimeout(() => caveRunFinishRun(), CR_BEAT_MS);
+    return;
+  }
+  v.tickTimer = setTimeout(caveRunAdvanceBeat, CR_BEAT_MS);
 }
 
 async function caveRunFinishRun(){
   const v = caveRunView;
+  caveRunRemoveTriviaLayer();
   v.phase = 'finishing';
   render();
   const data = await caveRunFetch('complete', {
@@ -9238,8 +9549,6 @@ async function caveRunFinishRun(){
     reachedTileIndex: v.trackLength - 1,
   });
   if(!data.ok){
-    v.phase = 'error';
-    v.summary = null;
     caveRunView = { phase: 'error', message: data.error || 'Could not close out the run.' };
     render();
     return;
@@ -9310,11 +9619,64 @@ function caveRunClaimTheme(){
   return (caveRunView && caveRunView.themeAffinityKey) || 'earth';
 }
 
-function renderCaveRun(){
+// Builds the running-phase screen's DOM ONCE per run. Every subsequent
+// call while phase==='running' (from renderCaveRun()'s dispatch) is a
+// no-op by design — see caveRunSetLane()/caveRunJumpNow()/
+// caveRunAdvanceBeat(), which patch the live DOM directly instead of
+// ever re-entering this function. This is what keeps player input and
+// the beat loop from stomping on each other's in-flight animations.
+function caveRunBuildRunningShell(){
+  const v = caveRunView;
   document.body.classList.add('hub-active');
   const app = document.getElementById('app');
+  const themeColor = hitColor(v.themeAffinityKey);
+  app.innerHTML = `<div class="hub-screen"><div class="hub-box"${bgAttrPlain('combat')}><div class="hub-overlay cr-screen" style="--cr-theme-color:${themeColor};">
+    <div class="cr-progress" id="caveRunProgressText">Step 0 / ${v.trackLength}</div>
+    <div class="cr-progress-bar"><div class="cr-progress-fill" id="caveRunProgressFill" style="width:0%;"></div></div>
+    <div class="cr-viewport" id="caveRunViewport" style="height:${CR_ROW_PX * CR_LOOKAHEAD}px;">
+      <div class="cr-lane-guides">${Array.from({ length: v.laneCount }, () => '<div class="cr-lane-guide"></div>').join('')}</div>
+      <div class="cr-reel" id="caveRunReel"></div>
+    </div>
+    <div class="cr-player-row" id="caveRunPlayerRow">
+      <div class="cr-player-token" id="caveRunPlayerToken"><div class="cr-head"></div><div class="cr-body"></div></div>
+    </div>
+    <div class="cr-hint-line">Dodge rocks left and right, jump the chasms, and watch for the glowing fork — answer wrong and something follows you out of the dark.</div>
+    <div class="cr-controls">
+      <button onclick="caveRunSetLane(-1)">◀ Left</button>
+      <button class="cr-jump-btn" id="caveRunJumpBtn" onclick="caveRunJumpNow()">Jump</button>
+      <button onclick="caveRunSetLane(1)">Right ▶</button>
+    </div>
+    <button class="secondary" style="margin-top:10px;" onclick="backFromCaveRun()">Abandon run</button>
+  </div></div></div>`;
+  v.shellBuilt = true;
+  caveRunSpawnInitialRows();
+  caveRunUpdateHud();
+}
+
+function renderCaveRun(){
   const v = caveRunView;
-  const themeColor = hitColor(caveRunClaimTheme());
+  if(!v) return;
+
+  // Mid-branch: the running shell underneath is frozen exactly as it
+  // was, deliberately untouched — only the trivia layer is (re)shown.
+  if(v.phase === 'trivia'){
+    caveRunShowTriviaLayer(v.currentBranch);
+    return;
+  }
+  // Running: build the shell exactly once; every later call is a no-op
+  // (see the function comment above) so player input never rebuilds it.
+  if(v.phase === 'running'){
+    document.body.classList.add('hub-active');
+    if(!v.shellBuilt) caveRunBuildRunningShell();
+    return;
+  }
+
+  // Every other phase is a plain, non-animated screen — safe to fully
+  // replace app.innerHTML the same way the rest of this file does.
+  caveRunRemoveTriviaLayer();
+  document.body.classList.add('hub-active');
+  const app = document.getElementById('app');
+  const themeColor = hitColor(v.themeAffinityKey || 'earth');
 
   if(v.phase === 'loading'){
     app.innerHTML = `<div class="hub-screen"><div class="hub-box"${bgAttrPlain('combat')}><div class="hub-overlay cr-screen"><p class="challenge-text">Descending into the cave…</p></div></div></div>`;
@@ -9360,62 +9722,6 @@ function renderCaveRun(){
     </div></div></div>`;
     return;
   }
-  if(v.phase === 'trivia' && v.currentBranch){
-    const b = v.currentBranch;
-    app.innerHTML = `
-      <div class="cr-trivia-overlay">
-        <div class="cr-trivia-card" style="--cr-theme-color:${themeColor};">
-          <div class="cr-trivia-culture">${esc(b.cultureKey)}</div>
-          <div class="cr-trivia-question">${esc(b.question)}</div>
-          <div class="cr-trivia-choices">
-            <button onclick="caveRunAnswerBranch('left')">${esc(b.leftAnswer)}</button>
-            <button onclick="caveRunAnswerBranch('right')">${esc(b.rightAnswer)}</button>
-          </div>
-        </div>
-      </div>
-    `;
-    return;
-  }
-
-  // phase === 'running' — the actual track.
-  const laneWidth = 100 / v.laneCount;
-  const tile = v.currentTile;
-  let markerHtml = '';
-  if(tile && tile.kind !== 'empty'){
-    const cls = tile.kind === 'obstacle' ? 'cr-obstacle' : tile.kind === 'gap' ? 'cr-gap' : 'cr-loot';
-    const left = tile.kind === 'gap' ? '' : `left:${(tile.lane * laneWidth) + 5}%;`;
-    const icon = tile.kind === 'obstacle' ? '⚠' : tile.kind === 'gap' ? '' : '✦';
-    markerHtml = `<div class="cr-marker ${cls}" id="caveRunMarker" style="${left}">${icon}</div>`;
-  }
-  const laneCols = Array.from({ length: v.laneCount }, () => '<div class="cr-lane-col"></div>').join('');
-  const playerLanes = Array.from({ length: v.laneCount }, (_, i) => `
-    <div class="cr-player-lane" data-lane="${i}">${i === v.lane ? '<div class="cr-player-token" id="caveRunPlayerToken"></div>' : ''}</div>
-  `).join('');
-  const pct = Math.round((v.tileIndex / v.trackLength) * 100);
-
-  app.innerHTML = `<div class="hub-screen"><div class="hub-box"${bgAttrPlain('combat')}><div class="hub-overlay cr-screen" style="--cr-theme-color:${themeColor};--cr-lanes:${v.laneCount};">
-    <div class="cr-progress">Step ${v.tileIndex} / ${v.trackLength}</div>
-    <div class="cr-progress-bar"><div class="cr-progress-fill" style="width:${pct}%;"></div></div>
-    <div class="cr-track"><div class="cr-lanes">${laneCols}</div>${markerHtml}</div>
-    <div class="cr-player-row">${playerLanes}</div>
-    <div class="cr-hint-line">${tile && tile.kind === 'gap' ? 'A gap ahead — jump it!' : tile && tile.kind === 'obstacle' ? 'Something blocks a lane ahead — move clear!' : 'Arrow keys or the buttons below to move.'}</div>
-    <div class="cr-controls">
-      <button onclick="caveRunSetLane(-1)">◀ Left</button>
-      <button class="cr-jump-btn ${v.jumpArmed ? 'cr-armed' : ''}" onclick="caveRunToggleJump()">Jump</button>
-      <button onclick="caveRunSetLane(1)">Right ▶</button>
-    </div>
-    <button class="secondary" style="margin-top:10px;" onclick="backFromCaveRun()">Abandon run</button>
-  </div></div></div>`;
-
-  // Trigger the marker's CSS fall-to-player transition on the next
-  // frame (setting the style in the same paint it's created would skip
-  // the transition entirely — the classic "force a reflow first" trick).
-  if(tile && tile.kind !== 'empty'){
-    const marker = document.getElementById('caveRunMarker');
-    if(marker){
-      requestAnimationFrame(() => { requestAnimationFrame(() => { marker.classList.add('cr-landed'); }); });
-    }
-  }
 }
 
 // Arrow-key controls — only acts while a Cave Run is actually on screen
@@ -9425,9 +9731,8 @@ document.addEventListener('keydown', (e) => {
   if(!caveRunView || caveRunView.phase !== 'running') return;
   if(e.key === 'ArrowLeft'){ caveRunSetLane(-1); e.preventDefault(); }
   else if(e.key === 'ArrowRight'){ caveRunSetLane(1); e.preventDefault(); }
-  else if(e.key === 'ArrowUp' || e.key === ' '){ caveRunToggleJump(); e.preventDefault(); }
+  else if(e.key === 'ArrowUp' || e.key === ' '){ caveRunJumpNow(); e.preventDefault(); }
 });
-
 /* ---------------- circles (Phase 4a skeleton) ---------------- */
 
 async function circleFetch(action, extra){
