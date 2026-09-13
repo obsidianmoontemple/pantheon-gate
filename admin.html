@@ -3996,6 +3996,22 @@ function showTab(id){
     btn.classList.add('active');
     const grp = btn.getAttribute('data-group');
     if(grp) lastActiveTabByGroup[grp] = id;
+    // Mobile follow-up to the fix above: lastActiveTabByGroup only lives
+    // in this page's JS memory, which is exactly what a desktop browser
+    // keeps intact while you flip between tabs — but a phone browser
+    // (iOS Safari especially, Android Chrome under memory pressure) will
+    // silently discard a backgrounded tab's whole JS context and reload
+    // it from scratch the next time you swipe back to it, which re-runs
+    // this entire script from the top and wipes that in-memory map right
+    // back to empty — landing on Overview again exactly like before this
+    // fix, but ONLY on mobile, since that reload never happens on
+    // desktop. sessionStorage survives that kind of reload (it's cleared
+    // only when the actual browser tab is closed), so persisting here
+    // and restoring on boot (see handleSession()) closes that gap.
+    try{
+      sessionStorage.setItem('adminActiveTab', id);
+      if(grp) sessionStorage.setItem('adminActiveGroup', grp);
+    }catch(e){ /* private-browsing storage denial, etc. — non-fatal, just skip persistence */ }
   }
   // Bug fix: every .tab-content div shares one document flow (display:
   // none/block, not a scrolled sub-container), and tabs vary hugely in
@@ -4265,7 +4281,17 @@ async function handleSession(session){
   if(adminBooted) return;
   adminBooted = true;
 
-  selectTabGroup('dashboard'); // #121 — Overview (the default-active tab) lives in this group
+  // Restore the tab/group the admin was actually on, if this is a
+  // same-browser-tab reload rather than a genuinely fresh visit — see
+  // the sessionStorage comment in showTab() for why this specifically
+  // matters on mobile. Falls back to Dashboard/Overview (the old fixed
+  // behavior) when there's nothing stored yet, or the stored group/tab
+  // no longer exists (e.g. after a deploy that renamed/removed one).
+  const storedGroup = (function(){ try{ return sessionStorage.getItem('adminActiveGroup'); }catch(e){ return null; } })();
+  const storedTab = (function(){ try{ return sessionStorage.getItem('adminActiveTab'); }catch(e){ return null; } })();
+  const storedGroupValid = storedGroup && TAB_GROUPS.some(g => g.key === storedGroup);
+  selectTabGroup(storedGroupValid ? storedGroup : 'dashboard'); // #121 — Overview (the default-active tab) lives in this group
+  if(storedTab && document.getElementById('tab-' + storedTab)) showTab(storedTab);
   loadPricing();
   loadSiteSettings();
   loadMapHotspots();
