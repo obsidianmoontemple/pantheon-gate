@@ -1176,6 +1176,52 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
 @media (max-width:560px){ .np-gift-popup{right:8px;top:8px;width:min(90vw,270px);} }
 @keyframes npGiftDrop{from{opacity:0;transform:translateY(-26px);}to{opacity:1;transform:translateY(0);}}
 @keyframes npGiftGlow{0%,100%{box-shadow:0 10px 40px rgba(0,0,0,0.6), 0 0 30px rgba(230,199,119,0.45);}50%{box-shadow:0 10px 40px rgba(0,0,0,0.6), 0 0 52px rgba(230,199,119,0.85);}}
+
+/* ============================= CAVE RUN (0152) =============================
+   Direct feedback: "I really want this to feel like an old cave run game
+   with proper elemental graphics and particle effects." Tile-based/
+   deterministic underneath (see cave-run/index.ts's header comment for
+   the full design), rendered here as one descending marker per hazard/
+   loot tile falling toward a fixed 3-lane player row — smooth CSS
+   animation on top of a simple, verifiable state machine. Theme color
+   comes from the run's themeAffinityKey via the EXISTING --p-color/
+   --p-sprite particle system (hitColor()/hitSprite()), not new assets. */
+.cr-screen{max-width:480px;margin:0 auto;text-align:center;}
+.cr-progress{font-family:'Cinzel',serif;letter-spacing:0.05em;color:var(--gold-bright,#e6c777);font-size:13px;margin-bottom:8px;}
+.cr-progress-bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;margin-bottom:14px;}
+.cr-progress-fill{height:100%;background:var(--cr-theme-color,#e6c777);transition:width .3s ease;}
+.cr-track{position:relative;height:220px;border-radius:14px;background:linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.25));border:1px solid rgba(255,255,255,0.08);overflow:hidden;margin-bottom:10px;}
+.cr-track::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%, var(--cr-theme-color,#e6c777) 0%, transparent 65%);opacity:0.12;pointer-events:none;}
+.cr-lanes{position:absolute;inset:0;display:flex;}
+.cr-lane-col{flex:1;border-right:1px dashed rgba(255,255,255,0.07);}
+.cr-lane-col:last-child{border-right:none;}
+.cr-marker{position:absolute;top:6px;width:calc(100%/var(--cr-lanes,3) - 10px);height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;transition:top 1.1s linear;}
+.cr-marker.cr-obstacle{background:rgba(200,40,40,0.85);box-shadow:0 0 14px rgba(200,40,40,0.6);}
+.cr-marker.cr-gap{width:calc(100% - 10px) !important;left:5px !important;background:repeating-linear-gradient(45deg, rgba(0,0,0,0.7), rgba(0,0,0,0.7) 8px, rgba(60,20,20,0.7) 8px, rgba(60,20,20,0.7) 16px);border:1px solid rgba(255,120,120,0.5);}
+.cr-marker.cr-loot{background:rgba(230,199,119,0.85);box-shadow:0 0 14px rgba(230,199,119,0.7);}
+.cr-marker.cr-landed{top:calc(100% - 46px) !important;}
+.cr-player-row{position:relative;display:flex;height:44px;margin-top:4px;}
+.cr-player-lane{flex:1;display:flex;align-items:center;justify-content:center;position:relative;}
+.cr-player-token{width:30px;height:30px;border-radius:50%;background:var(--cr-theme-color,#e6c777);box-shadow:0 0 16px var(--cr-theme-color,#e6c777);transition:transform .18s ease;}
+.cr-player-token.cr-hit{animation:crHitFlash .45s ease;}
+.cr-player-token.cr-dodge{animation:crDodgePulse .45s ease;}
+.cr-player-token.cr-jump{animation:crJumpHop .5s ease;}
+@keyframes crHitFlash{0%,100%{background:var(--cr-theme-color,#e6c777);}40%{background:#c82828;box-shadow:0 0 20px #c82828;}}
+@keyframes crDodgePulse{0%,100%{transform:scale(1);}45%{transform:scale(1.28);}}
+@keyframes crJumpHop{0%,100%{transform:translateY(0);}45%{transform:translateY(-26px);}}
+.cr-controls{display:flex;gap:10px;justify-content:center;margin:14px 0 6px;}
+.cr-controls button{min-width:76px;}
+.cr-controls button.cr-jump-btn.cr-armed{background:var(--cr-theme-color,#e6c777);color:#1a1408;}
+.cr-hint-line{font-size:12px;color:var(--parchment-dim,#b9ac93);margin-bottom:6px;}
+.cr-trivia-overlay{position:fixed;inset:0;background:rgba(6,4,2,0.82);display:flex;align-items:center;justify-content:center;z-index:60;padding:16px;}
+.cr-trivia-card{max-width:420px;width:100%;background:rgba(20,14,8,0.96);border:2px solid var(--cr-theme-color,#e6c777);border-radius:14px;padding:20px;box-shadow:0 0 40px rgba(0,0,0,0.7);}
+.cr-trivia-culture{font-family:'Cinzel',serif;letter-spacing:0.08em;font-size:11px;text-transform:uppercase;color:var(--cr-theme-color,#e6c777);margin-bottom:6px;}
+.cr-trivia-question{font-size:16px;color:var(--parchment,#e8dcc0);margin-bottom:16px;line-height:1.4;}
+.cr-trivia-choices{display:flex;gap:10px;}
+.cr-trivia-choices button{flex:1;white-space:normal;height:auto;padding:12px 8px;line-height:1.3;}
+.cr-summary-list{text-align:left;max-width:340px;margin:0 auto 14px;font-size:14px;color:var(--parchment,#e8dcc0);}
+.cr-summary-list div{padding:3px 0;}
+@media (max-width:480px){ .cr-track{height:190px;} }
 </style>
 </head>
 <body>
@@ -1730,6 +1776,14 @@ let answerDraft = '';
 // "pass_petition_trial", the same way the rest of the system does.
 let combatView = null;    // null | {step:'pick'} | {step:'loadout', ...} | {step:'battle', ...} | {step:'result', ...}
 let loadoutPicks = [];    // [{pantheonId, deityId}, ...] up to 5, chosen from full marks
+
+// Cave Run (0152) — replaces the old flat Train buttons. null while
+// closed; while open, a single mutable state object (see openCaveRun()
+// for its full shape) rather than a re-created view object per render,
+// since the tick loop mutates it directly between renders (lane, jump
+// flag, reports collected so far) — same "one long-lived mutable object,
+// render() just reads it" shape mageDuelView uses for its own live fight.
+let caveRunView = null;
 
 let circleView = null;    // null | {step:'locked'} | {step:'loading'} | {step:'browse'} | {step:'create'} | {step:'home'} | {step:'editBanner'}
 let myCircle = null;      // {circle, myRole, roster, pendingRequests} | null
@@ -2727,7 +2781,14 @@ function render(){
   if(!personalAltarView) stopPersonalAltarTicking();
   if(!serverChatView) stopServerChatPolling();
   if(guardian && petitionView){ renderPetition(); return; }
+  // Checked ahead of caveRunView (not just an alternative to it) —
+  // a hidden battle mid-run sets combatView while deliberately leaving
+  // caveRunView alone, so finishing that fight (finishCombat() only
+  // clears combatView) drops straight back into the run's own summary/
+  // next-encounter screen, same "inner view wins, outer view survives
+  // underneath" pattern mageDuelView/guardianHomeView already use below.
   if(guardian && combatView){ renderCombat(); return; }
+  if(guardian && caveRunView){ renderCaveRun(); return; }
   if(guardian && craftView){ renderCraft(); return; }
   if(guardian && redeemView){ renderRedeem(); return; }
   // Checked ahead of expeditionView on purpose — openDeityQA() (called
@@ -3806,7 +3867,7 @@ function renderGuardianFamiliarTab(){
       ${guardian.stage !== 'egg' ? `
         <div class="status" id="guardianTrainStatus"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">
-          <button onclick="doTrainGuardian()">Train</button>
+          <button onclick="openCaveRun()">Cave Run</button>
         </div>
         ${guardianFamiliarUseItemHtml()}
         ${guardianGearHtml()}
@@ -3967,7 +4028,7 @@ function renderGuardianMageTab(){
       <div class="status" id="mageActionStatus"></div>
 
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">
-        <button onclick="doTrainMage()">Train</button>
+        <button onclick="openCaveRun()">Cave Run</button>
         <button onclick="doDuelMage()">Duel</button>
         <button class="secondary" onclick="openMageGear()">Manage Gear</button>
       </div>
@@ -4062,6 +4123,67 @@ async function doUsePotionFromMageHome(potionKey){
 
 let mageGearCatalog = []; // mage_gear_catalog, public catalog — loaded once and cached, like craftCatalog
 
+// Mage Titles (0151) — "a list of titles and benefits... selectable as
+// it is earned and displayed on the profile page." mageTitleCatalog is
+// the full admin-authored catalog (loaded once, cached, like
+// mageGearCatalog above — used both to describe an owned title's
+// benefit and to show a "not yet earned" preview of active titles the
+// player doesn't have). mageTitlesOwned is this Mage's own
+// mage_titles_owned rows — reloaded fresh every Profile visit (NOT
+// cached-once like gear) since ownership can change server-side at any
+// moment via an admin grant or an auto-unlock the player never directly
+// triggered on this screen.
+let mageTitleCatalog = [];
+let mageTitlesOwned = [];
+
+async function loadMageTitleCatalog(){
+  const { data, error } = await supabaseClient
+    .from('mage_title_catalog')
+    .select('key, name, description, stat_key, stat_amount, effect_key, effect_amount, auto_unlock_mage_level, image_url, active, sort_order')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+  if(error){ console.error('mage_title_catalog load failed', error); return; }
+  mageTitleCatalog = data || [];
+}
+
+async function loadMageTitlesOwned(){
+  const { data, error } = await supabaseClient.from('mage_titles_owned').select('title_key, earned_via, earned_at').eq('mage_id', mage.id);
+  if(error){ console.error('mage_titles_owned load failed', error); return; }
+  mageTitlesOwned = data || [];
+}
+
+// A short human-readable line describing a title's benefit(s), reused by
+// both the owned list and the "not yet earned" preview list.
+function mageTitleBenefitLabel(t){
+  const parts = [];
+  if(t.stat_key && t.stat_amount) parts.push(`+${t.stat_amount} ${t.stat_key}`);
+  if(t.effect_key && t.effect_amount) parts.push(`+${t.effect_amount}% ${t.effect_key.replace('_pct', '').replace('_', ' ')}`);
+  return parts.join(', ') || 'No benefit configured';
+}
+
+function setTitleActionStatus(text, ok){
+  const el = document.getElementById('titleActionStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text;
+}
+
+async function doEquipMageTitle(titleKey){
+  const data = await mageFetch('equip-title', { titleKey });
+  if(!data.ok){ setTitleActionStatus(data.error || 'Could not equip that title.', false); return; }
+  await loadMage();
+  render();
+  setTitleActionStatus('Title equipped.', true);
+}
+
+async function doUnequipMageTitle(){
+  const data = await mageFetch('unequip-title');
+  if(!data.ok){ setTitleActionStatus(data.error || 'Could not unequip your title.', false); return; }
+  await loadMage();
+  render();
+  setTitleActionStatus('Title unequipped.', true);
+}
+
 /* ---------------- mage HP, reagents, potions (0069) ----------------
    Direct feedback: "we need to handle things like personal hp monster
    retaliation because that's not working and the ability to create
@@ -4139,6 +4261,14 @@ function mageEffectiveStats(){
     const cat = owned ? mageGearCatalog.find(c => c.key === owned.gear_key) : null;
     if(cat) base[cat.stat_key] += cat.stat_amount;
   });
+  // Mage Titles (0151) — an equipped title's stat bonus, same additive
+  // treatment as gear just above. Display-only here (Power Rating, the
+  // Profile stat grid); the authoritative version of this same addition
+  // lives server-side in mage/index.ts's effectiveStats().
+  if(mage.equipped_title_key){
+    const title = mageTitleCatalog.find(t => t.key === mage.equipped_title_key);
+    if(title && title.stat_key && title.stat_amount) base[title.stat_key] += title.stat_amount;
+  }
   return base;
 }
 
@@ -4248,6 +4378,10 @@ async function doTrainMage(){
   if(data.levelsGained > 0) msg += ` Leveled up to ${data.level}!`;
   setMageActionStatus(msg, true);
   if(data.levelsGained > 0) showRewardBanner('Level Up!', `Your Mage reached level ${data.level}`);
+  // Mage Titles (0151) — auto-unlock check runs server-side on every
+  // level-up; surface it here too, not just via the mailbox message, so
+  // it's not easy to miss in the moment it actually happened.
+  if(data.titlesUnlocked && data.titlesUnlocked.length) showRewardBanner('New Title Earned!', 'Equip it from your Profile page.');
 }
 
 // 0083, Phase 2 of "make the Mage's own Duel interactive" — opens (or
@@ -4309,6 +4443,10 @@ async function doMageDuelAct(){
   else celebrate({ count: 4, distance: 28, duration: 550, color: '#c8a24a', size: 22, sprite: 'particle-fx/fx_impact.png' });
   if(data.finished && data.won && data.levelsGained > 0){
     celebrate({ count: 18, distance: 50, duration: 900, color: '#e6c777', size: 20, sprite: 'particle-fx/fx_starburst.png' });
+  }
+  // Mage Titles (0151) — same auto-unlock surfacing as doTrainMage().
+  if(data.finished && data.won && data.titlesUnlocked && data.titlesUnlocked.length){
+    showRewardBanner('New Title Earned!', 'Equip it from your Profile page.');
   }
 }
 
@@ -5113,6 +5251,12 @@ function openProfile(){
     // map without ever visiting the Guardian Page this session.
     if(!mageGearCatalog.length) loaders.push(loadMageGearCatalog());
     if(!mageGearOwned.length) loaders.push(loadMageGearOwned());
+    // Mage Titles (0151) — catalog is cached-once like gear; owned is
+    // reloaded every visit since it can change without this screen's
+    // involvement (an admin grant, or an auto-unlock from training/
+    // dueling elsewhere).
+    if(!mageTitleCatalog.length) loaders.push(loadMageTitleCatalog());
+    loaders.push(loadMageTitlesOwned());
   }
   Promise.all(loaders).then(() => { if(profileView) render(); });
 }
@@ -5295,6 +5439,36 @@ function renderProfile(){
     <p class="hint">No Mage yet — create one from the Guardian Page.</p>
   `;
 
+  // Mage Titles (0151) — "titles and benefits... selectable as it is
+  // earned and displayed on the profile page." Owned titles are listed
+  // with an Equip/Unequip toggle (only one active at a time); active
+  // catalog titles not yet owned are shown dimmed underneath as a
+  // preview of what's still out there, with how to get it (an auto-
+  // unlock level, or "granted by an admin" for anything without one).
+  const equippedTitle = mage ? mageTitleCatalog.find(t => t.key === mage.equipped_title_key) : null;
+  const ownedTitleKeySet = new Set(mageTitlesOwned.map(o => o.title_key));
+  const ownedTitles = mageTitleCatalog.filter(t => ownedTitleKeySet.has(t.key));
+  const lockedTitles = mageTitleCatalog.filter(t => !ownedTitleKeySet.has(t.key));
+  const titlesBlock = mage ? `
+    <div class="pantheon-group" style="margin-top:14px;text-align:left;">
+      <h3>Titles</h3>
+      <p class="hint" style="margin-top:-4px;">${equippedTitle ? `Wearing: <strong>${esc(equippedTitle.name)}</strong> — ${esc(mageTitleBenefitLabel(equippedTitle))}` : 'No title equipped.'}</p>
+      ${ownedTitles.length ? ownedTitles.map(t => `
+        <div class="deity-row">
+          <span class="name">${esc(t.name)}<span style="opacity:0.6;"> — ${esc(mageTitleBenefitLabel(t))}</span></span>
+          ${mage.equipped_title_key === t.key
+            ? `<button class="secondary" style="padding:4px 10px;font-size:11px;" onclick="doUnequipMageTitle()">Unequip</button>`
+            : `<button class="secondary" style="padding:4px 10px;font-size:11px;" onclick="doEquipMageTitle('${esc(t.key)}')">Equip</button>`}
+        </div>
+      `).join('') : '<p class="hint">No titles earned yet.</p>'}
+      ${lockedTitles.length ? `
+        <p class="hint" style="margin-top:10px;margin-bottom:2px;">Not yet earned:</p>
+        ${lockedTitles.map(t => `<div class="deity-row" style="opacity:0.55;"><span class="name">${esc(t.name)}<span style="opacity:0.7;"> — ${esc(mageTitleBenefitLabel(t))}${t.auto_unlock_mage_level ? ` (reach Mage level ${t.auto_unlock_mage_level})` : ' (granted by an admin)'}</span></span></div>`).join('')}
+      ` : ''}
+      <div class="status" id="titleActionStatus"></div>
+    </div>
+  ` : '';
+
   app.innerHTML = `
     <div class="card"${bgAttr('profile', 'text-align:center;')}>
       <div class="essence-row" style="background:rgba(0,0,0,0.25);border-radius:8px;padding:8px 14px;">
@@ -5303,6 +5477,7 @@ function renderProfile(){
       </div>
 
       ${heroBlock}
+      ${titlesBlock}
 
       <div class="essence-row" style="margin-top:14px;">
         <span class="essence-label">Essence</span>
@@ -8742,6 +8917,13 @@ function renderBattleResult(){
   const v = combatView;
   const win = v.result === 'win';
   const isCampaign = v.source === 'campaign';
+  // Cave Run (0152) — a hidden battle deliberately pays no Essence/XP of
+  // its own here (combat/index.ts's battleSource==='gauntlet' gate skips
+  // it for source:'cave_run' on purpose, see that file's comment) since
+  // the run itself already paid out via cave-run/index.ts's "complete" —
+  // a win here is a bonus loot chance, not a second payout. Custom copy
+  // so the result screen doesn't show a slightly odd "Essence gained: 0."
+  const isCaveRun = v.source === 'cave_run';
 
   // Campaign fights never pay Essence/rank here — combat/index.ts
   // deliberately skips that payout on source:'campaign' wins, deferring to
@@ -8756,6 +8938,10 @@ function renderBattleResult(){
            <button onclick="claimCampaignVictory()">Claim your reward</button>`
         : `<p class="verdict-text">${esc(v.opponentName)} proved too much this time.</p>
            <button onclick="backFromCampaignCombat()">Return to your guardian</button>`)
+    : isCaveRun
+    ? `<p class="verdict-text">${win ? `${esc(guardian.name)} drove off the ${esc(v.opponentName)} lurking in the dark.` : `The ${esc(v.opponentName)} got the better of you this time.`}</p>
+       ${win && v.lootWon ? `<p class="gain-note">Found: ${esc(v.lootWon.name)}.</p>` : ''}
+       <button onclick="finishCombat()">Continue the run</button>`
     : `<p class="verdict-text">${win ? `${esc(guardian.name)} bested the ${esc(v.opponentName)}.` : `${esc(v.opponentName)} proved too much this time.`}</p>
        <p class="gain-note">Essence gained: ${v.essenceGained}.${v.rankUp ? ' A new trial ground has opened.' : ''}${v.lootWon ? ` Found: ${esc(v.lootWon.name)}.` : ''}${v.tierReward && v.tierReward.granted ? ` Also received ${esc(v.tierReward.name || 'a reward')} for clearing this trial ground.` : ''}</p>
        <button onclick="finishCombat()">Return to your guardian</button>`;
@@ -8820,6 +9006,427 @@ async function claimCampaignVictory(){
     if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
   }
 }
+
+/* =============================================================================
+   CAVE RUN (0152) — replaces the old flat Train buttons on both the
+   Guardian Page and the Mage screen. See cave-run/index.ts's header
+   comment for the full design writeup. Client responsibilities:
+     1. Regenerate the exact same hazard/loot tile sequence the server
+        used to issue this run's trivia (mulberry32Port/generateTrackClient
+        below — MUST stay byte-for-byte identical to the server's copy in
+        cave-run/index.ts, including the two "wasted" rng() draws at every
+        branch tile, or the two sides desync past the first branch).
+     2. Play it as a real-time-feeling tile runner (one descending marker
+        per hazard/loot tile, CSS-animated) while recording exactly what
+        the player actually did.
+     3. Report those recordings to cave-run/index.ts's "complete" action,
+        which is the only thing that actually decides what was dodged,
+        what was answered correctly, and what gets granted — this client
+        code never computes or trusts its own reward numbers.
+   ========================================================================= */
+
+// mulberry32, ported line-for-line from combat/index.ts / cave-run/index.ts.
+// Any change here MUST be made in both server copies too.
+function caveRunMulberry32(seed){
+  let a = seed >>> 0;
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Pure, no rng — same formula as cave-run/index.ts's branchPositions().
+function caveRunBranchPositions(trackLength, branchCount){
+  const positions = [];
+  for(let i = 1; i <= branchCount; i++) positions.push(Math.floor((i * trackLength) / (branchCount + 1)));
+  return positions;
+}
+
+// Ported from cave-run/index.ts's generateTrack(). Branch tiles still
+// consume exactly two rng() draws each (to stay in lockstep with the
+// server's own sequence) but their results are thrown away here — the
+// client never computes or displays which side is correct; that comes
+// only from the server's own `branches` payload (see openCaveRun()).
+function caveRunGenerateTrack(seed, trackLength, laneCount, branchCount, obstaclePct, gapPct, lootPct){
+  const rng = caveRunMulberry32(seed);
+  const branchAt = new Set(caveRunBranchPositions(trackLength, branchCount));
+  const hazards = []; // [{tileIndex, kind:'obstacle'|'gap', lane|null}]
+  const loot = [];    // [{tileIndex, lane}]
+  for(let i = 0; i < trackLength; i++){
+    if(branchAt.has(i)){ rng(); rng(); continue; } // correctSide + creatureKey, discarded client-side
+    const r = rng();
+    const obstacleCut = obstaclePct / 100;
+    const gapCut = obstacleCut + gapPct / 100;
+    const lootCut = gapCut + lootPct / 100;
+    if(r < obstacleCut){
+      const lane = Math.floor(rng() * laneCount);
+      hazards.push({ tileIndex: i, kind: 'obstacle', lane });
+    } else if(r < gapCut){
+      hazards.push({ tileIndex: i, kind: 'gap', lane: null });
+    } else if(r < lootCut){
+      const lootRoll = rng(); // same single draw the server also makes (and discards) — safe to actually use client-side, it's cosmetic only
+      loot.push({ tileIndex: i, lane: Math.floor(lootRoll * laneCount) });
+    }
+  }
+  return { hazards, loot };
+}
+
+async function caveRunFetch(action, extra){
+  const resp = await fetch(FUNCTIONS_URL + '/cave-run', {
+    method: 'POST',
+    headers: await petitionHeaders(),
+    body: JSON.stringify({ action, ...(extra || {}) })
+  });
+  return await resp.json();
+}
+
+function setCaveRunStatus(text, ok){
+  const el = document.getElementById('caveRunStatus');
+  if(!el) return;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+  el.textContent = text || '';
+}
+
+async function openCaveRun(){
+  caveRunView = { phase: 'loading' };
+  render();
+  const data = await caveRunFetch('start');
+  if(!data.ok){
+    caveRunView = { phase: 'error', message: data.error || 'Could not open the cave right now.', secondsLeft: data.secondsLeft };
+    render();
+    return;
+  }
+  const track = caveRunGenerateTrack(
+    data.seed, data.trackLength, data.laneCount, data.branchCount,
+    data.obstacleDensityPct, data.gapDensityPct, data.lootDensityPct,
+  );
+  const branchByTile = new Map((data.branches || []).map(b => [b.tileIndex, b]));
+  caveRunView = {
+    phase: 'intro',
+    sessionId: data.sessionId, seed: data.seed,
+    trackLength: data.trackLength, laneCount: data.laneCount, branchCount: data.branchCount,
+    themeAffinityKey: data.themeAffinityKey,
+    track, branchByTile,
+    tileIndex: 0,
+    lane: Math.floor(data.laneCount / 2),
+    jumpArmed: false,
+    hazardReports: [], branchReports: [],
+    hiddenBattles: [], hiddenBattleIndex: 0,
+    summary: null,
+    tickTimer: null,
+  };
+  render();
+}
+
+function backFromCaveRun(){
+  if(caveRunView && caveRunView.tickTimer) clearTimeout(caveRunView.tickTimer);
+  caveRunView = null;
+  render();
+}
+
+const CAVE_RUN_DECISION_MS = 1500; // how long a hazard/loot marker takes to "fall" to the player row
+const CAVE_RUN_EMPTY_MS = 380;     // fast filler beat for an empty tile — keeps pacing brisk
+
+function caveRunBegin(){
+  if(!caveRunView) return;
+  caveRunView.phase = 'running';
+  render();
+  caveRunAdvanceTile();
+}
+
+// The heart of the run — looks at the current tile, decides how to
+// present it, and (for anything but a branch) schedules its own
+// resolution after CAVE_RUN_DECISION_MS/CAVE_RUN_EMPTY_MS. Branches pause
+// entirely and are resumed by caveRunAnswerBranch() instead of a timer.
+function caveRunAdvanceTile(){
+  const v = caveRunView;
+  if(!v || v.phase !== 'running') return;
+  if(v.tileIndex >= v.trackLength){ caveRunFinishRun(); return; }
+
+  const branch = v.branchByTile.get(v.tileIndex);
+  if(branch){ caveRunShowTrivia(branch); return; }
+
+  const hazard = v.track.hazards.find(h => h.tileIndex === v.tileIndex);
+  const lootHere = v.track.loot.find(l => l.tileIndex === v.tileIndex);
+  v.currentTile = hazard || (lootHere ? { tileIndex: v.tileIndex, kind: 'loot', lane: lootHere.lane } : { tileIndex: v.tileIndex, kind: 'empty', lane: null });
+  v.jumpArmed = false;
+  render();
+
+  const ms = v.currentTile.kind === 'empty' ? CAVE_RUN_EMPTY_MS : CAVE_RUN_DECISION_MS;
+  v.tickTimer = setTimeout(() => caveRunResolveCurrentTile(), ms);
+}
+
+function caveRunResolveCurrentTile(){
+  const v = caveRunView;
+  if(!v || v.phase !== 'running' || !v.currentTile) return;
+  const tile = v.currentTile;
+  const token = document.getElementById('caveRunPlayerToken');
+
+  if(tile.kind === 'obstacle'){
+    const avoided = v.lane !== tile.lane;
+    v.hazardReports.push({ tileIndex: tile.tileIndex, lane: v.lane, jumped: v.jumpArmed });
+    if(token){
+      token.classList.remove('cr-hit', 'cr-dodge');
+      void token.offsetWidth;
+      token.classList.add(avoided ? 'cr-dodge' : 'cr-hit');
+    }
+    const laneWrap = document.querySelector(`.cr-player-lane[data-lane="${v.lane}"]`);
+    if(laneWrap) spawnParticles(laneWrap, avoided
+      ? { count: 5, distance: 24, duration: 450, color: hitColor(v.themeAffinityKey), size: 16, sprite: hitSprite(v.themeAffinityKey) }
+      : { count: 8, distance: 30, duration: 500, color: '#c82828', size: 18, sprite: 'particle-fx/fx_impact.png' });
+  } else if(tile.kind === 'gap'){
+    const avoided = v.jumpArmed;
+    v.hazardReports.push({ tileIndex: tile.tileIndex, lane: v.lane, jumped: v.jumpArmed });
+    if(token){
+      token.classList.remove('cr-hit', 'cr-jump');
+      void token.offsetWidth;
+      token.classList.add(avoided ? 'cr-jump' : 'cr-hit');
+    }
+  } else if(tile.kind === 'loot'){
+    const laneWrap = document.querySelector(`.cr-player-lane[data-lane="${tile.lane}"]`);
+    if(laneWrap) spawnParticles(laneWrap, { count: 6, distance: 22, duration: 500, color: hitColor(v.themeAffinityKey), size: 16, sprite: hitSprite(v.themeAffinityKey) });
+  }
+
+  v.tileIndex += 1;
+  v.currentTile = null;
+  render();
+  v.tickTimer = setTimeout(() => caveRunAdvanceTile(), tile.kind === 'empty' ? 60 : 260);
+}
+
+function caveRunSetLane(delta){
+  const v = caveRunView;
+  if(!v || v.phase !== 'running') return;
+  v.lane = Math.max(0, Math.min(v.laneCount - 1, v.lane + delta));
+  render();
+}
+
+function caveRunToggleJump(){
+  const v = caveRunView;
+  if(!v || v.phase !== 'running') return;
+  v.jumpArmed = !v.jumpArmed;
+  render();
+}
+
+function caveRunShowTrivia(branch){
+  const v = caveRunView;
+  v.phase = 'trivia';
+  v.currentBranch = branch;
+  render();
+}
+
+function caveRunAnswerBranch(side){
+  const v = caveRunView;
+  if(!v || v.phase !== 'trivia' || !v.currentBranch) return;
+  v.branchReports.push({ tileIndex: v.currentBranch.tileIndex, chosenSide: side });
+  v.currentBranch = null;
+  v.tileIndex += 1;
+  v.phase = 'running';
+  render();
+  v.tickTimer = setTimeout(() => caveRunAdvanceTile(), 200);
+}
+
+async function caveRunFinishRun(){
+  const v = caveRunView;
+  v.phase = 'finishing';
+  render();
+  const data = await caveRunFetch('complete', {
+    sessionId: v.sessionId,
+    hazardReports: v.hazardReports,
+    branchReports: v.branchReports,
+    reachedTileIndex: v.trackLength - 1,
+  });
+  if(!data.ok){
+    v.phase = 'error';
+    v.summary = null;
+    caveRunView = { phase: 'error', message: data.error || 'Could not close out the run.' };
+    render();
+    return;
+  }
+  await Promise.all([loadGuardian(), loadMage(), loadMageStatus()]);
+  v.phase = 'summary';
+  v.summary = data;
+  v.hiddenBattles = data.hiddenBattles || [];
+  v.hiddenBattleIndex = 0;
+  render();
+
+  if(data.perfect){
+    celebrate({ count: 22, distance: 60, duration: 1000, color: hitColor(v.themeAffinityKey), size: 24, sprite: hitSprite(v.themeAffinityKey) });
+    showRewardBanner('Flawless Run!', 'No hits taken, every question answered right.');
+  }
+  if(data.mageLevelsGained > 0 || data.guardianLevelsGained > 0){
+    showRewardBanner('Level Up!', [
+      data.mageLevelsGained > 0 ? `Mage reached level ${data.mageLevel}` : null,
+      data.guardianLevelsGained > 0 ? `Guardian reached level ${data.guardianLevel}` : null,
+    ].filter(Boolean).join(' · '));
+  }
+  if(data.mageTitlesUnlocked && data.mageTitlesUnlocked.length){
+    showRewardBanner('New Title Earned!', 'Equip it from your Profile page.');
+  }
+}
+
+// Enters the next queued hidden battle (a wrong trivia branch's
+// consequence) via combat/index.ts's cave_run source — no loadout
+// picker (an ambush, not a deliberate trial-ground entry) and no Energy
+// cost. finishCombat() (unchanged, existing) clears combatView when this
+// fight ends, which drops render() straight back to caveRunView's own
+// summary screen since combatView is checked ahead of it but caveRunView
+// is never cleared during the detour.
+async function caveRunEnterHiddenBattle(battle){
+  const status = document.getElementById('caveRunSummaryStatus');
+  if(status){ status.className = 'status'; status.textContent = 'Something moves in the dark…'; }
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/combat', {
+      method: 'POST',
+      headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'start', guardianId: guardian.id, source: 'cave_run', sessionId: caveRunView.sessionId, battleToken: battle.battleToken, loadout: [] })
+    });
+    const data = await resp.json();
+    if(!data.ok){
+      if(status){ status.className = 'status err'; status.textContent = data.error || 'Could not start that fight.'; }
+      return;
+    }
+    caveRunView.hiddenBattleIndex += 1;
+    combatView = {
+      step: 'battle', source: 'cave_run',
+      battleId: data.battleId,
+      opponentName: data.opponentName, opponentAffinity: data.opponentAffinity, opponentImageUrl: data.opponentImageUrl,
+      guardianHp: data.guardianHp, guardianMaxHp: data.guardianMaxHp,
+      opponentHp: data.opponentHp, opponentMaxHp: data.opponentMaxHp,
+      moves: data.moves, log: [],
+    };
+    if(guardian && typeof data.energyRemaining === 'number'){
+      guardian.energy_current = data.energyRemaining;
+      guardian.energy_updated_at = new Date().toISOString();
+    }
+    render();
+  }catch(e){
+    if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
+  }
+}
+
+function caveRunClaimTheme(){
+  return (caveRunView && caveRunView.themeAffinityKey) || 'earth';
+}
+
+function renderCaveRun(){
+  document.body.classList.add('hub-active');
+  const app = document.getElementById('app');
+  const v = caveRunView;
+  const themeColor = hitColor(caveRunClaimTheme());
+
+  if(v.phase === 'loading'){
+    app.innerHTML = `<div class="hub-screen"><div class="hub-box"${bgAttrPlain('combat')}><div class="hub-overlay cr-screen"><p class="challenge-text">Descending into the cave…</p></div></div></div>`;
+    return;
+  }
+  if(v.phase === 'error'){
+    const cooldownNote = v.secondsLeft ? ` (${formatRemaining(v.secondsLeft * 1000)})` : '';
+    app.innerHTML = `<div class="hub-screen"><div class="hub-box"${bgAttrPlain('combat')}><div class="hub-overlay cr-screen">
+      <p class="verdict-text">${esc(v.message)}${esc(cooldownNote)}</p>
+      <button class="secondary" onclick="backFromCaveRun()">Back</button>
+    </div></div></div>`;
+    return;
+  }
+  if(v.phase === 'intro'){
+    app.innerHTML = `<div class="hub-screen"><div class="hub-box"${bgAttrPlain('combat')}><div class="hub-overlay cr-screen" style="--cr-theme-color:${themeColor};">
+      <h2>Cave Run</h2>
+      <p class="challenge-text">Dodge left and right, jump the gaps, and answer whatever the dark asks you — get it wrong and something follows you the rest of the way down. ${v.branchCount} decisions, ${v.trackLength} steps to the bottom.</p>
+      <button onclick="caveRunBegin()">Enter the cave</button>
+      <button class="secondary" style="margin-top:8px;" onclick="backFromCaveRun()">Not right now</button>
+    </div></div></div>`;
+    return;
+  }
+  if(v.phase === 'finishing'){
+    app.innerHTML = `<div class="hub-screen"><div class="hub-box"${bgAttrPlain('combat')}><div class="hub-overlay cr-screen"><p class="challenge-text">Climbing back into the light…</p></div></div></div>`;
+    return;
+  }
+  if(v.phase === 'summary'){
+    const s = v.summary;
+    const pendingBattle = v.hiddenBattles[v.hiddenBattleIndex];
+    app.innerHTML = `<div class="hub-screen"><div class="hub-box"${bgAttrPlain('combat')}><div class="hub-overlay cr-screen" style="--cr-theme-color:${themeColor};">
+      <div class="verdict-badge ${s.perfect ? 'full' : 'partial'}">${s.perfect ? 'Flawless' : 'Run Complete'}</div>
+      <div class="cr-summary-list">
+        <div>Trivia answered correctly: ${s.correctCount} / ${s.totalBranches}</div>
+        <div>Hazards taken: ${s.hitCount} / ${s.totalHazards}</div>
+        <div>Mage: +${s.mageXpGained} XP, +${s.mageShardsGained} God Shards${s.mageLevelsGained > 0 ? ` (now level ${s.mageLevel})` : ''}</div>
+        <div>Guardian: +${s.guardianXpGained} XP, +${s.guardianEssenceGained} Essence${s.guardianLevelsGained > 0 ? ` (now level ${s.guardianLevel})` : ''}</div>
+      </div>
+      ${pendingBattle
+        ? `<p class="challenge-text">Something followed you out of the dark (${v.hiddenBattleIndex + 1}/${v.hiddenBattles.length}).</p>
+           <button onclick="caveRunEnterHiddenBattle(${JSON.stringify(pendingBattle).replace(/"/g, '&quot;')})">Face it</button>`
+        : `<button onclick="backFromCaveRun()">Back to the map</button>`}
+      <div class="status" id="caveRunSummaryStatus"></div>
+    </div></div></div>`;
+    return;
+  }
+  if(v.phase === 'trivia' && v.currentBranch){
+    const b = v.currentBranch;
+    app.innerHTML = `
+      <div class="cr-trivia-overlay">
+        <div class="cr-trivia-card" style="--cr-theme-color:${themeColor};">
+          <div class="cr-trivia-culture">${esc(b.cultureKey)}</div>
+          <div class="cr-trivia-question">${esc(b.question)}</div>
+          <div class="cr-trivia-choices">
+            <button onclick="caveRunAnswerBranch('left')">${esc(b.leftAnswer)}</button>
+            <button onclick="caveRunAnswerBranch('right')">${esc(b.rightAnswer)}</button>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // phase === 'running' — the actual track.
+  const laneWidth = 100 / v.laneCount;
+  const tile = v.currentTile;
+  let markerHtml = '';
+  if(tile && tile.kind !== 'empty'){
+    const cls = tile.kind === 'obstacle' ? 'cr-obstacle' : tile.kind === 'gap' ? 'cr-gap' : 'cr-loot';
+    const left = tile.kind === 'gap' ? '' : `left:${(tile.lane * laneWidth) + 5}%;`;
+    const icon = tile.kind === 'obstacle' ? '⚠' : tile.kind === 'gap' ? '' : '✦';
+    markerHtml = `<div class="cr-marker ${cls}" id="caveRunMarker" style="${left}">${icon}</div>`;
+  }
+  const laneCols = Array.from({ length: v.laneCount }, () => '<div class="cr-lane-col"></div>').join('');
+  const playerLanes = Array.from({ length: v.laneCount }, (_, i) => `
+    <div class="cr-player-lane" data-lane="${i}">${i === v.lane ? '<div class="cr-player-token" id="caveRunPlayerToken"></div>' : ''}</div>
+  `).join('');
+  const pct = Math.round((v.tileIndex / v.trackLength) * 100);
+
+  app.innerHTML = `<div class="hub-screen"><div class="hub-box"${bgAttrPlain('combat')}><div class="hub-overlay cr-screen" style="--cr-theme-color:${themeColor};--cr-lanes:${v.laneCount};">
+    <div class="cr-progress">Step ${v.tileIndex} / ${v.trackLength}</div>
+    <div class="cr-progress-bar"><div class="cr-progress-fill" style="width:${pct}%;"></div></div>
+    <div class="cr-track"><div class="cr-lanes">${laneCols}</div>${markerHtml}</div>
+    <div class="cr-player-row">${playerLanes}</div>
+    <div class="cr-hint-line">${tile && tile.kind === 'gap' ? 'A gap ahead — jump it!' : tile && tile.kind === 'obstacle' ? 'Something blocks a lane ahead — move clear!' : 'Arrow keys or the buttons below to move.'}</div>
+    <div class="cr-controls">
+      <button onclick="caveRunSetLane(-1)">◀ Left</button>
+      <button class="cr-jump-btn ${v.jumpArmed ? 'cr-armed' : ''}" onclick="caveRunToggleJump()">Jump</button>
+      <button onclick="caveRunSetLane(1)">Right ▶</button>
+    </div>
+    <button class="secondary" style="margin-top:10px;" onclick="backFromCaveRun()">Abandon run</button>
+  </div></div></div>`;
+
+  // Trigger the marker's CSS fall-to-player transition on the next
+  // frame (setting the style in the same paint it's created would skip
+  // the transition entirely — the classic "force a reflow first" trick).
+  if(tile && tile.kind !== 'empty'){
+    const marker = document.getElementById('caveRunMarker');
+    if(marker){
+      requestAnimationFrame(() => { requestAnimationFrame(() => { marker.classList.add('cr-landed'); }); });
+    }
+  }
+}
+
+// Arrow-key controls — only acts while a Cave Run is actually on screen
+// and mid-track, same guard every other keyboard-driven screen in this
+// file uses to avoid stealing keys elsewhere.
+document.addEventListener('keydown', (e) => {
+  if(!caveRunView || caveRunView.phase !== 'running') return;
+  if(e.key === 'ArrowLeft'){ caveRunSetLane(-1); e.preventDefault(); }
+  else if(e.key === 'ArrowRight'){ caveRunSetLane(1); e.preventDefault(); }
+  else if(e.key === 'ArrowUp' || e.key === ' '){ caveRunToggleJump(); e.preventDefault(); }
+});
 
 /* ---------------- circles (Phase 4a skeleton) ---------------- */
 
