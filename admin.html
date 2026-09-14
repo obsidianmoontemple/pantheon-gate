@@ -246,6 +246,14 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="deities" data-group="deities" onclick="showTab('deities')">Deity Personalities</button>
       <button class="tab-btn" data-tab="pantheons" data-group="deities" onclick="showTab('pantheons')">Pantheons &amp; Gods</button>
       <button class="tab-btn" data-tab="chainedgods" data-group="deities" onclick="showTab('chainedgods')">Chained Gods</button>
+      <!-- Deity Battle Catalogue (Phase 1 — full plan at
+           /root/.claude/plans/mellow-prancing-tiger.md): deities become
+           real, standalone combatants with their own stats, leveling up
+           from Deity Campaign wins (Phase 2), plus affinity/rarity/set
+           gear. -->
+      <button class="tab-btn" data-tab="deitybattlestats" data-group="deities" onclick="showTab('deitybattlestats')">Deity Battle Stats</button>
+      <button class="tab-btn" data-tab="deitygearcatalog" data-group="deities" onclick="showTab('deitygearcatalog')">Deity Gear Catalog</button>
+      <button class="tab-btn" data-tab="deitygearsetbonuses" data-group="deities" onclick="showTab('deitygearsetbonuses')">Deity Gear Set Bonuses</button>
       <button class="tab-btn" data-tab="maphotspots" data-group="site" onclick="showTab('maphotspots')">Backgrounds &amp; Hotspots</button>
       <button class="tab-btn" data-tab="guide" data-group="site" onclick="showTab('guide')">Narrator/Guide</button>
       <button class="tab-btn" data-tab="credits" data-group="site" onclick="showTab('credits')">Credits</button>
@@ -2194,6 +2202,117 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <button id="saveBlessingsBtn">Save changes</button>
           <div class="status" id="blessingStatus"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- ============================== DEITY BATTLE STATS ============================== -->
+    <div class="tab-content" id="tab-deitybattlestats">
+      <div class="card">
+        <h2>Deity Battle Stats (Phase 1 — placeholders, approve with Active)</h2>
+        <p class="hint">Deities have zero combat presence anywhere else in this game — this is their own standalone stat block, separate from a Guardian's mark. Every row ships inactive with flat base stats (10 each) until you tune it and check Active. Level/XP grow automatically once the Deity Campaign ships (Phase 2) — a level-up applies +2 to every base stat here, computed live wherever a deity fights, never baked in, so you can keep hand-tuning base stats later without fighting the level bonus. 'set' and 'leviathan' each span two pantheons and share one deity_id — only one flavor of stats can be kept per id, the same limitation Deity Moves/Deity Blessings already live with.</p>
+        <input class="search-box" type="text" id="deityBattleStatsSearch" placeholder="Search by name…">
+        <div class="scroll-table">
+          <table>
+            <thead><tr><th>God</th><th>Pantheon</th><th>Vitality</th><th>Might</th><th>Ward</th><th>Swiftness</th><th>Cunning</th><th>Level</th><th>XP</th><th>Active</th></tr></thead>
+            <tbody id="deityBattleStatsRows"><tr><td colspan="10">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveDeityBattleStatsBtn">Save changes</button>
+          <div class="status" id="deityBattleStatsStatus"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================== DEITY GEAR CATALOG ============================== -->
+    <div class="tab-content" id="tab-deitygearcatalog">
+      <div class="card">
+        <h2>Deity Gear Catalog (Phase 1)</h2>
+        <p class="hint">Affinity-themed, rarity-tiered gear a player crafts (with God Shards) and equips on any one unlocked deity — one of three slots (weapon/armor/accessory), a stat bonus and/or a granted move while equipped. Set key is free text: give matching pieces the same Set key and they'll count toward that set's 2-piece/3-piece bonus (Deity Gear Set Bonuses tab) — leave it blank for a standalone piece. At least one of Stat key or Grants move is required.</p>
+        <div class="scroll-table" style="max-height:420px;">
+          <table>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Affinity</th><th>Rarity</th><th>Slot</th><th>Stat key</th><th>Stat amount</th><th>Grants move</th><th>Set key</th><th>Shard cost</th><th>Image URL</th><th>Active</th></tr></thead>
+            <tbody id="deityGearRows"><tr><td colspan="13">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveDeityGearBtn">Save changes</button>
+          <div class="status" id="deityGearStatus"></div>
+        </div>
+        <h3>Add a new piece</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newDeityGearKey" style="max-width:150px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newDeityGearName" style="max-width:160px;"></div>
+          <div class="field"><label>Affinity</label>
+            <select id="newDeityGearAffinity" style="max-width:120px;">
+              <option value="fire">fire</option><option value="sea">sea</option><option value="storm">storm</option><option value="earth">earth</option>
+              <option value="death">death</option><option value="shadow">shadow</option><option value="war">war</option><option value="light">light</option>
+            </select>
+          </div>
+          <div class="field"><label>Rarity</label>
+            <select id="newDeityGearRarity" style="max-width:120px;">
+              <option value="common">common</option><option value="uncommon">uncommon</option><option value="rare">rare</option>
+              <option value="epic">epic</option><option value="mythic">mythic</option>
+            </select>
+          </div>
+          <div class="field"><label>Slot</label>
+            <select id="newDeityGearSlot" style="max-width:120px;">
+              <option value="weapon">weapon</option>
+              <option value="armor">armor</option>
+              <option value="accessory">accessory</option>
+            </select>
+          </div>
+          <div class="field"><label>Shard cost</label><input type="number" min="1" id="newDeityGearCost" style="max-width:110px;"></div>
+          <button id="addDeityGearBtn">Add piece</button>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Stat key (optional)</label>
+            <select id="newDeityGearStatKey" style="max-width:140px;">
+              <option value="">— none —</option>
+              <option value="vitality">vitality</option>
+              <option value="might">might</option>
+              <option value="ward">ward</option>
+              <option value="swiftness">swiftness</option>
+              <option value="cunning">cunning</option>
+            </select>
+          </div>
+          <div class="field"><label>Stat amount</label><input type="number" min="1" id="newDeityGearStatAmount" style="max-width:110px;"></div>
+          <div class="field"><label>Grants move (optional)</label><select id="newDeityGearMoveKey" style="max-width:220px;"></select></div>
+          <div class="field"><label>Set key (optional)</label><input type="text" id="newDeityGearSetKey" style="max-width:160px;" placeholder="e.g. ember_vanguard"></div>
+          <div class="field"><label>Image URL (optional)</label><input type="text" id="newDeityGearImageUrl" placeholder="https://…" style="max-width:220px;"></div>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (shown to players)</label>
+          <input type="text" id="newDeityGearDescription" style="max-width:none;">
+        </div>
+        <div class="status" id="newDeityGearStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== DEITY GEAR SET BONUSES ============================== -->
+    <div class="tab-content" id="tab-deitygearsetbonuses">
+      <div class="card">
+        <h2>Deity Gear Set Bonuses (Phase 1)</h2>
+        <p class="hint">A deity only has 3 gear slots, so a set can only ever have a 2-piece and/or a 3-piece threshold — checked live off however many of a deity's currently-equipped pieces share the same Set key (from the Deity Gear Catalog tab). Pick a set key already used in the catalog, then fill in either a Stat bonus or one of the whole-fight Effect bonuses (same 6 keys Deity Blessings uses) for each threshold you want active.</p>
+        <div class="scroll-table" style="max-height:420px;">
+          <table>
+            <thead><tr><th>Set key</th><th>Pieces required</th><th>Stat key</th><th>Stat amount</th><th>Effect key</th><th>Effect amount</th></tr></thead>
+            <tbody id="deityGearSetBonusRows"><tr><td colspan="6">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveDeityGearSetBonusesBtn">Save changes</button>
+          <div class="status" id="deityGearSetBonusStatus"></div>
+        </div>
+        <h3>Add a threshold</h3>
+        <div class="form-row">
+          <div class="field"><label>Set key</label><input type="text" id="newDeitySetBonusKey" style="max-width:180px;" placeholder="e.g. ember_vanguard"></div>
+          <div class="field"><label>Pieces required</label>
+            <select id="newDeitySetBonusPieces" style="max-width:110px;"><option value="2">2</option><option value="3">3</option></select>
+          </div>
+          <button id="addDeitySetBonusBtn">Add threshold</button>
+        </div>
+        <div class="status" id="newDeitySetBonusStatus"></div>
       </div>
     </div>
 
@@ -4391,6 +4510,9 @@ async function handleSession(session){
   loadSpeciesMoves();
   loadDeityMoves();
   loadDeityBlessings();
+  loadDeityBattleStats();
+  loadDeityGearCatalog();
+  loadDeityGearSetBonuses();
   loadCirclePatronBonuses();
   loadLootSettings();
   loadGuardianItemCatalog();
@@ -5373,6 +5495,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('saveBlessingsBtn').addEventListener('click', saveDeityBlessings);
   document.getElementById('blessingSearch').addEventListener('input', filterBlessingRows);
+  document.getElementById('saveDeityBattleStatsBtn').addEventListener('click', saveDeityBattleStats);
+  document.getElementById('deityBattleStatsSearch').addEventListener('input', filterDeityBattleStatsRows);
+  document.getElementById('saveDeityGearBtn').addEventListener('click', saveDeityGearCatalog);
+  document.getElementById('addDeityGearBtn').addEventListener('click', addDeityGearCatalog);
+  document.getElementById('saveDeityGearSetBonusesBtn').addEventListener('click', saveDeityGearSetBonuses);
+  document.getElementById('addDeitySetBonusBtn').addEventListener('click', addDeitySetBonus);
 
   document.getElementById('saveCircleBonusesBtn').addEventListener('click', saveCirclePatronBonuses);
   document.getElementById('saveCircleShopBtn').addEventListener('click', saveCircleShopCatalog);
@@ -11740,6 +11868,261 @@ async function saveDeityBlessings(){
   status.className = error ? 'status err' : 'status ok';
   status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Rows stay inactive until you check Active — nothing changes for players until then.';
   if(!error) loadDeityBlessings();
+}
+
+/* =====================================================================
+   DEITY BATTLE CATALOGUE (Phase 1 — full plan at
+   /root/.claude/plans/mellow-prancing-tiger.md). Deities have zero
+   combat presence anywhere else in this game; this is their own
+   standalone stat block + gear system, separate from a Guardian's own
+   gear (Guardian gear catalog card, just above the Guardian Items tab).
+   ===================================================================== */
+
+let deityBattleStats = {};
+
+async function loadDeityBattleStats(){
+  const { data, error } = await supabaseClient.from('deity_battle_stats').select('*');
+  deityBattleStats = {};
+  (data || []).forEach(r => { deityBattleStats[r.deity_id] = r; });
+  if(error) console.error('deity_battle_stats load failed', error);
+
+  const rows = document.getElementById('deityBattleStatsRows');
+  rows.innerHTML = FLAT_DEITIES.map(d => {
+    const o = deityBattleStats[d.id] || { vitality: 10, might: 10, ward: 10, swiftness: 10, cunning: 10, level: 1, xp: 0, active: false };
+    return `<tr data-name="${esc(d.name.toLowerCase())}">
+      <td>${esc(d.name)}</td>
+      <td class="dim">${esc(d.pantheonLabel)}</td>
+      <td><input type="number" min="1" id="dbsVit_${d.id}" value="${o.vitality}" style="max-width:80px;"></td>
+      <td><input type="number" min="1" id="dbsMight_${d.id}" value="${o.might}" style="max-width:80px;"></td>
+      <td><input type="number" min="1" id="dbsWard_${d.id}" value="${o.ward}" style="max-width:80px;"></td>
+      <td><input type="number" min="1" id="dbsSwift_${d.id}" value="${o.swiftness}" style="max-width:80px;"></td>
+      <td><input type="number" min="1" id="dbsCun_${d.id}" value="${o.cunning}" style="max-width:80px;"></td>
+      <td><input type="number" min="1" id="dbsLevel_${d.id}" value="${o.level}" style="max-width:70px;"></td>
+      <td><input type="number" min="0" id="dbsXp_${d.id}" value="${o.xp}" style="max-width:80px;"></td>
+      <td><input type="checkbox" id="dbsActive_${d.id}" ${o.active ? 'checked' : ''}></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterDeityBattleStatsRows(){
+  const q = document.getElementById('deityBattleStatsSearch').value.trim().toLowerCase();
+  document.querySelectorAll('#deityBattleStatsRows tr').forEach(tr => {
+    const name = tr.getAttribute('data-name') || '';
+    tr.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+}
+
+async function saveDeityBattleStats(){
+  const status = document.getElementById('deityBattleStatsStatus');
+  const rows = FLAT_DEITIES.map(d => ({
+    deity_id: d.id,
+    pantheon_id: d.pantheonId,
+    vitality: parseInt(document.getElementById('dbsVit_' + d.id).value, 10) || 1,
+    might: parseInt(document.getElementById('dbsMight_' + d.id).value, 10) || 1,
+    ward: parseInt(document.getElementById('dbsWard_' + d.id).value, 10) || 1,
+    swiftness: parseInt(document.getElementById('dbsSwift_' + d.id).value, 10) || 1,
+    cunning: parseInt(document.getElementById('dbsCun_' + d.id).value, 10) || 1,
+    level: parseInt(document.getElementById('dbsLevel_' + d.id).value, 10) || 1,
+    xp: parseInt(document.getElementById('dbsXp_' + d.id).value, 10) || 0,
+    active: document.getElementById('dbsActive_' + d.id).checked,
+    updated_at: new Date().toISOString()
+  }));
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('deity_battle_stats').upsert(rows, { onConflict: 'deity_id' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved. Rows stay inactive until you check Active — nothing changes for players until then.';
+  if(!error) loadDeityBattleStats();
+}
+
+let deityGearCatalogAdminCache = [];
+
+async function loadDeityGearCatalog(){
+  const { data, error } = await supabaseClient.from('deity_gear_catalog').select('*').order('sort_order', { ascending: true });
+  deityGearCatalogAdminCache = data || [];
+  const rows = document.getElementById('deityGearRows');
+  if(error){ rows.innerHTML = '<tr><td colspan="13">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  const moveSel = document.getElementById('newDeityGearMoveKey');
+  if(moveSel && !moveSel.options.length) moveSel.innerHTML = moveOptionsHtml('any', '', '— none —');
+  const affinityOptionsHtml = (current) => ['fire','sea','storm','earth','death','shadow','war','light']
+    .map(a => `<option value="${a}" ${a === current ? 'selected' : ''}>${a}</option>`).join('');
+  rows.innerHTML = (data || []).map(g => `<tr data-key="${esc(g.key)}">
+    <td class="dim">${esc(g.key)}</td>
+    <td><input type="text" id="dgName_${esc(g.key)}" value="${esc(g.name)}" style="max-width:140px;"></td>
+    <td><input type="text" id="dgDesc_${esc(g.key)}" value="${esc(g.description || '')}" style="max-width:220px;"></td>
+    <td><select id="dgAffinity_${esc(g.key)}">${affinityOptionsHtml(g.affinity)}</select></td>
+    <td><select id="dgRarity_${esc(g.key)}">
+      ${['common','uncommon','rare','epic','mythic'].map(r => `<option value="${r}" ${r === g.rarity ? 'selected' : ''}>${r}</option>`).join('')}
+    </select></td>
+    <td><select id="dgSlot_${esc(g.key)}">
+      <option value="weapon" ${g.slot === 'weapon' ? 'selected' : ''}>weapon</option>
+      <option value="armor" ${g.slot === 'armor' ? 'selected' : ''}>armor</option>
+      <option value="accessory" ${g.slot === 'accessory' ? 'selected' : ''}>accessory</option>
+    </select></td>
+    <td><select id="dgStatKey_${esc(g.key)}">
+      <option value="">— none —</option>
+      ${['vitality','might','ward','swiftness','cunning'].map(k => `<option value="${k}" ${k === g.stat_key ? 'selected' : ''}>${k}</option>`).join('')}
+    </select></td>
+    <td><input type="number" min="1" id="dgStatAmount_${esc(g.key)}" value="${g.stat_amount ?? ''}" style="max-width:80px;"></td>
+    <td><select id="dgMoveKey_${esc(g.key)}" style="max-width:220px;">${moveOptionsHtml('any', g.grants_move_key || '', '— none —')}</select></td>
+    <td><input type="text" id="dgSetKey_${esc(g.key)}" value="${esc(g.set_key || '')}" style="max-width:140px;"></td>
+    <td><input type="number" min="1" id="dgCost_${esc(g.key)}" value="${g.shard_cost}" style="max-width:80px;"></td>
+    <td><input type="text" id="dgImageUrl_${esc(g.key)}" value="${esc(g.image_url || '')}" style="max-width:170px;" placeholder="https://…"></td>
+    <td><input type="checkbox" id="dgActive_${esc(g.key)}" ${g.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="13">No Deity gear yet — run migration 0154.</td></tr>';
+}
+
+async function saveDeityGearCatalog(){
+  const status = document.getElementById('deityGearStatus');
+  const trs = document.querySelectorAll('#deityGearRows tr[data-key]');
+  const rows = [];
+  for(const tr of trs){
+    const key = tr.getAttribute('data-key');
+    const statKey = document.getElementById('dgStatKey_' + key).value || null;
+    const statAmountRaw = document.getElementById('dgStatAmount_' + key).value;
+    const statAmount = statKey && statAmountRaw ? (parseInt(statAmountRaw, 10) || null) : null;
+    const moveKey = document.getElementById('dgMoveKey_' + key).value || null;
+    if(!statKey && !moveKey){
+      status.className = 'status err';
+      status.textContent = key + ' needs at least a Stat key or a Grants move — pick one before saving.';
+      return;
+    }
+    rows.push({
+      key,
+      name: document.getElementById('dgName_' + key).value.trim(),
+      description: document.getElementById('dgDesc_' + key).value.trim(),
+      affinity: document.getElementById('dgAffinity_' + key).value,
+      rarity: document.getElementById('dgRarity_' + key).value,
+      slot: document.getElementById('dgSlot_' + key).value,
+      stat_key: statKey && statAmount ? statKey : null,
+      stat_amount: statKey && statAmount ? statAmount : null,
+      grants_move_key: moveKey,
+      set_key: document.getElementById('dgSetKey_' + key).value.trim() || null,
+      shard_cost: parseInt(document.getElementById('dgCost_' + key).value, 10) || 1,
+      image_url: document.getElementById('dgImageUrl_' + key).value.trim() || null,
+      active: document.getElementById('dgActive_' + key).checked,
+    });
+  }
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('deity_gear_catalog').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadDeityGearCatalog();
+}
+
+async function addDeityGearCatalog(){
+  const status = document.getElementById('newDeityGearStatus');
+  const key = document.getElementById('newDeityGearKey').value.trim().toLowerCase();
+  const name = document.getElementById('newDeityGearName').value.trim();
+  const description = document.getElementById('newDeityGearDescription').value.trim();
+  const affinity = document.getElementById('newDeityGearAffinity').value;
+  const rarity = document.getElementById('newDeityGearRarity').value;
+  const slot = document.getElementById('newDeityGearSlot').value;
+  const statKey = document.getElementById('newDeityGearStatKey').value || null;
+  const statAmountRaw = document.getElementById('newDeityGearStatAmount').value;
+  const statAmount = statKey && statAmountRaw ? (parseInt(statAmountRaw, 10) || null) : null;
+  const moveKey = document.getElementById('newDeityGearMoveKey').value || null;
+  const setKey = document.getElementById('newDeityGearSetKey').value.trim() || null;
+  const shardCost = parseInt(document.getElementById('newDeityGearCost').value, 10);
+  const imageUrl = document.getElementById('newDeityGearImageUrl').value.trim() || null;
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  if(!shardCost || shardCost < 1){ status.className = 'status err'; status.textContent = 'Shard cost must be at least 1.'; return; }
+  if(statKey && !statAmount){ status.className = 'status err'; status.textContent = 'Stat amount must be at least 1 when a Stat key is picked.'; return; }
+  if(!statKey && !moveKey){ status.className = 'status err'; status.textContent = 'Pick at least a Stat key or a Grants move.'; return; }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('deity_gear_catalog').insert({
+    key, name, description, affinity, rarity, slot,
+    stat_key: statKey && statAmount ? statKey : null,
+    stat_amount: statKey && statAmount ? statAmount : null,
+    grants_move_key: moveKey,
+    set_key: setKey,
+    shard_cost: shardCost, image_url: imageUrl, active: true
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+  status.className = 'status ok'; status.textContent = name + ' added.';
+  ['newDeityGearKey','newDeityGearName','newDeityGearStatAmount','newDeityGearCost','newDeityGearDescription','newDeityGearImageUrl','newDeityGearSetKey'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newDeityGearStatKey').value = '';
+  document.getElementById('newDeityGearMoveKey').value = '';
+  loadDeityGearCatalog();
+}
+
+let deityGearSetBonusesAdminCache = [];
+
+async function loadDeityGearSetBonuses(){
+  const { data, error } = await supabaseClient.from('deity_gear_set_bonuses').select('*').order('set_key', { ascending: true }).order('pieces_required', { ascending: true });
+  deityGearSetBonusesAdminCache = data || [];
+  const rows = document.getElementById('deityGearSetBonusRows');
+  if(error){ rows.innerHTML = '<tr><td colspan="6">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  rows.innerHTML = (data || []).map(sb => {
+    const rowKey = sb.set_key + '__' + sb.pieces_required;
+    return `<tr data-rowkey="${esc(rowKey)}" data-setkey="${esc(sb.set_key)}" data-pieces="${sb.pieces_required}">
+      <td class="dim">${esc(sb.set_key)}</td>
+      <td class="dim">${sb.pieces_required}</td>
+      <td><select id="sbStatKey_${esc(rowKey)}">
+        <option value="">— none —</option>
+        ${['vitality','might','ward','swiftness','cunning'].map(k => `<option value="${k}" ${k === sb.stat_key ? 'selected' : ''}>${k}</option>`).join('')}
+      </select></td>
+      <td><input type="number" min="1" id="sbStatAmount_${esc(rowKey)}" value="${sb.stat_amount ?? ''}" style="max-width:90px;"></td>
+      <td><select id="sbEffectKey_${esc(rowKey)}" style="max-width:220px;">${effectKeyOptionsHtml(AURA_EFFECT_OPTIONS, sb.effect_key)}</select></td>
+      <td><input type="number" step="0.01" id="sbEffectAmount_${esc(rowKey)}" value="${sb.effect_amount ?? ''}" style="max-width:100px;"></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6">No set bonuses yet — add gear with a matching Set key in the Deity Gear Catalog tab first, then add a threshold below.</td></tr>';
+}
+
+async function saveDeityGearSetBonuses(){
+  const status = document.getElementById('deityGearSetBonusStatus');
+  const trs = document.querySelectorAll('#deityGearSetBonusRows tr[data-rowkey]');
+  const rows = [];
+  for(const tr of trs){
+    const rowKey = tr.getAttribute('data-rowkey');
+    const setKey = tr.getAttribute('data-setkey');
+    const pieces = parseInt(tr.getAttribute('data-pieces'), 10);
+    const statKey = document.getElementById('sbStatKey_' + rowKey).value || null;
+    const statAmountRaw = document.getElementById('sbStatAmount_' + rowKey).value;
+    const statAmount = statKey && statAmountRaw ? (parseInt(statAmountRaw, 10) || null) : null;
+    const effectKey = document.getElementById('sbEffectKey_' + rowKey).value.trim() || null;
+    const effectAmountRaw = document.getElementById('sbEffectAmount_' + rowKey).value;
+    const effectAmount = effectKey && effectAmountRaw ? (parseFloat(effectAmountRaw) || null) : null;
+    if(!statKey && !effectKey){
+      status.className = 'status err';
+      status.textContent = setKey + ' (' + pieces + 'pc) needs at least a Stat bonus or an Effect bonus — pick one before saving.';
+      return;
+    }
+    rows.push({
+      set_key: setKey, pieces_required: pieces,
+      stat_key: statKey && statAmount ? statKey : null,
+      stat_amount: statKey && statAmount ? statAmount : null,
+      effect_key: effectKey && effectAmount ? effectKey : null,
+      effect_amount: effectKey && effectAmount ? effectAmount : null,
+    });
+  }
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('deity_gear_set_bonuses').upsert(rows, { onConflict: 'set_key,pieces_required' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadDeityGearSetBonuses();
+}
+
+async function addDeitySetBonus(){
+  const status = document.getElementById('newDeitySetBonusStatus');
+  const setKey = document.getElementById('newDeitySetBonusKey').value.trim();
+  const pieces = parseInt(document.getElementById('newDeitySetBonusPieces').value, 10);
+  if(!setKey){ status.className = 'status err'; status.textContent = 'Set key is required — use the same Set key you gave matching gear pieces in the catalog.'; return; }
+  status.className = 'status'; status.textContent = 'Adding…';
+  // A blank threshold with neither a stat nor an effect would immediately
+  // fail this table's own check constraint, so seed it with a small
+  // placeholder stat bonus — admin edits it in the table above right
+  // after adding, same "row exists, fill it in" flow as every other
+  // bulk-edit table's add-new-row helpers.
+  const { error } = await supabaseClient.from('deity_gear_set_bonuses').insert({
+    set_key: setKey, pieces_required: pieces, stat_key: 'vitality', stat_amount: 1
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That set key + pieces combination already exists — edit it in the table above.' : ('Failed: ' + error.message); return; }
+  status.className = 'status ok'; status.textContent = 'Threshold added — edit its bonus in the table above.';
+  document.getElementById('newDeitySetBonusKey').value = '';
+  loadDeityGearSetBonuses();
 }
 
 /* =====================================================================
