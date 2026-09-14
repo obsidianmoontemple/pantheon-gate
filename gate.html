@@ -3709,6 +3709,47 @@ let currentPantheon = 'greek';
 let currentDeity = null;
 const chatHistory = {};
 
+// AI reply language toggle — this is the game's main/paid full-chat
+// feature, so it gets the same Spanish-response toggle already shipped
+// on index.html's petition/Ganymede/Expeditions surfaces (see
+// petition/index.ts's langDirective comment for the full rationale).
+// Deliberately reads/writes the SAME localStorage key (pg_ai_lang) that
+// index.html uses, so a player's language choice carries over between
+// the two pages in the same browser instead of resetting here. Just the
+// deity's spoken replies — this page's own UI text (buttons, labels)
+// stays English, same scoping as everywhere else this toggle exists.
+function getAiLang(){
+  try{ return localStorage.getItem('pg_ai_lang') === 'es' ? 'es' : 'en'; }catch(e){ return 'en'; }
+}
+function setAiLang(lang){
+  try{ localStorage.setItem('pg_ai_lang', lang === 'es' ? 'es' : 'en'); }catch(e){ /* private mode etc — just won't persist */ }
+}
+// Direct feedback: "the toggle between language should be able to go
+// either way without having to refresh the page." The toggle already
+// flips both directions instantly (setAiLang() re-read fresh by
+// getAiLang() on the very next request) — but renderDeityDetail() fully
+// rebuilds the chat panel's innerHTML, and #chatInput holds whatever the
+// player has typed but not yet sent ONLY in the DOM, with nothing backing
+// it up. Toggling language mid-typing silently wiped that draft, which
+// reads exactly like the toggle breaking the page. Snapshot + restore it
+// around the rebuild.
+function toggleAiLang(){
+  setAiLang(getAiLang() === 'es' ? 'en' : 'es');
+  const draftEl = document.getElementById('chatInput');
+  const draft = draftEl ? draftEl.value : '';
+  if(currentDeity) renderDeityDetail(currentDeity);
+  if(draft){
+    const el = document.getElementById('chatInput');
+    if(el) el.value = draft;
+  }
+}
+function aiLangToggleRowHTML(){
+  const isEs = getAiLang() === 'es';
+  return '<div class="chat-export-row"><button onclick="toggleAiLang()">' +
+    (isEs ? '🌐 Replying in Spanish — switch to English' : '🌐 Switch replies to Spanish') +
+    '</button></div>';
+}
+
 const esc = s => String(s).replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -3878,6 +3919,7 @@ function renderDeityDetail(d){
       <div class="communion">
         <div class="section-title">Speak with ${state === 'unlocked' ? esc(d.name) : 'this god'}</div>
         ${state === 'unlocked' ? `
+        ${aiLangToggleRowHTML()}
         <div class="chat-window" id="chatWindow"></div>
         <div class="chat-input-row">
           <input type="text" id="chatInput" maxlength="600" placeholder="Ask ${esc(d.name)} something..." onkeydown="if(event.key==='Enter')sendMessage()">
@@ -4013,7 +4055,8 @@ async function sendMessage(){
         pantheon: currentPantheon,
         deity: currentDeity.id,
         sid: SESSION_ID,
-        messages: apiMessages
+        messages: apiMessages,
+        lang: getAiLang()
       })
     });
 
