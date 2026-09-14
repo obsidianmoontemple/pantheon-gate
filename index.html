@@ -671,10 +671,10 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
   font-size:13px;color:var(--parchment-dim);font-style:italic;text-align:center;
   max-width:80vw;text-shadow:0 1px 4px rgba(0,0,0,0.8);
 }
-/* Petition language toggle (Spanish deity dialogue) — mirrors
-   .hub-loose-back's corner-anchored, art-agnostic positioning so it works
-   whether or not the admin has painted 'oracle' art. Right corner, so it
-   never collides with .hub-loose-back on the left. */
+/* AI dialogue language toggle (Spanish deity/narrator responses) —
+   mirrors .hub-loose-back's corner-anchored, art-agnostic positioning so
+   it works whether or not the admin has painted art for that screen.
+   Right corner, so it never collides with .hub-loose-back on the left. */
 .hub-loose-lang{
   position:absolute;top:12px;right:14px;z-index:6;
   font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.06em;
@@ -1993,26 +1993,69 @@ let marks = [];          // [{deity_id, pantheon_id, mark_type}]
 let currentPhase = null; // {cycle_id, phase, phase_index} — flavor + gating text only, edge function re-checks server-side
 let petitionView = null; // null | {step:'pick'} | {step:'challenge', ...} | {step:'verdict', ...}
 let answerDraft = '';
-// Petition language toggle — direct feedback: "for the gods to respond in
-// espanol." Scoped deliberately narrow: this switches ONLY the deity's
-// AI-generated trial/hint/verdict text (petition edge function), not the
-// rest of the app's UI strings, which stay a separate, much larger
-// undertaking. Persisted client-side only (localStorage) and resent on
-// every petition request — no DB schema change, so this ships as a pure
-// edge-function + index.html paste with no migration to run.
-function getPetitionLang(){
-  try{ return localStorage.getItem('pg_petition_lang') === 'es' ? 'es' : 'en'; }catch(e){ return 'en'; }
+// AI dialogue language toggle — direct feedback: "for the gods to respond
+// in espanol," then "as much as we can added into the espanol version."
+// Scoped to every LIVE AI-generated (Groq) surface a player can actually
+// reach — petition trials, Ganymede's narrator chat, and Expeditions'
+// deity whisper/ask-deity — NOT the rest of the app's UI strings (menus,
+// buttons, static screen text), which stay a separate, much larger
+// undertaking. One shared preference (not per-screen) so setting it once
+// covers every AI surface. Persisted client-side only (localStorage) and
+// resent on every request — no DB schema change, so every one of these
+// ships as a pure edge-function + index.html paste with no migration to
+// run before a deadline.
+function getAiLang(){
+  try{
+    const v = localStorage.getItem('pg_ai_lang');
+    if(v === 'es' || v === 'en') return v;
+    // Back-compat with the first build of this toggle, which was
+    // petition-only and stored under its own key.
+    return localStorage.getItem('pg_petition_lang') === 'es' ? 'es' : 'en';
+  }catch(e){ return 'en'; }
 }
-function setPetitionLang(lang){
-  try{ localStorage.setItem('pg_petition_lang', lang === 'es' ? 'es' : 'en'); }catch(e){ /* private mode etc — just won't persist */ }
+function setAiLang(lang){
+  try{ localStorage.setItem('pg_ai_lang', lang === 'es' ? 'es' : 'en'); }catch(e){ /* private mode etc — just won't persist */ }
 }
-function togglePetitionLang(){
-  setPetitionLang(getPetitionLang() === 'es' ? 'en' : 'es');
+// Direct feedback: "the toggle between language should be able to go
+// either way without having to refresh the page." The toggle itself
+// already flips both directions instantly (setAiLang() + render() below,
+// re-read fresh by getAiLang() on the very next AI request — verified by
+// clicking it repeatedly with zero reloads) — but render() fully rebuilds
+// the current screen's innerHTML, and two live chat boxes
+// (narratorChatInput, deityQAInput) hold their in-progress, not-yet-sent
+// text ONLY in the DOM, with no draft state var backing them the way
+// petition's answerBox has answerDraft. So toggling language while
+// mid-typing a question silently wiped it — which reads exactly like
+// "switching languages breaks the page, guess I have to start over."
+// Snapshotting and restoring these by id around render() fixes that
+// without needing a dedicated state var (and a draft-tracking oninput
+// handler) for every current and future chat box.
+const AI_LANG_DRAFT_INPUT_IDS = ['narratorChatInput', 'deityQAInput'];
+function toggleAiLang(){
+  setAiLang(getAiLang() === 'es' ? 'en' : 'es');
+  const drafts = {};
+  AI_LANG_DRAFT_INPUT_IDS.forEach(id => { const el = document.getElementById(id); if(el) drafts[id] = el.value; });
   render();
+  AI_LANG_DRAFT_INPUT_IDS.forEach(id => {
+    if(!drafts[id]) return;
+    const el = document.getElementById(id);
+    if(el) el.value = drafts[id];
+  });
 }
-function petitionLangToggleHtml(){
-  const isEs = getPetitionLang() === 'es';
-  return `<button type="button" class="hub-loose-lang" onclick="togglePetitionLang()" title="${isEs ? 'Switch to English' : 'Cambiar a español'}">${isEs ? '🌐 ES' : '🌐 EN'}</button>`;
+// Absolute, corner-anchored variant — for screens built on .hub-box or a
+// plain .card given position:relative (petition picker/challenge,
+// Expeditions home), same convention as .hub-loose-back.
+function aiLangToggleHtml(){
+  const isEs = getAiLang() === 'es';
+  return `<button type="button" class="hub-loose-lang" onclick="toggleAiLang()" title="${isEs ? 'Switch to English' : 'Cambiar a español'}">${isEs ? '🌐 ES' : '🌐 EN'}</button>`;
+}
+// Plain inline variant — for screens whose content lives inside a fixed
+// .hub-overlay panel (Ganymede chat, ask-your-deity), where an absolutely
+// positioned corner button would float outside the panel instead of
+// sitting with its other controls.
+function aiLangToggleInlineHtml(){
+  const isEs = getAiLang() === 'es';
+  return `<button type="button" class="secondary" style="padding:4px 12px;font-size:11px;margin:0 0 10px;" onclick="toggleAiLang()">${isEs ? '🌐 Replying in Spanish — switch to English' : '🌐 Switch replies to Spanish'}</button>`;
 }
 // Direct feedback: an admin-created custom item ("Silk Scarf") with the
 // Petition Clear effect never showed a "use this to pass instantly"
@@ -5295,7 +5338,7 @@ async function sendNarratorMessage(){
     // function to match.
     const res = await fetch(FUNCTIONS_URL + '/ganymede', {
       method: 'POST', headers: await petitionHeaders(),
-      body: JSON.stringify({ messages: narratorChatView.messages })
+      body: JSON.stringify({ messages: narratorChatView.messages, lang: getAiLang() })
     });
     const data = await res.json();
     if(!narratorChatView) return; // screen was left mid-request
@@ -5356,6 +5399,7 @@ function renderNarratorChat(){
       <div class="hub-box"${bgAttrPlain('guide')}>
         <div class="hub-overlay">
           <button type="button" class="hub-back" onclick="backFromNarratorChat()">‹ Back to the Map</button>
+          ${aiLangToggleInlineHtml()}
           <div class="art narrator-portrait-pop">${portrait}</div>
           <div class="essence-label" style="display:block;margin-bottom:6px;">${esc(narratorSettings.name)}</div>
           ${v.messages.length === 0 ? `<p class="challenge-text">What do you need to know?</p>` : `<div class="narrator-history">${historyMarkup}</div>`}
@@ -8011,7 +8055,7 @@ function renderPetitionPicker(){
         ${hotspotButtonsMarkup(PETITION_AREAS, 'PETITION_AREAS', 'oracle')}
         ${pickerMarkup}
         <button type="button" class="hub-loose-back" onclick="backToGuardianHome()">‹ Back to Map</button>
-        ${petitionLangToggleHtml()}
+        ${aiLangToggleHtml()}
         <div id="pickerStatus" class="hub-loose-status">${optgroups ? '' : 'No gods are open for petition right now — check back soon.'}</div>
       </div>
     </div>
@@ -8036,7 +8080,7 @@ async function beginPetition(pantheonId, deityId){
     const resp = await fetch(FUNCTIONS_URL + '/petition', {
       method: 'POST',
       headers: await petitionHeaders(),
-      body: JSON.stringify({ action: 'begin', guardianId: guardian.id, pantheonId, deityId, lang: getPetitionLang() })
+      body: JSON.stringify({ action: 'begin', guardianId: guardian.id, pantheonId, deityId, lang: getAiLang() })
     });
     const data = await resp.json();
     if(!data.ok){
@@ -8097,8 +8141,8 @@ function renderPetitionChallenge(){
     <p class="hint">You're holding ${esc(clearItemName)}. Use it to skip answering and pass this trial instantly, with a full mark.</p>
     <button class="secondary" id="clearItemBtn" style="margin-bottom:10px;" onclick="usePetitionClearItem('${esc(clearItem.id)}')">Use ${esc(clearItemName)}</button>` : '';
   app.innerHTML = `
-    <div class="card" style="position:relative;"${bgAttr('oracle')}>
-      ${petitionLangToggleHtml()}
+    <div class="card"${bgAttr('oracle', 'position:relative;')}>
+      ${aiLangToggleHtml()}
       <h2 style="text-align:center;">${esc(v.deityName)} sets a trial</h2>
       <p class="hint" style="text-align:center;">Write whatever answer feels honest to your guardian's keeper — there's no wrong format. Any genuine attempt earns at least a partial mark; a real show of understanding, courage, or wit earns the full one.</p>
       <p class="challenge-text">"${esc(v.challenge)}"</p>
@@ -8122,7 +8166,7 @@ async function getPetitionHint(){
     const resp = await fetch(FUNCTIONS_URL + '/petition', {
       method: 'POST',
       headers: await petitionHeaders(),
-      body: JSON.stringify({ action: 'hint', attemptId: petitionView.attemptId, lang: getPetitionLang() })
+      body: JSON.stringify({ action: 'hint', attemptId: petitionView.attemptId, lang: getAiLang() })
     });
     const data = await resp.json();
     if(!data.ok){
@@ -8242,7 +8286,7 @@ async function submitPetitionAnswer(){
     const resp = await fetch(FUNCTIONS_URL + '/petition', {
       method: 'POST',
       headers: await petitionHeaders(),
-      body: JSON.stringify({ action: 'answer', attemptId: petitionView.attemptId, answer, lang: getPetitionLang() })
+      body: JSON.stringify({ action: 'answer', attemptId: petitionView.attemptId, answer, lang: getAiLang() })
     });
     const data = await resp.json();
     if(!data.ok){
@@ -12523,7 +12567,7 @@ async function doRequestClue(artifactKey){
     const resp = await fetch(FUNCTIONS_URL + '/expedition', {
       method: 'POST',
       headers: await petitionHeaders(),
-      body: JSON.stringify({ action: 'request-clue', guardianId: guardian.id, artifactKey })
+      body: JSON.stringify({ action: 'request-clue', guardianId: guardian.id, artifactKey, lang: getAiLang() })
     });
     const data = await resp.json();
     if(!data.ok){
@@ -12680,7 +12724,7 @@ async function sendDeityQuestion(){
     const resp = await fetch(FUNCTIONS_URL + '/expedition', {
       method: 'POST',
       headers: await petitionHeaders(),
-      body: JSON.stringify({ action: 'ask-deity', guardianId: guardian.id, artifactKey: deityQAView.artifactKey, question: text })
+      body: JSON.stringify({ action: 'ask-deity', guardianId: guardian.id, artifactKey: deityQAView.artifactKey, question: text, lang: getAiLang() })
     });
     const data = await resp.json();
     if(!deityQAView) return; // screen was left mid-request
@@ -12727,6 +12771,7 @@ function renderDeityQA(){
       <div class="hub-box"${bgAttrPlain('expeditions')}>
         <div class="hub-overlay">
           <button type="button" class="hub-back" onclick="backFromDeityQA()">‹ Back to Expeditions</button>
+          ${aiLangToggleInlineHtml()}
           <div class="essence-label" style="display:block;margin-bottom:6px;">${esc(v.deityName)}</div>
           ${v.messages.length === 0 ? `<p class="challenge-text">Ask about the hunt, or what you might learn along the way.</p>` : `<div class="narrator-history">${historyMarkup}</div>`}
           ${v.error ? `<p class="status err">${esc(v.error)}</p>` : ''}
@@ -12946,7 +12991,8 @@ function renderExpedition(){
   app.innerHTML = `
     ${unanchoredActiveCard}
     ${pendingAltarCard}
-    <div class="card"${bgAttr('expeditions', 'text-align:center;')}>
+    <div class="card"${bgAttr('expeditions', 'position:relative;text-align:center;')}>
+      ${aiLangToggleHtml()}
       <h2>Expeditions</h2>
       <p class="hint">Consult the deity you're trying to unlock, interpret its whisper, and pick where to send your familiar from the choices it gives you. Guess wrong and it still travels — you'll pay in wait time and need to let it recover before trying again. Guess right, answer honestly, learn something true either way, and reassemble a full set to fully unlock that deity and earn a unique Altar Item.</p>
       <p class="hint">${capNote}</p>
