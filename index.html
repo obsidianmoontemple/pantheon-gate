@@ -1822,6 +1822,15 @@ function affinityEmblemSVG(affinity, size){
    page doesn't need. Admin-added pantheons/gods get folded in at init. */
 const CATALOG = {"greek": {"label": "Greek", "deities": [["zeus", "Zeus"], ["hera", "Hera"], ["poseidon", "Poseidon"], ["demeter", "Demeter"], ["athena", "Athena"], ["apollo", "Apollo"], ["artemis", "Artemis"], ["ares", "Ares"], ["hephaestus", "Hephaestus"], ["aphrodite", "Aphrodite"], ["hermes", "Hermes"], ["hestia", "Hestia"], ["dionysus", "Dionysus"], ["hades", "Hades"], ["persephone", "Persephone"], ["hecate", "Hecate"], ["nemesis", "Nemesis"], ["morpheus", "Morpheus"]]}, "norse": {"label": "Norse", "deities": [["odin", "Odin"], ["frigg", "Frigg"], ["thor", "Thor"], ["sif", "Sif"], ["loki", "Loki"], ["baldr", "Baldr"], ["tyr", "Tyr"], ["heimdall", "Heimdall"], ["bragi", "Bragi"], ["idunn", "Idunn"], ["vidar", "Vidar"], ["njord", "Njord"], ["freyr", "Freyr"], ["freyja", "Freyja"], ["skadi", "Skadi"], ["hel", "Hel"]]}, "egyptian": {"label": "Egyptian", "deities": [["ra", "Ra"], ["amun", "Amun"], ["ptah", "Ptah"], ["thoth", "Thoth"], ["maat", "Maat"], ["osiris", "Osiris"], ["isis", "Isis"], ["set", "Set"], ["nephthys", "Nephthys"], ["horus", "Horus"], ["anubis", "Anubis"], ["sekhmet", "Sekhmet"], ["hathor", "Hathor"], ["bastet", "Bastet"], ["sobek", "Sobek"], ["nut", "Nut"], ["geb", "Geb"], ["taweret", "Taweret"]]}, "yoruba": {"label": "Yoruba / Orisha", "deities": [["obatala", "Obatala"], ["oduduwa", "Oduduwa"], ["esu", "Esu"], ["ogun", "Ogun"], ["sango", "Sango"], ["oya", "Oya"], ["osun", "Osun"], ["yemoja", "Yemoja"], ["orunmila", "Orunmila"], ["ososi", "Ososi"], ["osanyin", "Osanyin"], ["obaluaye", "Obaluaye"], ["olokun", "Olokun"], ["aganju", "Aganju"], ["ibeji", "Ibeji"], ["osumare", "Osumare"]]}, "celtic": {"label": "Celtic", "deities": [["dagda", "Dagda"], ["morrigan", "Morrigan"], ["brigid", "Brigid"], ["lugh", "Lugh"], ["nuada", "Nuada"], ["airmid", "Airmid"], ["manannan", "Manannan"], ["aengus", "Aengus"], ["oghma", "Oghma"], ["eriu", "Eriu"], ["rhiannon", "Rhiannon"], ["arawn", "Arawn"], ["cerridwen", "Cerridwen"], ["arianrhod", "Arianrhod"], ["gwydion", "Gwydion"], ["math", "Math"], ["bran", "Bran"], ["orddu", "Orddu"], ["cernunnos", "Cernunnos"], ["epona", "Epona"], ["matres", "Matres"], ["taranis", "Taranis"], ["merlin", "Merlin"], ["queenmab", "Queen Mab"]]}, "chinese": {"label": "Chinese", "deities": [["pangu", "Pangu"], ["nuwa", "Nuwa"], ["fuxi", "Fuxi"], ["jadeemperor", "Jade Emperor"], ["xiwangmu", "Xiwangmu"], ["laojun", "Taishang Laojun"], ["shennong", "Shennong"], ["houyi", "Houyi"], ["change", "Chang'e"], ["guanyin", "Guanyin"], ["mazu", "Mazu"], ["guanyu", "Guan Yu"], ["zaojun", "Zao Jun"], ["yanluo", "Yanluo Wang"], ["zhongkui", "Zhong Kui"], ["nezha", "Nezha"], ["wukong", "Sun Wukong"], ["lvdongbin", "Lu Dongbin"], ["zhongliquan", "Zhongli Quan"], ["zhangguolao", "Zhang Guolao"], ["hanxiangzi", "Han Xiangzi"], ["caoguojiu", "Cao Guojiu"], ["litieguai", "Li Tieguai"], ["lancaihe", "Lan Caihe"], ["hexiangu", "He Xiangu"]]}, "dragons": {"label": "Great Dragons", "deities": [["tiamat", "Tiamat"], ["kingu", "Kingu"], ["mushussu", "Mushussu"], ["apep", "Apep"], ["typhon", "Typhon"], ["echidna", "Echidna"], ["python", "Python"], ["ladon", "Ladon"], ["draco", "Draco"], ["colchian", "Colchian Dragon"], ["hydra", "Hydra"], ["jormungandr", "Jormungandr"], ["fafnir", "Fafnir"], ["nidhogg", "Nidhogg"], ["ddraiggoch", "Y Ddraig Goch"], ["barrowwyrm", "Barrow Wyrm"], ["zmey", "Zmey Gorynych"], ["azidahaka", "Azi Dahaka"], ["vritra", "Vritra"], ["vasuki", "Vasuki"], ["shesha", "Shesha"], ["aoguang", "Ao Guang"], ["yinglong", "Yinglong"], ["ryujin", "Ryujin"], ["orochi", "Yamata no Orochi"], ["quetzalcoatl", "Quetzalcoatl"], ["leviathan", "Leviathan"]]}, "lhp": {"label": "Left-Hand Path", "deities": [["lucifer", "Lucifer"], ["satan", "Satan"], ["lilith", "Lilith"], ["samael", "Samael"], ["naamah", "Naamah"], ["belial", "Belial"], ["beelzebub", "Beelzebub"], ["asmodeus", "Asmodeus"], ["astaroth", "Astaroth"], ["azazel", "Azazel"], ["baphomet", "Baphomet"], ["mammon", "Mammon"], ["belphegor", "Belphegor"], ["bael", "Bael"], ["paimon", "Paimon"], ["leviathan", "Leviathan"], ["moloch", "Moloch"], ["adramelech", "Adramelech"], ["lucifuge", "Lucifuge Rofocale"], ["choronzon", "Choronzon"], ["nachash", "Nachash"], ["cain", "Cain"], ["prometheus", "Prometheus"], ["ahriman", "Ahriman"], ["set", "Set"]]}};
 
+// Deity Battle Catalogue (Phase 1) — short blurb data (epithets + domains
+// only, NOT the full intro/myth text the AI chat prompts use server-side)
+// for the new Deity Catalogue card grid. Generated once from the same
+// deities.json content chat/petition/expedition already carry server-side
+// — id-keyed the same way CATALOG above is, first occurrence wins for the
+// two ids that span two pantheons ('set', 'leviathan'), matching every
+// other id-keyed deity table in this project (deity_settings, deity_blessings, etc).
+const DEITY_BLURBS = {"zeus":{"epithets":"Cloud-Gatherer · Father of Gods and Men · Aegis-Bearer","domains":["Sky","Thunder","Law","Kingship","Oaths"]},"hera":{"epithets":"Queen of Heaven · Cow-Eyed · Teleia, the Fulfilled","domains":["Marriage","Sovereignty","Women","Childbirth"]},"poseidon":{"epithets":"Earth-Shaker · Lord of Horses · Dark-Haired One","domains":["The Sea","Earthquakes","Horses","Storms"]},"demeter":{"epithets":"Bringer of Seasons · Grain-Mother · Thesmophoros","domains":["Harvest","Grain","Fertility","The Mysteries"]},"athena":{"epithets":"Grey-Eyed · Pallas · Parthenos · Promachos","domains":["Wisdom","Strategy","Crafts","Civilization"]},"apollo":{"epithets":"Far-Shooter · Phoebus, the Radiant · Loxias, the Oblique","domains":["Prophecy","Music","Healing","Plague","Light"]},"artemis":{"epithets":"Lady of the Wild Things · Far-Darting · Potnia Theron","domains":["The Hunt","Wilderness","The Moon","Girls","Childbirth"]},"ares":{"epithets":"Manslaughtering · Shield-Piercer · Brazen","domains":["War","Courage","Rage","Rebellion"]},"hephaestus":{"epithets":"The Lame God · Master of the Forge · Amphigyeis","domains":["Fire","Smithcraft","Invention","Volcanoes"]},"aphrodite":{"epithets":"Foam-Born · Cypris · The Golden One","domains":["Love","Beauty","Desire","Fertility"]},"hermes":{"epithets":"Messenger · Psychopomp · Guide of Souls · Trickster","domains":["Travel","Trade","Communication","Boundaries"]},"hestia":{"epithets":"First and Last · Keeper of the Flame · Lady of the Hearth","domains":["The Hearth","Home","Sanctuary","Sacred Fire"]},"dionysus":{"epithets":"The Twice-Born · Liberator · Bull-Horned · Bacchus","domains":["Wine","Ecstasy","Theatre","Madness","Rebirth"]},"hades":{"epithets":"Lord of the Unseen · Plouton, the Rich One · Host of Many","domains":["The Underworld","The Dead","Hidden Wealth"]},"persephone":{"epithets":"Kore, the Maiden · Dread Queen · Bringer of Spring","domains":["Spring","The Underworld","Transformation","The Mysteries"]},"hecate":{"epithets":"Torch-Bearer · Queen of the Crossroads · Key-Keeper","domains":["Magic","Crossroads","Witchcraft","The Moon","Boundaries"]},"nemesis":{"epithets":"Adrasteia, the Inescapable · Lady of Rhamnous · She Who Gives What Is Due","domains":["Retribution","Balance","Hubris","Fortune","Measure"]},"morpheus":{"epithets":"Shaper of Forms · Son of Sleep · He Who Wears Your Faces","domains":["Dreams","Sleep","Illusion","Omens","Grief"]},"odin":{"epithets":"Allfather · Raven-God · The Hanged One · Aesir","domains":["Wisdom","War","Poetry","Runes","The Dead"]},"frigg":{"epithets":"Queen of Asgard · Lady of Fensalir · She Who Knows and Does Not Say · Aesir","domains":["Foresight","Marriage","Motherhood","Sovereignty","Silence"]},"thor":{"epithets":"Thunderer · Friend of Man · Warder of Midgard · Aesir","domains":["Thunder","Storm","Strength","Protection","Oaths"]},"sif":{"epithets":"Golden-Haired · Lady of the Harvest · Aesir","domains":["Harvest","Grain","Family","Prosperity","Endurance"]},"loki":{"epithets":"Sky-Traveller · Father of Monsters · Blood-Brother to Odin · Jotun-Born","domains":["Cunning","Change","Fire","Mischief","Endings"]},"baldr":{"epithets":"The Shining · The Beloved · He Who Comes Back · Aesir","domains":["Light","Beauty","Innocence","Grief","Return"]},"tyr":{"epithets":"The One-Handed · Keeper of Oaths · God of the Thing · Aesir","domains":["Justice","Law","Oaths","Courage","War"]},"heimdall":{"epithets":"The White God · Watcher on Bifrost · Bearer of the Horn · Aesir","domains":["Vigilance","Boundaries","Sight","Hearing","Beginnings"]},"bragi":{"epithets":"Long-Bearded · God of Skalds · First Voice of the Hall · Aesir","domains":["Poetry","Eloquence","Music","Memory","Welcome"]},"idunn":{"epithets":"Keeper of the Apples · The Ever-Young · Aesir","domains":["Youth","Renewal","Spring","Healing","Continuance"]},"vidar":{"epithets":"The Silent · The Avenger · Heir of the New World · Aesir","domains":["Silence","Vengeance","Endurance","Wild Places","Survival"]},"njord":{"epithets":"Lord of Noatun · Giver of Wealth · Calmer of Sea and Fire · Vanir","domains":["Sea","Wind","Wealth","Fishing","Safe Voyage"]},"freyr":{"epithets":"Lord · Bright One of the Elves · The Sword-Giver · Vanir","domains":["Fertility","Harvest","Peace","Sunshine","Kingship"]},"freyja":{"epithets":"Lady · Mistress of Seiðr · She Who Takes Half the Slain · Vanir","domains":["Love","Desire","War","Magic","The Dead"]},"skadi":{"epithets":"The Ski-Goddess · Lady of Winter · She Who Came Armed · Jotun of the Aesir","domains":["Winter","Hunting","Mountains","Vengeance","Independence"]},"hel":{"epithets":"Ruler of the Ninth World · Half-Living · Keeper of Those Who Were Not Slain · Daughter of Loki","domains":["Death","The Underworld","Judgment","Stillness","The Unheroic Dead"]},"ra":{"epithets":"Lord of the Two Horizons · He Who Sails the Night · Of Heliopolis","domains":["The Sun","Creation","Kingship","Order","Endurance"]},"amun":{"epithets":"The Hidden One · He Whose Name Is Concealed · Of Thebes","domains":["Hiddenness","Wind","Creation","Kingship","The Unseen"]},"ptah":{"epithets":"He Who Made With Heart and Tongue · Master of Craftsmen · Of Memphis","domains":["Creation","Craft","Architecture","Speech","Making"]},"thoth":{"epithets":"Lord of Divine Words · Reckoner of Time · Of Hermopolis","domains":["Writing","Wisdom","The Moon","Judgment","Magic"]},"maat":{"epithets":"The Feather of Truth · Ma'at, Order Itself · Daughter of Ra","domains":["Truth","Justice","Cosmic Order","Balance","Reciprocity"]},"osiris":{"epithets":"Lord of the Silent Land · He Who Is Permanently Benign · First of the Westerners","domains":["The Dead","Resurrection","Fertility","Judgment","Kingship"]},"isis":{"epithets":"Great of Magic · She Who Knows the Secret Name · Mistress of the Throne","domains":["Magic","Healing","Motherhood","Cunning","Devotion"]},"set":{"epithets":"Lord of the Red Land · He Who Stands at the Prow · Great of Strength","domains":["Chaos","The Desert","Storms","Violence","Necessary Defence"]},"nephthys":{"epithets":"Lady of the House · The Other Mourner · She Who Is Not Seen","domains":["Mourning","Night","Protection of the Dead","Concealment","Loyalty"]},"horus":{"epithets":"The Falcon · Avenger of His Father · He of the Two Eyes","domains":["Kingship","The Sky","Vengeance","Protection","Legitimacy"]},"anubis":{"epithets":"He Who Is Upon His Mountain · Guardian of the Scales · Lord of the Sacred Land","domains":["Embalming","The Dead","Judgment","Protection","Passage"]},"sekhmet":{"epithets":"The Powerful · Lady of Slaughter · Mistress of the Plague and Its Cure","domains":["War","Destruction","Plague","Healing","Divine Fury"]},"hathor":{"epithets":"Lady of Drunkenness · Mistress of the Sycamore · She Who Welcomes the Dead","domains":["Love","Joy","Music","Motherhood","The Beautiful West"]},"bastet":{"epithets":"Lady of Bubastis · Protector of the House · The Gentle Eye","domains":["Home","Protection","Cats","Fertility","Festivity"]},"sobek":{"epithets":"Lord of the Waters · He Who Rages · Of the Faiyum","domains":["The Nile","Fertility","Ferocity","Military Might","Protection"]},"nut":{"epithets":"She Who Bears the Stars · Mother of the Five · The Great Deep","domains":["The Sky","Night","Rebirth","Motherhood","The Coffin"]},"geb":{"epithets":"The Great Cackler · Father of Serpents · He Upon Whom Everything Rests","domains":["The Earth","Crops","Earthquakes","Grief","Foundation"]},"taweret":{"epithets":"The Great One · Lady of the Birth-Bed · She Who Frightens What Comes At Night","domains":["Childbirth","Fertility","Household Protection","Motherhood","Ferocity"]},"obatala":{"epithets":"Ọbàtálá · Ọ̀rìṣà-Ńlá, the Great Òrìṣà · King of the White Cloth","domains":["Creation","Purity","Character","Patience","Justice"]},"oduduwa":{"epithets":"Odùduwà · Progenitor at Ilé-Ifẹ̀ · Source of the Crowns","domains":["Ancestry","Kingship","Land","Founding","Lineage"]},"esu":{"epithets":"Èṣù Ẹlẹ́gbára · Keeper of the Crossroads · Bearer of Àṣẹ","domains":["Crossroads","Messages","Language","Chance","Testing"]},"ogun":{"epithets":"Ògún · Lord of Iron · He Who Cleared the Path","domains":["Iron","War","Labour","Technology","Oaths"]},"sango":{"epithets":"Ṣàngó · Fourth Aláàfin of Ọ̀yọ́ · Lord of Thunder and Justice","domains":["Thunder","Lightning","Justice","Kingship","Drums"]},"oya":{"epithets":"Ọya Yánsàn · Mother of Nine · Wind Before the Storm","domains":["Wind","Storm","Change","The Marketplace","The Threshold of the Dead"]},"osun":{"epithets":"Ọ̀ṣun · Ìyálóde, Mother of the Town · Owner of Sweet Water and Brass","domains":["Fresh Water","Fertility","Wealth","Beauty","Healing"]},"yemoja":{"epithets":"Yemọja · Mother Whose Children Are the Fish · Lady of the Waters","domains":["Motherhood","Water","Protection","Fertility","Consolation"]},"orunmila":{"epithets":"Òrúnmìlà · Ẹlẹ́rìí Ìpín, Witness to Destiny · Lord of Ifá","domains":["Wisdom","Destiny","Ifá","Counsel","Memory"]},"ososi":{"epithets":"Ọ̀ṣọ́ọ̀sì · Hunter of the Forest · One Arrow, One Aim","domains":["The Hunt","The Forest","Precision","Provision","Tracking"]},"osanyin":{"epithets":"Ọ̀sanyìn · Keeper of the Leaves · One Leg, One Arm, One Eye","domains":["Herbs","Medicine","The Forest","Secrets","Healing"]},"obaluaye":{"epithets":"Ọbalúayé · Lord of the Earth · He Whose Name Is Spoken Carefully","domains":["Disease","Healing","The Earth","Endurance","Dignity"]},"olokun":{"epithets":"Olókun · Owner of the Sea · Keeper of What Is Below","domains":["The Deep","Wealth","Mystery","The Unknown","Dreams"]},"aganju":{"epithets":"Aganjú · Fire Beneath the Earth · Ferryman of the Wilderness","domains":["Volcano","Wilderness","Strength","Crossings","Untamed Land"]},"ibeji":{"epithets":"Ìbejì · The Sacred Twins · Táíwò and Kẹ́hìndé","domains":["Twins","Doubling","Fortune","Childhood","Joy"]},"osumare":{"epithets":"Ọ̀ṣùmàrè · The Rainbow Serpent · He Who Carries Water Back to the Sky","domains":["Cycles","Renewal","Rain","Continuity","Transformation"]},"dagda":{"epithets":"The Dagda, the Good God · Eochaid Ollathair · Ruad Rofhessa · Irish","domains":["Abundance","Life and Death","Weather","Music","Kingship"]},"morrigan":{"epithets":"An Mórrígan, the Great Queen · Badb, Macha, Nemain · Irish","domains":["War","Sovereignty","Prophecy","Fate","Death"]},"brigid":{"epithets":"Brigid of the Flame · Poet, Smith and Healer · Daughter of the Dagda · Irish","domains":["Poetry","Smithcraft","Healing","Fire","Spring"]},"lugh":{"epithets":"Lámhfhada, of the Long Arm · Samildánach, Skilled in All Arts · Irish","domains":["Skill","Craft","Kingship","Storm","Victory"]},"nuada":{"epithets":"Airgetlám, of the Silver Arm · First King of the Tuatha Dé · Irish","domains":["Kingship","Justice","Sacrifice","Wholeness","Restoration"]},"airmid":{"epithets":"Keeper of the Herbs · She Who Lost the Cure · Irish","domains":["Herbcraft","Healing","Knowledge","Loss","Wells"]},"manannan":{"epithets":"Manannán mac Lir · Rider of the Crested Wave · Lord of the Mists · Irish","domains":["The Sea","Illusion","The Otherworld","Travel","Concealment"]},"aengus":{"epithets":"Aengus Óg, the Young · Son of the Boyne · Master of the Brú · Irish","domains":["Love","Youth","Dreams","Poetry","Cleverness"]},"oghma":{"epithets":"Oghma the Sun-Faced · Cermait, Honey-Mouthed · Father of Ogham · Irish","domains":["Eloquence","Writing","Strength","Champions","Language"]},"eriu":{"epithets":"Ériu, from Whom Ireland Is Named · Sovereignty of the Land · Irish","domains":["Sovereignty","The Land","Kingship","Naming","Endurance"]},"rhiannon":{"epithets":"Lady of the Slow White Horse · She Who Bore the Punishment · Welsh","domains":["Horses","Patience","Injustice","Birds","Endurance"]},"arawn":{"epithets":"King of Annwn · Master of the White Hounds · Welsh","domains":["The Otherworld","The Hunt","Honour","Death","Exchange"]},"cerridwen":{"epithets":"Keeper of the Cauldron · Mother of Awen · The Chase in Four Shapes · Welsh","domains":["Transformation","Inspiration","Witchcraft","Rebirth","Knowledge"]},"arianrhod":{"epithets":"Silver Wheel · Lady of Caer Arianrhod · She Who Refused · Welsh","domains":["The Stars","Fate","Refusal","Sovereignty","Naming"]},"gwydion":{"epithets":"Gwydion fab Dôn · The Great Enchanter · Master of Illusion · Welsh","domains":["Magic","Illusion","Trickery","Poetry","Devotion"]},"math":{"epithets":"Math fab Mathonwy · Lord of Gwynedd · He Whose Wand Changes Shape · Welsh","domains":["Sovereignty","Magic","Judgment","Restitution","Law"]},"bran":{"epithets":"Bendigeidfran, Bran the Blessed · The Bridge · The Wondrous Head · Welsh","domains":["Kingship","Protection","Hospitality","War","Prophecy"]},"orddu":{"epithets":"Y Widdon Orddu, the Very Black Witch · Daughter of the Very White Witch · Of Pennant Gofid · Welsh","domains":["Witchcraft","Annwn","Caves","Defiance","Blood"]},"cernunnos":{"epithets":"The Horned One · Lord of Wild Things · Herne the Hunter, in the later telling · Gaulish","domains":["Animals","The Wild","Abundance","The Hunt","Liminality"]},"epona":{"epithets":"The Great Mare · Protectress of Riders · Gaulish","domains":["Horses","Journeys","Cavalry","Fertility","Protection"]},"matres":{"epithets":"Matres · Matronae · The Mothers · Gaulish","domains":["Motherhood","Plenty","Place","Protection","Fate"]},"taranis":{"epithets":"The Thunderer · Turner of the Wheel · Gaulish","domains":["Thunder","Sky","The Wheel","Storm","Judgment"]},"merlin":{"epithets":"Ambrosius · The Enchanter · Myrddin Wyllt · Prophet of Britain","domains":["Prophecy","Transformation","Wisdom","the Otherworld"]},"queenmab":{"epithets":"The Fairies' Midwife · Mistress of Dreams · Queen of the Small Folk","domains":["Dreams","Fairy Rade","Desire Made Visible","the Unspoken Wish"]},"pangu":{"epithets":"盤古 · The First · He Who Held Them Apart","domains":["Creation","Separation","Sacrifice","The World's Body"]},"nuwa":{"epithets":"女媧 · Maker of People · She Who Patched the Sky","domains":["Creation","Repair","Marriage","Humanity","Survival"]},"fuxi":{"epithets":"伏羲 · First of the Three Sovereigns · Giver of the Trigrams","domains":["Divination","Writing","Civilisation","Marriage","Order"]},"jadeemperor":{"epithets":"玉皇大帝 · Yù Huáng · August Personage of Jade · Sovereign of Heaven","domains":["Heaven","Authority","Bureaucracy","Justice","Order"]},"xiwangmu":{"epithets":"西王母 · Queen Mother of the West · Keeper of the Peaches · Of Kunlun","domains":["Immortality","Plague","Punishment","The West","Transformation"]},"laojun":{"epithets":"太上老君 · The Supreme Venerable Sovereign · Laozi Deified · Keeper of the Furnace","domains":["The Dao","Alchemy","Wisdom","Longevity","Non-Action"]},"shennong":{"epithets":"神農 · The Divine Farmer · He Who Tasted Everything · Ox-Headed","domains":["Agriculture","Medicine","Herbs","Discovery","Sacrifice"]},"houyi":{"epithets":"后羿 · The Archer · He Who Shot Down Nine Suns","domains":["Archery","Heroism","Excess","Rescue","Ruin"]},"change":{"epithets":"嫦娥 · Lady of the Moon · She Who Took the Elixir · Of the Cold Palace","domains":["The Moon","Beauty","Loneliness","Immortality","Regret"]},"guanyin":{"epithets":"觀音 · She Who Hears the Cries of the World · Bodhisattva of Compassion","domains":["Compassion","Mercy","Rescue","Vows","Refuge"]},"mazu":{"epithets":"媽祖 · Empress of Heaven · Lin Moniang, Who Did Not Cry · Guardian of Sailors","domains":["The Sea","Rescue","Protection","Storms","Voyages"]},"guanyu":{"epithets":"關羽 · Guandi, Emperor Guan · The Red-Faced General · Sworn Brother of the Peach Garden","domains":["Loyalty","War","Brotherhood","Righteousness","Commerce"]},"zaojun":{"epithets":"灶君 · The Kitchen God · He Who Files the Annual Report","domains":["The Household","Observation","Judgment","Food","The New Year"]},"yanluo":{"epithets":"閻羅王 · King Yama · Judge of the Fifth Court · Master of the Registers","domains":["Death","Judgment","Records","The Underworld","Rebirth"]},"zhongkui":{"epithets":"鍾馗 · Queller of Demons · The Ugly Scholar · Ghost-Catcher of the Emperor's Dream","domains":["Exorcism","Justice","Protection","Wrath","The Wronged"]},"nezha":{"epithets":"哪吒 · The Lotus Child · Third Prince · Marshal of the Central Altar","domains":["Youth","Rebellion","Fire","Protection","Rebirth"]},"wukong":{"epithets":"孫悟空 · The Monkey King · Great Sage Equal to Heaven · Born of Stone","domains":["Chaos","Transformation","Defiance","Cleverness","Endurance"]},"lvdongbin":{"epithets":"呂洞賓 · Chief of the Eight Immortals · He Who Dreamt a Whole Life · Immortal","domains":["Wisdom","Swordsmanship","Alchemy","Teaching","Wine"]},"zhongliquan":{"epithets":"鍾離權 · The Fat Immortal · Bearer of the Reviving Fan · Immortal","domains":["Alchemy","Death and Revival","Teaching","Retreat"]},"zhangguolao":{"epithets":"張果老 · The Old Man on the Backward Donkey · Immortal","domains":["Age","Reversal","Wine","Refusal","Fertility"]},"hanxiangzi":{"epithets":"韓湘子 · The Flute Player · Nephew of the Great Scholar · Immortal","domains":["Music","Flowers","Poetry","Growth","Persuasion"]},"caoguojiu":{"epithets":"曹國舅 · The Imperial Brother-in-Law · He Who Left the Court · Immortal","domains":["Nobility","Shame","Theatre","Renunciation","Rank"]},"litieguai":{"epithets":"李鐵拐 · Iron-Crutch Li · He Who Came Back to the Wrong Body · Immortal","domains":["Healing","The Poor","The Sick","Disguise","Endurance"]},"lancaihe":{"epithets":"藍采和 · The Singer in the Market · Neither One Thing Nor the Other · Immortal","domains":["Song","Poverty","Freedom","Flowers","Detachment"]},"hexiangu":{"epithets":"何仙姑 · The Immortal Maiden · She Who Would Not Marry · Immortal","domains":["Purity","Refusal","Household","Divination","Weightlessness"]},"tiamat":{"epithets":"𒀭𒋾𒊑𒀫 · The Bitter Sea · Mother of the Eleven · Mesopotamian","domains":["Chaos","Saltwater","Creation","Motherhood","The First"]},"kingu":{"epithets":"𒀭𒌦𒂅 · Consort of Tiamat · Bearer of the Tablet of Destinies · Mesopotamian","domains":["War","Command","Sacrifice","Blood","Humanity"]},"mushussu":{"epithets":"𒈲𒄭𒄊 · The Furious Snake · Dragon of the Ishtar Gate · Mesopotamian","domains":["Guardianship","Sovereignty","Threshold","Loyalty"]},"apep":{"epithets":"Apophis · The Serpent of Dissolution · Enemy of Ra · Egyptian","domains":["Annihilation","Darkness","Non-Being","The Duat","Appetite"]},"typhon":{"epithets":"Τυφῶν · Father of All Monsters · The Last Son of Gaia · Greek","domains":["Storm","Volcanoes","Monstrousness","Rebellion","Hurricanes"]},"echidna":{"epithets":"Ἔχιδνα · The Viper · Mother of All Monsters · Greek","domains":["Monstrousness","Caves","Motherhood","The Underground","Ambush"]},"python":{"epithets":"Πύθων · The Serpent of Delphi · The Voice Before Apollo · Greek","domains":["Prophecy","The Earth","Oracles","Rot","Displacement"]},"ladon":{"epithets":"Λάδων · The Hundred-Headed · Guardian of the Golden Apples · Greek","domains":["Vigilance","Guardianship","Gardens","Sleeplessness","The Stars"]},"draco":{"epithets":"The Dragon at the Pole · The Circumpolar Coil · Never-Setting · Constellation","domains":["The Northern Sky","Permanence","Navigation","Memory","Deep Time"]},"colchian":{"epithets":"The Sleepless One · Guardian of the Golden Fleece · Of the Grove of Ares · Greek","domains":["Guardianship","Sleeplessness","Treasure","Betrayal","Teeth"]},"hydra":{"epithets":"Ὕδρα · The Lernaean · She of the Many Heads · Greek","domains":["Regeneration","Venom","Swamps","Persistence","Escalation"]},"jormungandr":{"epithets":"Jörmungandr · The Midgard Serpent · He Who Bites His Own Tail · Norse","domains":["The Encircling Sea","Boundaries","Venom","Ragnarok","Waiting"]},"fafnir":{"epithets":"Fáfnir · The Dwarf Who Became a Worm · Keeper of Andvari's Gold · Norse","domains":["Greed","Transformation","Cursed Gold","Isolation","Poison"]},"nidhogg":{"epithets":"Níðhöggr · The Malice-Striker · Gnawer at the Root · Norse","domains":["Decay","Corpses","Undermining","Oathbreakers","Persistence"]},"ddraiggoch":{"epithets":"The Red Dragon · The Dragon of the Britons · Of Vortigern's Tower · Welsh","domains":["Sovereignty","Prophecy","War","Nationhood","The Land"]},"barrowwyrm":{"epithets":"The Dragon of Beowulf · Keeper of the Hoard · Fifty Winters in the Dark · Anglo-Saxon","domains":["Treasure","Vengeance","Old Age","Fire","The Grave"]},"zmey":{"epithets":"Змей Горыныч · The Mountain Serpent · Three Heads and Seven Tails · Slavic","domains":["Fire","Abduction","Mountains","Regrowth","Raiding"]},"azidahaka":{"epithets":"Aži Dahāka · Zahhāk · The Three-Jawed · Bound Under Damavand · Persian","domains":["Tyranny","Deceit","Serpents","Plague","Imprisonment"]},"vritra":{"epithets":"वृत्र · The Enveloper · He Who Held the Waters · Hindu","domains":["Drought","Obstruction","The Withheld","Cosmic Order","Release"]},"vasuki":{"epithets":"वासुकि · King of the Nagas · The Churning Rope · Ornament of Shiva · Hindu","domains":["Serpents","Endurance","Sacrifice","Poison","Cooperation"]},"shesha":{"epithets":"शेष · Ananta, the Endless · The Couch of Vishnu · Bearer of the Worlds · Hindu","domains":["Time","Support","Remainder","Sleep","Dissolution"]},"aoguang":{"epithets":"敖廣 · Dragon King of the East Sea · Lord of Rain and Tribute · Chinese","domains":["The Sea","Rain","Bureaucracy","Treasure","Grievance"]},"yinglong":{"epithets":"應龍 · The Winged Dragon · General of the Yellow Emperor · Chinese","domains":["Rain","War","Wings","Drought","Exile"]},"ryujin":{"epithets":"龍神 · Watatsumi · Dragon God of the Sea · Keeper of the Tide Jewels · Japanese","domains":["The Sea","Tides","Storms","Fishing","Sovereignty"]},"orochi":{"epithets":"八岐大蛇 · The Eight-Forked Serpent · Eight Heads, Eight Tails · Japanese","domains":["Floods","Devouring","Rivers","Sacrifice","Hidden Steel"]},"quetzalcoatl":{"epithets":"The Feathered Serpent · Ehecatl, the Wind · Lord of the Morning Star · Mesoamerican","domains":["Wind","Learning","Creation","Priesthood","Return"]},"leviathan":{"epithets":"לִוְיָתָן · The Coiling One · The Sea's Own · Levantine","domains":["The Deep","Chaos","Untamed Creation","Terror","The Feast at the End"]},"lucifer":{"epithets":"The Light-Bearer · Helel ben Shachar, Shining One, Son of Dawn · Adversarial","domains":["Illumination","Pride","Rebellion","The Morning Star","Self-Sovereignty"]},"satan":{"epithets":"ha-Satan, the Adversary · The Accuser · Prosecutor of the Heavenly Court · Adversarial","domains":["Opposition","Testing","Accusation","Doubt","Independence"]},"lilith":{"epithets":"The First Woman · She Who Would Not Lie Beneath · Queen of Gamaliel · Qliphothic","domains":["Autonomy","Night","Desire","Exile","Refusal"]},"samael":{"epithets":"The Venom of God · Angel of Death · Consort of Lilith · Qliphothic","domains":["Death","Severity","Poison","Judgment","Accusation"]},"naamah":{"epithets":"The Pleasant One · Sister of Tubal-Cain · Queen of Nehemoth · Qliphothic","domains":["Seduction","Music","Dreams","Whispering","The Material"]},"belial":{"epithets":"Beliya'al, Without Worth · King With No Master · Prince of Darkness · Demonology","domains":["Lawlessness","Independence","Corruption","Dominion","Rejection"]},"beelzebub":{"epithets":"Baal-zebul, Lord of the Exalted House · Lord of the Flies · Chaigidel · Demonology","domains":["Sovereignty","Pride","Decay","Swarms","Displaced Gods"]},"asmodeus":{"epithets":"Ashmedai · Aeshma-daeva, the Demon of Wrath · King of Golachab · Demonology","domains":["Lust","Wrath","Jealousy","Cunning","Craft"]},"astaroth":{"epithets":"Once Astarte · Ashtoreth, Queen of Heaven · Grand Duke · Demonology","domains":["Knowledge","The Past and Future","Secrets","Sciences","Demotion"]},"azazel":{"epithets":"The Scapegoat's Destination · Teacher of Forbidden Craft · Bound in Dudael · Adversarial","domains":["Forbidden Knowledge","Weapons","Ornament","Exile","Blame"]},"baphomet":{"epithets":"The Sabbatic Goat · Solve et Coagula · The Templar Confession · Adversarial","domains":["Balance","Union of Opposites","Blasphemy","Symbol","Invention"]},"mammon":{"epithets":"Wealth Made a Master · He Who Looked Down in Heaven · Demonology","domains":["Wealth","Greed","Trade","Accumulation","Distraction"]},"belphegor":{"epithets":"Once Baal-Peor · The Ingenious Tempter · Lord of Thagirion · Demonology","domains":["Sloth","Invention","Discovery","Wealth Without Labour","Disillusion"]},"bael":{"epithets":"First King of the Goetia · Three Heads: Cat, Man, Toad · Once Baal · Demonology","domains":["Invisibility","Sovereignty","Cunning","Command","Displacement"]},"paimon":{"epithets":"King of the West · He Who Rides the Dromedary · Crowned and Attended · Demonology","domains":["Arts and Sciences","Secrets","Binding","Obedience","Ceremony"]},"moloch":{"epithets":"The King · Of Tophet in the Valley of Hinnom · Thaumiel · Qliphothic","domains":["Sacrifice","Kingship","Fire","Terrible Cost","Accusation"]},"adramelech":{"epithets":"The Magnificent King · Of Sepharvaim · Ruler of Samael's Shell · Qliphothic","domains":["Vanity","Kingship","Sun and Fire","Desolation","Ceremony"]},"lucifuge":{"epithets":"He Who Flees the Light · Prime Minister of Hell · Ruler of Sathariel · Qliphothic","domains":["Concealment","Bargains","Treasure","Contracts","Avoidance"]},"choronzon":{"epithets":"333 · Dweller in the Abyss · The Dispersion · Adversarial","domains":["Dissolution","Illusion","The Abyss","Fragmentation","Ego"]},"nachash":{"epithets":"The Serpent of Eden · The One Who Told the Truth · Adversarial","domains":["Knowledge","Persuasion","Disobedience","Awakening","Consequence"]},"cain":{"epithets":"The First Murderer · Builder of the First City · Bearer of the Mark · Adversarial","domains":["Exile","Craft","Violence","Cities","Protection"]},"prometheus":{"epithets":"Forethought · The Fire-Bringer · Chained on the Caucasus · Adversarial","domains":["Fire","Foresight","Defiance","Craft","Suffering"]},"ahriman":{"epithets":"Angra Mainyu, the Destructive Spirit · The Lie · The Adversary in Truth · Adversarial","domains":["Destruction","Falsehood","Opposition","Darkness","Duality"]}};
+
 // Shop grid redesign (0132) — deity_id -> portrait filename, for the same
 // flat PNGs gate.html's own PANTHEONS blob already points at (art("Name.png"),
 // ART_PATH === "" there so it's just the bare filename). Only includes an
@@ -2428,6 +2437,20 @@ let currencyDefs = [];     // currency_definitions cache, shared by renderPromo(
 let campaignView = null;   // null | {step:'browse'} | {step:'choice', encounterKey, name, prompt, choices} | {step:'choiceResult', ...} — top-level (Map hub's "The Divine Realms" title hotspot, Phase 4)
 let campaignData = null;   // cached response from campaign/list: {level, xp, chapters:[{key,name,requiredLevel,unlocked,encounters:[...]}]}
 let campaignMsg = '';      // transient status shown on the browse screen after returning from a fight/choice (XP/level-up summary)
+
+// Deity Battle Catalogue (Phase 1 — full plan at
+// /root/.claude/plans/mellow-prancing-tiger.md) — top-level (Map hub's
+// "Deity Battle Catalogue" hotspot). Deities have no combat presence
+// anywhere else in this codebase; this is the first real stat block +
+// gear system for a deity itself, separate from a Guardian's own gear.
+let deityCatalogueView = null;    // null | {step:'browse'} | {step:'detail', deityId}
+let deityBattleStatsCache = null; // Map(deity_id -> row) from deity_battle_stats, loaded once (public, small — 167 rows)
+let deityGearCatalogCache = [];   // deity_gear_catalog, loaded once (public, small — affinity/rarity/set gear pieces)
+let deityGearSetBonusesCache = []; // deity_gear_set_bonuses, loaded once (public, small — 2pc/3pc thresholds)
+let deityMovesCache = null;       // Map(deity_id -> {power, control}) merged from deity_moves + moves_catalog, loaded once (public, small — each deity's own mythology-grounded signature power/control move)
+let deityGearOwned = [];          // this account's deity_gear_items for the currently-open deity (reloaded per detail view)
+let deityGearEquipped = [];       // this account's deity_gear_equipped rows for the currently-open deity
+let deityCatalogueMsg = '';       // transient status on the detail screen after craft/equip/unequip
 
 // The map hub (renderMapHub()) is the landing screen once a guardian
 // exists — see render()'s fallback below. Guardian Home (stats/Bond) is
@@ -3115,6 +3138,7 @@ function render(){
   if(guardian && promoView){ renderPromo(); return; }
   if(guardian && worldBossView){ renderWorldBoss(); return; }
   if(guardian && campaignView){ renderCampaign(); return; }
+  if(guardian && deityCatalogueView){ renderDeityCatalogue(); return; }
   // Checked ahead of guardianHomeView for the same reason creditsView is
   // checked ahead of profileView above: doDuelMage() (called from the
   // Guardian Page's Mage tab) sets mageDuelView but deliberately leaves
@@ -3403,6 +3427,10 @@ const DEFAULT_MAP_AREAS = [
   // treatment as Guide/Milestones/World Boss/Your Altar above; drag into
   // place once there's art to line up against.
   { id: 'serverChat',    label: 'Server Chat',        left: 52, top: 68, width: 10, height: 16, action: openServerChat, glow: true },
+  // Deity Battle Catalogue (Phase 1) — same "no illustrated plaque yet"
+  // starting-guess treatment as Guide/Milestones/Server Chat above; drag
+  // into place once there's art to line up against.
+  { id: 'deityCatalogue', label: 'Deity Battle Catalogue', left: 62, top: 68, width: 10, height: 16, action: openDeityCatalogue, glow: true },
   // The small "X" already illustrated on the map art — direct feedback:
   // "there is a small X button on my main map and I want it to be hooked
   // to a back to login button." No glow (the art already draws the eye to
@@ -4213,6 +4241,366 @@ function guardianGearHtml(){
     <h3 style="margin-top:14px;">In Reserve</h3>
     ${inventoryRows}
   `;
+}
+
+// -----------------------------------------------------------------------
+// Deity Battle Catalogue (Phase 1 — full plan at
+// /root/.claude/plans/mellow-prancing-tiger.md). Deities have zero
+// combat presence anywhere else in this codebase; this is the first
+// real, standalone stat block + gear system for a deity itself, separate
+// from (and additive to) a Guardian's own gear above. Card grid browse
+// screen (portrait/blurb/stats-if-configured) -> a detail screen with
+// the same equipped-slots/"In Reserve" gear shape as guardianGearHtml()
+// just above, scoped per-deity. Server-side actions live on
+// craft/index.ts (craft-deity-gear/equip-deity-gear/unequip-deity-gear).
+// -----------------------------------------------------------------------
+
+async function openDeityCatalogue(){
+  const gate = featureGateStatus('deityCatalogue');
+  if(!gate.open){ featureLockView = { label: gate.label, message: gate.message }; render(); return; }
+  deityCatalogueView = { step: 'browse' };
+  deityCatalogueMsg = '';
+  render();
+  maybeShowPageTip('deityCatalogue');
+  const loaders = [loadDeityBattleStatsCache(), loadDeityGearCatalogCache(), loadDeityGearSetBonusesCache(), loadDeityMovesCache()];
+  if(!Object.keys(shopDeitySettings).length) loaders.push(loadShopCatalog());
+  if(!shrineEntitlements.length) loaders.push(loadShrineEntitlements());
+  await Promise.all(loaders);
+  if(deityCatalogueView) render();
+}
+
+function backFromDeityCatalogue(){
+  deityCatalogueView = null;
+  deityCatalogueMsg = '';
+  render();
+}
+
+async function loadDeityBattleStatsCache(){
+  if(deityBattleStatsCache) return;
+  const { data, error } = await supabaseClient
+    .from('deity_battle_stats')
+    .select('deity_id, pantheon_id, vitality, might, ward, swiftness, cunning, level, xp, active');
+  if(error){ console.error('deity_battle_stats load failed', error); deityBattleStatsCache = new Map(); return; }
+  const m = new Map();
+  (data || []).forEach(r => m.set(r.deity_id, r));
+  deityBattleStatsCache = m;
+}
+
+async function loadDeityGearCatalogCache(){
+  if(deityGearCatalogCache.length) return;
+  const { data, error } = await supabaseClient
+    .from('deity_gear_catalog')
+    .select('key, name, description, affinity, rarity, slot, stat_key, stat_amount, grants_move_key, set_key, shard_cost, image_url, active, sort_order')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+  if(error){ console.error('deity_gear_catalog load failed', error); return; }
+  deityGearCatalogCache = data || [];
+}
+
+async function loadDeityGearSetBonusesCache(){
+  if(deityGearSetBonusesCache.length) return;
+  const { data, error } = await supabaseClient
+    .from('deity_gear_set_bonuses')
+    .select('set_key, pieces_required, stat_key, stat_amount, effect_key, effect_amount');
+  if(error){ console.error('deity_gear_set_bonuses load failed', error); return; }
+  deityGearSetBonusesCache = data || [];
+}
+
+// Direct feedback: "the deities also need to have their special power
+// based on domains and affinity." That content already exists — 0144
+// gave all 167 deities a real, mythology-grounded power move and control
+// move (moves_catalog keys 'deity_<id>_power'/'deity_<id>_control',
+// linked via deity_moves.move_key), each one's `affinity` column already
+// matching that deity's own domains. It was never surfaced in the Deity
+// Catalogue, just used server-side when a Guardian marks that deity. Two
+// separate queries + a client-side merge, matching how deityGearCatalogCache/
+// deityGearSetBonusesCache are already joined client-side rather than via
+// a PostgREST embedded-resource select (no such join is used anywhere
+// else in this file).
+async function loadDeityMovesCache(){
+  if(deityMovesCache) return;
+  const [{ data: links, error: linkErr }, { data: moves, error: moveErr }] = await Promise.all([
+    supabaseClient.from('deity_moves').select('deity_id, kind, move_key, active').eq('active', true),
+    supabaseClient.from('moves_catalog').select('key, name, description, affinity, power, effect_key, effect_amount, archetype').like('key', 'deity_%')
+  ]);
+  if(linkErr || moveErr){ console.error('deity_moves load failed', linkErr || moveErr); deityMovesCache = new Map(); return; }
+  const byKey = new Map((moves || []).map(m => [m.key, m]));
+  const merged = new Map();
+  (links || []).forEach(l => {
+    if(!l.move_key) return;
+    const move = byKey.get(l.move_key);
+    if(!move || !move.name) return;
+    const entry = merged.get(l.deity_id) || {};
+    entry[l.kind] = move;
+    merged.set(l.deity_id, entry);
+  });
+  deityMovesCache = merged;
+}
+
+function deityMoveEffectLabel(move){
+  if(!move || !move.effect_key || move.effect_amount == null) return '';
+  const label = move.effect_key.replace(/_pct$|_flat$/, '').replace(/_/g, ' ');
+  if(move.effect_key.endsWith('_pct')) return `+${move.effect_amount}% ${label}`;
+  if(move.effect_key.endsWith('_flat')) return `${move.effect_amount} ${label}`;
+  return `${move.effect_amount} stacks of ${label}`;
+}
+
+async function loadDeityGearOwnedAndEquipped(deityId){
+  const [{ data: owned, error: ownedErr }, { data: equipped, error: eqErr }] = await Promise.all([
+    supabaseClient.from('deity_gear_items').select('id, deity_id, gear_key, acquired_at').eq('deity_id', deityId),
+    supabaseClient.from('deity_gear_equipped').select('deity_id, slot, gear_item_id').eq('deity_id', deityId),
+  ]);
+  if(ownedErr) console.error('deity_gear_items load failed', ownedErr);
+  if(eqErr) console.error('deity_gear_equipped load failed', eqErr);
+  deityGearOwned = owned || [];
+  deityGearEquipped = equipped || [];
+}
+
+// Effective (level-scaled) stats — same formula server-side actions will
+// use once Phase 3 wires this into live combat: base + growth*(level-1).
+// Computed live here too, never cached, so an admin edit to base stats
+// or a level-up shows immediately on next render.
+const DEITY_LEVEL_STAT_GROWTH = 2;
+function deityEffectiveStat(baseStat, level){
+  return baseStat + DEITY_LEVEL_STAT_GROWTH * Math.max(0, (level || 1) - 1);
+}
+
+// Same free-or-entitled check craft/index.ts's requireUnlockedDeity()
+// enforces server-side — this is the client-side mirror purely for
+// display (lock badges, disabling Craft/Equip buttons before a wasted
+// round trip); the server is still the real authority.
+function deityCatalogueIsUnlocked(pantheonId, deityId){
+  if(shopIsFree(deityId)) return true;
+  return isDeityUnlocked(pantheonId, deityId);
+}
+
+function deityPantheonFor(deityId){
+  for(const pid of Object.keys(CATALOG)){
+    if(CATALOG[pid].deities.some(([id]) => id === deityId)) return pid;
+  }
+  return null;
+}
+
+function renderDeityCatalogue(){
+  if(deityCatalogueView.step === 'detail') return renderDeityCatalogueDetail();
+  return renderDeityCatalogueBrowse();
+}
+
+function renderDeityCatalogueBrowse(){
+  const app = document.getElementById('app');
+  if(!deityBattleStatsCache){
+    app.innerHTML = `<div class="card"${bgAttr('deityCatalogue', 'text-align:center;')}><h2>Deity Battle Catalogue</h2><p class="hint">Loading…</p></div>`;
+    return;
+  }
+  const groups = Object.keys(CATALOG).map(pid => {
+    const cards = CATALOG[pid].deities.map(([id, name]) => {
+      const blurb = DEITY_BLURBS[id];
+      const stats = deityBattleStatsCache.get(id);
+      const unlocked = deityCatalogueIsUnlocked(pid, id);
+      const statLine = (stats && stats.active)
+        ? `<div class="cblurb">Lv ${stats.level} · VIT ${deityEffectiveStat(stats.vitality, stats.level)} · MGT ${deityEffectiveStat(stats.might, stats.level)} · WRD ${deityEffectiveStat(stats.ward, stats.level)} · SWF ${deityEffectiveStat(stats.swiftness, stats.level)} · CUN ${deityEffectiveStat(stats.cunning, stats.level)}</div>`
+        : `<div class="cblurb hint">Not yet outfitted for battle.</div>`;
+      return `<div class="roster-row">
+        <div>
+          <div class="rname">${esc(name)}${unlocked ? '' : ' 🔒'}</div>
+          <div class="cblurb">${blurb ? esc(blurb.epithets) : ''}</div>
+          ${statLine}
+        </div>
+        <div class="ractions"><button class="secondary" onclick="openDeityCatalogueDetail('${esc(id)}')">${unlocked ? 'View' : 'Preview'}</button></div>
+      </div>`;
+    }).join('');
+    return `<div class="pantheon-group"><h3>${esc(CATALOG[pid].label)}</h3>${cards}</div>`;
+  }).join('');
+
+  app.innerHTML = `<div class="card"${bgAttr('deityCatalogue')}>
+    <h2>Deity Battle Catalogue</h2>
+    <p class="hint">Every deity's own battle stats, gear, and — once unlocked — the War on Chaos campaign. Locked deities are still browsable; gear it up once you've unlocked it.</p>
+    ${groups}
+    <button class="secondary" onclick="backFromDeityCatalogue()">Back to the Map</button>
+  </div>`;
+}
+
+async function openDeityCatalogueDetail(deityId){
+  deityCatalogueView = { step: 'detail', deityId };
+  deityCatalogueMsg = '';
+  render();
+  await loadDeityGearOwnedAndEquipped(deityId);
+  if(deityCatalogueView && deityCatalogueView.deityId === deityId) render();
+}
+
+function backFromDeityCatalogueDetail(){
+  deityCatalogueView = { step: 'browse' };
+  deityCatalogueMsg = '';
+  render();
+}
+
+function deitySetBonusProgressHtml(deityId){
+  const equippedKeys = deityGearEquipped.map(e => e.gear_item_id);
+  const equippedCatalog = equippedKeys
+    .map(id => deityGearOwned.find(g => g.id === id))
+    .filter(Boolean)
+    .map(g => deityGearCatalogCache.find(c => c.key === g.gear_key))
+    .filter(c => c && c.set_key);
+  const bySet = {};
+  equippedCatalog.forEach(c => { bySet[c.set_key] = (bySet[c.set_key] || 0) + 1; });
+  const rows = Object.keys(bySet).map(setKey => {
+    const thresholds = deityGearSetBonusesCache.filter(sb => sb.set_key === setKey).sort((a, b) => a.pieces_required - b.pieces_required);
+    if(!thresholds.length) return '';
+    const have = bySet[setKey];
+    const thresholdText = thresholds.map(sb => {
+      const desc = sb.stat_key ? `+${sb.stat_amount} ${sb.stat_key}` : `+${sb.effect_amount}% ${sb.effect_key}`;
+      const met = have >= sb.pieces_required;
+      return `<span class="${met ? '' : 'hint'}">${sb.pieces_required}pc: ${desc}${met ? ' ✓' : ''}</span>`;
+    }).join(' · ');
+    return `<div class="cblurb">${esc(setKey)} (${have}/3 equipped) — ${thresholdText}</div>`;
+  }).join('');
+  return rows ? `<h3 style="margin-top:14px;">Set Bonuses</h3>${rows}` : '';
+}
+
+function deityGearHtml(deityId){
+  const slotRows = ['weapon', 'armor', 'accessory'].map(slot => {
+    const eq = deityGearEquipped.find(e => e.slot === slot);
+    const owned = eq ? deityGearOwned.find(g => g.id === eq.gear_item_id) : null;
+    const cat = owned ? deityGearCatalogCache.find(c => c.key === owned.gear_key) : null;
+    const notes = [];
+    if(cat && cat.stat_key) notes.push(`+${cat.stat_amount} ${cat.stat_key}`);
+    if(cat && cat.grants_move_key) notes.push('grants a move in battle');
+    return `<div class="roster-row">
+      <div><div class="rname">${slot.charAt(0).toUpperCase() + slot.slice(1)}</div><div class="cblurb">${cat ? esc(cat.name) + (notes.length ? ' (' + notes.join(', ') + ')' : '') : 'Empty'}</div></div>
+      ${cat ? `<div class="ractions"><button class="secondary" onclick="doUnequipDeityGear('${esc(deityId)}', '${slot}')">Unequip</button></div>` : ''}
+    </div>`;
+  }).join('');
+
+  const equippedItemIds = new Set(deityGearEquipped.map(e => e.gear_item_id));
+  const unequippedOwned = deityGearOwned.filter(g => !equippedItemIds.has(g.id));
+  const inventoryRows = unequippedOwned.map(g => {
+    const cat = deityGearCatalogCache.find(c => c.key === g.gear_key);
+    const notes = [];
+    if(cat && cat.stat_key) notes.push(`+${cat.stat_amount} ${cat.stat_key}`);
+    if(cat && cat.grants_move_key) notes.push('grants a move in battle');
+    return `<div class="roster-row">
+      <div><div class="rname">${cat ? esc(cat.name) : esc(g.gear_key)}</div><div class="cblurb">${notes.join(', ')}</div></div>
+      <div class="ractions"><button class="secondary" onclick="doEquipDeityGear('${esc(deityId)}', '${esc(g.id)}')">Equip</button></div>
+    </div>`;
+  }).join('') || '<p class="hint">Nothing in reserve — craft a piece below.</p>';
+
+  const craftRows = deityGearCatalogCache.map(c => {
+    const notes = [];
+    if(c.stat_key) notes.push(`+${c.stat_amount} ${c.stat_key}`);
+    if(c.grants_move_key) notes.push('grants a move in battle');
+    if(c.set_key) notes.push(`part of ${c.set_key}`);
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(c.name)} <span class="hint">(${esc(c.rarity)} ${esc(c.affinity)} ${esc(c.slot)})</span></div><div class="cblurb">${notes.join(', ')}</div></div>
+      <div class="ractions"><button class="secondary" onclick="doCraftDeityGear('${esc(deityId)}', '${esc(c.key)}')">Craft (${c.shard_cost} Shards)</button></div>
+    </div>`;
+  }).join('');
+
+  return `
+    <h3 style="margin-top:18px;">Equipped Gear</h3>
+    ${slotRows}
+    ${deitySetBonusProgressHtml(deityId)}
+    <h3 style="margin-top:14px;">In Reserve</h3>
+    ${inventoryRows}
+    <h3 style="margin-top:14px;">Craft New Gear</h3>
+    ${craftRows}
+  `;
+}
+
+function renderDeityCatalogueDetail(){
+  const app = document.getElementById('app');
+  const deityId = deityCatalogueView.deityId;
+  const pantheonId = deityPantheonFor(deityId);
+  const nameEntry = pantheonId ? CATALOG[pantheonId].deities.find(([id]) => id === deityId) : null;
+  const name = nameEntry ? nameEntry[1] : deityId;
+  const blurb = DEITY_BLURBS[deityId];
+  const unlocked = pantheonId ? deityCatalogueIsUnlocked(pantheonId, deityId) : false;
+  const stats = deityBattleStatsCache ? deityBattleStatsCache.get(deityId) : null;
+
+  const statsHtml = (stats && stats.active) ? `
+    <h3 style="margin-top:14px;">Battle Stats — Level ${stats.level} (${stats.xp} XP)</h3>
+    <div class="cblurb">Vitality ${deityEffectiveStat(stats.vitality, stats.level)} · Might ${deityEffectiveStat(stats.might, stats.level)} · Ward ${deityEffectiveStat(stats.ward, stats.level)} · Swiftness ${deityEffectiveStat(stats.swiftness, stats.level)} · Cunning ${deityEffectiveStat(stats.cunning, stats.level)}</div>
+  ` : `<p class="hint" style="margin-top:14px;">This deity hasn't been outfitted for battle yet.</p>`;
+
+  const moves = deityMovesCache ? deityMovesCache.get(deityId) : null;
+  const powerHtml = (moves && (moves.power || moves.control)) ? `
+    <h3 style="margin-top:14px;">Signature Power</h3>
+    ${moves.power ? `<div class="cblurb"><strong>${esc(moves.power.name)}</strong> <span class="hint">(${esc(moves.power.affinity)})</span><br>${esc(moves.power.description || '')}${deityMoveEffectLabel(moves.power) ? ` <span class="hint">— ${esc(deityMoveEffectLabel(moves.power))}</span>` : ''}</div>` : ''}
+    ${moves.control ? `<div class="cblurb" style="margin-top:6px;"><strong>${esc(moves.control.name)}</strong> <span class="hint">(${esc(moves.control.affinity)})</span><br>${esc(moves.control.description || '')}${deityMoveEffectLabel(moves.control) ? ` <span class="hint">— ${esc(deityMoveEffectLabel(moves.control))}</span>` : ''}</div>` : ''}
+  ` : '';
+
+  const gearSection = unlocked
+    ? deityGearHtml(deityId)
+    : `<p class="hint" style="margin-top:18px;">Unlock this deity (Temple of the Gods / Chained Gods) to gear it up.</p>`;
+
+  const statusHtml = deityCatalogueMsg ? `<p class="status">${esc(deityCatalogueMsg)}</p>` : '';
+
+  app.innerHTML = `<div class="card"${bgAttr('deityCatalogue')}>
+    <h2>${esc(name)}${unlocked ? '' : ' 🔒'}</h2>
+    <p class="cblurb">${blurb ? esc(blurb.epithets) : ''}</p>
+    <p class="hint">${blurb ? esc((blurb.domains || []).join(' · ')) : ''}</p>
+    ${statsHtml}
+    ${powerHtml}
+    ${statusHtml}
+    ${gearSection}
+    <button class="secondary" style="margin-top:14px;" onclick="backFromDeityCatalogueDetail()">Back to the Catalogue</button>
+  </div>`;
+}
+
+function setDeityCatalogueStatus(text){
+  deityCatalogueMsg = text;
+  const el = document.querySelector('#app .status');
+  if(el){ el.textContent = text; }
+  else { render(); }
+}
+
+async function doCraftDeityGear(deityId, gearKey){
+  setDeityCatalogueStatus('Working the Shards…');
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/craft', {
+      method: 'POST', headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'craft-deity-gear', guardianId: guardian.id, deityId, gearKey })
+    });
+    const data = await resp.json();
+    if(!data.ok){ setDeityCatalogueStatus(data.error || 'Could not craft that.'); return; }
+    guardian.god_shards = data.remainingShards;
+    await Promise.all([loadGuardian(), loadDeityGearOwnedAndEquipped(deityId)]);
+    render();
+    setDeityCatalogueStatus('Crafted — equip it above.');
+  }catch(e){
+    setDeityCatalogueStatus('Could not reach the relay: ' + e.message);
+  }
+}
+
+async function doEquipDeityGear(deityId, gearItemId){
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/craft', {
+      method: 'POST', headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'equip-deity-gear', guardianId: guardian.id, deityId, gearItemId })
+    });
+    const data = await resp.json();
+    if(!data.ok){ setDeityCatalogueStatus(data.error || 'Could not equip that.'); return; }
+    await loadDeityGearOwnedAndEquipped(deityId);
+    render();
+    setDeityCatalogueStatus('Equipped.');
+  }catch(e){
+    setDeityCatalogueStatus('Could not reach the relay: ' + e.message);
+  }
+}
+
+async function doUnequipDeityGear(deityId, slot){
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/craft', {
+      method: 'POST', headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'unequip-deity-gear', guardianId: guardian.id, deityId, slot })
+    });
+    const data = await resp.json();
+    if(!data.ok){ setDeityCatalogueStatus(data.error || 'Could not unequip that.'); return; }
+    await loadDeityGearOwnedAndEquipped(deityId);
+    render();
+    setDeityCatalogueStatus('Unequipped.');
+  }catch(e){
+    setDeityCatalogueStatus('Could not reach the relay: ' + e.message);
+  }
 }
 
 // Direct feedback: "we...need a use guardian item on the familiar
