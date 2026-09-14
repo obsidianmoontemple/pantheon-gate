@@ -671,6 +671,17 @@ body.hub-active .wrap{max-width:none;margin:0;padding:0;}
   font-size:13px;color:var(--parchment-dim);font-style:italic;text-align:center;
   max-width:80vw;text-shadow:0 1px 4px rgba(0,0,0,0.8);
 }
+/* Petition language toggle (Spanish deity dialogue) — mirrors
+   .hub-loose-back's corner-anchored, art-agnostic positioning so it works
+   whether or not the admin has painted 'oracle' art. Right corner, so it
+   never collides with .hub-loose-back on the left. */
+.hub-loose-lang{
+  position:absolute;top:12px;right:14px;z-index:6;
+  font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.06em;
+  color:var(--parchment-dim);cursor:pointer;background:rgba(0,0,0,0.45);
+  border:1px solid var(--line);border-radius:20px;padding:4px 12px;
+}
+.hub-loose-lang:hover{color:var(--gold-bright);border-color:var(--gold-bright);}
 
 /* #123 — Check-in calendar grid. .checkin-grid-frame is the admin-movable
    positioning box (see CHECKIN_AREAS' 'checkinGrid'/'newPlayerGrid'
@@ -1394,11 +1405,21 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
   background:linear-gradient(180deg, var(--cr-theme-color,#e6c777), #6b4f1a);box-shadow:0 0 14px var(--cr-theme-color,#e6c777);}
 .cr-player-token.cr-airborne{transform:translateY(-28px) scale(1.05);transition:left .18s ease, transform .32s cubic-bezier(.34,1.56,.64,1);}
 .cr-player-token.cr-hit{animation:crHitFlash .45s ease;}
-.cr-player-token.cr-dodge,
-.cr-player-token.cr-collect{animation:crDodgePulse .4s ease;}
+.cr-player-token.cr-dodge{animation:crDodgePulse .4s ease;}
+/* Direct feedback: "collecting the jewels makes him wince" — collect
+   shared the same tense scale-pulse as a narrow dodge, so a genuinely
+   good outcome (free loot) read the same as "that was close." Now its
+   own upward, brightening bounce — reads as a little cheer, not a
+   flinch. */
+.cr-player-token.cr-collect{animation:crCollectBounce .45s ease;}
 .cr-player-token.cr-jumping{animation:crJumpHop .5s cubic-bezier(.34,1.56,.64,1);}
 @keyframes crHitFlash{0%,100%{filter:none;}40%{filter:brightness(2) saturate(2) hue-rotate(-40deg);}}
 @keyframes crDodgePulse{0%,100%{transform:scale(1);}45%{transform:scale(1.24);}}
+@keyframes crCollectBounce{
+  0%,100%{transform:translateY(0) scale(1);filter:none;}
+  35%{transform:translateY(-11px) scale(1.1);filter:brightness(1.5) saturate(1.35);}
+  65%{transform:translateY(-3px) scale(1.03);filter:brightness(1.15);}
+}
 @keyframes crJumpHop{0%,100%{transform:translateY(0);}45%{transform:translateY(-30px);}}
 
 /* Direct feedback: "motion feels mechanical" — a hit landing with zero
@@ -1972,6 +1993,27 @@ let marks = [];          // [{deity_id, pantheon_id, mark_type}]
 let currentPhase = null; // {cycle_id, phase, phase_index} — flavor + gating text only, edge function re-checks server-side
 let petitionView = null; // null | {step:'pick'} | {step:'challenge', ...} | {step:'verdict', ...}
 let answerDraft = '';
+// Petition language toggle — direct feedback: "for the gods to respond in
+// espanol." Scoped deliberately narrow: this switches ONLY the deity's
+// AI-generated trial/hint/verdict text (petition edge function), not the
+// rest of the app's UI strings, which stay a separate, much larger
+// undertaking. Persisted client-side only (localStorage) and resent on
+// every petition request — no DB schema change, so this ships as a pure
+// edge-function + index.html paste with no migration to run.
+function getPetitionLang(){
+  try{ return localStorage.getItem('pg_petition_lang') === 'es' ? 'es' : 'en'; }catch(e){ return 'en'; }
+}
+function setPetitionLang(lang){
+  try{ localStorage.setItem('pg_petition_lang', lang === 'es' ? 'es' : 'en'); }catch(e){ /* private mode etc — just won't persist */ }
+}
+function togglePetitionLang(){
+  setPetitionLang(getPetitionLang() === 'es' ? 'en' : 'es');
+  render();
+}
+function petitionLangToggleHtml(){
+  const isEs = getPetitionLang() === 'es';
+  return `<button type="button" class="hub-loose-lang" onclick="togglePetitionLang()" title="${isEs ? 'Switch to English' : 'Cambiar a español'}">${isEs ? '🌐 ES' : '🌐 EN'}</button>`;
+}
 // Direct feedback: an admin-created custom item ("Silk Scarf") with the
 // Petition Clear effect never showed a "use this to pass instantly"
 // button on the trial screen. Root cause — this used to hardcode ONE
@@ -7969,6 +8011,7 @@ function renderPetitionPicker(){
         ${hotspotButtonsMarkup(PETITION_AREAS, 'PETITION_AREAS', 'oracle')}
         ${pickerMarkup}
         <button type="button" class="hub-loose-back" onclick="backToGuardianHome()">‹ Back to Map</button>
+        ${petitionLangToggleHtml()}
         <div id="pickerStatus" class="hub-loose-status">${optgroups ? '' : 'No gods are open for petition right now — check back soon.'}</div>
       </div>
     </div>
@@ -7993,7 +8036,7 @@ async function beginPetition(pantheonId, deityId){
     const resp = await fetch(FUNCTIONS_URL + '/petition', {
       method: 'POST',
       headers: await petitionHeaders(),
-      body: JSON.stringify({ action: 'begin', guardianId: guardian.id, pantheonId, deityId })
+      body: JSON.stringify({ action: 'begin', guardianId: guardian.id, pantheonId, deityId, lang: getPetitionLang() })
     });
     const data = await resp.json();
     if(!data.ok){
@@ -8054,7 +8097,8 @@ function renderPetitionChallenge(){
     <p class="hint">You're holding ${esc(clearItemName)}. Use it to skip answering and pass this trial instantly, with a full mark.</p>
     <button class="secondary" id="clearItemBtn" style="margin-bottom:10px;" onclick="usePetitionClearItem('${esc(clearItem.id)}')">Use ${esc(clearItemName)}</button>` : '';
   app.innerHTML = `
-    <div class="card"${bgAttr('oracle')}>
+    <div class="card" style="position:relative;"${bgAttr('oracle')}>
+      ${petitionLangToggleHtml()}
       <h2 style="text-align:center;">${esc(v.deityName)} sets a trial</h2>
       <p class="hint" style="text-align:center;">Write whatever answer feels honest to your guardian's keeper — there's no wrong format. Any genuine attempt earns at least a partial mark; a real show of understanding, courage, or wit earns the full one.</p>
       <p class="challenge-text">"${esc(v.challenge)}"</p>
@@ -8078,7 +8122,7 @@ async function getPetitionHint(){
     const resp = await fetch(FUNCTIONS_URL + '/petition', {
       method: 'POST',
       headers: await petitionHeaders(),
-      body: JSON.stringify({ action: 'hint', attemptId: petitionView.attemptId })
+      body: JSON.stringify({ action: 'hint', attemptId: petitionView.attemptId, lang: getPetitionLang() })
     });
     const data = await resp.json();
     if(!data.ok){
@@ -8198,7 +8242,7 @@ async function submitPetitionAnswer(){
     const resp = await fetch(FUNCTIONS_URL + '/petition', {
       method: 'POST',
       headers: await petitionHeaders(),
-      body: JSON.stringify({ action: 'answer', attemptId: petitionView.attemptId, answer })
+      body: JSON.stringify({ action: 'answer', attemptId: petitionView.attemptId, answer, lang: getPetitionLang() })
     });
     const data = await resp.json();
     if(!data.ok){
@@ -9325,7 +9369,18 @@ async function caveRunFetch(action, extra){
 const CR_ROW_PX = 84;       // px height of one tile row; the viewport is exactly CR_ROW_PX * CR_LOOKAHEAD tall
 const CR_LOOKAHEAD = 5;     // how many tile-rows are visible/gliding at once — this is your reaction window
 const CR_BEAT_MS = 950;     // ms for the whole conveyor to glide down by one row; every tile gets exactly one beat
-const CR_JUMP_MS = 850;     // how long a Jump press keeps the player airborne (long enough to clear whichever gap is at the line)
+// Direct feedback: "when you jump an item he needs to actually jump it
+// not still hit it." The old design armed a real-time 850ms window from
+// the moment Jump was pressed — but CR_LOOKAHEAD gives up to 4 beats
+// (~3.8s) of advance warning before a tile actually resolves, so a
+// player who (reasonably!) jumps as soon as they SEE a chasm coming had
+// their window expire long before it arrived. Jump is now a queued flag
+// (see caveRunJumpNow()/v.jumpQueued) that stays armed — with the Jump
+// button visibly lit the whole time — until the next gap actually
+// resolves, however many beats away that is. CR_JUMP_HOP_MS is now
+// purely the cosmetic hop animation's duration, decoupled from whether
+// the jump "counts" for anything.
+const CR_JUMP_HOP_MS = 500;
 
 async function openCaveRun(){
   if(caveRunView && caveRunView.tickTimer) clearTimeout(caveRunView.tickTimer);
@@ -9355,7 +9410,7 @@ async function openCaveRun(){
     // landing at the resolve line with zero warning on beat one.
     tileIndex: -(CR_LOOKAHEAD - 1),
     lane: Math.floor(data.laneCount / 2),
-    jumpUntil: 0,
+    jumpQueued: false,
     hazardReports: [], branchReports: [],
     hiddenBattles: [], hiddenBattleIndex: 0,
     summary: null,
@@ -9538,7 +9593,7 @@ function caveRunUpdateHud(){
   if(fill) fill.style.width = Math.round((shownStep / v.trackLength) * 100) + '%';
   caveRunPositionToken();
   const jumpBtn = document.getElementById('caveRunJumpBtn');
-  if(jumpBtn) jumpBtn.classList.toggle('cr-armed', Date.now() < (v.jumpUntil || 0));
+  if(jumpBtn) jumpBtn.classList.toggle('cr-armed', !!v.jumpQueued);
 }
 
 // Live, real-time controls — these deliberately never call render() or
@@ -9578,12 +9633,18 @@ function caveRunShakeViewport(){
 function caveRunJumpNow(){
   const v = caveRunView;
   if(!v || v.phase !== 'running') return;
-  v.jumpUntil = Date.now() + CR_JUMP_MS;
+  // Arms — doesn't expire on its own. See the CR_JUMP_HOP_MS comment
+  // above for why: with a multi-beat lookahead, "press the instant you
+  // see a chasm coming" has to actually work, not just "press at the
+  // exact millisecond it reaches the line."
+  v.jumpQueued = true;
   caveRunPulsePlayer('jump');
   const token = document.getElementById('caveRunPlayerToken');
   if(token){
+    // Purely cosmetic feedback that the press registered — NOT what
+    // determines whether a gap is cleared (see v.jumpQueued above).
     token.classList.add('cr-airborne');
-    setTimeout(() => { token.classList.remove('cr-airborne'); }, CR_JUMP_MS);
+    setTimeout(() => { token.classList.remove('cr-airborne'); }, CR_JUMP_HOP_MS);
   }
   caveRunUpdateHud();
 }
@@ -9594,11 +9655,10 @@ function caveRunJumpNow(){
 function caveRunResolveNonBranch(info){
   const v = caveRunView;
   if(info.kind === 'entrance' || info.kind === 'empty') return '';
-  const airborne = Date.now() < (v.jumpUntil || 0);
   const token = document.getElementById('caveRunPlayerToken');
   if(info.kind === 'obstacle'){
     const avoided = v.lane !== info.lane;
-    v.hazardReports.push({ tileIndex: v.tileIndex, lane: v.lane, jumped: airborne });
+    v.hazardReports.push({ tileIndex: v.tileIndex, lane: v.lane, jumped: v.jumpQueued });
     caveRunPulsePlayer(avoided ? 'dodge' : 'hit');
     if(token) spawnParticles(token, avoided
       ? { count: 5, distance: 20, duration: 420, color: hitColor(v.themeAffinityKey), size: 14, sprite: hitSprite(v.themeAffinityKey) }
@@ -9606,8 +9666,13 @@ function caveRunResolveNonBranch(info){
     return avoided ? 'cr-flash-dodge' : 'cr-flash-hit';
   }
   if(info.kind === 'gap'){
-    const avoided = airborne;
-    v.hazardReports.push({ tileIndex: v.tileIndex, lane: v.lane, jumped: airborne });
+    // The one place a queued jump actually gets consumed — whether it
+    // was armed in time or not, it's spent either way once a gap
+    // resolves, so it can only ever save you from the very next one.
+    const avoided = v.jumpQueued;
+    v.jumpQueued = false;
+    caveRunUpdateHud(); // un-light the Jump button now that it's spent
+    v.hazardReports.push({ tileIndex: v.tileIndex, lane: v.lane, jumped: avoided });
     caveRunPulsePlayer(avoided ? 'jump' : 'hit');
     return avoided ? 'cr-flash-jump' : 'cr-flash-hit';
   }
