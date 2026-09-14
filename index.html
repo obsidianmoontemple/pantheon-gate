@@ -1197,14 +1197,26 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
         the EXISTING --p-color/--p-sprite particle system (hitColor()/
         hitSprite()) for hit/dodge/collect bursts — no new asset files. */
 .cr-screen{max-width:480px;margin:0 auto;text-align:center;}
-.cr-progress{font-family:'Cinzel',serif;letter-spacing:0.05em;color:var(--gold-bright,#e6c777);font-size:13px;margin-bottom:8px;}
-.cr-progress-bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;margin-bottom:14px;}
-.cr-progress-fill{height:100%;background:var(--cr-theme-color,#e6c777);transition:width .3s ease;}
+/* Direct feedback: "layout/UI feels plain." A step counter plus a bare
+   bar read as debug chrome, not a game HUD — paired the label with the
+   run's own theme color and gave the bar a matching glow so it reads as
+   belonging to the cave rather than a generic loading bar. */
+.cr-progress{font-family:'Cinzel',serif;letter-spacing:0.05em;color:var(--cr-theme-color,#e6c777);font-size:13px;margin-bottom:8px;
+  text-shadow:0 0 10px rgba(0,0,0,0.6);}
+.cr-progress-bar{height:7px;border-radius:4px;background:rgba(255,255,255,0.08);overflow:hidden;margin-bottom:14px;
+  border:1px solid rgba(255,255,255,0.1);}
+.cr-progress-fill{height:100%;background:linear-gradient(90deg, var(--cr-theme-color,#e6c777), #fff);
+  box-shadow:0 0 8px var(--cr-theme-color,#e6c777);transition:width .3s ease;}
 
 /* The scrolling viewport. Height is set inline from JS (CR_ROW_PX *
    CR_LOOKAHEAD) so the two constants can never drift out of sync with
    this CSS — see caveRunBuildRunningShell(). */
-.cr-viewport{position:relative;overflow:hidden;border-radius:14px 14px 0 0;border:2px solid rgba(255,255,255,0.12);border-bottom:3px solid var(--cr-theme-color,#e6c777);
+/* Now the player's own container too (see .cr-player-token below) — the
+   old bottom-square-corners assumed a separate player strip continued
+   the frame underneath; that strip is gone, so this needs to be a
+   complete, self-contained frame with margin below it now. */
+.cr-viewport{position:relative;overflow:hidden;border-radius:14px;border:2px solid rgba(255,255,255,0.12);border-bottom:3px solid var(--cr-theme-color,#e6c777);
+  margin-bottom:14px;
   background:linear-gradient(180deg, #17110a 0%, #291d10 55%, #140f09 100%);
   box-shadow:inset 0 0 60px rgba(0,0,0,0.7), inset 0 6px 30px rgba(0,0,0,0.55);}
 .cr-viewport::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
@@ -1215,6 +1227,17 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
 .cr-lane-guide{flex:1;border-right:1px dashed rgba(255,255,255,0.16);}
 .cr-lane-guide:last-child{border-right:none;}
 .cr-reel{position:absolute;inset:0;z-index:3;}
+
+/* Direct feedback: "layout/UI feels plain" — a plain rounded rectangle
+   viewport reads as a generic card, not a HUD frame. Four small L-shaped
+   corner brackets (a standard "viewfinder/HUD" cue) added once at
+   shell-build time, purely decorative, z-indexed above the reel. */
+.cr-frame-corner{position:absolute;width:18px;height:18px;border-color:var(--cr-theme-color,#e6c777);
+  border-style:solid;opacity:0.75;pointer-events:none;z-index:6;}
+.cr-frame-corner.cr-fc-tl{top:6px;left:6px;border-width:2px 0 0 2px;border-radius:4px 0 0 0;}
+.cr-frame-corner.cr-fc-tr{top:6px;right:6px;border-width:2px 2px 0 0;border-radius:0 4px 0 0;}
+.cr-frame-corner.cr-fc-bl{bottom:6px;left:6px;border-width:0 0 2px 2px;border-radius:0 0 0 4px;}
+.cr-frame-corner.cr-fc-br{bottom:6px;right:6px;border-width:0 2px 2px 0;border-radius:0 0 4px 0;}
 
 /* Direct feedback: "make it more attractive, use particle effects."
    Ambient drifting motes, independent of game state entirely — pure
@@ -1229,61 +1252,57 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
 /* One row per tile, absolutely positioned by `top` (animated — see
    --cr-beat-ms, set once on #caveRunReel) so a whole conveyor of tiles
    glides down together at a constant, predictable rhythm. */
-.cr-row{position:absolute;left:0;right:0;display:flex;transition:top var(--cr-beat-ms,950ms) linear, opacity .35s ease, transform .35s ease;}
+/* Direct feedback: "motion feels mechanical." A constant-speed (linear)
+   glide reads as robotic because every beat looks identical with no
+   settle — switching to a gentle ease lets each beat decelerate slightly
+   into place. Every row shares the same duration and starts together,
+   so they stay perfectly in lockstep (the whole reel eases as one belt)
+   — this isn't the same thing as easing rows independently, which would
+   desync them and look jittery. */
+.cr-row{position:absolute;left:0;right:0;display:flex;transition:top var(--cr-beat-ms,950ms) cubic-bezier(.32,.08,.24,1), opacity .35s ease, transform .35s ease;}
 .cr-row.cr-row-clear{opacity:0;transform:scale(0.6);}
 .cr-cell{flex:1;position:relative;display:flex;align-items:center;justify-content:center;}
 
 .cr-tile-entrance .cr-entrance-glow{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 100%, rgba(255,255,255,0.18), transparent 70%);}
 
-/* Direct feedback: real screenshots showed obstacle/gap/empty tiles
-   rendering with correct geometry but reading as near-invisible against
-   the (also dark) cave backdrop — a contrast bug, not a broken-DOM bug.
-   Every cell now shows a genuinely visible lit floor panel with a real
-   border regardless of tile kind, so the conveyor always reads as a
-   track (fixes "invisible grid") and every marker below gets brighter,
-   more saturated fills plus a filter:drop-shadow rim (NOT box-shadow —
-   box-shadow doesn't reliably follow a clip-path silhouette, drop-shadow
-   does) so shapes stay legible no matter what's behind them. */
-/* Direct feedback (round 2, screenshots from the live site): this panel's
-   original white-on-11%-opacity treatment tested bright on a dev screen
-   but reads as basically nothing on a real laptop panel — a subtle
-   translucency effect isn't the same thing as a visible shape. Rebuilt
-   with literal warm-gold colors (not a color-mix()/CSS-function tint —
-   deliberately avoiding anything that silently no-ops the whole property
-   on an older browser, same lesson as filter:drop-shadow over box-shadow
-   above) plus a real outer glow, so it's unmistakable even on a
-   washed-out display — same visual weight class as the rock/chasm/gem
-   art now, not a translucency effect riding on a dark background. */
-.cr-floor-glint{position:relative;width:74%;height:62%;border-radius:8px;
-  background:linear-gradient(180deg, rgba(230,199,119,0.32), rgba(230,199,119,0.1));
-  border:1.5px solid rgba(230,199,119,0.85);
-  box-shadow:0 0 10px rgba(230,199,119,0.5), inset 0 0 10px rgba(0,0,0,0.35);}
+/* A prior round marked every safe/empty cell with a lit panel to fix a
+   real contrast bug (hazards were rendering but invisible against the
+   dark backdrop). Direct feedback once real hazard art was working:
+   "the safe path should be clear, not marked with boxes" — bordering
+   every empty cell competed with the actual hazards for attention and
+   read as clutter, defeating the point of having bold hazard art at
+   all. Safe cells now render nothing extra at all; the lane guides
+   (dashed dividers, see .cr-lane-guide above) already establish the
+   grid, so only things that actually matter — rock/chasm/gem/rune —
+   draw the eye. */
 
-/* Obstacle — a jagged, lit rock, one lane wide. */
-.cr-rock{position:relative;width:66%;height:66%;
-  background:radial-gradient(circle at 32% 26%, rgba(255,255,255,0.55), transparent 45%), linear-gradient(150deg, #c9a877 0%, #8a6a3f 55%, #4a3620 100%);
-  clip-path:polygon(20% 0%, 55% 8%, 85% 0%, 100% 35%, 92% 70%, 100% 100%, 60% 92%, 25% 100%, 0% 75%, 8% 40%);
-  filter:drop-shadow(0 3px 5px rgba(0,0,0,0.75)) drop-shadow(0 0 12px var(--cr-theme-color,#e6c777));}
-/* A light sweep passing across the rock face every few seconds — cheap
-   CSS-only polish (one gradient, animated background-position) that
-   makes an otherwise static shape read as lit/alive instead of flat. */
-.cr-rock::before{content:'';position:absolute;inset:0;clip-path:inherit;pointer-events:none;
-  background:linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.55) 46%, transparent 62%);
-  background-size:250% 250%;animation:crRockShine 3.4s ease-in-out infinite;}
-@keyframes crRockShine{0%{background-position:130% 0%;}100%{background-position:-30% 0%;}}
-.cr-rock::after{content:'';position:absolute;inset:0;clip-path:inherit;mix-blend-mode:overlay;opacity:0.45;
-  background:radial-gradient(circle at 50% 45%, var(--cr-theme-color,#e6c777), transparent 70%);}
+/* Obstacle — direct feedback: "shapes look like CSS, not game art." A
+   clip-path polygon reads as a placeholder shape no matter how it's
+   colored. Rebuilt as a real hand-drawn SVG icon (see caveRunTileSvg()),
+   same illustrated language — glow ring behind a gradient-filled path
+   glyph — as the affinity emblem icons used everywhere else in the app
+   (see affinityEmblemSVG() above). A gentle bob stands in for the old
+   light-sweep so it still reads as "alive," not static. */
+.cr-rock{position:relative;width:68%;height:68%;
+  filter:drop-shadow(0 3px 5px rgba(0,0,0,0.75)) drop-shadow(0 0 12px var(--cr-theme-color,#e6c777));
+  animation:crRockBob 2.8s ease-in-out infinite;}
+@keyframes crRockBob{0%,100%{transform:translateY(0) rotate(0deg);}50%{transform:translateY(-3px) rotate(-1.5deg);}}
 .cr-rock-glow{position:absolute;inset:-14px;border-radius:50%;filter:blur(5px);opacity:0.4;
   background:radial-gradient(circle, var(--cr-theme-color,#e6c777), transparent 65%);}
+.cr-tile-svg{display:block;width:100%;height:100%;}
 
 /* Gap — a full-width glowing chasm; no lane, spans the whole row. Bright
    and lava-like on purpose (a near-black "void" tile was the single
    biggest contrast offender — it visually vanished into the equally
    dark viewport background entirely). */
-.cr-tile-gap .cr-chasm{position:absolute;inset:6px;border-radius:8px;overflow:hidden;
+/* A jagged torn-crack silhouette instead of a plain rounded panel — same
+   "look like game art, not a CSS box" fix applied to the gap tile. */
+.cr-tile-gap .cr-chasm{position:absolute;inset:4px;overflow:hidden;
+  clip-path:polygon(3% 32%, 11% 6%, 24% 24%, 38% 2%, 53% 22%, 67% 4%, 81% 26%, 97% 8%, 95% 68%, 83% 94%, 66% 76%, 51% 98%, 36% 78%, 19% 96%, 5% 74%);
   background:radial-gradient(ellipse at 50% 50%, rgba(255,150,70,0.4), transparent 72%), linear-gradient(180deg, #230903 0%, #4a1608 45%, #230903 100%);
-  box-shadow:inset 0 0 30px rgba(255,120,60,0.55), 0 0 20px rgba(255,120,60,0.5), inset 0 0 10px rgba(0,0,0,0.6);
-  border:1px solid rgba(255,160,100,0.6);}
+  box-shadow:inset 0 0 30px rgba(255,120,60,0.55), inset 0 0 10px rgba(0,0,0,0.6);
+  filter:drop-shadow(0 0 10px rgba(255,140,80,0.6));}
+.cr-tile-gap .cr-chasm::before,.cr-tile-gap .cr-chasm::after{clip-path:inherit;}
 .cr-tile-gap .cr-chasm::before{content:'';position:absolute;inset:0;
   background:repeating-linear-gradient(100deg, transparent 0 8px, rgba(255,160,100,0.4) 8px 10px);
   animation:crChasmDrift 2.6s linear infinite;}
@@ -1305,14 +1324,15 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
   100%{background-position:12% -30%, 42% -30%, 68% -30%, 88% -30%;opacity:0;}}
 
 /* Loot — direct feedback: "make the gems rainbow colored so folks know
-   to pick em up." Deliberately NOT tinted by the run's element (every
-   hazard already reads as "elemental" via --cr-theme-color, so loot
-   needed to look like a different CATEGORY of thing at a glance, not
-   just a friendlier hazard) — a genuine rainbow conic-gradient instead,
-   spinning with the gem itself, plus two twinkling sparkle accents. */
-.cr-gem{position:relative;width:38%;height:56%;
-  background:conic-gradient(from 0deg, #ff4d4d, #ff9f40, #ffe066, #6fdc6f, #4ec9e0, #7c7cff, #d97cff, #ff4d4d);
-  clip-path:polygon(50% 0%, 100% 38%, 78% 100%, 22% 100%, 0% 38%);
+   to pick em up," then later "shapes look like CSS, not game art." A
+   flat conic-gradient behind a clip-path polygon read as a CSS trick;
+   rebuilt as a real faceted-gem SVG (see caveRunTileSvg()) — each facet
+   is its own gradient triangle, which is closer to how a cut gem
+   actually catches light than one gradient wrapped around a silhouette,
+   and reads as illustrated rather than flat. Deliberately NOT tinted by
+   the run's element (every hazard already reads as "elemental," so loot
+   needs to look like a different CATEGORY of thing at a glance). */
+.cr-gem{position:relative;width:42%;height:58%;
   filter:drop-shadow(0 0 3px #fff) drop-shadow(0 0 14px rgba(255,255,255,0.75));
   animation:crGemSpin 2.1s ease-in-out infinite;}
 @keyframes crGemSpin{0%,100%{transform:rotate(-7deg) scale(1);}50%{transform:rotate(7deg) scale(1.1);}}
@@ -1337,11 +1357,14 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
 .cr-tile-branch .cr-fork::after{content:'';position:absolute;top:50%;left:50%;width:46px;height:46px;margin:-23px 0 0 -23px;
   border-radius:50%;border:1px dashed rgba(255,255,255,0.5);pointer-events:none;animation:crForkRing 2.6s linear infinite;}
 @keyframes crForkRing{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
-.cr-tile-branch .cr-fork-rune{position:absolute;top:50%;left:50%;width:34px;height:34px;border-radius:50%;
-  transform:translate(-50%,-50%);box-shadow:0 0 18px var(--cr-theme-color,#e6c777);
-  background:radial-gradient(circle, #fff, var(--cr-theme-color,#e6c777) 60%, transparent 75%);
+/* A plain pulsing gradient circle read as "just a dot" — direct
+   feedback more than once. Rebuilt as a real rune-sigil SVG (see
+   caveRunTileSvg()): a bordered ring with a crossed-lines glyph inside,
+   so it reads as a deliberate mystical symbol instead of a blob. */
+.cr-tile-branch .cr-fork-rune{position:absolute;top:50%;left:50%;width:44px;height:44px;
+  transform:translate(-50%,-50%);filter:drop-shadow(0 0 10px var(--cr-theme-color,#e6c777));
   animation:crRunePulse 1.05s ease-in-out infinite;}
-@keyframes crRunePulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:0.85;}50%{transform:translate(-50%,-50%) scale(1.24);opacity:1;}}
+@keyframes crRunePulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:0.85;}50%{transform:translate(-50%,-50%) scale(1.15);opacity:1;}}
 
 /* A brief flash on whichever row just resolved, so a dodge/hit/jump/
    pickup/branch reads clearly before the row fades and is removed. */
@@ -1353,29 +1376,51 @@ footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-s
 .cr-row.cr-flash-branch .cr-resolve-flash{background:var(--cr-theme-color,#e6c777);animation:crFlashPop .4s ease;}
 @keyframes crFlashPop{0%{opacity:0.75;}100%{opacity:0;}}
 
-/* Player row — sits just under the viewport, a small cloaked-mage
-   silhouette that slides left/right (`left`, set from JS) instead of
-   living in per-lane wrapper divs, so hit/dodge/jump animations always
-   apply to one persistent element. */
-.cr-player-row{position:relative;height:58px;border-radius:0 0 14px 14px;border:2px solid rgba(255,255,255,0.12);border-top:none;
-  background:linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.55));margin-bottom:10px;overflow:hidden;}
-.cr-player-token{position:absolute;top:0;height:100%;transition:left .18s ease;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:6px;}
+/* Direct feedback: "we should be on the screen not off of it so it
+   actually jumps things visually." The player used to live in its own
+   bordered strip UNDER the viewport — visually disconnected from the
+   hazards, so a jump/dodge never looked like it was reacting to
+   anything. Now positioned absolutely INSIDE .cr-viewport itself, right
+   over the resolve line (the same spot a row sits at relativeIndex 0 —
+   see caveRunRowTop()'s comment), so the player is standing directly on
+   top of whatever tile just arrived and a jump visibly clears it. z-index
+   keeps it above the reel/ambient motes/frame corners; height matches
+   CR_ROW_PX exactly (set inline from JS, same "can't drift out of sync"
+   pattern as --cr-beat-ms) so it lines up with the row beneath it. */
+.cr-player-token{position:absolute;left:0;bottom:0;z-index:8;transition:left .18s ease;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:6px;}
 .cr-player-token .cr-head{width:16px;height:16px;border-radius:50%;margin-bottom:-3px;
   background:radial-gradient(circle at 35% 30%, #fff9, var(--cr-theme-color,#e6c777) 60%);box-shadow:0 0 10px var(--cr-theme-color,#e6c777);}
 .cr-player-token .cr-body{width:26px;height:30px;clip-path:polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%);
   background:linear-gradient(180deg, var(--cr-theme-color,#e6c777), #6b4f1a);box-shadow:0 0 14px var(--cr-theme-color,#e6c777);}
-.cr-player-token.cr-airborne{transform:translateY(-28px) scale(1.05);}
+.cr-player-token.cr-airborne{transform:translateY(-28px) scale(1.05);transition:left .18s ease, transform .32s cubic-bezier(.34,1.56,.64,1);}
 .cr-player-token.cr-hit{animation:crHitFlash .45s ease;}
 .cr-player-token.cr-dodge,
 .cr-player-token.cr-collect{animation:crDodgePulse .4s ease;}
-.cr-player-token.cr-jumping{animation:crJumpHop .5s ease;}
+.cr-player-token.cr-jumping{animation:crJumpHop .5s cubic-bezier(.34,1.56,.64,1);}
 @keyframes crHitFlash{0%,100%{filter:none;}40%{filter:brightness(2) saturate(2) hue-rotate(-40deg);}}
 @keyframes crDodgePulse{0%,100%{transform:scale(1);}45%{transform:scale(1.24);}}
 @keyframes crJumpHop{0%,100%{transform:translateY(0);}45%{transform:translateY(-30px);}}
 
+/* Direct feedback: "motion feels mechanical" — a hit landing with zero
+   physical feedback beyond a color flash is part of that. A brief
+   screen-shake on the viewport itself (not just the player token) sells
+   the impact without touching the reel's own beat-driven `top`
+   transition, so it can never desync the conveyor. Triggered by JS
+   toggling .cr-shake briefly — see caveRunResolveNonBranch() usage. */
+.cr-viewport.cr-shake{animation:crViewportShake .35s ease;}
+@keyframes crViewportShake{
+  0%,100%{transform:translateX(0);}
+  20%{transform:translateX(-6px) rotate(-0.4deg);}
+  40%{transform:translateX(5px) rotate(0.4deg);}
+  60%{transform:translateX(-4px);}
+  80%{transform:translateX(2px);}
+}
+
 .cr-controls{display:flex;gap:10px;justify-content:center;margin:14px 0 6px;}
-.cr-controls button{min-width:76px;}
+.cr-controls button{min-width:76px;transition:transform .1s ease, background .15s;}
+.cr-controls button:active:not(:disabled){transform:translateY(2px) scale(0.97);}
 .cr-controls button.cr-jump-btn.cr-armed{background:var(--cr-theme-color,#e6c777);color:#1a1408;}
+.cr-controls .cr-btn-arrow{display:inline-block;width:11px;height:11px;vertical-align:-1px;}
 .cr-hint-line{font-size:12px;color:var(--parchment-dim,#b9ac93);margin-bottom:6px;}
 .cr-trivia-overlay{position:fixed;inset:0;background:rgba(6,4,2,0.82);display:flex;align-items:center;justify-content:center;z-index:60;padding:16px;}
 .cr-trivia-card{max-width:420px;width:100%;background:rgba(20,14,8,0.96);border:2px solid var(--cr-theme-color,#e6c777);border-radius:14px;padding:20px;box-shadow:0 0 40px rgba(0,0,0,0.7);}
@@ -9367,25 +9412,84 @@ function caveRunLaneCellsHtml(laneCount, cellFn){
   return html;
 }
 
+// Direct feedback: "shapes look like CSS, not game art." Same
+// illustrated language as affinityEmblemSVG() above (a gradient-filled
+// hand-drawn path, not a CSS clip-path trick) but purpose-built glyphs
+// for the three tile concepts that need one — a boulder, a faceted gem,
+// and a rune sigil. Each gradient gets its own unique id (a running
+// counter, same trick affinityEmblemSVG uses) since multiple copies of
+// the same tile kind can be on screen — and therefore in the DOM — at
+// once, and SVG gradient ids are global to the document.
+let _caveRunSvgSeq = 0;
+function caveRunTileSvg(kind, themeColor){
+  const g = 'crsvg' + (_caveRunSvgSeq++);
+  if(kind === 'rock'){
+    return `<svg class="cr-tile-svg" viewBox="0 0 100 100" aria-hidden="true">
+      <defs><linearGradient id="${g}" x1="20%" y1="8%" x2="82%" y2="96%">
+        <stop offset="0%" stop-color="#dcc093"/><stop offset="55%" stop-color="#9a7a4a"/><stop offset="100%" stop-color="#4a3620"/>
+      </linearGradient></defs>
+      <path d="M50 10 C66 9 83 21 87 39 C90 54 80 67 66 76 C51 84 29 81 18 68 C8 55 10 34 24 21 C32 14 42 12 50 10 Z"
+        fill="url(#${g})" stroke="#2c2013" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M37 28 L46 47 L34 61" fill="none" stroke="#3a2a16" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+      <path d="M61 24 L70 44" fill="none" stroke="#3a2a16" stroke-width="2.4" stroke-linecap="round" opacity="0.55"/>
+      <ellipse cx="38" cy="27" rx="11" ry="6" fill="#fff" opacity="0.3"/>
+    </svg>`;
+  }
+  if(kind === 'gem'){
+    return `<svg class="cr-tile-svg" viewBox="0 0 100 100" aria-hidden="true">
+      <defs>
+        <linearGradient id="${g}a" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ff6b6b"/><stop offset="100%" stop-color="#ffb84d"/></linearGradient>
+        <linearGradient id="${g}b" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#4ec9e0"/><stop offset="100%" stop-color="#7c7cff"/></linearGradient>
+        <linearGradient id="${g}c" x1="50%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#ffe066"/><stop offset="100%" stop-color="#6fdc6f"/></linearGradient>
+        <linearGradient id="${g}d" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#d97cff"/><stop offset="100%" stop-color="#ff6bd6"/></linearGradient>
+      </defs>
+      <path d="M50 6 L38 34 L50 94 L20 40 Z" fill="url(#${g}b)" opacity="0.6"/>
+      <path d="M50 6 L62 34 L50 94 L80 40 Z" fill="url(#${g}a)" opacity="0.6"/>
+      <path d="M50 6 L38 34 L50 94 Z" fill="url(#${g}a)"/>
+      <path d="M50 6 L62 34 L50 94 Z" fill="url(#${g}b)"/>
+      <path d="M50 6 L26 32 L38 34 Z" fill="url(#${g}c)"/>
+      <path d="M50 6 L74 32 L62 34 Z" fill="url(#${g}d)"/>
+      <path d="M50 6 L38 34 L62 34 Z" fill="#fff" opacity="0.4"/>
+      <path d="M50 6 L38 34 L50 94 M50 6 L62 34 L50 94 M26 32 L74 32" fill="none" stroke="#fff" stroke-width="1.2" opacity="0.5"/>
+    </svg>`;
+  }
+  if(kind === 'rune'){
+    return `<svg class="cr-tile-svg" viewBox="0 0 100 100" aria-hidden="true">
+      <defs><radialGradient id="${g}" cx="50%" cy="50%" r="60%">
+        <stop offset="0%" stop-color="#fff"/><stop offset="55%" stop-color="${themeColor}"/><stop offset="100%" stop-color="${themeColor}" stop-opacity="0"/>
+      </radialGradient></defs>
+      <circle cx="50" cy="50" r="42" fill="url(#${g})"/>
+      <circle cx="50" cy="50" r="30" fill="none" stroke="${themeColor}" stroke-width="2.5" opacity="0.9"/>
+      <path d="M50 20 L50 80 M20 50 L80 50 M31 31 L69 69 M69 31 L31 69" stroke="${themeColor}" stroke-width="2" stroke-linecap="round" opacity="0.75"/>
+      <circle cx="50" cy="50" r="7" fill="#fff"/>
+    </svg>`;
+  }
+  return '';
+}
+
 function caveRunMakeRowEl(tileIndex){
   const v = caveRunView;
   const info = caveRunTileAt(v, tileIndex);
+  const themeColor = hitColor(v.themeAffinityKey || 'earth');
   const row = document.createElement('div');
   row.className = 'cr-row cr-tile-' + info.kind;
   row.dataset.tileIndex = String(tileIndex);
   row.style.height = CR_ROW_PX + 'px';
+  // Safe lanes/tiles deliberately render nothing — direct feedback: "the
+  // safe path should be clear, not marked with boxes." Only hazards,
+  // loot, and the branch rune draw anything at all now.
   if(info.kind === 'obstacle'){
-    row.innerHTML = caveRunLaneCellsHtml(v.laneCount, lane => lane === info.lane ? '<div class="cr-rock-glow"></div><div class="cr-rock"></div>' : '<div class="cr-floor-glint"></div>');
+    row.innerHTML = caveRunLaneCellsHtml(v.laneCount, lane => lane === info.lane ? `<div class="cr-rock-glow"></div><div class="cr-rock">${caveRunTileSvg('rock')}</div>` : '');
   } else if(info.kind === 'gap'){
     row.innerHTML = '<div class="cr-chasm"></div>';
   } else if(info.kind === 'loot'){
-    row.innerHTML = caveRunLaneCellsHtml(v.laneCount, lane => lane === info.lane ? '<div class="cr-gem-halo"></div><div class="cr-gem"></div><div class="cr-gem-sparkle"></div>' : '<div class="cr-floor-glint"></div>');
+    row.innerHTML = caveRunLaneCellsHtml(v.laneCount, lane => lane === info.lane ? `<div class="cr-gem-halo"></div><div class="cr-gem">${caveRunTileSvg('gem')}</div><div class="cr-gem-sparkle"></div>` : '');
   } else if(info.kind === 'branch'){
-    row.innerHTML = '<div class="cr-fork"></div><div class="cr-fork-rune"></div>';
+    row.innerHTML = `<div class="cr-fork"></div><div class="cr-fork-rune">${caveRunTileSvg('rune', themeColor)}</div>`;
   } else if(info.kind === 'entrance'){
     row.innerHTML = '<div class="cr-entrance-glow"></div>';
   } else {
-    row.innerHTML = caveRunLaneCellsHtml(v.laneCount, () => '<div class="cr-floor-glint"></div>');
+    row.innerHTML = '';
   }
   const flash = document.createElement('div');
   flash.className = 'cr-resolve-flash';
@@ -9456,6 +9560,19 @@ function caveRunPulsePlayer(kind){
   else if(kind === 'dodge') token.classList.add('cr-dodge');
   else if(kind === 'jump') token.classList.add('cr-jumping');
   else if(kind === 'collect') token.classList.add('cr-collect');
+  if(kind === 'hit') caveRunShakeViewport();
+}
+
+// Direct feedback: "motion feels mechanical" — a hit with zero physical
+// feedback beyond a color flash was part of that. Shakes the viewport
+// itself, never the reel's own rows, so it can't desync the beat-driven
+// `top` transition those rely on.
+function caveRunShakeViewport(){
+  const vp = document.getElementById('caveRunViewport');
+  if(!vp) return;
+  vp.classList.remove('cr-shake');
+  void vp.offsetWidth;
+  vp.classList.add('cr-shake');
 }
 
 function caveRunJumpNow(){
@@ -9734,15 +9851,15 @@ function caveRunBuildRunningShell(){
       <div class="cr-lane-guides">${Array.from({ length: v.laneCount }, () => '<div class="cr-lane-guide"></div>').join('')}</div>
       <div class="cr-reel" id="caveRunReel"></div>
       <div class="cr-ambient">${caveRunAmbientMotesHtml()}</div>
-    </div>
-    <div class="cr-player-row" id="caveRunPlayerRow">
-      <div class="cr-player-token" id="caveRunPlayerToken"><div class="cr-head"></div><div class="cr-body"></div></div>
+      <div class="cr-player-token" id="caveRunPlayerToken" style="height:${CR_ROW_PX}px;"><div class="cr-head"></div><div class="cr-body"></div></div>
+      <div class="cr-frame-corner cr-fc-tl"></div><div class="cr-frame-corner cr-fc-tr"></div>
+      <div class="cr-frame-corner cr-fc-bl"></div><div class="cr-frame-corner cr-fc-br"></div>
     </div>
     <div class="cr-hint-line">Dodge rocks left and right, jump the chasms, and watch for the glowing fork — answer wrong and something follows you out of the dark.</div>
     <div class="cr-controls">
-      <button onclick="caveRunSetLane(-1)">◀ Left</button>
+      <button onclick="caveRunSetLane(-1)"><svg class="cr-btn-arrow" viewBox="0 0 24 24"><path d="M15 4L7 12L15 20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg> Left</button>
       <button class="cr-jump-btn" id="caveRunJumpBtn" onclick="caveRunJumpNow()">Jump</button>
-      <button onclick="caveRunSetLane(1)">Right ▶</button>
+      <button onclick="caveRunSetLane(1)">Right <svg class="cr-btn-arrow" viewBox="0 0 24 24"><path d="M9 4L17 12L9 20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
     <button class="secondary" style="margin-top:10px;" onclick="backFromCaveRun()">Abandon run</button>
   </div></div></div>`;
