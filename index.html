@@ -2448,6 +2448,13 @@ let deityBattleStatsCache = null; // Map(deity_id -> row) from deity_battle_stat
 let deityGearCatalogCache = [];   // deity_gear_catalog, loaded once (public, small — affinity/rarity/set gear pieces)
 let deityGearSetBonusesCache = []; // deity_gear_set_bonuses, loaded once (public, small — 2pc/3pc thresholds)
 let deityMovesCache = null;       // Map(deity_id -> {power, control}) merged from deity_moves + moves_catalog, loaded once (public, small — each deity's own mythology-grounded signature power/control move)
+// Deity Campaign ("War on Chaos", Phase 2) — a deity fights on its OWN
+// stats/gear/level against the chaos_entities roster, resolved entirely
+// server-side in one call by deity-campaign/index.ts (no persisted
+// per-round battle row, same one-shot shape PvP already uses).
+let deityCampaignView = null;     // null | {step:'browse'} | {step:'pickDeity', encounterKey, encounterName} | {step:'result', ...}
+let deityCampaignData = null;     // {chapters, fieldableDeities} from the "list" action, reloaded after every fight
+let deityCampaignMsg = '';
 let deityGearOwned = [];          // this account's deity_gear_items for the currently-open deity (reloaded per detail view)
 let deityGearEquipped = [];       // this account's deity_gear_equipped rows for the currently-open deity
 let deityCatalogueMsg = '';       // transient status on the detail screen after craft/equip/unequip
@@ -3139,6 +3146,7 @@ function render(){
   if(guardian && worldBossView){ renderWorldBoss(); return; }
   if(guardian && campaignView){ renderCampaign(); return; }
   if(guardian && deityCatalogueView){ renderDeityCatalogue(); return; }
+  if(guardian && deityCampaignView){ renderDeityCampaign(); return; }
   // Checked ahead of guardianHomeView for the same reason creditsView is
   // checked ahead of profileView above: doDuelMage() (called from the
   // Guardian Page's Mage tab) sets mageDuelView but deliberately leaves
@@ -3431,6 +3439,10 @@ const DEFAULT_MAP_AREAS = [
   // starting-guess treatment as Guide/Milestones/Server Chat above; drag
   // into place once there's art to line up against.
   { id: 'deityCatalogue', label: 'Deity Battle Catalogue', left: 62, top: 68, width: 10, height: 16, action: openDeityCatalogue, glow: true },
+  // Deity Campaign / "War on Chaos" (Phase 2) — same "no illustrated
+  // plaque yet" starting-guess treatment as the hotspots above; drag
+  // into place once there's art to line up against.
+  { id: 'warOnChaos', label: 'War on Chaos', left: 72, top: 68, width: 10, height: 16, action: openDeityCampaign, glow: true },
   // The small "X" already illustrated on the map art — direct feedback:
   // "there is a small X button on my main map and I want it to be hooked
   // to a back to login button." No glow (the art already draws the eye to
@@ -4601,6 +4613,219 @@ async function doUnequipDeityGear(deityId, slot){
   }catch(e){
     setDeityCatalogueStatus('Could not reach the relay: ' + e.message);
   }
+}
+
+/* =========================================================================
+   DEITY CAMPAIGN — "War on Chaos" (Phase 2). Direct feedback: "go for it
+   and make sure just like the mages [mythology] campaign we fill it with
+   ancient lore" — see deity-campaign/index.ts and migrations 0159/0160
+   for the roster/chapter content itself; this block is purely the
+   browse -> pick-a-deity -> fight -> result flow, structurally cloned
+   from renderCampaignBrowse()/renderCampaignChoice(), adapted for a
+   one-shot server-resolved duel (deity-campaign/index.ts's "fight"
+   action) instead of Campaign's persisted per-encounter progress calls.
+   ========================================================================= */
+
+async function openDeityCampaign(){
+  const gate = featureGateStatus('deityCampaign');
+  if(!gate.open){ featureLockView = { label: gate.label, message: gate.message }; render(); return; }
+  deityCampaignView = { step: 'browse' };
+  deityCampaignMsg = '';
+  render();
+  maybeShowPageTip('deityCampaign');
+  await loadDeityCampaignData();
+  if(deityCampaignView) render();
+}
+
+async function loadDeityCampaignData(){
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/deity-campaign', {
+      method: 'POST', headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'list' })
+    });
+    const data = await resp.json();
+    if(!data.ok){ deityCampaignMsg = data.error || 'Could not load the campaign.'; return; }
+    deityCampaignData = data;
+  }catch(e){
+    deityCampaignMsg = 'Could not reach the relay: ' + e.message;
+  }
+}
+
+function backFromDeityCampaign(){
+  deityCampaignView = null;
+  deityCampaignMsg = '';
+  render();
+}
+
+function renderDeityCampaign(){
+  if(deityCampaignView.step === 'pickDeity') return renderDeityCampaignPickDeity();
+  if(deityCampaignView.step === 'result') return renderDeityCampaignResult();
+  return renderDeityCampaignBrowse();
+}
+
+function renderDeityCampaignBrowse(){
+  const app = document.getElementById('app');
+  if(!deityCampaignData){
+    app.innerHTML = `<div class="card"${bgAttr('deityCampaign', 'text-align:center;')}><h2>War on Chaos</h2><p class="hint">${deityCampaignMsg ? esc(deityCampaignMsg) : 'Loading…'}</p>
+      <button class="secondary" style="margin-top:14px;" onclick="backFromDeityCampaign()">Back to the map</button></div>`;
+    return;
+  }
+  const chapters = (deityCampaignData.chapters || []).map(c => {
+    const rows = (c.encounters || []).map(e => {
+      const statusBadge = e.locked
+        ? `<span class="mark-badge">locked</span>`
+        : (e.cleared ? `<span class="mark-badge full">cleared ×${e.clearCount}</span>` : `<span class="mark-badge">new</span>`);
+      const xpNote = e.cleared ? `+${e.replayXpReward} XP replay` : `+${e.xpReward} XP`;
+      const actionHtml = e.locked
+        ? `<span class="hint">Clear the earlier encounters first</span>`
+        : `<button class="secondary" onclick="openDeityCampaignPickDeity('${esc(e.key)}')">Fight</button>`;
+      const tierNote = e.chaosEntityTier ? `Tier ${e.chaosEntityTier}` : '';
+      return `<div class="roster-row">
+        <div><div class="rname">⚔️ ${esc(e.name)}${e.chaosEntityName ? ' — ' + esc(e.chaosEntityName) : ''}${e.chaosEntityTitle ? ' <span class="hint">(' + esc(e.chaosEntityTitle) + ')</span>' : ''}</div>
+        <div class="cblurb">${esc(e.description || '')} — ${esc(xpNote)}${tierNote ? ' · ' + esc(tierNote) : ''}</div></div>
+        <div class="ractions">${statusBadge}${actionHtml}</div>
+      </div>`;
+    }).join('') || '<p class="hint">Nothing here yet.</p>';
+    return `<div class="pantheon-group"><h3>${esc(c.name)}</h3><p class="hint" style="margin:-4px 0 8px;">${esc(c.description || '')}</p>${rows}</div>`;
+  }).join('') || '<p class="hint">No chapters yet — check back soon.</p>';
+
+  app.innerHTML = `
+    <div class="card"${bgAttr('deityCampaign', 'text-align:center;')}>
+      <h2>War on Chaos</h2>
+      <p class="hint">Field one of your own battle-ready deities against what the Long Silence has been hiding.</p>
+      ${deityCampaignMsg ? `<p class="status" style="display:block;">${esc(deityCampaignMsg)}</p>` : ''}
+    </div>
+    <div class="card"${bgAttr('deityCampaignScroll')}>
+      ${chapters}
+      <button class="secondary" style="margin-top:10px;" onclick="backFromDeityCampaign()">Back to the map</button>
+    </div>
+  `;
+}
+
+function deityCampaignFindEncounter(encounterKey){
+  for(const c of (deityCampaignData.chapters || [])){
+    const e = (c.encounters || []).find(x => x.key === encounterKey);
+    if(e) return e;
+  }
+  return null;
+}
+
+function openDeityCampaignPickDeity(encounterKey){
+  const encounter = deityCampaignFindEncounter(encounterKey);
+  if(!encounter) return;
+  deityCampaignView = { step: 'pickDeity', encounterKey, encounterName: encounter.name };
+  deityCampaignMsg = '';
+  render();
+}
+
+// A deity picker, not a hotspot array — the roster varies per account
+// (only unlocked deities with an active deity_battle_stats row show up
+// at all), same "too dynamic to decompose" reasoning as the battle
+// screen's own move row.
+function renderDeityCampaignPickDeity(){
+  document.body.classList.add('hub-active');
+  const app = document.getElementById('app');
+  const v = deityCampaignView;
+  const fieldable = (deityCampaignData.fieldableDeities || []).filter(d => !d.locked);
+  const rows = fieldable.length ? fieldable.map(d => {
+    const pantheonId = deityPantheonFor(d.deityId);
+    const nameEntry = pantheonId ? CATALOG[pantheonId].deities.find(([id]) => id === d.deityId) : null;
+    const name = nameEntry ? nameEntry[1] : d.deityId;
+    return `<div class="roster-row">
+      <div><div class="rname">${esc(name)}</div><div class="cblurb">Level ${d.level}</div></div>
+      <div class="ractions"><button class="secondary" onclick="doFightChaosEntity('${esc(v.encounterKey)}', '${esc(d.deityId)}')">Field this deity</button></div>
+    </div>`;
+  }).join('') : '<p class="hint">No deity is battle-ready yet — outfit one in the Deity Battle Catalogue first.</p>';
+  app.innerHTML = `
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('deityCampaign')}>
+        <div class="hub-overlay">
+          <button type="button" class="hub-back" onclick="backFromDeityCampaignPickDeity()">‹ Back</button>
+          <h2 style="text-align:center;">${esc(v.encounterName)}</h2>
+          <p class="hint" style="text-align:center;">Choose which deity to field.</p>
+          <div style="max-width:480px;margin:0 auto;">${rows}</div>
+          <div class="status" id="deityCampaignPickStatus"></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function backFromDeityCampaignPickDeity(){
+  deityCampaignView = { step: 'browse' };
+  render();
+}
+
+async function doFightChaosEntity(encounterKey, deityId){
+  const status = document.getElementById('deityCampaignPickStatus');
+  if(status){ status.className = 'status'; status.textContent = 'The fight is joined…'; }
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/deity-campaign', {
+      method: 'POST', headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'fight', encounterKey, deityId, guardianId: guardian ? guardian.id : undefined })
+    });
+    const data = await resp.json();
+    if(!data.ok){ if(status){ status.className = 'status err'; status.textContent = data.error || 'Could not resolve that fight.'; } return; }
+    deityCampaignView = { step: 'result', ...data };
+    await loadDeityCampaignData();
+    render();
+  }catch(e){
+    if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
+  }
+}
+
+// Per-event line formatting — same phrasing rules as renderBattleScreen()'s
+// own log (round/burn/poison/stun/dodge/support/crit/effects), adapted for
+// a flat events[] array (one full duel resolved in a single call, not a
+// series of polled rounds) and actor "a"/"b" instead of "guardian"/
+// "opponent"/"mage".
+function deityCampaignEventLine(e, aName, bName){
+  const who = e.actor === 'a' ? esc(aName) : esc(bName);
+  const defender = e.actor === 'a' ? esc(bName) : esc(aName);
+  if(e.move === undefined && e.burnTick !== undefined) return `<div class="entry burntick">Round ${e.round}: ${who} takes ${e.burnTick} burn damage.</div>`;
+  if(e.move === undefined && e.poisonTick !== undefined) return `<div class="entry poisontick">Round ${e.round}: ${who} takes ${e.poisonTick} poison damage.</div>`;
+  if(e.move === undefined && e.customDotTick !== undefined) return `<div class="entry poisontick">Round ${e.round}: ${who} suffers ${e.customDotTick} damage from ${esc((e.effectKey || '').replace(/_/g, ' '))}.</div>`;
+  if(e.move === undefined && e.stunned) return `<div class="entry stunskip">Round ${e.round}: ${who} is stunned and cannot act!</div>`;
+  if(e.dodged) return `<div class="entry dodgeskip">Round ${e.round}: ${who} attacks — ${defender} dodges!</div>`;
+  if(e.support){
+    const healText = e.healed ? ` and heals for ${e.healed} HP` : '';
+    return `<div class="entry heal">Round ${e.round}: ${who} used ${esc(e.move)}${healText}.</div>`;
+  }
+  const tag = e.crit ? ' (critical!)' : (e.control ? ' (swiftness shaved)' : '');
+  const extra = (e.healed ? ` (+${e.healed} lifesteal)` : '') + (e.stunned ? ' (stunned!)' : '') + (e.burn ? ' (burning)' : '') +
+    (e.poison ? ' (poisoned)' : '') + (e.weakened ? ' (weakened)' : '') + (e.vulnerable ? ' (vulnerable)' : '') +
+    (e.shieldGranted ? ' (shielded)' : '') + (e.shieldAbsorbed ? ` (shield absorbed ${e.shieldAbsorbed})` : '');
+  return `<div class="entry${e.crit ? ' crit' : ''}">Round ${e.round}: ${who} used ${esc(e.move)}${tag} — ${e.damage} damage${extra}.</div>`;
+}
+
+function renderDeityCampaignResult(){
+  document.body.classList.add('hub-active');
+  const app = document.getElementById('app');
+  const v = deityCampaignView;
+  const pantheonId = deityPantheonFor(v.deityId);
+  const nameEntry = pantheonId ? CATALOG[pantheonId].deities.find(([id]) => id === v.deityId) : null;
+  const deityName = nameEntry ? nameEntry[1] : v.deityId;
+  const won = v.winner === 'deity';
+  const logHtml = (v.events || []).map(e => deityCampaignEventLine(e, deityName, v.chaosEntityName)).join('');
+  const xpLine = v.xpGranted ? `+${v.xpGranted} XP${v.levelsGained > 0 ? ` — Level up! Now Level ${v.newLevel}.` : ''}` : '';
+  app.innerHTML = `
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlain('deityCampaign')}>
+        <div class="hub-overlay">
+          <h2 style="text-align:center;">${won ? 'Victory' : 'Defeated'}</h2>
+          <p class="hint" style="text-align:center;">${esc(deityName)} ${won ? 'has overcome' : 'was overcome by'} ${esc(v.chaosEntityName || 'the foe')}.</p>
+          ${xpLine ? `<p class="status ok" style="display:block;text-align:center;">${esc(xpLine)}</p>` : ''}
+          <div class="battle-log" style="max-height:320px;overflow-y:auto;margin:10px 0;">${logHtml}</div>
+          <button class="secondary" onclick="backFromDeityCampaignResult()">Back to the Campaign</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function backFromDeityCampaignResult(){
+  deityCampaignView = { step: 'browse' };
+  render();
 }
 
 // Direct feedback: "we...need a use guardian item on the familiar
