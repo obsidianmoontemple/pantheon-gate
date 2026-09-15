@@ -1102,6 +1102,31 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .altar-grid.palt{grid-template-columns:repeat(3,1fr);max-width:340px;margin-left:auto;margin-right:auto;}
 .altar-plot .pickup-btn{margin-top:4px;padding:2px 6px;font-size:9px;}
 
+/* Deity Battle Catalogue card grid — direct feedback: "turned into like
+   a card grid 4 or 5 gods across... darkening out the cards for the
+   ones you don't have." Fixed-column-count grid (like .altar-grid
+   above), not .shop-grid's auto-fill/minmax — the user asked for an
+   explicit "4 or 5 across" rather than "as many as fit." 5 columns on a
+   full-width screen, stepping down at the same breakpoints the rest of
+   this file's responsive rules already use for narrower views. */
+.deity-cat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:14px 0;}
+@media (max-width:760px){ .deity-cat-grid{grid-template-columns:repeat(3,1fr);} }
+@media (max-width:460px){ .deity-cat-grid{grid-template-columns:repeat(2,1fr);} }
+.deity-cat-card{
+  display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;
+  padding:8px 5px;border:1px solid var(--line);border-radius:8px;
+  background:rgba(10,8,16,0.4);cursor:pointer;transition:border-color .15s, box-shadow .15s;
+}
+.deity-cat-card:hover{border-color:var(--gold-bright,#e6c777);box-shadow:0 0 14px rgba(230,199,119,0.25);}
+/* Locked/unowned deities stay clickable (still previewable) but read as
+   visually "not yours yet" — dimmed and desaturated rather than hidden,
+   since the user was explicit these should stay browsable. */
+.deity-cat-card.locked{opacity:0.4;filter:grayscale(0.65);}
+.deity-cat-card.locked:hover{opacity:0.62;}
+.deity-cat-card .dcname{font-size:11.5px;color:var(--parchment,#e8dcc0);line-height:1.25;font-weight:600;}
+.deity-cat-card .dcmeta{font-size:9.5px;color:var(--parchment-dim);line-height:1.25;}
+.deity-cat-card .dclock{font-size:9.5px;color:var(--gold-bright,#e6c777);}
+
 footer.notice{text-align:center;color:var(--parchment-dim);font-size:12px;font-style:italic;margin-top:50px;opacity:0.65;}
 
 /* Direct feedback: "in deity redemption and honestly anywhere you spend
@@ -2458,6 +2483,19 @@ let deityCampaignMsg = '';
 let deityGearOwned = [];          // this account's deity_gear_items for the currently-open deity (reloaded per detail view)
 let deityGearEquipped = [];       // this account's deity_gear_equipped rows for the currently-open deity
 let deityCatalogueMsg = '';       // transient status on the detail screen after craft/equip/unequip
+// Direct feedback: "make it sortable by power meaning the strongest that
+// you have will always be in the first position." Sorting the browse
+// grid needs every deity's gear at once, not just the one open in the
+// detail view — deityGearOwned/deityGearEquipped above are scoped to a
+// single deity and reloaded away the moment another one is opened, so
+// they can't answer "what's equipped on deity X" for all 167 deities at
+// the same time. These two are the account-wide equivalent, loaded once
+// by loadDeityGearAllCache() and read by deityCataloguePower() below —
+// separate variables (not a rename of the per-deity ones) so nothing
+// that already reads deityGearOwned/deityGearEquipped for the open
+// detail screen has to change.
+let deityGearItemsAllCache = null;    // null (not loaded) | this account's full deity_gear_items rows, every deity
+let deityGearEquippedAllCache = null; // null (not loaded) | this account's full deity_gear_equipped rows, every deity
 
 // The map hub (renderMapHub()) is the landing screen once a guardian
 // exists — see render()'s fallback below. Guardian Home (stats/Bond) is
@@ -4286,7 +4324,7 @@ async function openDeityCatalogue(){
   deityCatalogueMsg = '';
   render();
   maybeShowPageTip('deityCatalogue');
-  const loaders = [loadDeityBattleStatsCache(), loadDeityGearCatalogCache(), loadDeityGearSetBonusesCache(), loadDeityMovesCache()];
+  const loaders = [loadDeityBattleStatsCache(), loadDeityGearCatalogCache(), loadDeityGearSetBonusesCache(), loadDeityMovesCache(), loadDeityGearAllCache()];
   if(!Object.keys(shopDeitySettings).length) loaders.push(loadShopCatalog());
   if(!shrineEntitlements.length) loaders.push(loadShrineEntitlements());
   await Promise.all(loaders);
@@ -4380,6 +4418,27 @@ async function loadDeityGearOwnedAndEquipped(deityId){
   deityGearEquipped = equipped || [];
 }
 
+// Account-wide counterpart to loadDeityGearOwnedAndEquipped() above — every
+// owned/equipped deity_gear row for this account in one shot, not scoped to
+// a single deity. Needed so the browse grid can sort every unlocked deity
+// by its current power without opening each one's detail screen first.
+// Loaded once (like the other Deity Catalogue caches) and left cached
+// across a craft/equip/unequip on the detail screen; those three actions
+// already null out deityCatalogueDetail's own per-deity caches and reload
+// them, so re-entering the browse screen (backFromDeityCatalogueDetail)
+// forces a fresh copy of this one too rather than trusting a stale one.
+async function loadDeityGearAllCache(force){
+  if(deityGearItemsAllCache && deityGearEquippedAllCache && !force) return;
+  const [{ data: owned, error: ownedErr }, { data: equipped, error: eqErr }] = await Promise.all([
+    supabaseClient.from('deity_gear_items').select('id, deity_id, gear_key, acquired_at'),
+    supabaseClient.from('deity_gear_equipped').select('deity_id, slot, gear_item_id'),
+  ]);
+  if(ownedErr) console.error('deity_gear_items (all) load failed', ownedErr);
+  if(eqErr) console.error('deity_gear_equipped (all) load failed', eqErr);
+  deityGearItemsAllCache = owned || [];
+  deityGearEquippedAllCache = equipped || [];
+}
+
 // Effective (level-scaled) stats — same formula server-side actions will
 // use once Phase 3 wires this into live combat: base + growth*(level-1).
 // Computed live here too, never cached, so an admin edit to base stats
@@ -4387,6 +4446,46 @@ async function loadDeityGearOwnedAndEquipped(deityId){
 const DEITY_LEVEL_STAT_GROWTH = 2;
 function deityEffectiveStat(baseStat, level){
   return baseStat + DEITY_LEVEL_STAT_GROWTH * Math.max(0, (level || 1) - 1);
+}
+
+// Direct feedback: "sortable by power meaning the strongest that you have
+// will always be in the first position and it will change of course as
+// you equip stuff." A single comparable number per deity: the sum of its
+// 5 level-scaled stats, plus every currently-equipped gear piece's flat
+// stat_amount, plus any set-bonus stat_amount whose piece-count threshold
+// is currently met — the same three ingredients deitySetBonusProgressHtml()
+// and deityGearHtml() already display individually for the one open
+// detail screen, just totaled into one number and read from the
+// account-wide caches so every deity can be compared at once. Returns 0
+// for a deity with no active deity_battle_stats row (shows up as
+// "unoutfitted," naturally sorting behind anything with real stats
+// without needing a separate null-handling branch). Only stat_key/
+// stat_amount bonuses count toward this score — a move-granting piece
+// (grants_move_key) changes what a deity can DO in a fight, not a single
+// comparable number, so it doesn't move the needle here, same distinction
+// the detail screen's own gear notes already draw.
+function deityCataloguePower(deityId){
+  const stats = deityBattleStatsCache ? deityBattleStatsCache.get(deityId) : null;
+  if(!stats || !stats.active) return 0;
+  let total = deityEffectiveStat(stats.vitality, stats.level) + deityEffectiveStat(stats.might, stats.level) +
+    deityEffectiveStat(stats.ward, stats.level) + deityEffectiveStat(stats.swiftness, stats.level) +
+    deityEffectiveStat(stats.cunning, stats.level);
+  if(!deityGearItemsAllCache || !deityGearEquippedAllCache) return total;
+  const equippedForDeity = deityGearEquippedAllCache.filter(e => e.deity_id === deityId);
+  const equippedCatalog = equippedForDeity
+    .map(e => deityGearItemsAllCache.find(g => g.id === e.gear_item_id && g.deity_id === deityId))
+    .filter(Boolean)
+    .map(g => deityGearCatalogCache.find(c => c.key === g.gear_key))
+    .filter(Boolean);
+  equippedCatalog.forEach(c => { if(c.stat_key && c.stat_amount) total += c.stat_amount; });
+  const bySet = {};
+  equippedCatalog.forEach(c => { if(c.set_key) bySet[c.set_key] = (bySet[c.set_key] || 0) + 1; });
+  Object.keys(bySet).forEach(setKey => {
+    const have = bySet[setKey];
+    deityGearSetBonusesCache.filter(sb => sb.set_key === setKey && sb.stat_key && have >= sb.pieces_required)
+      .forEach(sb => { total += sb.stat_amount; });
+  });
+  return total;
 }
 
 // Same free-or-entitled check craft/index.ts's requireUnlockedDeity()
@@ -4410,36 +4509,86 @@ function renderDeityCatalogue(){
   return renderDeityCatalogueBrowse();
 }
 
+// Direct feedback: "turned into like a card grid 4 or 5 gods across
+// keeping ones you own at the top darkening out the cards for the ones
+// you don't have... sortable by power meaning the strongest that you
+// have will always be in the first position... I want the gods pictures
+// attached to their cards the same ones we already use." Replaces the
+// old per-pantheon text-row grouping with one flat grid: unlocked deities
+// first (sorted strongest-first by deityCataloguePower()), then locked
+// ones (darkened via the .locked class, alphabetical — there's no
+// "power" to sort a locked deity by, since it can't be geared or leveled
+// yet). Portrait art reuses the Shop's own shopDeityPortraitUrl()/
+// shopPortraitHtml() so a deity looks the same here as it does in the
+// Shop, per the user's own "the same ones we already use" ask.
+//
+// Follow-up feedback: "we are only going to show in the catalogue what
+// is available currently just let the admins toggle on and off their
+// presence in the catalogue." Originally every one of the 167 deities
+// showed here, including the ~160 an admin has never actually set up
+// for battle yet (locked-and-dimmed "Not yet outfitted" cards) — that
+// read as an unfinished roster rather than a curated one. The toggle the
+// user's asking for already exists: deity_battle_stats.active, set per
+// deity in admin.html's Deity Battle Stats tab. It already gates whether
+// a deity contributes real stats/gear anywhere else in the game, so
+// reusing it to also gate catalogue PRESENCE is one consistent meaning
+// ("this deity is live in the battle system") instead of a second,
+// separate flag — no new schema or admin UI needed, an admin already has
+// the exact on/off switch requested. A deity with active=false (or no
+// deity_battle_stats row at all) is filtered out entirely below, before
+// the unlocked/locked split; the player-unlock distinction and its
+// darkened "Locked · Preview" card still apply within that active set,
+// since that's a separate concern (does the PLAYER own it) from whether
+// the ADMIN has published it at all.
 function renderDeityCatalogueBrowse(){
   const app = document.getElementById('app');
   if(!deityBattleStatsCache){
     app.innerHTML = `<div class="card"${bgAttr('deityCatalogue', 'text-align:center;')}><h2>Deity Battle Catalogue</h2><p class="hint">Loading…</p></div>`;
     return;
   }
-  const groups = Object.keys(CATALOG).map(pid => {
-    const cards = CATALOG[pid].deities.map(([id, name]) => {
-      const blurb = DEITY_BLURBS[id];
-      const stats = deityBattleStatsCache.get(id);
-      const unlocked = deityCatalogueIsUnlocked(pid, id);
-      const statLine = (stats && stats.active)
-        ? `<div class="cblurb">Lv ${stats.level} · VIT ${deityEffectiveStat(stats.vitality, stats.level)} · MGT ${deityEffectiveStat(stats.might, stats.level)} · WRD ${deityEffectiveStat(stats.ward, stats.level)} · SWF ${deityEffectiveStat(stats.swiftness, stats.level)} · CUN ${deityEffectiveStat(stats.cunning, stats.level)}</div>`
-        : `<div class="cblurb hint">Not yet outfitted for battle.</div>`;
-      return `<div class="roster-row">
-        <div>
-          <div class="rname">${esc(name)}${unlocked ? '' : ' 🔒'}</div>
-          <div class="cblurb">${blurb ? esc(blurb.epithets) : ''}</div>
-          ${statLine}
-        </div>
-        <div class="ractions"><button class="secondary" onclick="openDeityCatalogueDetail('${esc(id)}')">${unlocked ? 'View' : 'Preview'}</button></div>
-      </div>`;
-    }).join('');
-    return `<div class="pantheon-group"><h3>${esc(CATALOG[pid].label)}</h3>${cards}</div>`;
-  }).join('');
+  // A handful of ids (e.g. Leviathan, Set) legitimately belong to more
+  // than one pantheon's roster in CATALOG — fine for the old per-pantheon
+  // grouped view, but a flat grid with no pantheon headings would show
+  // the exact same portrait/name twice with no explanation. Dedupe by id
+  // here; a deity counts as unlocked if it's unlocked under ANY pantheon
+  // it appears in (openDeityCatalogueDetail/deityPantheonFor already only
+  // ever resolve the first matching pantheon anyway, so this doesn't
+  // change what the detail screen shows).
+  const byId = new Map();
+  Object.keys(CATALOG).forEach(pid => {
+    CATALOG[pid].deities.forEach(([id, name]) => {
+      const unlockedHere = deityCatalogueIsUnlocked(pid, id);
+      const existing = byId.get(id);
+      if(existing) existing.unlocked = existing.unlocked || unlockedHere;
+      else byId.set(id, { id, name, unlocked: unlockedHere });
+    });
+  });
+  const withMeta = Array.from(byId.values())
+    .map(d => ({ ...d, stats: deityBattleStatsCache.get(d.id) }))
+    .filter(d => d.stats && d.stats.active)
+    .map(d => ({ ...d, power: deityCataloguePower(d.id) }));
+  const owned = withMeta.filter(d => d.unlocked).sort((a, b) => b.power - a.power || a.name.localeCompare(b.name));
+  const locked = withMeta.filter(d => !d.unlocked).sort((a, b) => a.name.localeCompare(b.name));
+
+  const cardHtml = d => {
+    const portrait = shopPortraitHtml(shopDeityPortraitUrl(d.id), d.name, 64, 'top');
+    const metaLine = d.unlocked ? `Lv ${d.stats.level} · Power ${d.power}` : 'Locked';
+    return `<div class="deity-cat-card${d.unlocked ? '' : ' locked'}" onclick="openDeityCatalogueDetail('${esc(d.id)}')">
+      ${portrait}
+      <div class="dcname">${esc(d.name)}</div>
+      <div class="dcmeta">${esc(metaLine)}</div>
+      ${d.unlocked ? '' : '<div class="dclock">🔒 Preview</div>'}
+    </div>`;
+  };
+
+  const grid = owned.length || locked.length
+    ? `<div class="deity-cat-grid">${owned.map(cardHtml).join('')}${locked.map(cardHtml).join('')}</div>`
+    : '<p class="hint">No deities are set up for battle yet — check back soon.</p>';
 
   app.innerHTML = `<div class="card"${bgAttr('deityCatalogue')}>
     <h2>Deity Battle Catalogue</h2>
-    <p class="hint">Every deity's own battle stats, gear, and — once unlocked — the War on Chaos campaign. Locked deities are still browsable; gear it up once you've unlocked it.</p>
-    ${groups}
+    <p class="hint">Every battle-ready deity's own stats, gear, and — once unlocked — the War on Chaos campaign. Your strongest gods lead the pack; gear them up and they'll climb further. Locked deities are still browsable, just dimmed, until you unlock them.</p>
+    ${grid}
     <button class="secondary" onclick="backFromDeityCatalogue()">Back to the Map</button>
   </div>`;
 }
@@ -4452,10 +4601,17 @@ async function openDeityCatalogueDetail(deityId){
   if(deityCatalogueView && deityCatalogueView.deityId === deityId) render();
 }
 
-function backFromDeityCatalogueDetail(){
+async function backFromDeityCatalogueDetail(){
   deityCatalogueView = { step: 'browse' };
   deityCatalogueMsg = '';
   render();
+  // A craft/equip/unequip on the detail screen we're leaving may have
+  // changed this deity's power — refresh the account-wide gear cache so
+  // the browse grid's power sort (and every card's stat line) reflects it
+  // immediately instead of showing whatever was true when the grid was
+  // first opened.
+  await loadDeityGearAllCache(true);
+  if(deityCatalogueView && deityCatalogueView.step === 'browse') render();
 }
 
 function deitySetBonusProgressHtml(deityId){
@@ -4530,6 +4686,17 @@ function deityGearHtml(deityId){
   `;
 }
 
+// Direct feedback: "when you click on their card make their full info
+// page pretty and decorative with a big picture of the deity on the
+// screen in that big empty square space." This screen previously had no
+// portrait at all. Adds the same .split-panel/.split-art/.affinity-glow
+// header block the Guardian Page and Profile's Mage hero already use
+// (see renderGuardianFamiliarTab()) — a large portrait on one side, name/
+// stats on the other — reusing shopPortraitHtml()/shopDeityPortraitUrl()
+// for the art itself so it matches the browse grid's card art and the
+// Shop's own deity tiles. The glow color comes from the deity's own
+// Signature Power move's affinity (deityMovesCache) when one's assigned,
+// falling back to no glow rather than a guessed color when it isn't.
 function renderDeityCatalogueDetail(){
   const app = document.getElementById('app');
   const deityId = deityCatalogueView.deityId;
@@ -4539,13 +4706,19 @@ function renderDeityCatalogueDetail(){
   const blurb = DEITY_BLURBS[deityId];
   const unlocked = pantheonId ? deityCatalogueIsUnlocked(pantheonId, deityId) : false;
   const stats = deityBattleStatsCache ? deityBattleStatsCache.get(deityId) : null;
+  const moves = deityMovesCache ? deityMovesCache.get(deityId) : null;
+
+  const portraitAffinity = (moves && (moves.power || moves.control)) ? (moves.power || moves.control).affinity : null;
+  const glowColor = portraitAffinity ? (AFFINITY_COLORS[portraitAffinity] || '#c8a24a') : 'transparent';
+  const rawArt = shopPortraitHtml(shopDeityPortraitUrl(deityId), name, 240);
+  const art = portraitAffinity ? `<div class="affinity-glow" style="--glow-color:${glowColor};">${rawArt}</div>` : rawArt;
 
   const statsHtml = (stats && stats.active) ? `
     <h3 style="margin-top:14px;">Battle Stats — Level ${stats.level} (${stats.xp} XP)</h3>
     <div class="cblurb">Vitality ${deityEffectiveStat(stats.vitality, stats.level)} · Might ${deityEffectiveStat(stats.might, stats.level)} · Ward ${deityEffectiveStat(stats.ward, stats.level)} · Swiftness ${deityEffectiveStat(stats.swiftness, stats.level)} · Cunning ${deityEffectiveStat(stats.cunning, stats.level)}</div>
+    <div class="cblurb">Power ${deityCataloguePower(deityId)}</div>
   ` : `<p class="hint" style="margin-top:14px;">This deity hasn't been outfitted for battle yet.</p>`;
 
-  const moves = deityMovesCache ? deityMovesCache.get(deityId) : null;
   const powerHtml = (moves && (moves.power || moves.control)) ? `
     <h3 style="margin-top:14px;">Signature Power</h3>
     ${moves.power ? `<div class="cblurb"><strong>${esc(moves.power.name)}</strong> <span class="hint">(${esc(moves.power.affinity)})</span><br>${esc(moves.power.description || '')}${deityMoveEffectLabel(moves.power) ? ` <span class="hint">— ${esc(deityMoveEffectLabel(moves.power))}</span>` : ''}</div>` : ''}
@@ -4559,9 +4732,14 @@ function renderDeityCatalogueDetail(){
   const statusHtml = deityCatalogueMsg ? `<p class="status">${esc(deityCatalogueMsg)}</p>` : '';
 
   app.innerHTML = `<div class="card"${bgAttr('deityCatalogue')}>
-    <h2>${esc(name)}${unlocked ? '' : ' 🔒'}</h2>
-    <p class="cblurb">${blurb ? esc(blurb.epithets) : ''}</p>
-    <p class="hint">${blurb ? esc((blurb.domains || []).join(' · ')) : ''}</p>
+    <div class="split-panel">
+      <div class="split-art">${art}</div>
+      <div class="split-info">
+        <h2 style="margin:4px 0;">${esc(name)}${unlocked ? '' : ' 🔒'}</h2>
+        <p class="cblurb">${blurb ? esc(blurb.epithets) : ''}</p>
+        <p class="hint">${blurb ? esc((blurb.domains || []).join(' · ')) : ''}</p>
+      </div>
+    </div>
     ${statsHtml}
     ${powerHtml}
     ${statusHtml}
@@ -4692,9 +4870,19 @@ function renderDeityCampaignBrowse(){
         ? `<span class="hint">Clear the earlier encounters first</span>`
         : `<button class="secondary" onclick="openDeityCampaignPickDeity('${esc(e.key)}')">Fight</button>`;
       const tierNote = e.chaosEntityTier ? `Tier ${e.chaosEntityTier}` : '';
+      // Direct feedback: "no bad guy pics... on field." Each encounter's
+      // chaos entity now shows its own portrait (chaosEntityImageUrl, new
+      // from the deity-campaign/index.ts "list" action) the same way
+      // shopPortraitHtml already renders every deity elsewhere — falls
+      // back to a letter sigil until an admin sets one via the Chaos
+      // Entity Roster tab's new Image URL field.
+      const entityPortrait = shopPortraitHtml(e.chaosEntityImageUrl, e.chaosEntityName || e.name, 44, 'top');
       return `<div class="roster-row">
-        <div><div class="rname">⚔️ ${esc(e.name)}${e.chaosEntityName ? ' — ' + esc(e.chaosEntityName) : ''}${e.chaosEntityTitle ? ' <span class="hint">(' + esc(e.chaosEntityTitle) + ')</span>' : ''}</div>
-        <div class="cblurb">${esc(e.description || '')} — ${esc(xpNote)}${tierNote ? ' · ' + esc(tierNote) : ''}</div></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          ${entityPortrait}
+          <div><div class="rname">⚔️ ${esc(e.name)}${e.chaosEntityName ? ' — ' + esc(e.chaosEntityName) : ''}${e.chaosEntityTitle ? ' <span class="hint">(' + esc(e.chaosEntityTitle) + ')</span>' : ''}</div>
+          <div class="cblurb">${esc(e.description || '')} — ${esc(xpNote)}${tierNote ? ' · ' + esc(tierNote) : ''}</div></div>
+        </div>
         <div class="ractions">${statusBadge}${actionHtml}</div>
       </div>`;
     }).join('') || '<p class="hint">Nothing here yet.</p>';
@@ -4743,8 +4931,15 @@ function renderDeityCampaignPickDeity(){
     const pantheonId = deityPantheonFor(d.deityId);
     const nameEntry = pantheonId ? CATALOG[pantheonId].deities.find(([id]) => id === d.deityId) : null;
     const name = nameEntry ? nameEntry[1] : d.deityId;
+    // Direct feedback: "no pics of the gods available... on field" — same
+    // portrait source as the Deity Catalogue grid (shopDeityPortraitUrl),
+    // so a god looks the same here as everywhere else it's pictured.
+    const portrait = shopPortraitHtml(shopDeityPortraitUrl(d.deityId), name, 44, 'top');
     return `<div class="roster-row">
-      <div><div class="rname">${esc(name)}</div><div class="cblurb">Level ${d.level}</div></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        ${portrait}
+        <div><div class="rname">${esc(name)}</div><div class="cblurb">Level ${d.level}</div></div>
+      </div>
       <div class="ractions"><button class="secondary" onclick="doFightChaosEntity('${esc(v.encounterKey)}', '${esc(d.deityId)}')">Field this deity</button></div>
     </div>`;
   }).join('') : '<p class="hint">No deity is battle-ready yet — outfit one in the Deity Battle Catalogue first.</p>';
@@ -4820,11 +5015,25 @@ function renderDeityCampaignResult(){
   const won = v.winner === 'deity';
   const logHtml = (v.events || []).map(e => deityCampaignEventLine(e, deityName, v.chaosEntityName)).join('');
   const xpLine = v.xpGranted ? `+${v.xpGranted} XP${v.levelsGained > 0 ? ` — Level up! Now Level ${v.newLevel}.` : ''}` : '';
+  // Direct feedback: "no pics of the gods available or on field" — a
+  // "vs" portrait row for the two combatants, same source as the pick-
+  // deity screen (deity) and the browse screen (chaos entity, via
+  // chaosEntityImageUrl on the fight response). The loser dims slightly
+  // so the outcome reads at a glance, same idea as the Catalogue grid's
+  // .locked dimming.
+  const deityPortrait = shopPortraitHtml(shopDeityPortraitUrl(v.deityId), deityName, 96, 'top');
+  const foePortrait = shopPortraitHtml(v.chaosEntityImageUrl, v.chaosEntityName || 'the foe', 96, 'top');
+  const vsHtml = `<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:12px 0;">
+    <div style="text-align:center;opacity:${won ? '1' : '0.5'};">${deityPortrait}<div class="cblurb" style="margin-top:4px;">${esc(deityName)}</div></div>
+    <div class="hint" style="font-family:'Cinzel',serif;">VS</div>
+    <div style="text-align:center;opacity:${won ? '0.5' : '1'};">${foePortrait}<div class="cblurb" style="margin-top:4px;">${esc(v.chaosEntityName || 'The Foe')}</div></div>
+  </div>`;
   app.innerHTML = `
     <div class="hub-screen">
       <div class="hub-box"${bgAttrPlain('deityCampaign')}>
         <div class="hub-overlay">
           <h2 style="text-align:center;">${won ? 'Victory' : 'Defeated'}</h2>
+          ${vsHtml}
           <p class="hint" style="text-align:center;">${esc(deityName)} ${won ? 'has overcome' : 'was overcome by'} ${esc(v.chaosEntityName || 'the foe')}.</p>
           ${xpLine ? `<p class="status ok" style="display:block;text-align:center;">${esc(xpLine)}</p>` : ''}
           <div class="battle-log" style="max-height:320px;overflow-y:auto;margin:10px 0;">${logHtml}</div>
@@ -8004,12 +8213,23 @@ function shopDeityPortraitUrl(deityId){
 // don't collide with the attribute's own delimiters) or, when there's no
 // url at all, the sigil directly — skips a guaranteed-404 request for the
 // many deities (Celtic/Chinese/Dragons/LHP) with no portrait art yet.
-function shopPortraitHtml(url, name, sizePx){
+// objectPosition (optional, defaults to 'center' — every existing caller
+// keeps its exact old look) lets a small square crop favor the top of the
+// source art instead of dead-centering it. Direct feedback: "it should
+// show the pictures on the catalogue grid like a bust" — most of this
+// game's deity portraits are full-figure illustrations with the face in
+// the upper third, so a dead-center crop at a small card size often lands
+// on a torso instead of a face. 'top' fixes that for a small card without
+// touching the Shop's own grid or the Catalogue detail screen's much
+// larger 240px portrait, where a center crop already reads fine (see
+// their own call sites below).
+function shopPortraitHtml(url, name, sizePx, objectPosition){
   const initial = esc((name || '?').trim().charAt(0).toUpperCase() || '?');
   const size = sizePx || 56;
+  const position = objectPosition || 'center';
   const sigil = `<div class="shop-sigil" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.42)}px;">${initial}</div>`;
   if(!url) return sigil;
-  return `<img src="${esc(url)}" alt="${esc(name || '')}" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:6px;flex-shrink:0;" onerror="this.outerHTML='<div class=&quot;shop-sigil&quot; style=&quot;width:${size}px;height:${size}px;font-size:${Math.round(size * 0.42)}px;&quot;>${initial}</div>'">`;
+  return `<img src="${esc(url)}" alt="${esc(name || '')}" style="width:${size}px;height:${size}px;object-fit:cover;object-position:${position};border-radius:6px;flex-shrink:0;" onerror="this.outerHTML='<div class=&quot;shop-sigil&quot; style=&quot;width:${size}px;height:${size}px;font-size:${Math.round(size * 0.42)}px;&quot;>${initial}</div>'">`;
 }
 // Same "what does this actually grant" phrasing describeBroadcastGift()
 // already uses for mail gift previews (findDeityNameAnywhere/CATALOG),
