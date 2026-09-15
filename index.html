@@ -2207,6 +2207,16 @@ let craftCatalogFilter = 'all'; // 'all'|'stat_boost'|'consumable'|'enchantment'
 let guardianGearCatalog = []; // guardian_gear_catalog (0141), public catalog — loaded once and cached, like mageGearCatalog
 let guardianGearOwned = [];   // this guardian's guardian_gear_items, reloaded alongside craftInventory
 
+let craftDeityGearSelectedId = null; // deity id picked in Craft's own "Deity Gear" dropdown — direct feedback:
+                                      // "the giant list of craftables should not be under each gods card...
+                                      // all that gear needs to be put in another drop down in crafting." The
+                                      // full 200-piece deity_gear_catalog used to render in full under EVERY
+                                      // single deity's own catalogue page (deityGearHtml()'s old "Craft New
+                                      // Gear" section) — moved here instead, one shared list behind a deity
+                                      // picker, matching how Familiar/Mage gear already craft from this one
+                                      // screen rather than from their own pages. Persists across re-renders
+                                      // the same way craftCatalogFilter above does.
+
 let redeemView = null;        // null | {step:'hub'} — Chained Gods: spend a God Token or a Key of Night, both a blind draw from their own admin-set pool (0122)
 let seasonPool = [];          // [{deity_id, pantheon_id}] — deities currently in_season, loaded via loadSeasonInfo()
 let seasonName = '';          // display label from season_settings, loaded via loadSeasonInfo()
@@ -4664,26 +4674,25 @@ function deityGearHtml(deityId){
     </div>`;
   }).join('') || '<p class="hint">Nothing in reserve — craft a piece below.</p>';
 
-  const craftRows = deityGearCatalogCache.map(c => {
-    const notes = [];
-    if(c.stat_key) notes.push(`+${c.stat_amount} ${c.stat_key}`);
-    if(c.grants_move_key) notes.push('grants a move in battle');
-    if(c.set_key) notes.push(`part of ${c.set_key}`);
-    return `<div class="roster-row">
-      <div><div class="rname">${esc(c.name)} <span class="hint">(${esc(c.rarity)} ${esc(c.affinity)} ${esc(c.slot)})</span></div><div class="cblurb">${notes.join(', ')}</div></div>
-      <div class="ractions"><button class="secondary" onclick="doCraftDeityGear('${esc(deityId)}', '${esc(c.key)}')">Craft (${c.shard_cost} Shards)</button></div>
-    </div>`;
-  }).join('');
-
   return `
     <h3 style="margin-top:18px;">Equipped Gear</h3>
     ${slotRows}
     ${deitySetBonusProgressHtml(deityId)}
     <h3 style="margin-top:14px;">In Reserve</h3>
     ${inventoryRows}
-    <h3 style="margin-top:14px;">Craft New Gear</h3>
-    ${craftRows}
+    <p class="hint" style="margin-top:14px;">Craft new gear for ${esc(deityCatalogueDeityName(deityId))} from the Shard Crafting screen's "Deity Gear" section, then equip it here.</p>
   `;
+}
+
+// Every deity's display name, for the "craft it from the Crafting screen"
+// pointer above — CATALOG only stores [id, name] pairs per pantheon, so
+// this is just a lookup, same shape as deityPantheonFor() just above.
+function deityCatalogueDeityName(deityId){
+  for(const pid of Object.keys(CATALOG)){
+    const hit = CATALOG[pid].deities.find(([id]) => id === deityId);
+    if(hit) return hit[1];
+  }
+  return deityId;
 }
 
 // Direct feedback: "when you click on their card make their full info
@@ -13902,6 +13911,12 @@ async function openCraft(){
   const loaders = [loadCraftCatalog(), loadCraftInventory()];
   if(!guardianGearCatalog.length) loaders.push(loadGuardianGearCatalog());
   loaders.push(loadGuardianGearOwned());
+  // Deity Gear's "Craft" list moved here (direct feedback — see
+  // craftDeityGearSelectedId above); needs the same three caches the
+  // Deity Catalogue itself loads via openDeityCatalogue().
+  if(!deityBattleStatsCache) loaders.push(loadDeityBattleStatsCache());
+  if(!deityGearCatalogCache.length) loaders.push(loadDeityGearCatalogCache());
+  loaders.push(loadDeityGearAllCache());
   if(mage){
     if(!mageGearCatalog.length) loaders.push(loadMageGearCatalog());
     loaders.push(loadMageGearOwned());
@@ -13971,6 +13986,33 @@ async function doCraftGuardianGearFromCraft(gearKey){
     await Promise.all([loadGuardian(), loadGuardianGearOwned()]);
     render();
     setCraftStatus('Crafted — equip it from the Familiar tab.', true);
+  }catch(e){
+    setCraftStatus('Could not reach the relay: ' + e.message, false);
+  }
+}
+
+// Deity gear's own craft action, called from Craft's "Deity Gear" section
+// (see craftDeityGearSelectedId above) — same craft-deity-gear action
+// doCraftDeityGear() already calls from the Deity Catalogue detail
+// screen, just pointed at #craftStatus and reloading the account-wide
+// deity gear cache (force:true) instead of one deity's own owned/equipped
+// pair, since Craft has no single "current deity" the way the Catalogue
+// detail screen does. Equip/unequip still only happens from the
+// Catalogue detail screen's own gear UI (deityGearHtml()), matching the
+// same craft-here/equip-there split Familiar and Mage gear already use.
+async function doCraftDeityGearFromCraft(deityId, gearKey){
+  setCraftStatus('Working the Shards…');
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/craft', {
+      method: 'POST', headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'craft-deity-gear', guardianId: guardian.id, deityId, gearKey })
+    });
+    const data = await resp.json();
+    if(!data.ok){ setCraftStatus(data.error || 'Could not craft that.', false); return; }
+    guardian.god_shards = data.remainingShards;
+    await Promise.all([loadGuardian(), loadDeityGearAllCache(true)]);
+    render();
+    setCraftStatus(`Crafted — equip it from ${esc(deityCatalogueDeityName(deityId))}'s own page in the Deity Catalogue.`, true);
   }catch(e){
     setCraftStatus('Could not reach the relay: ' + e.message, false);
   }
@@ -14144,6 +14186,11 @@ function setCraftCatalogFilter(value){
   if(craftView) render();
 }
 
+function setCraftDeityGearSelected(value){
+  craftDeityGearSelectedId = value || null;
+  if(craftView) render();
+}
+
 function renderCraft(){
   const app = document.getElementById('app');
 
@@ -14239,6 +14286,59 @@ function renderCraft(){
       <p class="hint" style="margin-top:10px;">Equip what you craft from the Familiar tab on the Guardian Page.</p>`;
   })();
 
+  // Deity gear (direct feedback: "the giant list of craftables should not
+  // be under each gods card... all that gear needs to be put in another
+  // drop down in crafting"). deityGearHtml() used to dump the ENTIRE
+  // 200-piece deity_gear_catalog under every single deity's own
+  // catalogue page — moved here instead, behind a deity picker, same
+  // "one shared craft list, equip elsewhere" shape as Familiar/Mage gear
+  // just above. Only deities the player has actually unlocked AND the
+  // admin has activated for battle (deityBattleStatsCache's own .active
+  // flag — the same gate the Deity Catalogue grid itself uses) show up
+  // in the picker, since gear for a deity that isn't even battle-ready
+  // yet would have nothing to buy.
+  const deityGearSection = deityBattleStatsCache ? (() => {
+    const byId = new Map();
+    Object.keys(CATALOG).forEach(pid => {
+      CATALOG[pid].deities.forEach(([id, name]) => {
+        const unlockedHere = deityCatalogueIsUnlocked(pid, id);
+        const existing = byId.get(id);
+        if(existing) existing.unlocked = existing.unlocked || unlockedHere;
+        else byId.set(id, { id, name, unlocked: unlockedHere });
+      });
+    });
+    const craftableDeities = Array.from(byId.values())
+      .filter(d => d.unlocked)
+      .map(d => ({ ...d, stats: deityBattleStatsCache.get(d.id) }))
+      .filter(d => d.stats && d.stats.active)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    if(!craftableDeities.length){
+      return '<p class="hint">Unlock a deity in the Deity Battle Catalogue to craft gear for it.</p>';
+    }
+    if(!craftDeityGearSelectedId || !craftableDeities.some(d => d.id === craftDeityGearSelectedId)){
+      craftDeityGearSelectedId = craftableDeities[0].id;
+    }
+    const deityOptions = craftableDeities.map(d => `<option value="${esc(d.id)}" ${d.id === craftDeityGearSelectedId ? 'selected' : ''}>${esc(d.name)}</option>`).join('');
+    const ownedForDeity = (deityGearItemsAllCache || []).filter(g => g.deity_id === craftDeityGearSelectedId);
+    const deityGearRows = deityGearCatalogCache.map(c => {
+      const notes = [];
+      if(c.stat_key) notes.push(`+${c.stat_amount} ${c.stat_key}`);
+      if(c.grants_move_key) notes.push('grants a move in battle');
+      if(c.set_key) notes.push(`part of ${c.set_key}`);
+      const owned = ownedForDeity.filter(g => g.gear_key === c.key).length;
+      const affordable = (guardian.god_shards || 0) >= c.shard_cost;
+      return `<div class="roster-row">
+        <div><div class="rname">${esc(c.name)} ${owned ? '(have ' + owned + ')' : ''}<span class="hint"> (${esc(c.rarity)} ${esc(c.affinity)} ${esc(c.slot)})</span></div><div class="cblurb">${notes.join(', ')}</div></div>
+        <div class="ractions"><button class="secondary" ${affordable ? '' : 'disabled'} onclick="doCraftDeityGearFromCraft('${esc(craftDeityGearSelectedId)}', '${esc(c.key)}')">Craft — ${c.shard_cost} Shards</button></div>
+      </div>`;
+    }).join('') || '<p class="hint">No deity gear catalog set up yet.</p>';
+
+    return `<div style="margin:10px 0;"><label class="hint" style="margin-right:6px;">Crafting gear for:</label><select onchange="setCraftDeityGearSelected(this.value)">${deityOptions}</select></div>
+      ${deityGearRows}
+      <p class="hint" style="margin-top:10px;">Equip what you craft from that deity's own page in the Deity Battle Catalogue.</p>`;
+  })() : '<p class="hint">Loading…</p>';
+
   // 0069 — reagents (buy only — no direct "craft a reagent" action
   // exists, they only come from Duels or a straight Shard purchase) and
   // potions (buy AND/OR craft, per potion — "two paths to the same
@@ -14295,6 +14395,10 @@ function renderCraft(){
     <details class="card"${craftBg}>
       <summary style="cursor:pointer;"><h2 style="display:inline;">${esc(guardian.name)}'s Gear</h2></summary>
       ${guardianGearSection}
+    </details>
+    <details class="card"${craftBg}>
+      <summary style="cursor:pointer;"><h2 style="display:inline;">Deity Gear</h2></summary>
+      ${deityGearSection}
     </details>
     ${mageGearSection ? `<details class="card"${craftBg}>
       <summary style="cursor:pointer;"><h2 style="display:inline;">${esc(mage.name)}'s Gear</h2></summary>
