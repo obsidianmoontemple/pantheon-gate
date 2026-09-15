@@ -4025,6 +4025,46 @@ Object.keys(CATALOG).forEach(pid => {
   });
 });
 
+// ---- Shared deduped deity roster ------------------------------------
+// FLAT_DEITIES deliberately keeps one entry per (deity, pantheon)
+// pairing — 169 entries for 167 unique deity ids — because most pickers
+// on this page (dropdowns, the EZ adder, etc.) are fine with, or need,
+// a row per pantheon appearance. But Leviathan (Great Dragons + Left-
+// Hand Path) and Set (Egyptian + Left-Hand Path) each appear TWICE, and
+// any table keyed one-row-per-deity_id (Deity Battle Stats, Deity
+// Moves, Deity Blessings) breaks if it renders/saves off the raw array:
+// two rows with the same deity_id land in one upsert call and Postgres
+// rejects the whole batch with "ON CONFLICT DO UPDATE command cannot
+// affect row a second time" — exactly the error direct feedback
+// reported after hitting "Save changes" on Deity Battle Stats, and the
+// same latent bug Deity Moves and Deity Blessings shared (same raw-
+// FLAT_DEITIES iteration, same duplicate-id upsert shape) before this
+// fix. dedupeFlatDeities() collapses FLAT_DEITIES to one entry per id,
+// combining pantheonIds/pantheonLabel so the admin can still see and
+// toggle a shared deity by either pantheon it belongs to.
+// `preferredPantheonId(id)` lets each table keep whatever pantheon_id
+// its own existing row already has, so a routine save never silently
+// reassigns it — only a brand-new never-saved id falls back to
+// whichever pantheon CATALOG happens to list first.
+function dedupeFlatDeities(preferredPantheonId){
+  const byId = new Map();
+  FLAT_DEITIES.forEach(d => {
+    const existing = byId.get(d.id);
+    if(existing){
+      existing.pantheonIds.push(d.pantheonId);
+      existing.pantheonLabel += ' / ' + d.pantheonLabel;
+    } else {
+      byId.set(d.id, {
+        id: d.id, name: d.name,
+        pantheonIds: [d.pantheonId],
+        pantheonLabel: d.pantheonLabel,
+        pantheonId: (preferredPantheonId && preferredPantheonId(d.id)) || d.pantheonId,
+      });
+    }
+  });
+  return Array.from(byId.values());
+}
+
 // Deity Lore Encyclopedia (0129/0130) — must match the check constraint
 // on deity_lore_facts.category exactly (server-side is the real
 // enforcement; this is just what the "Add a fact" dropdown offers).
@@ -11851,6 +11891,16 @@ async function saveSpeciesMoves(){
 
 let deityMoveOverrides = {}; // deity_id -> { power: row|null, control: row|null }
 
+// deduped, one entry per unique deity_id — see dedupeFlatDeities()'s
+// comment next to FLAT_DEITIES above. Without this, Leviathan/Set each
+// render as two rows sharing the same input ids (document.getElementById
+// always resolves to the first), and saveDeityMoves() sends two upsert
+// rows with the same deity_id, which Postgres rejects with "ON CONFLICT
+// DO UPDATE command cannot affect row a second time" — the same bug
+// fixed on Deity Battle Stats, hit here too since this table iterates
+// deity ids the identical way.
+let deityMoveRoster = [];
+
 async function loadDeityMoves(){
   const { data, error } = await supabaseClient.from('deity_moves').select('*');
   deityMoveOverrides = {};
@@ -11859,13 +11909,17 @@ async function loadDeityMoves(){
     deityMoveOverrides[r.deity_id][r.kind] = r;
   });
   if(error) console.error('deity_moves load failed', error);
+  deityMoveRoster = dedupeFlatDeities(id => {
+    const o = deityMoveOverrides[id];
+    return o && ((o.power && o.power.pantheon_id) || (o.control && o.control.pantheon_id));
+  });
   renderDeityMoveRows();
 }
 
 function renderDeityMoveRows(){
   const rows = document.getElementById('deityMoveRows');
   if(!rows) return;
-  rows.innerHTML = FLAT_DEITIES.map(d => {
+  rows.innerHTML = deityMoveRoster.map(d => {
     const o = deityMoveOverrides[d.id] || {};
     const power = o.power || {};
     const control = o.control || {};
@@ -11891,7 +11945,7 @@ function filterDeityMoveRows(){
 async function saveDeityMoves(){
   const status = document.getElementById('deityMoveStatus');
   const rows = [];
-  for(const d of FLAT_DEITIES){
+  for(const d of deityMoveRoster){
     const powerMoveKey = document.getElementById('dmPowerMove_' + d.id).value || null;
     const powerActive = document.getElementById('dmPowerActive_' + d.id).checked;
     const controlMoveKey = document.getElementById('dmControlMove_' + d.id).value || null;
@@ -11946,14 +12000,21 @@ async function saveDeityMoves(){
 
 let deityBlessings = {};
 
+// deduped, one entry per unique deity_id — see dedupeFlatDeities()'s
+// comment next to FLAT_DEITIES above. Same "ON CONFLICT DO UPDATE
+// command cannot affect row a second time" bug as Deity Battle Stats
+// and Deity Moves, since this table also iterated raw FLAT_DEITIES.
+let deityBlessingRoster = [];
+
 async function loadDeityBlessings(){
   const { data, error } = await supabaseClient.from('deity_blessings').select('*');
   deityBlessings = {};
   (data || []).forEach(r => { deityBlessings[r.deity_id] = r; });
   if(error) console.error('deity_blessings load failed', error);
+  deityBlessingRoster = dedupeFlatDeities(id => deityBlessings[id] && deityBlessings[id].pantheon_id);
 
   const rows = document.getElementById('blessingRows');
-  rows.innerHTML = FLAT_DEITIES.map(d => {
+  rows.innerHTML = deityBlessingRoster.map(d => {
     const o = deityBlessings[d.id] || { name: '', description: '', stat_key: '', stat_amount: '', effect_key: '', effect_amount: '', defender_effect_key: '', defender_effect_amount: '', active: false };
     return `<tr data-name="${esc(d.name.toLowerCase())}">
       <td>${esc(d.name)}</td>
@@ -11990,7 +12051,7 @@ function filterBlessingRows(){
 
 async function saveDeityBlessings(){
   const status = document.getElementById('blessingStatus');
-  const rows = FLAT_DEITIES
+  const rows = deityBlessingRoster
     .map(d => {
       const statKey = document.getElementById('blsStatKey_' + d.id).value;
       const statAmount = document.getElementById('blsStatAmount_' + d.id).value;
@@ -12034,11 +12095,22 @@ async function saveDeityBlessings(){
 
 let deityBattleStats = {};
 
+// deduped, one entry per unique deity_id — built fresh by
+// loadDeityBattleStats() every load via the shared dedupeFlatDeities()
+// helper (defined next to FLAT_DEITIES above) — see the comment there
+// for why this table can't render/save off the raw FLAT_DEITIES array.
+let deityBattleStatsRoster = [];
+
+function buildDeityBattleStatsRoster(){
+  return dedupeFlatDeities(id => deityBattleStats[id] && deityBattleStats[id].pantheon_id);
+}
+
 async function loadDeityBattleStats(){
   const { data, error } = await supabaseClient.from('deity_battle_stats').select('*');
   deityBattleStats = {};
   (data || []).forEach(r => { deityBattleStats[r.deity_id] = r; });
   if(error) console.error('deity_battle_stats load failed', error);
+  deityBattleStatsRoster = buildDeityBattleStatsRoster();
 
   // Direct feedback: "add a pantheon active toggle on that deity battle
   // stats card" — approving a whole pantheon's worth of deities one
@@ -12052,7 +12124,7 @@ async function loadDeityBattleStats(){
   if(pantheonSelect && !pantheonSelect.options.length) pantheonSelect.innerHTML = pantheonOptionsHtml('');
 
   const rows = document.getElementById('deityBattleStatsRows');
-  rows.innerHTML = FLAT_DEITIES.map(d => {
+  rows.innerHTML = deityBattleStatsRoster.map(d => {
     const o = deityBattleStats[d.id] || { vitality: 10, might: 10, ward: 10, swiftness: 10, cunning: 10, level: 1, xp: 0, active: false };
     return `<tr data-name="${esc(d.name.toLowerCase())}">
       <td>${esc(d.name)}</td>
@@ -12081,7 +12153,11 @@ function setDeityBattleStatsPantheonActive(active){
   const status = document.getElementById('deityBattleStatsPantheonStatus');
   const pantheonId = document.getElementById('deityBattleStatsPantheonSelect').value;
   if(!pantheonId){ status.className = 'status err'; status.textContent = 'Pick a pantheon first.'; return; }
-  const members = FLAT_DEITIES.filter(d => d.pantheonId === pantheonId);
+  // pantheonIds (plural) — a shared id like Leviathan or Set genuinely
+  // belongs to two pantheons' rosters, so "activate all in Left-Hand
+  // Path" should catch it even though its one saved row's canonical
+  // pantheon_id might currently read Dragons or Egyptian.
+  const members = deityBattleStatsRoster.filter(d => d.pantheonIds.includes(pantheonId));
   let changed = 0;
   members.forEach(d => {
     const box = document.getElementById('dbsActive_' + d.id);
@@ -12093,7 +12169,7 @@ function setDeityBattleStatsPantheonActive(active){
 
 async function saveDeityBattleStats(){
   const status = document.getElementById('deityBattleStatsStatus');
-  const rows = FLAT_DEITIES.map(d => ({
+  const rows = deityBattleStatsRoster.map(d => ({
     deity_id: d.id,
     pantheon_id: d.pantheonId,
     vitality: parseInt(document.getElementById('dbsVit_' + d.id).value, 10) || 1,
