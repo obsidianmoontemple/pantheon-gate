@@ -4784,6 +4784,17 @@ const DEFAULT_MAP_AREAS_ADMIN = [
   // "we need a server chat." Another starting-guess position; drag into
   // place once there's art to line up against.
   { id: 'serverChat',    label: 'Server Chat',                         left: 52,   top: 68,   width: 10,   height: 16 },
+  // Deity Battle Catalogue (Phase 1) and Deity Campaign / "War on Chaos"
+  // (Phase 2) were missing from this admin registry entirely — index.html
+  // had both hotspots live on the map, but there was no way to drag
+  // either one here, so they were stuck at their hardcoded starting-guess
+  // coordinates with no admin override possible. Added now, positions
+  // matched to index.html's own (corrected) defaults — War on Chaos in
+  // particular used to sit almost entirely on top of Chained Gods and was
+  // nearly unclickable; it now sits just below it instead. Drag either
+  // one into place once there's real art to line up against.
+  { id: 'deityCatalogue', label: 'Deity Battle Catalogue',             left: 62,   top: 68,   width: 7,    height: 16 },
+  { id: 'warOnChaos',    label: 'War on Chaos',                        left: 72,   top: 80,   width: 10,   height: 14 },
   // The small "X" already drawn on the map art, hooked up to sign-out —
   // drag this box onto the actual X once you can see where it sits.
   { id: 'signOut',       label: 'Sign Out (the map\'s X)',              left: 2,    top: 2,    width: 6,    height: 5  }
