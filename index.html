@@ -3438,11 +3438,23 @@ const DEFAULT_MAP_AREAS = [
   // Deity Battle Catalogue (Phase 1) — same "no illustrated plaque yet"
   // starting-guess treatment as Guide/Milestones/Server Chat above; drag
   // into place once there's art to line up against.
-  { id: 'deityCatalogue', label: 'Deity Battle Catalogue', left: 62, top: 68, width: 10, height: 16, action: openDeityCatalogue, glow: true },
-  // Deity Campaign / "War on Chaos" (Phase 2) — same "no illustrated
-  // plaque yet" starting-guess treatment as the hotspots above; drag
-  // into place once there's art to line up against.
-  { id: 'warOnChaos', label: 'War on Chaos', left: 72, top: 68, width: 10, height: 16, action: openDeityCampaign, glow: true },
+  // Width trimmed from the usual 10 to 7 (left unchanged) so this box
+  // stops just short of x=70, where the Chained Gods plaque begins —
+  // direct feedback caught War on Chaos below sitting almost entirely on
+  // top of Chained Gods, and this one had the same problem at its right
+  // edge, just less severely (a 2%-wide sliver overlap at 68-84% down
+  // the screen). No functional change otherwise.
+  { id: 'deityCatalogue', label: 'Deity Battle Catalogue', left: 62, top: 68, width: 7, height: 16, action: openDeityCatalogue, glow: true },
+  // Deity Campaign / "War on Chaos" (Phase 2) — direct feedback: this box
+  // used to sit at left:72/top:68/height:16 (72-82% x, 68-84% y), which
+  // lands almost entirely inside the Chained Gods plaque's own hotspot
+  // (70-85.3% x, 56.6-80% y) and made it nearly impossible to click
+  // without hitting Chained Gods instead. Moved below Chained Gods
+  // (which ends at y=80) instead of overlapping it — still a "no
+  // illustrated plaque yet" starting-guess position, drag it into place
+  // in admin.html's Map Hotspots editor once there's real art to line up
+  // against.
+  { id: 'warOnChaos', label: 'War on Chaos', left: 72, top: 80, width: 10, height: 14, action: openDeityCampaign, glow: true },
   // The small "X" already illustrated on the map art — direct feedback:
   // "there is a small X button on my main map and I want it to be hooked
   // to a back to login button." No glow (the art already draws the eye to
