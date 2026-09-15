@@ -2213,6 +2213,14 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <h2>Deity Battle Stats (Phase 1 — placeholders, approve with Active)</h2>
         <p class="hint">Deities have zero combat presence anywhere else in this game — this is their own standalone stat block, separate from a Guardian's mark. Every row ships inactive with flat base stats (10 each) until you tune it and check Active. Level/XP grow automatically once the Deity Campaign ships (Phase 2) — a level-up applies +2 to every base stat here, computed live wherever a deity fights, never baked in, so you can keep hand-tuning base stats later without fighting the level bonus. 'set' and 'leviathan' each span two pantheons and share one deity_id — only one flavor of stats can be kept per id, the same limitation Deity Moves/Deity Blessings already live with. <strong>Active also controls whether a deity shows up in the Deity Battle Catalogue at all</strong> — direct feedback was to only show what's actually available and let admins toggle that, so an inactive deity here is entirely absent from the Catalogue grid, not just shown as "not yet outfitted."</p>
         <input class="search-box" type="text" id="deityBattleStatsSearch" placeholder="Search by name…">
+        <div class="form-row" style="align-items:flex-end;">
+          <div class="field"><label>Pantheon</label>
+            <select id="deityBattleStatsPantheonSelect" style="max-width:220px;"></select>
+          </div>
+          <button id="activateDeityBattleStatsPantheonBtn">Activate all in pantheon</button>
+          <button id="deactivateDeityBattleStatsPantheonBtn" class="secondary">Deactivate all in pantheon</button>
+          <div class="status" id="deityBattleStatsPantheonStatus"></div>
+        </div>
         <div class="scroll-table">
           <table>
             <thead><tr><th>God</th><th>Pantheon</th><th>Vitality</th><th>Might</th><th>Ward</th><th>Swiftness</th><th>Cunning</th><th>Level</th><th>XP</th><th>Active</th></tr></thead>
@@ -5635,6 +5643,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('blessingSearch').addEventListener('input', filterBlessingRows);
   document.getElementById('saveDeityBattleStatsBtn').addEventListener('click', saveDeityBattleStats);
   document.getElementById('deityBattleStatsSearch').addEventListener('input', filterDeityBattleStatsRows);
+  document.getElementById('activateDeityBattleStatsPantheonBtn').addEventListener('click', () => setDeityBattleStatsPantheonActive(true));
+  document.getElementById('deactivateDeityBattleStatsPantheonBtn').addEventListener('click', () => setDeityBattleStatsPantheonActive(false));
   document.getElementById('saveDeityGearBtn').addEventListener('click', saveDeityGearCatalog);
   document.getElementById('addDeityGearBtn').addEventListener('click', addDeityGearCatalog);
   document.getElementById('saveDeityGearSetBonusesBtn').addEventListener('click', saveDeityGearSetBonuses);
@@ -12030,6 +12040,17 @@ async function loadDeityBattleStats(){
   (data || []).forEach(r => { deityBattleStats[r.deity_id] = r; });
   if(error) console.error('deity_battle_stats load failed', error);
 
+  // Direct feedback: "add a pantheon active toggle on that deity battle
+  // stats card" — approving a whole pantheon's worth of deities one
+  // checkbox at a time (up to ~25 for Celtic) was the tedious part once
+  // Active started gating Catalogue presence too. This bulk-checks/
+  // unchecks every row in the picked pantheon in the DOM only — same
+  // "stage edits, then hit Save changes to commit" flow the table
+  // already uses for every other field, so nothing is written until the
+  // admin reviews and saves.
+  const pantheonSelect = document.getElementById('deityBattleStatsPantheonSelect');
+  if(pantheonSelect && !pantheonSelect.options.length) pantheonSelect.innerHTML = pantheonOptionsHtml('');
+
   const rows = document.getElementById('deityBattleStatsRows');
   rows.innerHTML = FLAT_DEITIES.map(d => {
     const o = deityBattleStats[d.id] || { vitality: 10, might: 10, ward: 10, swiftness: 10, cunning: 10, level: 1, xp: 0, active: false };
@@ -12054,6 +12075,20 @@ function filterDeityBattleStatsRows(){
     const name = tr.getAttribute('data-name') || '';
     tr.style.display = (!q || name.includes(q)) ? '' : 'none';
   });
+}
+
+function setDeityBattleStatsPantheonActive(active){
+  const status = document.getElementById('deityBattleStatsPantheonStatus');
+  const pantheonId = document.getElementById('deityBattleStatsPantheonSelect').value;
+  if(!pantheonId){ status.className = 'status err'; status.textContent = 'Pick a pantheon first.'; return; }
+  const members = FLAT_DEITIES.filter(d => d.pantheonId === pantheonId);
+  let changed = 0;
+  members.forEach(d => {
+    const box = document.getElementById('dbsActive_' + d.id);
+    if(box && box.checked !== active){ box.checked = active; changed++; }
+  });
+  status.className = 'status ok';
+  status.textContent = `${active ? 'Checked' : 'Unchecked'} Active for ${members.length} deities in ${esc(CATALOG[pantheonId] ? CATALOG[pantheonId].label : pantheonId)} (${changed} changed). Hit "Save changes" below to commit.`;
 }
 
 async function saveDeityBattleStats(){
