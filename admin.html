@@ -254,6 +254,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="deitybattlestats" data-group="deities" onclick="showTab('deitybattlestats')">Deity Battle Stats</button>
       <button class="tab-btn" data-tab="deitygearcatalog" data-group="deities" onclick="showTab('deitygearcatalog')">Deity Gear Catalog</button>
       <button class="tab-btn" data-tab="deitygearsetbonuses" data-group="deities" onclick="showTab('deitygearsetbonuses')">Deity Gear Set Bonuses</button>
+      <button class="tab-btn" data-tab="chaosentities" data-group="deities" onclick="showTab('chaosentities')">Chaos Entity Roster</button>
+      <button class="tab-btn" data-tab="deitycampaign" data-group="deities" onclick="showTab('deitycampaign')">Deity Campaign</button>
       <button class="tab-btn" data-tab="maphotspots" data-group="site" onclick="showTab('maphotspots')">Backgrounds &amp; Hotspots</button>
       <button class="tab-btn" data-tab="guide" data-group="site" onclick="showTab('guide')">Narrator/Guide</button>
       <button class="tab-btn" data-tab="credits" data-group="site" onclick="showTab('credits')">Credits</button>
@@ -2313,6 +2315,114 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
           <button id="addDeitySetBonusBtn">Add threshold</button>
         </div>
         <div class="status" id="newDeitySetBonusStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== CHAOS ENTITY ROSTER ============================== -->
+    <div class="tab-content" id="tab-chaosentities">
+      <div class="card">
+        <h2>Chaos Entity Roster (Phase 2)</h2>
+        <p class="hint">The Deity Campaign's antagonists — primordial-disorder concepts drawn from real world mythology (the raw chaos every pantheon's own creation myth had to push back to give the world its shape), deliberately distinct from the 167 playable deities. Affinity may be left blank for a truly neutral chaos force (wheelMultiplier treats a missing affinity as neutral 1.0, same rule used everywhere else in this game). Tier is just a display/ordering hint — actual difficulty comes from the stats below.</p>
+        <div class="scroll-table" style="max-height:460px;">
+          <table>
+            <thead><tr><th>Key</th><th>Name</th><th>Title</th><th>Description</th><th>Affinity</th><th>Vit</th><th>Might</th><th>Ward</th><th>Swift</th><th>Cunning</th><th>Tier</th><th>Power move</th><th>Control move</th><th>Active</th></tr></thead>
+            <tbody id="chaosEntityRows"><tr><td colspan="14">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveChaosEntitiesBtn">Save changes</button>
+          <div class="status" id="chaosEntityStatus"></div>
+        </div>
+        <h3>Add a new chaos entity</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newChaosEntityKey" style="max-width:150px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newChaosEntityName" style="max-width:160px;"></div>
+          <div class="field"><label>Title</label><input type="text" id="newChaosEntityTitle" style="max-width:200px;"></div>
+          <div class="field"><label>Affinity (optional)</label>
+            <select id="newChaosEntityAffinity" style="max-width:140px;">
+              <option value="">— none (neutral) —</option>
+              <option value="fire">fire</option><option value="sea">sea</option><option value="storm">storm</option><option value="earth">earth</option>
+              <option value="death">death</option><option value="shadow">shadow</option><option value="war">war</option><option value="light">light</option>
+            </select>
+          </div>
+          <div class="field"><label>Tier</label><input type="number" min="0" id="newChaosEntityTier" style="max-width:90px;" value="1"></div>
+          <button id="addChaosEntityBtn">Add entity</button>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Vitality</label><input type="number" min="1" id="newChaosEntityVitality" style="max-width:90px;"></div>
+          <div class="field"><label>Might</label><input type="number" min="1" id="newChaosEntityMight" style="max-width:90px;"></div>
+          <div class="field"><label>Ward</label><input type="number" min="1" id="newChaosEntityWard" style="max-width:90px;"></div>
+          <div class="field"><label>Swiftness</label><input type="number" min="1" id="newChaosEntitySwiftness" style="max-width:90px;"></div>
+          <div class="field"><label>Cunning</label><input type="number" min="1" id="newChaosEntityCunning" style="max-width:90px;"></div>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description / flavor text (shown to players)</label>
+          <input type="text" id="newChaosEntityDescription" style="max-width:none;">
+        </div>
+        <div class="status" id="newChaosEntityStatus"></div>
+      </div>
+    </div>
+
+    <!-- ============================== DEITY CAMPAIGN ============================== -->
+    <div class="tab-content" id="tab-deitycampaign">
+      <div class="card">
+        <h2>Deity Campaign — Chapters (Phase 2)</h2>
+        <p class="hint">"War on Chaos" — deities fight the Chaos Entity Roster directly (no Guardian involved). Parallel to the regular Campaign's chapters, but simpler: no required level or completion bundle, since a deity's own level/gear gate is what matters here.</p>
+        <div class="scroll-table" style="max-height:320px;">
+          <table>
+            <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Sort order</th><th>Active</th></tr></thead>
+            <tbody id="deityCampaignChapterRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveDeityCampaignChaptersBtn">Save changes</button>
+          <div class="status" id="deityCampaignChapterStatus"></div>
+        </div>
+        <h3>Add a new chapter</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newDeityCampaignChapterKey" style="max-width:180px;"></div>
+          <div class="field"><label>Name</label><input type="text" id="newDeityCampaignChapterName" style="max-width:200px;"></div>
+          <div class="field"><label>Sort order</label><input type="number" id="newDeityCampaignChapterSort" style="max-width:90px;" value="0"></div>
+          <button id="addDeityCampaignChapterBtn">Add chapter</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (shown to players)</label>
+          <input type="text" id="newDeityCampaignChapterDescription" style="max-width:none;">
+        </div>
+        <div class="status" id="newDeityCampaignChapterStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Deity Campaign — Encounters</h2>
+        <p class="hint">One encounter = one Chaos Entity fight. First clear pays XP first; every clear after that (deity_campaign_progress.clear_count) pays the smaller XP replay instead — same convention the regular Campaign uses for replays.</p>
+        <div class="scroll-table" style="max-height:420px;">
+          <table>
+            <thead><tr><th>Key</th><th>Chapter</th><th>Name</th><th>Description</th><th>Sort order</th><th>Chaos entity</th><th>XP first</th><th>XP replay</th><th>Reward package</th><th>Active</th></tr></thead>
+            <tbody id="deityCampaignEncounterRows"><tr><td colspan="10">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveDeityCampaignEncountersBtn">Save changes</button>
+          <div class="status" id="deityCampaignEncounterStatus"></div>
+        </div>
+        <h3>Add a new encounter</h3>
+        <div class="form-row">
+          <div class="field"><label>Key (lowercase, no spaces)</label><input type="text" id="newDeityCampaignEncounterKey" style="max-width:180px;"></div>
+          <div class="field"><label>Chapter</label><select id="newDeityCampaignEncounterChapter" style="max-width:200px;"></select></div>
+          <div class="field"><label>Name</label><input type="text" id="newDeityCampaignEncounterName" style="max-width:200px;"></div>
+          <div class="field"><label>Sort order</label><input type="number" id="newDeityCampaignEncounterSort" style="max-width:90px;" value="0"></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Chaos entity</label><select id="newDeityCampaignEncounterEntity" style="max-width:200px;"></select></div>
+          <div class="field"><label>XP first clear</label><input type="number" min="0" id="newDeityCampaignEncounterXp" style="max-width:100px;" value="0"></div>
+          <div class="field"><label>XP replay</label><input type="number" min="0" id="newDeityCampaignEncounterReplayXp" style="max-width:100px;" value="0"></div>
+          <button id="addDeityCampaignEncounterBtn">Add encounter</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Description (shown to players)</label>
+          <input type="text" id="newDeityCampaignEncounterDescription" style="max-width:none;">
+        </div>
+        <div class="status" id="newDeityCampaignEncounterStatus"></div>
       </div>
     </div>
 
@@ -4513,6 +4623,9 @@ async function handleSession(session){
   loadDeityBattleStats();
   loadDeityGearCatalog();
   loadDeityGearSetBonuses();
+  loadChaosEntities().then(() => {
+    loadDeityCampaignChapters().then(() => loadDeityCampaignEncounters());
+  });
   loadCirclePatronBonuses();
   loadLootSettings();
   loadGuardianItemCatalog();
@@ -5501,6 +5614,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addDeityGearBtn').addEventListener('click', addDeityGearCatalog);
   document.getElementById('saveDeityGearSetBonusesBtn').addEventListener('click', saveDeityGearSetBonuses);
   document.getElementById('addDeitySetBonusBtn').addEventListener('click', addDeitySetBonus);
+  document.getElementById('saveChaosEntitiesBtn').addEventListener('click', saveChaosEntities);
+  document.getElementById('addChaosEntityBtn').addEventListener('click', addChaosEntity);
+  document.getElementById('saveDeityCampaignChaptersBtn').addEventListener('click', saveDeityCampaignChapters);
+  document.getElementById('addDeityCampaignChapterBtn').addEventListener('click', addDeityCampaignChapter);
+  document.getElementById('saveDeityCampaignEncountersBtn').addEventListener('click', saveDeityCampaignEncounters);
+  document.getElementById('addDeityCampaignEncounterBtn').addEventListener('click', addDeityCampaignEncounter);
 
   document.getElementById('saveCircleBonusesBtn').addEventListener('click', saveCirclePatronBonuses);
   document.getElementById('saveCircleShopBtn').addEventListener('click', saveCircleShopCatalog);
@@ -12123,6 +12242,316 @@ async function addDeitySetBonus(){
   status.className = 'status ok'; status.textContent = 'Threshold added — edit its bonus in the table above.';
   document.getElementById('newDeitySetBonusKey').value = '';
   loadDeityGearSetBonuses();
+}
+
+/* =====================================================================
+   CHAOS ENTITY ROSTER (Phase 2) — the Deity Campaign's antagonists.
+   Entity fields live in chaos_entities; each entity's power/control moves
+   live in chaos_entity_moves (entity_key, kind) -> move_key, joined
+   client-side exactly the way deityMoveOverrides joins deity_moves onto
+   FLAT_DEITIES above.
+   ===================================================================== */
+
+let chaosEntityCache = []; // chaos_entities rows, refreshed by loadChaosEntities() — feeds the Deity Campaign Encounters tab's Chaos entity dropdown
+let chaosEntityMoveOverrides = {}; // entity_key -> { power: row|null, control: row|null }
+
+function chaosAffinityOptionsHtml(current){
+  return '<option value="">— none (neutral) —</option>' +
+    ['fire','sea','storm','earth','death','shadow','war','light']
+      .map(a => `<option value="${a}" ${a === current ? 'selected' : ''}>${a}</option>`).join('');
+}
+
+async function loadChaosEntities(){
+  const [entitiesRes, movesRes] = await Promise.all([
+    supabaseClient.from('chaos_entities').select('*').order('tier', { ascending: true }),
+    supabaseClient.from('chaos_entity_moves').select('*')
+  ]);
+  const rows = document.getElementById('chaosEntityRows');
+  if(entitiesRes.error){ rows.innerHTML = '<tr><td colspan="14">Failed to load: ' + esc(entitiesRes.error.message) + '</td></tr>'; return; }
+  chaosEntityCache = entitiesRes.data || [];
+
+  chaosEntityMoveOverrides = {};
+  (movesRes.data || []).forEach(r => {
+    if(!chaosEntityMoveOverrides[r.entity_key]) chaosEntityMoveOverrides[r.entity_key] = {};
+    chaosEntityMoveOverrides[r.entity_key][r.kind] = r;
+  });
+  if(movesRes.error) console.error('chaos_entity_moves load failed', movesRes.error);
+
+  rows.innerHTML = chaosEntityCache.map(c => {
+    const o = chaosEntityMoveOverrides[c.key] || {};
+    const power = o.power || {};
+    const control = o.control || {};
+    return `<tr data-key="${esc(c.key)}">
+    <td class="dim">${esc(c.key)}</td>
+    <td><input type="text" id="ceName_${esc(c.key)}" value="${esc(c.name)}" style="max-width:140px;"></td>
+    <td><input type="text" id="ceTitle_${esc(c.key)}" value="${esc(c.title || '')}" style="max-width:160px;"></td>
+    <td><input type="text" id="ceDesc_${esc(c.key)}" value="${esc(c.description || '')}" style="min-width:220px;"></td>
+    <td><select id="ceAffinity_${esc(c.key)}">${chaosAffinityOptionsHtml(c.affinity)}</select></td>
+    <td><input type="number" min="1" id="ceVitality_${esc(c.key)}" value="${c.vitality}" style="max-width:70px;"></td>
+    <td><input type="number" min="1" id="ceMight_${esc(c.key)}" value="${c.might}" style="max-width:70px;"></td>
+    <td><input type="number" min="1" id="ceWard_${esc(c.key)}" value="${c.ward}" style="max-width:70px;"></td>
+    <td><input type="number" min="1" id="ceSwiftness_${esc(c.key)}" value="${c.swiftness}" style="max-width:70px;"></td>
+    <td><input type="number" min="1" id="ceCunning_${esc(c.key)}" value="${c.cunning}" style="max-width:70px;"></td>
+    <td><input type="number" min="0" id="ceTier_${esc(c.key)}" value="${c.tier}" style="max-width:60px;"></td>
+    <td><select id="cePowerMove_${esc(c.key)}" style="max-width:220px;">${moveOptionsHtml('power', power.move_key || '', '— none —')}</select></td>
+    <td><select id="ceControlMove_${esc(c.key)}" style="max-width:220px;">${moveOptionsHtml('control', control.move_key || '', '— none —')}</select></td>
+    <td><input type="checkbox" id="ceActive_${esc(c.key)}" ${c.active ? 'checked' : ''}></td>
+  </tr>`;
+  }).join('') || '<tr><td colspan="14">No chaos entities yet — run migration 0159.</td></tr>';
+
+  populateDeityCampaignEncounterEntityOptions();
+}
+
+async function saveChaosEntities(){
+  const status = document.getElementById('chaosEntityStatus');
+  const trs = document.querySelectorAll('#chaosEntityRows tr[data-key]');
+  const entityRows = [];
+  const moveRows = [];
+  for(const tr of trs){
+    const key = tr.getAttribute('data-key');
+    entityRows.push({
+      key,
+      name: document.getElementById('ceName_' + key).value.trim(),
+      title: document.getElementById('ceTitle_' + key).value.trim(),
+      description: document.getElementById('ceDesc_' + key).value.trim(),
+      affinity: document.getElementById('ceAffinity_' + key).value || null,
+      vitality: parseInt(document.getElementById('ceVitality_' + key).value, 10) || 1,
+      might: parseInt(document.getElementById('ceMight_' + key).value, 10) || 1,
+      ward: parseInt(document.getElementById('ceWard_' + key).value, 10) || 1,
+      swiftness: parseInt(document.getElementById('ceSwiftness_' + key).value, 10) || 1,
+      cunning: parseInt(document.getElementById('ceCunning_' + key).value, 10) || 1,
+      tier: parseInt(document.getElementById('ceTier_' + key).value, 10) || 0,
+      active: document.getElementById('ceActive_' + key).checked,
+    });
+
+    const powerMoveKey = document.getElementById('cePowerMove_' + key).value || null;
+    const controlMoveKey = document.getElementById('ceControlMove_' + key).value || null;
+    const had = chaosEntityMoveOverrides[key] || {};
+    // Only write a move row if a move is picked or a row already exists
+    // there (same "clear via upsert" logic loadDeityMoves()/saveDeityMoves()
+    // already uses above) — leaving both blank is fine, the entity just
+    // fights with no power/control move that fight.
+    if(powerMoveKey || had.power) moveRows.push({ entity_key: key, kind: 'power', move_key: powerMoveKey });
+    if(controlMoveKey || had.control) moveRows.push({ entity_key: key, kind: 'control', move_key: controlMoveKey });
+  }
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error: entityError } = await supabaseClient.from('chaos_entities').upsert(entityRows, { onConflict: 'key' });
+  if(entityError){ status.className = 'status err'; status.textContent = 'Failed: ' + entityError.message; return; }
+  if(moveRows.length){
+    const { error: moveError } = await supabaseClient.from('chaos_entity_moves').upsert(moveRows, { onConflict: 'entity_key,kind' });
+    if(moveError){ status.className = 'status err'; status.textContent = 'Entity stats saved, but moves failed: ' + moveError.message; return; }
+  }
+  status.className = 'status ok'; status.textContent = 'Saved.';
+  loadChaosEntities();
+}
+
+async function addChaosEntity(){
+  const status = document.getElementById('newChaosEntityStatus');
+  const key = document.getElementById('newChaosEntityKey').value.trim().toLowerCase();
+  const name = document.getElementById('newChaosEntityName').value.trim();
+  const title = document.getElementById('newChaosEntityTitle').value.trim();
+  const description = document.getElementById('newChaosEntityDescription').value.trim();
+  const affinity = document.getElementById('newChaosEntityAffinity').value || null;
+  const tier = parseInt(document.getElementById('newChaosEntityTier').value, 10) || 0;
+  const vitality = parseInt(document.getElementById('newChaosEntityVitality').value, 10);
+  const might = parseInt(document.getElementById('newChaosEntityMight').value, 10);
+  const ward = parseInt(document.getElementById('newChaosEntityWard').value, 10);
+  const swiftness = parseInt(document.getElementById('newChaosEntitySwiftness').value, 10);
+  const cunning = parseInt(document.getElementById('newChaosEntityCunning').value, 10);
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  for(const [label, val] of [['Vitality', vitality], ['Might', might], ['Ward', ward], ['Swiftness', swiftness], ['Cunning', cunning]]){
+    if(isNaN(val) || val < 1){ status.className = 'status err'; status.textContent = label + ' must be a number of 1 or higher.'; return; }
+  }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  // Ships inactive by default, same "flip it on when it's ready" convention
+  // as every other freshly-authored catalog row in this project.
+  const { error } = await supabaseClient.from('chaos_entities').insert({
+    key, name, title, description, affinity, tier, vitality, might, ward, swiftness, cunning, active: false
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+
+  status.className = 'status ok';
+  status.textContent = name + ' added (inactive) — pick its moves in the table above, then flip Active on when ready.';
+  ['newChaosEntityKey','newChaosEntityName','newChaosEntityTitle','newChaosEntityDescription','newChaosEntityVitality','newChaosEntityMight','newChaosEntityWard','newChaosEntitySwiftness','newChaosEntityCunning'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newChaosEntityTier').value = '1';
+  loadChaosEntities();
+}
+
+/* =====================================================================
+   DEITY CAMPAIGN (Phase 2) — "War on Chaos." Structurally the same
+   chapter -> encounters shape as the regular Campaign tab
+   (loadCampaignChapters/loadCampaignEncounters above), simplified: no
+   required_level/completion bundle on chapters, no narrative encounter
+   type — every encounter is a straight deity-vs-chaos-entity fight.
+   ===================================================================== */
+
+let deityCampaignChaptersCache = []; // deity_campaign_chapters rows, refreshed by loadDeityCampaignChapters() — feeds the Encounters tab's Chapter dropdown
+
+function deityCampaignRewardOptions(selectedKey){
+  return '<option value="">No reward package</option>' +
+    giftableRewardsCache.map(r => `<option value="${esc(r.key)}" ${r.key === selectedKey ? 'selected' : ''}>${esc(r.name)}${r.active ? '' : ' (inactive)'}</option>`).join('');
+}
+
+function populateDeityCampaignEncounterChapterOptions(){
+  const sel = document.getElementById('newDeityCampaignEncounterChapter');
+  if(!sel) return;
+  const current = sel.value;
+  sel.innerHTML = deityCampaignChaptersCache.map(c => `<option value="${esc(c.key)}">${esc(c.name)}${c.active ? '' : ' (inactive)'}</option>`).join('');
+  if(current && deityCampaignChaptersCache.some(c => c.key === current)) sel.value = current;
+}
+
+function populateDeityCampaignEncounterEntityOptions(){
+  const sel = document.getElementById('newDeityCampaignEncounterEntity');
+  if(!sel) return;
+  const current = sel.value;
+  sel.innerHTML = chaosEntityCache.map(c => `<option value="${esc(c.key)}">${esc(c.name)}${c.active ? '' : ' (inactive)'}</option>`).join('');
+  if(current && chaosEntityCache.some(c => c.key === current)) sel.value = current;
+}
+
+async function loadDeityCampaignChapters(){
+  const { data, error } = await supabaseClient.from('deity_campaign_chapters').select('*').order('sort_order', { ascending: true });
+  const rows = document.getElementById('deityCampaignChapterRows');
+  if(error){ rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  deityCampaignChaptersCache = data || [];
+  rows.innerHTML = deityCampaignChaptersCache.map(c => `<tr data-key="${esc(c.key)}">
+    <td class="dim">${esc(c.key)}</td>
+    <td><input type="text" id="dccName_${esc(c.key)}" value="${esc(c.name)}"></td>
+    <td><input type="text" id="dccDesc_${esc(c.key)}" value="${esc(c.description || '')}" style="min-width:240px;"></td>
+    <td><input type="number" id="dccSort_${esc(c.key)}" value="${c.sort_order}" style="max-width:80px;"></td>
+    <td><input type="checkbox" id="dccActive_${esc(c.key)}" ${c.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="5">No chapters yet.</td></tr>';
+
+  populateDeityCampaignEncounterChapterOptions();
+}
+
+async function saveDeityCampaignChapters(){
+  const status = document.getElementById('deityCampaignChapterStatus');
+  const trs = document.querySelectorAll('#deityCampaignChapterRows tr[data-key]');
+  const rows = Array.from(trs).map(tr => {
+    const key = tr.getAttribute('data-key');
+    return {
+      key,
+      name: document.getElementById('dccName_' + key).value.trim(),
+      description: document.getElementById('dccDesc_' + key).value.trim(),
+      sort_order: parseInt(document.getElementById('dccSort_' + key).value, 10) || 0,
+      active: document.getElementById('dccActive_' + key).checked
+    };
+  });
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('deity_campaign_chapters').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadDeityCampaignChapters();
+}
+
+async function addDeityCampaignChapter(){
+  const status = document.getElementById('newDeityCampaignChapterStatus');
+  const key = document.getElementById('newDeityCampaignChapterKey').value.trim().toLowerCase();
+  const name = document.getElementById('newDeityCampaignChapterName').value.trim();
+  const description = document.getElementById('newDeityCampaignChapterDescription').value.trim();
+  const sortOrder = parseInt(document.getElementById('newDeityCampaignChapterSort').value, 10) || 0;
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('deity_campaign_chapters').insert({ key, name, description, sort_order: sortOrder, active: false });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+
+  status.className = 'status ok';
+  status.textContent = name + ' added (inactive) — add encounters below, then flip Active on when ready.';
+  ['newDeityCampaignChapterKey','newDeityCampaignChapterName','newDeityCampaignChapterDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newDeityCampaignChapterSort').value = '0';
+  loadDeityCampaignChapters();
+}
+
+async function loadDeityCampaignEncounters(){
+  const { data, error } = await supabaseClient.from('deity_campaign_encounters').select('*').order('sort_order', { ascending: true });
+  const rows = document.getElementById('deityCampaignEncounterRows');
+  if(error){ rows.innerHTML = '<tr><td colspan="10">Failed to load: ' + esc(error.message) + '</td></tr>'; return; }
+  rows.innerHTML = (data || []).map(e => `<tr data-key="${esc(e.key)}">
+    <td class="dim">${esc(e.key)}</td>
+    <td>
+      <select id="decChapter_${esc(e.key)}">
+        ${deityCampaignChaptersCache.map(c => `<option value="${esc(c.key)}" ${c.key === e.chapter_key ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="text" id="decName_${esc(e.key)}" value="${esc(e.name)}" style="max-width:160px;"></td>
+    <td><input type="text" id="decDesc_${esc(e.key)}" value="${esc(e.description || '')}" style="min-width:200px;"></td>
+    <td><input type="number" id="decSort_${esc(e.key)}" value="${e.sort_order}" style="max-width:70px;"></td>
+    <td>
+      <select id="decEntity_${esc(e.key)}">
+        ${chaosEntityCache.map(c => `<option value="${esc(c.key)}" ${c.key === e.chaos_entity_key ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="number" min="0" id="decXp_${esc(e.key)}" value="${e.xp_reward}" style="max-width:80px;"></td>
+    <td><input type="number" min="0" id="decReplayXp_${esc(e.key)}" value="${e.replay_xp_reward}" style="max-width:80px;"></td>
+    <td><select id="decReward_${esc(e.key)}">${deityCampaignRewardOptions(e.reward_key)}</select></td>
+    <td><input type="checkbox" id="decActive_${esc(e.key)}" ${e.active ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="10">No encounters yet.</td></tr>';
+}
+
+async function saveDeityCampaignEncounters(){
+  const status = document.getElementById('deityCampaignEncounterStatus');
+  const trs = document.querySelectorAll('#deityCampaignEncounterRows tr[data-key]');
+  const rows = [];
+  for(const tr of Array.from(trs)){
+    const key = tr.getAttribute('data-key');
+    const entityKey = document.getElementById('decEntity_' + key).value;
+    if(!entityKey){ status.className = 'status err'; status.textContent = `Encounter "${key}" needs a Chaos entity selected.`; return; }
+    rows.push({
+      key,
+      chapter_key: document.getElementById('decChapter_' + key).value,
+      name: document.getElementById('decName_' + key).value.trim(),
+      description: document.getElementById('decDesc_' + key).value.trim(),
+      sort_order: parseInt(document.getElementById('decSort_' + key).value, 10) || 0,
+      chaos_entity_key: entityKey,
+      xp_reward: parseInt(document.getElementById('decXp_' + key).value, 10) || 0,
+      replay_xp_reward: parseInt(document.getElementById('decReplayXp_' + key).value, 10) || 0,
+      reward_key: document.getElementById('decReward_' + key).value || null,
+      active: document.getElementById('decActive_' + key).checked
+    });
+  }
+  status.className = 'status'; status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('deity_campaign_encounters').upsert(rows, { onConflict: 'key' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadDeityCampaignEncounters();
+}
+
+async function addDeityCampaignEncounter(){
+  const status = document.getElementById('newDeityCampaignEncounterStatus');
+  const key = document.getElementById('newDeityCampaignEncounterKey').value.trim().toLowerCase();
+  const chapterKey = document.getElementById('newDeityCampaignEncounterChapter').value;
+  const name = document.getElementById('newDeityCampaignEncounterName').value.trim();
+  const description = document.getElementById('newDeityCampaignEncounterDescription').value.trim();
+  const sortOrder = parseInt(document.getElementById('newDeityCampaignEncounterSort').value, 10) || 0;
+  const entityKey = document.getElementById('newDeityCampaignEncounterEntity').value;
+  const xpReward = parseInt(document.getElementById('newDeityCampaignEncounterXp').value, 10) || 0;
+  const replayXpReward = parseInt(document.getElementById('newDeityCampaignEncounterReplayXp').value, 10) || 0;
+
+  if(!/^[a-z0-9_]+$/.test(key)){ status.className = 'status err'; status.textContent = 'Key must be lowercase letters/numbers/underscores only.'; return; }
+  if(!chapterKey){ status.className = 'status err'; status.textContent = 'Add a chapter first — every encounter needs one.'; return; }
+  if(!name){ status.className = 'status err'; status.textContent = 'Name is required.'; return; }
+  if(!entityKey){ status.className = 'status err'; status.textContent = 'Add a chaos entity first — every encounter needs one.'; return; }
+
+  status.className = 'status'; status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('deity_campaign_encounters').insert({
+    key, chapter_key: chapterKey, name, description, sort_order: sortOrder,
+    chaos_entity_key: entityKey, xp_reward: xpReward, replay_xp_reward: replayXpReward, active: false
+  });
+  if(error){ status.className = 'status err'; status.textContent = error.code === '23505' ? 'That key is already in use.' : ('Failed: ' + error.message); return; }
+
+  status.className = 'status ok';
+  status.textContent = name + ' added (inactive) — flip Active on in the table above when ready.';
+  ['newDeityCampaignEncounterKey','newDeityCampaignEncounterName','newDeityCampaignEncounterDescription'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newDeityCampaignEncounterSort').value = '0';
+  document.getElementById('newDeityCampaignEncounterXp').value = '0';
+  document.getElementById('newDeityCampaignEncounterReplayXp').value = '0';
+  loadDeityCampaignEncounters();
 }
 
 /* =====================================================================
