@@ -4858,6 +4858,7 @@ function backFromDeityCampaign(){
 
 function renderDeityCampaign(){
   if(deityCampaignView.step === 'pickDeity') return renderDeityCampaignPickDeity();
+  if(deityCampaignView.step === 'battle') return renderDeityCampaignBattle();
   if(deityCampaignView.step === 'result') return renderDeityCampaignResult();
   return renderDeityCampaignBrowse();
 }
@@ -4949,7 +4950,7 @@ function renderDeityCampaignPickDeity(){
         ${portrait}
         <div><div class="rname">${esc(name)}</div><div class="cblurb">Level ${d.level}</div></div>
       </div>
-      <div class="ractions"><button class="secondary" onclick="doFightChaosEntity('${esc(v.encounterKey)}', '${esc(d.deityId)}')">Field this deity</button></div>
+      <div class="ractions"><button class="secondary" onclick="startChaosBattle('${esc(v.encounterKey)}', '${esc(d.deityId)}')">Field this deity</button></div>
     </div>`;
   }).join('') : '<p class="hint">No deity is battle-ready yet — outfit one in the Deity Battle Catalogue first.</p>';
   app.innerHTML = `
@@ -4972,68 +4973,270 @@ function backFromDeityCampaignPickDeity(){
   render();
 }
 
-async function doFightChaosEntity(encounterKey, deityId){
+// v2 — turn-based rework. Direct feedback: "the war on chaos fighting
+// should be executed the same as the campaign battles we want health
+// bars and turn for turn and move selection and item selection all of
+// that should be there it shouldn't auto end after just a second." The
+// old doFightChaosEntity() fired one "fight" call that resolved (and
+// displayed) an entire multi-round duel instantly. It's replaced by the
+// same two-function shape Gauntlet/Campaign fights already use —
+// startChaosBattle() (mirrors startBattle()) opens a persisted
+// chaos_battles row and lands on the live battle screen below;
+// actChaosMove() (mirrors actMove()) resolves one round per click, with
+// the same sleep()-paced HP-bar animation.
+async function startChaosBattle(encounterKey, deityId){
   const status = document.getElementById('deityCampaignPickStatus');
-  if(status){ status.className = 'status'; status.textContent = 'The fight is joined…'; }
+  if(status){ status.className = 'status'; status.textContent = 'Opening the encounter…'; }
+  const pantheonId = deityPantheonFor(deityId);
+  const nameEntry = pantheonId ? CATALOG[pantheonId].deities.find(([id]) => id === deityId) : null;
+  const deityName = nameEntry ? nameEntry[1] : deityId;
   try{
     const resp = await fetch(FUNCTIONS_URL + '/deity-campaign', {
       method: 'POST', headers: await petitionHeaders(),
-      body: JSON.stringify({ action: 'fight', encounterKey, deityId, guardianId: guardian ? guardian.id : undefined })
+      body: JSON.stringify({ action: 'start', encounterKey, deityId, guardianId: guardian ? guardian.id : undefined })
     });
     const data = await resp.json();
-    if(!data.ok){ if(status){ status.className = 'status err'; status.textContent = data.error || 'Could not resolve that fight.'; } return; }
-    deityCampaignView = { step: 'result', ...data };
-    await loadDeityCampaignData();
+    if(!data.ok){ if(status){ status.className = 'status err'; status.textContent = data.error || 'Could not open that encounter.'; } return; }
+    deityCampaignView = {
+      step: 'battle', encounterKey,
+      battleId: data.battleId,
+      deityId: data.deityId || deityId, deityName,
+      chaosEntityKey: data.chaosEntityKey, chaosEntityName: data.chaosEntityName,
+      chaosEntityImageUrl: data.chaosEntityImageUrl, chaosEntityAffinity: data.chaosEntityAffinity,
+      deityHp: data.deityHp, deityMaxHp: data.deityMaxHp,
+      chaosHp: data.chaosHp, chaosMaxHp: data.chaosMaxHp,
+      moves: data.moves, log: []
+    };
     render();
   }catch(e){
     if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
   }
 }
 
-// Per-event line formatting — same phrasing rules as renderBattleScreen()'s
-// own log (round/burn/poison/stun/dodge/support/crit/effects), adapted for
-// a flat events[] array (one full duel resolved in a single call, not a
-// series of polled rounds) and actor "a"/"b" instead of "guardian"/
-// "opponent"/"mage".
-function deityCampaignEventLine(e, aName, bName){
-  const who = e.actor === 'a' ? esc(aName) : esc(bName);
-  const defender = e.actor === 'a' ? esc(bName) : esc(aName);
-  if(e.move === undefined && e.burnTick !== undefined) return `<div class="entry burntick">Round ${e.round}: ${who} takes ${e.burnTick} burn damage.</div>`;
-  if(e.move === undefined && e.poisonTick !== undefined) return `<div class="entry poisontick">Round ${e.round}: ${who} takes ${e.poisonTick} poison damage.</div>`;
-  if(e.move === undefined && e.customDotTick !== undefined) return `<div class="entry poisontick">Round ${e.round}: ${who} suffers ${e.customDotTick} damage from ${esc((e.effectKey || '').replace(/_/g, ' '))}.</div>`;
-  if(e.move === undefined && e.stunned) return `<div class="entry stunskip">Round ${e.round}: ${who} is stunned and cannot act!</div>`;
-  if(e.dodged) return `<div class="entry dodgeskip">Round ${e.round}: ${who} attacks — ${defender} dodges!</div>`;
-  if(e.support){
-    const healText = e.healed ? ` and heals for ${e.healed} HP` : '';
-    return `<div class="entry heal">Round ${e.round}: ${who} used ${esc(e.move)}${healText}.</div>`;
-  }
-  const tag = e.crit ? ' (critical!)' : (e.control ? ' (swiftness shaved)' : '');
-  const extra = (e.healed ? ` (+${e.healed} lifesteal)` : '') + (e.stunned ? ' (stunned!)' : '') + (e.burn ? ' (burning)' : '') +
-    (e.poison ? ' (poisoned)' : '') + (e.weakened ? ' (weakened)' : '') + (e.vulnerable ? ' (vulnerable)' : '') +
-    (e.shieldGranted ? ' (shielded)' : '') + (e.shieldAbsorbed ? ` (shield absorbed ${e.shieldAbsorbed})` : '');
-  return `<div class="entry${e.crit ? ' crit' : ''}">Round ${e.round}: ${who} used ${esc(e.move)}${tag} — ${e.damage} damage${extra}.</div>`;
+// Mid-fight cure items — same out-of-turn shape as battleCureItemsHtml()
+// (Gauntlet/Campaign), just pointed at the chaosBattleId param
+// doUseItem()/craft/index.ts's use-item action now both accept.
+function deityBattleCureItemsHtml(){
+  if(!deityCampaignView || !deityCampaignView.battleId) return '';
+  const items = craftInventory.filter(it => {
+    if(it.consumed_at) return false;
+    const cat = craftCatalog.find(c => c.key === it.item_key);
+    return cat && cat.item_type === 'consumable' && cat.consumable_effect === 'cure_status';
+  });
+  if(!items.length) return '';
+  const buttons = items.map(it => {
+    const cat = craftCatalog.find(c => c.key === it.item_key);
+    return `<button class="secondary" onclick="doUseItem('${esc(it.id)}', null, null, '${esc(deityCampaignView.battleId)}')">${esc(cat.name)}</button>`;
+  }).join('');
+  return `<div class="move-row" style="margin-top:6px;">${buttons}</div>`;
 }
 
+// Own move-callout labeler, separate from combatActorLabel() — that one
+// is hardwired to combatView (guardian/opponent/mage); this fight has no
+// Mage and reads its two names off deityCampaignView instead.
+function deityBattleActorLabel(actor){
+  return actor === 'deity' ? esc(deityCampaignView.deityName) : esc(deityCampaignView.chaosEntityName || 'The foe');
+}
+function showDeityBattleMoveCallout(actor, moveName, moveDescription){
+  const el = document.getElementById('moveCallout');
+  if(!el || !moveName) return;
+  el.hidden = false;
+  el.innerHTML = `<div class="mc-name">${deityBattleActorLabel(actor)} uses ${esc(moveName)}</div>${moveDescription ? `<div class="mc-desc">${esc(moveDescription)}</div>` : ''}`;
+}
+
+// The live, in-progress fight screen — structurally identical to
+// renderBattleScreen() (Gauntlet/Campaign): real HP bars, a move-button
+// row, the same mid-fight cure-item row, and a growing round-by-round
+// log. Reuses the EXACT same #gHpWrap/#gHpFill/#gHpText/#oHpWrap/
+// #oHpFill/#oHpText DOM ids (deity in the "g" slot, chaos entity in the
+// "o" slot) so actChaosMove() below can drive the very same
+// animateHit()/animateBurnTick()/animatePoisonTick()/animateStunSkip()/
+// animateDodge()/animateHeal()/animateStatusProc() functions
+// combat/index.ts's own battle screen already uses, unmodified — one
+// visual system for every turn-based fight in the game, not a second
+// copy for this one.
+function renderDeityCampaignBattle(){
+  document.body.classList.add('hub-active');
+  const app = document.getElementById('app');
+  const v = deityCampaignView;
+  const dPct = Math.max(0, Math.round((v.deityHp / v.deityMaxHp) * 100));
+  const cPct = Math.max(0, Math.round((v.chaosHp / v.chaosMaxHp) * 100));
+  const moveButtons = (v.moves || []).map((label, i) =>
+    `<button class="move-btn" onclick="actChaosMove(${i})">${esc(label)}</button>`
+  ).join('');
+  const logHtml = v.log.slice().reverse().map(entry => entry.events.map(e => {
+    const who = e.actor === 'deity' ? esc(v.deityName) : esc(v.chaosEntityName || 'The foe');
+    const defender = e.actor === 'deity' ? esc(v.chaosEntityName || 'The foe') : esc(v.deityName);
+    if(e.move === undefined && e.burnTick !== undefined) return `<div class="entry burntick">Round ${entry.round}: ${who} takes ${e.burnTick} burn damage.</div>`;
+    if(e.move === undefined && e.poisonTick !== undefined) return `<div class="entry poisontick">Round ${entry.round}: ${who} takes ${e.poisonTick} poison damage.</div>`;
+    if(e.move === undefined && e.customDotTick !== undefined) return `<div class="entry poisontick">Round ${entry.round}: ${who} suffers ${e.customDotTick} damage from ${esc((e.effectKey || '').replace(/_/g, ' '))}.</div>`;
+    if(e.move === undefined && e.stunned) return `<div class="entry stunskip">Round ${entry.round}: ${who} is stunned and cannot act!</div>`;
+    if(e.dodged) return `<div class="entry dodgeskip">Round ${entry.round}: ${who} attacks — ${defender} dodges!</div>`;
+    if(e.support){
+      const healText = e.healed ? ` and heals for ${e.healed} HP` : '';
+      return `<div class="entry heal">Round ${entry.round}: ${who} used ${esc(e.move)}${healText}.</div>`;
+    }
+    const tag = e.crit ? ' (critical!)' : (e.control ? ' (swiftness shaved)' : '');
+    const extra = (e.healed ? ` (+${e.healed} lifesteal)` : '') + (e.stunned ? ' (stunned!)' : '') + (e.burn ? ' (burning)' : '') +
+      (e.poison ? ' (poisoned)' : '') + (e.weakened ? ' (weakened)' : '') + (e.vulnerable ? ' (vulnerable)' : '') +
+      (e.shieldGranted ? ' (shielded)' : '') + (e.shieldAbsorbed ? ` (shield absorbed ${e.shieldAbsorbed})` : '');
+    return `<div class="entry${e.crit ? ' crit' : ''}">Round ${entry.round}: ${who} used ${esc(e.move)}${tag} — ${e.damage} damage${extra}.</div>`;
+  }).join('')).join('');
+
+  app.innerHTML = `
+    <div class="hub-screen">
+      <div class="hub-box"${bgAttrPlainOrUrl('deityCampaign', v.chaosEntityImageUrl)}>
+        <div class="hub-overlay">
+          <h2 style="text-align:center;">${esc(v.deityName)} vs. ${esc(v.chaosEntityName || 'the foe')}</h2>
+          <div class="battle-arena">
+            <div class="battle-side">
+              <div class="battle-sprite">${opponentImgFor(shopDeityPortraitUrl(v.deityId), null, 110)}</div>
+              <div class="hp-wrap" id="gHpWrap">
+                <div class="hp-row"><span class="hp-name">${esc(v.deityName)}</span><span class="hp-name" id="gHpText">${v.deityHp} / ${v.deityMaxHp}</span></div>
+                <div class="hp-bar-track"><div class="hp-bar-fill" id="gHpFill" style="width:${dPct}%;"></div></div>
+              </div>
+            </div>
+            <div class="battle-vs">VS</div>
+            <div class="battle-side">
+              <div class="battle-sprite">${opponentImgFor(v.chaosEntityImageUrl, v.chaosEntityAffinity, 110)}</div>
+              <div class="hp-wrap" id="oHpWrap">
+                <div class="hp-row"><span class="hp-name">${esc(v.chaosEntityName || 'The Foe')}</span><span class="hp-name" id="oHpText">${v.chaosHp} / ${v.chaosMaxHp}</span></div>
+                <div class="hp-bar-track"><div class="hp-bar-fill opponent" id="oHpFill" style="width:${cPct}%;"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="move-callout" id="moveCallout" hidden></div>
+          <div class="move-row" id="moveRow">${moveButtons}</div>
+          ${deityBattleCureItemsHtml()}
+          <div class="status" id="battleStatus"></div>
+          <div class="battle-log">${logHtml || '<div class="entry">The fight has not yet begun its first round.</div>'}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// One round per click — same event-by-event animation pacing as actMove()
+// (Gauntlet/Campaign), reusing its exact animate*() functions by treating
+// actor:"deity" as the "guardian" HP-bar slot and actor:"chaos" as the
+// "opponent" slot (see renderDeityCampaignBattle()'s DOM-id comment).
+async function actChaosMove(moveIndex){
+  const status = document.getElementById('battleStatus');
+  const row = document.getElementById('moveRow');
+  if(row) Array.from(row.querySelectorAll('button')).forEach(b => b.disabled = true);
+  if(status){ status.className = 'status'; status.textContent = 'The blow lands…'; }
+
+  try{
+    const resp = await fetch(FUNCTIONS_URL + '/deity-campaign', {
+      method: 'POST', headers: await petitionHeaders(),
+      body: JSON.stringify({ action: 'act', battleId: deityCampaignView.battleId, moveIndex })
+    });
+    const data = await resp.json();
+    if(!data.ok){
+      if(status){ status.className = 'status err'; status.textContent = data.error || 'The round did not resolve.'; }
+      if(row) Array.from(row.querySelectorAll('button')).forEach(b => b.disabled = false);
+      return;
+    }
+
+    let dHp = deityCampaignView.deityHp, cHp = deityCampaignView.chaosHp;
+    for(const ev of data.events){
+      if(ev.move === undefined && ev.burnTick !== undefined){
+        if(ev.actor === 'deity') dHp = Math.max(0, dHp - ev.burnTick); else cHp = Math.max(0, cHp - ev.burnTick);
+        animateBurnTick(ev.actor === 'deity' ? 'guardian' : 'opponent', ev.burnTick, ev.actor === 'deity' ? dHp : cHp,
+          ev.actor === 'deity' ? deityCampaignView.deityMaxHp : deityCampaignView.chaosMaxHp);
+        await sleep(900);
+        continue;
+      }
+      if(ev.move === undefined && ev.poisonTick !== undefined){
+        if(ev.actor === 'deity') dHp = Math.max(0, dHp - ev.poisonTick); else cHp = Math.max(0, cHp - ev.poisonTick);
+        animatePoisonTick(ev.actor === 'deity' ? 'guardian' : 'opponent', ev.poisonTick, ev.actor === 'deity' ? dHp : cHp,
+          ev.actor === 'deity' ? deityCampaignView.deityMaxHp : deityCampaignView.chaosMaxHp);
+        await sleep(900);
+        continue;
+      }
+      if(ev.move === undefined && ev.stunned){
+        animateStunSkip(ev.actor === 'deity' ? 'guardian' : 'opponent');
+        await sleep(900);
+        continue;
+      }
+      if(ev.dodged){
+        showDeityBattleMoveCallout(ev.actor, ev.move, ev.moveDescription);
+        animateDodge(ev.actor === 'deity' ? 'opponent' : 'guardian');
+        await sleep(900);
+        continue;
+      }
+      showDeityBattleMoveCallout(ev.actor, ev.move, ev.moveDescription);
+      const targetIsChaos = ev.actor === 'deity';
+      if(targetIsChaos) cHp = Math.max(0, cHp - ev.damage); else dHp = Math.max(0, dHp - ev.damage);
+      animateHit(
+        targetIsChaos ? 'opponent' : 'guardian', ev.damage, ev.crit, ev.control,
+        targetIsChaos ? cHp : dHp,
+        targetIsChaos ? deityCampaignView.chaosMaxHp : deityCampaignView.deityMaxHp,
+        ev.affinity, ev.particleKey
+      );
+      await sleep(1000);
+
+      if(ev.stunned){ animateStatusProc(targetIsChaos ? 'opponent' : 'guardian', 'stun'); await sleep(500); }
+      if(ev.burn){ animateStatusProc(targetIsChaos ? 'opponent' : 'guardian', 'burn'); await sleep(500); }
+      if(ev.poison){ animateStatusProc(targetIsChaos ? 'opponent' : 'guardian', 'poison'); await sleep(500); }
+      if(ev.weakened){ animateStatusProc(targetIsChaos ? 'opponent' : 'guardian', 'weaken'); await sleep(500); }
+      if(ev.vulnerable){ animateStatusProc(targetIsChaos ? 'opponent' : 'guardian', 'vulnerable'); await sleep(500); }
+      if(ev.shieldGranted){ animateStatusProc(ev.actor === 'deity' ? 'guardian' : 'opponent', 'shield'); await sleep(500); }
+      if(ev.shieldAbsorbed){ animateStatusProc(targetIsChaos ? 'opponent' : 'guardian', 'shield'); await sleep(500); }
+      if(ev.healed){
+        if(ev.actor === 'deity'){
+          dHp = Math.min(deityCampaignView.deityMaxHp, dHp + ev.healed);
+          animateHeal('guardian', ev.healed, dHp, deityCampaignView.deityMaxHp);
+        } else {
+          cHp = Math.min(deityCampaignView.chaosMaxHp, cHp + ev.healed);
+          animateHeal('opponent', ev.healed, cHp, deityCampaignView.chaosMaxHp);
+        }
+        await sleep(600);
+      }
+    }
+
+    deityCampaignView.deityHp = data.deityHp;
+    deityCampaignView.chaosHp = data.chaosHp;
+    deityCampaignView.moves = data.moves;
+    deityCampaignView.log.push({ round: data.round, events: data.events });
+
+    if(data.finished){
+      const finishedView = {
+        step: 'result',
+        deityId: deityCampaignView.deityId, deityName: deityCampaignView.deityName,
+        chaosEntityName: deityCampaignView.chaosEntityName, chaosEntityImageUrl: deityCampaignView.chaosEntityImageUrl,
+        result: data.result, xpGranted: data.xpGranted, newLevel: data.newLevel, levelsGained: data.levelsGained, reward: data.reward
+      };
+      deityCampaignView = finishedView;
+      await loadDeityCampaignData();
+    }
+    render();
+  }catch(e){
+    if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
+    if(row) Array.from(row.querySelectorAll('button')).forEach(b => b.disabled = false);
+  }
+}
+
+// Transient result screen, shown once after the round that finishes the
+// fight — same "verdict badge + short summary + one button" shape as
+// renderBattleResult() (Gauntlet/Campaign), which deliberately doesn't
+// re-show the log either: the player already watched it play out live
+// on the battle screen above.
 function renderDeityCampaignResult(){
   document.body.classList.add('hub-active');
   const app = document.getElementById('app');
   const v = deityCampaignView;
-  const pantheonId = deityPantheonFor(v.deityId);
-  const nameEntry = pantheonId ? CATALOG[pantheonId].deities.find(([id]) => id === v.deityId) : null;
-  const deityName = nameEntry ? nameEntry[1] : v.deityId;
-  const won = v.winner === 'deity';
-  const logHtml = (v.events || []).map(e => deityCampaignEventLine(e, deityName, v.chaosEntityName)).join('');
+  const won = v.result === 'win';
   const xpLine = v.xpGranted ? `+${v.xpGranted} XP${v.levelsGained > 0 ? ` — Level up! Now Level ${v.newLevel}.` : ''}` : '';
   // Direct feedback: "no pics of the gods available or on field" — a
-  // "vs" portrait row for the two combatants, same source as the pick-
-  // deity screen (deity) and the browse screen (chaos entity, via
-  // chaosEntityImageUrl on the fight response). The loser dims slightly
-  // so the outcome reads at a glance, same idea as the Catalogue grid's
+  // "vs" portrait row for the two combatants, loser dimmed so the
+  // outcome reads at a glance, same idea as the Catalogue grid's
   // .locked dimming.
-  const deityPortrait = shopPortraitHtml(shopDeityPortraitUrl(v.deityId), deityName, 96, 'top');
+  const deityPortrait = shopPortraitHtml(shopDeityPortraitUrl(v.deityId), v.deityName, 96, 'top');
   const foePortrait = shopPortraitHtml(v.chaosEntityImageUrl, v.chaosEntityName || 'the foe', 96, 'top');
   const vsHtml = `<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:12px 0;">
-    <div style="text-align:center;opacity:${won ? '1' : '0.5'};">${deityPortrait}<div class="cblurb" style="margin-top:4px;">${esc(deityName)}</div></div>
+    <div style="text-align:center;opacity:${won ? '1' : '0.5'};">${deityPortrait}<div class="cblurb" style="margin-top:4px;">${esc(v.deityName)}</div></div>
     <div class="hint" style="font-family:'Cinzel',serif;">VS</div>
     <div style="text-align:center;opacity:${won ? '0.5' : '1'};">${foePortrait}<div class="cblurb" style="margin-top:4px;">${esc(v.chaosEntityName || 'The Foe')}</div></div>
   </div>`;
@@ -5041,16 +5244,17 @@ function renderDeityCampaignResult(){
     <div class="hub-screen">
       <div class="hub-box"${bgAttrPlain('deityCampaign')}>
         <div class="hub-overlay">
-          <h2 style="text-align:center;">${won ? 'Victory' : 'Defeated'}</h2>
+          <div class="verdict-badge ${won ? 'full' : 'partial'}">${won ? 'Victory' : 'Defeat'}</div>
           ${vsHtml}
-          <p class="hint" style="text-align:center;">${esc(deityName)} ${won ? 'has overcome' : 'was overcome by'} ${esc(v.chaosEntityName || 'the foe')}.</p>
+          <p class="hint" style="text-align:center;">${esc(v.deityName)} ${won ? 'has overcome' : 'was overcome by'} ${esc(v.chaosEntityName || 'the foe')}.</p>
           ${xpLine ? `<p class="status ok" style="display:block;text-align:center;">${esc(xpLine)}</p>` : ''}
-          <div class="battle-log" style="max-height:320px;overflow-y:auto;margin:10px 0;">${logHtml}</div>
+          ${v.reward && v.reward.granted ? `<p class="gain-note" style="text-align:center;">Also received ${esc(v.reward.name || 'a reward')}.</p>` : ''}
           <button class="secondary" onclick="backFromDeityCampaignResult()">Back to the Campaign</button>
         </div>
       </div>
     </div>
   `;
+  if(won) showRewardBanner('Victory!', xpLine || undefined, '⚔️');
 }
 
 function backFromDeityCampaignResult(){
@@ -14122,11 +14326,15 @@ function setBattleUseItemStatus(text, ok){
   el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
   el.textContent = text;
 }
-async function doUseItem(itemId, battleId, statusElId){
+async function doUseItem(itemId, battleId, statusElId, chaosBattleId){
   // statusElId (new) lets a screen other than Craft/Battle point this at
   // its own status line — e.g. the Guardian Page's Familiar tab passes
   // 'guardianTrainStatus' so "Use" there reports next to Train instead of
   // silently updating a #craftStatus element that isn't on this screen.
+  // chaosBattleId (War on Chaos turn-based rework) — the deity-battle
+  // equivalent of battleId, sent instead of (never alongside) it; see
+  // craft/index.ts's use-item action for how the two are distinguished
+  // server-side.
   const setStatus = statusElId
     ? (text, ok) => {
         const el = document.getElementById(statusElId);
@@ -14134,13 +14342,13 @@ async function doUseItem(itemId, battleId, statusElId){
         el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
         el.textContent = text;
       }
-    : (battleId ? setBattleUseItemStatus : setCraftStatus);
+    : ((battleId || chaosBattleId) ? setBattleUseItemStatus : setCraftStatus);
   setStatus('Using…');
   try{
     const resp = await fetch(FUNCTIONS_URL + '/craft', {
       method: 'POST',
       headers: await petitionHeaders(),
-      body: JSON.stringify({ action: 'use-item', guardianId: guardian.id, itemId, battleId })
+      body: JSON.stringify({ action: 'use-item', guardianId: guardian.id, itemId, battleId, chaosBattleId })
     });
     const data = await resp.json();
     if(!data.ok){ setStatus(data.error || 'Could not use that item.', false); return; }
