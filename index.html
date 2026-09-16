@@ -5007,6 +5007,13 @@ async function startChaosBattle(encounterKey, deityId){
       chaosHp: data.chaosHp, chaosMaxHp: data.chaosMaxHp,
       moves: data.moves, log: []
     };
+    // Same fix as startBattle()'s own copy of this comment — the War on
+    // Chaos picker drops straight into the battle screen without ever
+    // touching Craft, so without this deityBattleCureItemsHtml()'s item
+    // row would come up empty even for a deity's own guardian holding
+    // real cure items. Direct feedback: "the buttons to use items in the
+    // fights are not showing."
+    await Promise.all([loadCraftInventory(), loadCraftCatalog()]);
     render();
   }catch(e){
     if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
@@ -9758,6 +9765,14 @@ async function startBattle(){
       guardian.energy_current = data.energyRemaining;
       guardian.energy_updated_at = new Date().toISOString();
     }
+    // craftInventory/craftCatalog otherwise only ever load when the Craft
+    // screen itself opens (or a Petition trial begins — see beginTrial()'s
+    // own copy of this fix) — most players jump straight from the loadout
+    // picker into a fight without ever visiting Craft first, so without
+    // this the mid-fight item row (battleCureItemsHtml()) always came up
+    // empty even for a guardian holding real cure items. Direct feedback:
+    // "the buttons to use items in the fights are not showing."
+    await Promise.all([loadCraftInventory(), loadCraftCatalog()]);
     render();
   }catch(e){
     if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
@@ -10974,6 +10989,10 @@ async function caveRunEnterHiddenBattle(battle){
       guardian.energy_current = data.energyRemaining;
       guardian.energy_updated_at = new Date().toISOString();
     }
+    // Same fix as startBattle()'s own copy of this comment — a cave-run
+    // ambush drops straight into combatView without ever touching Craft,
+    // so without this the mid-fight item row would come up empty here too.
+    await Promise.all([loadCraftInventory(), loadCraftCatalog()]);
     render();
   }catch(e){
     if(status){ status.className = 'status err'; status.textContent = 'Could not reach the relay: ' + e.message; }
