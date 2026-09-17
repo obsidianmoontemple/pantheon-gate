@@ -836,6 +836,29 @@ textarea:focus{outline:none;border-color:var(--gold);}
 .battle-sprite-duo{gap:6px;}
 .battle-sprite-mage{opacity:0.92;filter:drop-shadow(0 0 10px rgba(200,162,74,0.15));}
 @media (max-width:520px){.battle-arena{gap:6px;} .battle-sprite{height:70px;} .battle-sprite-mage{display:none;}}
+
+/* Sprite movement (0103) — direct feedback: "battles ... seems sort of
+   still." Two independent layers so they never fight over the same CSS
+   property: idle bob is a permanent, always-on animation on the portrait
+   IMAGE/SVG itself (just gentle life while waiting for a move); every
+   reaction below (lunge/dodge/wobble/rise) is a transient class toggled
+   on the OUTER .battle-sprite container by pulseSprite() in the JS below.
+   A nested translateX on the container plus a nested translateY on the
+   image compose naturally instead of one animation clobbering the other. */
+.battle-sprite img, .battle-sprite svg, .battle-sprite-mage img{animation:battleIdleBob 2.6s ease-in-out infinite;}
+.battle-sprite-mage img{animation-duration:2.15s;animation-delay:-0.35s;} /* slightly out of phase so duo art doesn't bob in lockstep */
+@keyframes battleIdleBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+.battle-sprite.lunge-right{animation:battleLungeRight 0.45s ease;}
+.battle-sprite.lunge-left{animation:battleLungeLeft 0.45s ease;}
+@keyframes battleLungeRight{0%{transform:translateX(0);}40%{transform:translateX(18px);}100%{transform:translateX(0);}}
+@keyframes battleLungeLeft{0%{transform:translateX(0);}40%{transform:translateX(-18px);}100%{transform:translateX(0);}}
+.battle-sprite.dodge-step{animation:battleDodgeStep 0.5s ease;}
+@keyframes battleDodgeStep{0%{transform:translateX(0);opacity:1;}30%{transform:translateX(10px);opacity:0.55;}60%{transform:translateX(-6px);opacity:1;}100%{transform:translateX(0);opacity:1;}}
+.battle-sprite.stun-wobble{animation:battleStunWobble 0.6s ease;}
+@keyframes battleStunWobble{0%,100%{transform:rotate(0deg);}25%{transform:rotate(-4deg);}75%{transform:rotate(4deg);}}
+.battle-sprite.heal-rise{animation:battleHealRise 0.6s ease;}
+@keyframes battleHealRise{0%{transform:translateY(0);}50%{transform:translateY(-8px);}100%{transform:translateY(0);}}
+
 .hp-wrap{position:relative;}
 /* Direct feedback: the hit-flash + damage-number combo read as "a fast
    red response ... very hard to read." Slowed both down and softened the
@@ -5097,7 +5120,7 @@ function renderDeityCampaignBattle(){
           <h2 style="text-align:center;">${esc(v.deityName)} vs. ${esc(v.chaosEntityName || 'the foe')}</h2>
           <div class="battle-arena">
             <div class="battle-side">
-              <div class="battle-sprite">${opponentImgFor(shopDeityPortraitUrl(v.deityId), null, 110)}</div>
+              <div class="battle-sprite" id="gSprite">${opponentImgFor(shopDeityPortraitUrl(v.deityId), null, 110)}</div>
               <div class="hp-wrap" id="gHpWrap">
                 <div class="hp-row"><span class="hp-name">${esc(v.deityName)}</span><span class="hp-name" id="gHpText">${v.deityHp} / ${v.deityMaxHp}</span></div>
                 <div class="hp-bar-track"><div class="hp-bar-fill" id="gHpFill" style="width:${dPct}%;"></div></div>
@@ -5105,7 +5128,7 @@ function renderDeityCampaignBattle(){
             </div>
             <div class="battle-vs">VS</div>
             <div class="battle-side">
-              <div class="battle-sprite">${opponentImgFor(v.chaosEntityImageUrl, v.chaosEntityAffinity, 110)}</div>
+              <div class="battle-sprite" id="oSprite">${opponentImgFor(v.chaosEntityImageUrl, v.chaosEntityAffinity, 110)}</div>
               <div class="hp-wrap" id="oHpWrap">
                 <div class="hp-row"><span class="hp-name">${esc(v.chaosEntityName || 'The Foe')}</span><span class="hp-name" id="oHpText">${v.chaosHp} / ${v.chaosMaxHp}</span></div>
                 <div class="hp-bar-track"><div class="hp-bar-fill opponent" id="oHpFill" style="width:${cPct}%;"></div></div>
@@ -9858,7 +9881,7 @@ function renderBattleScreen(){
           <h2 style="text-align:center;">${esc(guardian.name)} vs. ${esc(v.opponentName)}</h2>
           <div class="battle-arena">
             <div class="battle-side">
-              <div class="battle-sprite battle-sprite-duo">
+              <div class="battle-sprite battle-sprite-duo" id="gSprite">
                 ${mage ? `<div class="battle-sprite-mage">${opponentImgFor(MAGE_ART_IMAGES[mage.art_key], mageArtFor(mage.art_key) ? mageArtFor(mage.art_key).affinity : null, 84)}</div>` : ''}
                 ${imgFor(guardian.species, guardian.stage, 110)}
               </div>
@@ -9869,7 +9892,7 @@ function renderBattleScreen(){
             </div>
             <div class="battle-vs">VS</div>
             <div class="battle-side">
-              <div class="battle-sprite">${opponentImgFor(v.opponentImageUrl, v.opponentAffinity, 110)}</div>
+              <div class="battle-sprite" id="oSprite">${opponentImgFor(v.opponentImageUrl, v.opponentAffinity, 110)}</div>
               <div class="hp-wrap" id="oHpWrap">
                 <div class="hp-row"><span class="hp-name">${esc(v.opponentName)}</span><span class="hp-name" id="oHpText">${v.opponentHp} / ${v.opponentMaxHp}</span></div>
                 <div class="hp-bar-track"><div class="hp-bar-fill opponent" id="oHpFill" style="width:${oPct}%;"></div></div>
@@ -10031,7 +10054,31 @@ function moveHitSprite(affinity, particleKey){
   return particleKey ? ('particle-fx/fx_' + particleKey + '.png') : hitSprite(affinity);
 }
 
+// Sprite movement (0103) — direct feedback: "battles ... seems sort of
+// still." Toggles a transient class on the OUTER .battle-sprite container
+// (gSprite/oSprite, added alongside gHpWrap/oHpWrap in every battle-arena
+// render — Gauntlet/Campaign and War on Chaos share this same function,
+// same as every other animate* helper here). Independent of the portrait
+// image's own always-on idle-bob animation (see the CSS), so the two never
+// fight over the transform property. Missing element (a screen that hasn't
+// rendered gSprite/oSprite yet) is a silent no-op, same defensiveness as
+// every other animate* function's `if(!wrap) return`.
+function pulseSprite(side, cls){
+  const el = document.getElementById(side === 'guardian' ? 'gSprite' : 'oSprite');
+  if(!el) return;
+  el.classList.remove('lunge-right', 'lunge-left', 'dodge-step', 'stun-wobble', 'heal-rise');
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
+
 function animateHit(side, damage, crit, control, hpAfter, maxHp, affinity, particleKey){
+  // `side` is the DEFENDER (whose HP bar is changing) — the attacker is
+  // whoever's on the other side of the arena, and lunges toward them.
+  // Guardian sits on the left of "VS", opponent on the right, so guardian
+  // lunges +X (right) and opponent lunges -X (left).
+  const attackerSide = side === 'guardian' ? 'opponent' : 'guardian';
+  pulseSprite(attackerSide, attackerSide === 'guardian' ? 'lunge-right' : 'lunge-left');
+
   const fill = document.getElementById(side === 'guardian' ? 'gHpFill' : 'oHpFill');
   const text = document.getElementById(side === 'guardian' ? 'gHpText' : 'oHpText');
   const wrap = document.getElementById(side === 'guardian' ? 'gHpWrap' : 'oHpWrap');
@@ -10045,12 +10092,15 @@ function animateHit(side, damage, crit, control, hpAfter, maxHp, affinity, parti
   wrap.appendChild(num);
   setTimeout(() => num.remove(), 1600);
 
+  // Bigger/more particle effects — direct feedback alongside the sprite
+  // movement above: counts/sizes/distances bumped up across the board
+  // (roughly +50-60%) from the original tuning.
   if(crit){
-    spawnParticles(wrap, { count: 6, color: '#e6c777', size: 46, distance: 48, duration: 750, sprite: 'particle-fx/fx_starburst.png' });
+    spawnParticles(wrap, { count: 10, color: '#e6c777', size: 58, distance: 66, duration: 800, sprite: 'particle-fx/fx_starburst.png' });
   } else if(control){
-    spawnParticles(wrap, { count: 4, color: 'var(--moon)', size: 38, distance: 28, duration: 750, sprite: 'particle-fx/fx_streak.png' });
+    spawnParticles(wrap, { count: 7, color: 'var(--moon)', size: 46, distance: 40, duration: 780, sprite: 'particle-fx/fx_streak.png' });
   } else {
-    spawnParticles(wrap, { count: 4, color: hitColor(affinity), size: 40, distance: 32, duration: 650, sprite: moveHitSprite(affinity, particleKey) });
+    spawnParticles(wrap, { count: 7, color: hitColor(affinity), size: 48, distance: 44, duration: 700, sprite: moveHitSprite(affinity, particleKey) });
   }
 }
 
@@ -10070,7 +10120,7 @@ function animateBurnTick(side, amount, hpAfter, maxHp){
   num.textContent = '-' + amount;
   wrap.appendChild(num);
   setTimeout(() => num.remove(), 1600);
-  spawnParticles(wrap, { count: 3, color: '#c05a34', size: 32, distance: 20, duration: 700, lift: 10, sprite: 'particle-fx/fx_ember.png' });
+  spawnParticles(wrap, { count: 5, color: '#c05a34', size: 38, distance: 26, duration: 750, lift: 10, sprite: 'particle-fx/fx_ember.png' });
 }
 
 // Poison ticking at the top of a round — same shape as animateBurnTick,
@@ -10089,12 +10139,14 @@ function animatePoisonTick(side, amount, hpAfter, maxHp){
   num.textContent = '-' + amount;
   wrap.appendChild(num);
   setTimeout(() => num.remove(), 1600);
-  spawnParticles(wrap, { count: 3, color: '#6fae4a', size: 32, distance: 20, duration: 700, lift: 10, sprite: 'particle-fx/fx_smoke_thin.png' });
+  spawnParticles(wrap, { count: 5, color: '#6fae4a', size: 38, distance: 26, duration: 750, lift: 10, sprite: 'particle-fx/fx_smoke_thin.png' });
 }
 
 // A stunned turn — no damage, the side just loses its action. A moon-tinted
-// binding-rune ring plus a text badge in place of a damage number.
+// binding-rune ring plus a text badge in place of a damage number, plus
+// (0103) a little rotational wobble on the sprite itself to sell "bound."
 function animateStunSkip(side){
+  pulseSprite(side, 'stun-wobble');
   const wrap = document.getElementById(side === 'guardian' ? 'gHpWrap' : 'oHpWrap');
   if(!wrap) return;
   wrap.classList.remove('flash-hit'); void wrap.offsetWidth; wrap.classList.add('flash-hit');
@@ -10103,12 +10155,15 @@ function animateStunSkip(side){
   num.textContent = 'STUNNED';
   wrap.appendChild(num);
   setTimeout(() => num.remove(), 1600);
-  spawnParticles(wrap, { count: 4, color: 'var(--moon)', size: 38, distance: 28, duration: 750, sprite: 'particle-fx/fx_rune.png' });
+  spawnParticles(wrap, { count: 6, color: 'var(--moon)', size: 44, distance: 36, duration: 800, sprite: 'particle-fx/fx_rune.png' });
 }
 
 // A dodged hit — the defender's bar never moves at all, just a pale
-// evasive streak and a text badge in place of a damage number.
+// evasive streak and a text badge in place of a damage number, plus
+// (0103) a quick sidestep on the sprite so the evasion actually reads as
+// movement, not just a label.
 function animateDodge(side){
+  pulseSprite(side, 'dodge-step');
   const wrap = document.getElementById(side === 'guardian' ? 'gHpWrap' : 'oHpWrap');
   if(!wrap) return;
   const num = document.createElement('div');
@@ -10116,12 +10171,14 @@ function animateDodge(side){
   num.textContent = 'DODGED';
   wrap.appendChild(num);
   setTimeout(() => num.remove(), 1600);
-  spawnParticles(wrap, { count: 4, color: '#cfd6e0', size: 34, distance: 30, duration: 650, sprite: 'particle-fx/fx_streak.png' });
+  spawnParticles(wrap, { count: 6, color: '#cfd6e0', size: 40, distance: 38, duration: 650, sprite: 'particle-fx/fx_streak.png' });
 }
 
 // Lifesteal — the actor's own bar rises. Upward green glow rings instead of
-// an outward burst, so it reads as "recovering" rather than "getting hit".
+// an outward burst, so it reads as "recovering" rather than "getting hit",
+// plus (0103) the sprite itself lifts a little to match.
 function animateHeal(side, amount, hpAfter, maxHp){
+  pulseSprite(side, 'heal-rise');
   const fill = document.getElementById(side === 'guardian' ? 'gHpFill' : 'oHpFill');
   const text = document.getElementById(side === 'guardian' ? 'gHpText' : 'oHpText');
   const wrap = document.getElementById(side === 'guardian' ? 'gHpWrap' : 'oHpWrap');
@@ -10133,7 +10190,7 @@ function animateHeal(side, amount, hpAfter, maxHp){
   num.textContent = '+' + amount;
   wrap.appendChild(num);
   setTimeout(() => num.remove(), 1600);
-  spawnParticles(wrap, { count: 3, color: '#7fbf6a', size: 36, distance: 18, duration: 850, lift: 18, sprite: 'particle-fx/fx_glow_rings.png' });
+  spawnParticles(wrap, { count: 5, color: '#7fbf6a', size: 42, distance: 26, duration: 900, lift: 22, sprite: 'particle-fx/fx_glow_rings.png' });
 }
 
 // A status proc riding along on a normal hit (an affliction/boon just
@@ -12042,7 +12099,15 @@ async function doTithe(){
 
 async function doShopBuy(itemKey){
   const data = await circleFetch('shop-buy', { itemKey });
-  setChestStatus(data.ok ? 'Blessing received.' : (data.error || 'Could not complete the purchase.'), data.ok);
+  // 0102 — direct feedback: "blessings bought with devotion in the circle
+  // should have a half application to everyone elses familiars as well."
+  // circle/index.ts's shop-buy now splashes half the stat bump onto every
+  // other member's guardian and reports how many via splashApplied.
+  let msg = 'Blessing received.';
+  if(data.ok && data.splashApplied){
+    msg += ` ${data.splashApplied} other circle-mate${data.splashApplied === 1 ? '' : 's'} got half the boost too.`;
+  }
+  setChestStatus(data.ok ? msg : (data.error || 'Could not complete the purchase.'), data.ok);
   if(data.ok){ await loadGuardian(); await loadMyCircle(); }
 }
 
