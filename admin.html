@@ -245,6 +245,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       <button class="tab-btn" data-tab="guardianitems" data-group="guardian" onclick="showTab('guardianitems')">Guardian Items</button>
       <button class="tab-btn" data-tab="deities" data-group="deities" onclick="showTab('deities')">Deity Personalities</button>
       <button class="tab-btn" data-tab="pantheons" data-group="deities" onclick="showTab('pantheons')">Pantheons &amp; Gods</button>
+      <button class="tab-btn" data-tab="bloodlines" data-group="deities" onclick="showTab('bloodlines')">Divine Bloodlines</button>
       <button class="tab-btn" data-tab="chainedgods" data-group="deities" onclick="showTab('chainedgods')">Chained Gods</button>
       <!-- Deity Battle Catalogue (Phase 1 — full plan at
            /root/.claude/plans/mellow-prancing-tiger.md): deities become
@@ -3176,6 +3177,89 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
       </div>
     </div>
 
+    <!-- ============================== DIVINE BLOODLINES ============================== -->
+    <div class="tab-content" id="tab-bloodlines">
+      <div class="card">
+        <h2>Divine Bloodlines — Relationships</h2>
+        <!-- 0163 — direct feedback: "all pages need admin controls as well
+             as a added URL spot for background you can list all comps you
+             have and perhaps clean up and steady those trees." The
+             relationship graph index.html draws for each pantheon (family,
+             romance, rivalry, fusion) reads straight from this table —
+             edit it here, no redeploy needed. Seeded from 147 edges hand-
+             built out of the Deity Lore Encyclopedia's own related_deity
+             facts; treat that seed as a starting point, not a fixed list. -->
+        <p class="hint">One row per connection in a pantheon's family-tree graph. <code>Type</code> is free text (parent_of, sibling_of, spouse_of, affair_with, rival_of, merge_of, mentor_of, associated_with, …) — anything not recognized by the graph's styling just renders as a plain "associated" line, so it's safe to invent new ones. <code>God B</code> can name someone who isn't a full playable deity (a parent, a consort, a named relative) — the graph will still draw them, just smaller.</p>
+        <div class="form-row">
+          <div class="field">
+            <label>Pantheon</label>
+            <select id="bloodlinesPantheonSelect" style="max-width:200px;">
+              <option value="egyptian">Egyptian</option>
+              <option value="greek">Greek</option>
+              <option value="norse">Norse</option>
+            </select>
+          </div>
+        </div>
+        <div class="scroll-table" style="max-height:380px;">
+          <table>
+            <thead><tr><th>God A</th><th>God B</th><th>Type</th><th>Fact</th><th>Active</th></tr></thead>
+            <tbody id="bloodlinesRelRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveBloodlinesRelBtn">Save changes</button>
+          <div class="status" id="bloodlinesRelStatus"></div>
+        </div>
+        <h3>Add a relationship</h3>
+        <div class="form-row">
+          <div class="field"><label>God A</label><input type="text" id="newBloodlinesRelA" placeholder="e.g. zeus"></div>
+          <div class="field"><label>God B</label><input type="text" id="newBloodlinesRelB" placeholder="e.g. hera"></div>
+          <div class="field"><label>Type</label><input type="text" id="newBloodlinesRelType" placeholder="e.g. spouse_of"></div>
+          <button id="addBloodlinesRelBtn">Add relationship</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Fact text</label>
+          <textarea id="newBloodlinesRelFact" rows="2" style="max-width:none;" placeholder="The actual myth/history behind this connection, 1-2 sentences."></textarea>
+        </div>
+        <div class="status" id="newBloodlinesRelStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2>Divine Bloodlines — Cross-Pantheon Comps</h2>
+        <p class="hint">Every comparison shown on the Cross-Pantheon screen — either a "documented" ancient identification (the Greeks actually said Amun was Zeus) or a "thematic" parallel with no ancient source (Odin and Zeus both being chief sky-fathers). The frontend labels the two differently so nothing reads as more historical than it is.</p>
+        <div class="scroll-table" style="max-height:380px;">
+          <table>
+            <thead><tr><th>Pantheon A</th><th>God A</th><th>Pantheon B</th><th>God B</th><th>Kind</th><th>Note</th><th>Active</th></tr></thead>
+            <tbody id="bloodlinesCompRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="save-bar">
+          <button id="saveBloodlinesCompBtn">Save changes</button>
+          <div class="status" id="bloodlinesCompStatus"></div>
+        </div>
+        <h3>Add a comparison</h3>
+        <div class="form-row">
+          <div class="field"><label>Pantheon A</label>
+            <select id="newBloodlinesCompPantheonA"><option value="egyptian">Egyptian</option><option value="greek">Greek</option><option value="norse">Norse</option></select>
+          </div>
+          <div class="field"><label>God A</label><input type="text" id="newBloodlinesCompA" placeholder="e.g. amun"></div>
+          <div class="field"><label>Pantheon B</label>
+            <select id="newBloodlinesCompPantheonB"><option value="egyptian">Egyptian</option><option value="greek" selected>Greek</option><option value="norse">Norse</option></select>
+          </div>
+          <div class="field"><label>God B</label><input type="text" id="newBloodlinesCompB" placeholder="e.g. zeus"></div>
+          <div class="field"><label>Kind</label>
+            <select id="newBloodlinesCompKind"><option value="documented">Documented</option><option value="thematic">Thematic</option></select>
+          </div>
+          <button id="addBloodlinesCompBtn">Add comparison</button>
+        </div>
+        <div class="field" style="max-width:none;">
+          <label>Note</label>
+          <textarea id="newBloodlinesCompNote" rows="2" style="max-width:none;" placeholder="The ancient source (documented) or the shared theme (thematic)."></textarea>
+        </div>
+        <div class="status" id="newBloodlinesCompStatus"></div>
+      </div>
+    </div>
+
     <!-- ============================== PRICING & STORE ============================== -->
     <div class="tab-content" id="tab-pricing">
       <div class="card">
@@ -4762,7 +4846,11 @@ const PAGE_KEYS = [
   { key: 'shop', label: 'Shop' },
   { key: 'combat', label: 'Battle screen' },
   { key: 'chat', label: 'Deity Chat (gate.html)' },
-  { key: 'serverChat', label: 'Server Chat' }
+  { key: 'serverChat', label: 'Server Chat' },
+  { key: 'bloodlinesEgyptian', label: 'Divine Bloodlines — Egyptian tree' },
+  { key: 'bloodlinesGreek', label: 'Divine Bloodlines — Greek tree' },
+  { key: 'bloodlinesNorse', label: 'Divine Bloodlines — Norse tree' },
+  { key: 'bloodlinesCross', label: 'Divine Bloodlines — Cross-Pantheon' }
 ];
 
 function siteBackgroundInputId(key){ return 'siteBg_' + key; }
@@ -5759,6 +5847,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('loreFactsDeitySelect').addEventListener('change', loadLoreFacts);
   document.getElementById('saveLoreFactsBtn').addEventListener('click', saveLoreFacts);
   document.getElementById('addLoreFactBtn').addEventListener('click', addLoreFact);
+
+  document.getElementById('bloodlinesPantheonSelect').addEventListener('change', loadBloodlinesRelationships);
+  document.getElementById('saveBloodlinesRelBtn').addEventListener('click', saveBloodlinesRelationships);
+  document.getElementById('addBloodlinesRelBtn').addEventListener('click', addBloodlinesRelationship);
+  document.getElementById('saveBloodlinesCompBtn').addEventListener('click', saveBloodlinesComparisons);
+  document.getElementById('addBloodlinesCompBtn').addEventListener('click', addBloodlinesComparison);
+  loadBloodlinesRelationships();
+  loadBloodlinesComparisons();
 });
 
 /* ---------------- pantheons ---------------- */
@@ -15059,6 +15155,162 @@ async function addLoreFact(){
   document.getElementById('newLoreFactSource').value = '';
   document.getElementById('newLoreFactMature').checked = false;
   loadLoreFacts();
+}
+
+/* =====================================================================
+   DIVINE BLOODLINES (0163) — the per-pantheon relationship graph and the
+   cross-pantheon comparison list index.html's new Bloodlines screen reads
+   directly. Relationships load one pantheon at a time (same reasoning as
+   Deity Lore Encyclopedia above); comparisons are a single flat list
+   since there are only a couple dozen of them total across all pantheons.
+   ===================================================================== */
+
+async function loadBloodlinesRelationships(){
+  const pantheon = document.getElementById('bloodlinesPantheonSelect').value;
+  const rows = document.getElementById('bloodlinesRelRows');
+  rows.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
+  const { data, error } = await supabaseClient
+    .from('deity_relationships')
+    .select('id, deity_a, deity_b, rel_type, fact_text, active')
+    .eq('pantheon_id', pantheon)
+    .order('deity_a', { ascending: true });
+  if(error){
+    rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  rows.innerHTML = (data || []).map(r => `<tr data-id="${esc(r.id)}">
+    <td><input type="text" id="bloodRelA_${esc(r.id)}" value="${esc(r.deity_a)}" style="width:100%;min-width:90px;"></td>
+    <td><input type="text" id="bloodRelB_${esc(r.id)}" value="${esc(r.deity_b)}" style="width:100%;min-width:90px;"></td>
+    <td><input type="text" id="bloodRelType_${esc(r.id)}" value="${esc(r.rel_type)}" style="width:100%;min-width:110px;"></td>
+    <td><textarea id="bloodRelFact_${esc(r.id)}" rows="2" style="width:100%;min-width:280px;">${esc(r.fact_text)}</textarea></td>
+    <td><input type="checkbox" id="bloodRelActive_${esc(r.id)}" ${r.active !== false ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="5">No relationships yet for this pantheon — add one below.</td></tr>';
+}
+
+async function saveBloodlinesRelationships(){
+  const status = document.getElementById('bloodlinesRelStatus');
+  const trs = document.querySelectorAll('#bloodlinesRelRows tr[data-id]');
+  if(!trs.length){ status.className = 'status'; status.textContent = 'Nothing to save.'; return; }
+  const rows = Array.from(trs).map(tr => {
+    const id = tr.getAttribute('data-id');
+    return {
+      id,
+      deity_a: document.getElementById('bloodRelA_' + id).value.trim(),
+      deity_b: document.getElementById('bloodRelB_' + id).value.trim(),
+      rel_type: document.getElementById('bloodRelType_' + id).value.trim(),
+      fact_text: document.getElementById('bloodRelFact_' + id).value.trim(),
+      active: document.getElementById('bloodRelActive_' + id).checked
+    };
+  });
+  const badRow = rows.find(r => !r.deity_a || !r.deity_b || !r.rel_type || !r.fact_text);
+  if(badRow){ status.className = 'status err'; status.textContent = 'Every relationship needs God A, God B, a type, and fact text.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('deity_relationships').upsert(rows, { onConflict: 'id' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadBloodlinesRelationships();
+}
+
+async function addBloodlinesRelationship(){
+  const status = document.getElementById('newBloodlinesRelStatus');
+  const pantheon = document.getElementById('bloodlinesPantheonSelect').value;
+  const deityA = document.getElementById('newBloodlinesRelA').value.trim();
+  const deityB = document.getElementById('newBloodlinesRelB').value.trim();
+  const relType = document.getElementById('newBloodlinesRelType').value.trim();
+  const factText = document.getElementById('newBloodlinesRelFact').value.trim();
+  if(!deityA || !deityB || !relType || !factText){ status.className = 'status err'; status.textContent = 'God A, God B, a type, and fact text are all required.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('deity_relationships').insert({
+    pantheon_id: pantheon, deity_a: deityA, deity_b: deityB, rel_type: relType, fact_text: factText
+  });
+  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+  status.className = 'status ok';
+  status.textContent = 'Relationship added.';
+  document.getElementById('newBloodlinesRelA').value = '';
+  document.getElementById('newBloodlinesRelB').value = '';
+  document.getElementById('newBloodlinesRelType').value = '';
+  document.getElementById('newBloodlinesRelFact').value = '';
+  loadBloodlinesRelationships();
+}
+
+async function loadBloodlinesComparisons(){
+  const rows = document.getElementById('bloodlinesCompRows');
+  rows.innerHTML = '<tr><td colspan="7">Loading…</td></tr>';
+  const { data, error } = await supabaseClient
+    .from('pantheon_comparisons')
+    .select('id, pantheon_a, deity_a, pantheon_b, deity_b, kind, note_text, active')
+    .order('kind', { ascending: true })
+    .order('pantheon_a', { ascending: true });
+  if(error){
+    rows.innerHTML = '<tr><td colspan="7">Failed to load: ' + esc(error.message) + '</td></tr>';
+    return;
+  }
+  const pantheonOptions = ['egyptian', 'greek', 'norse'];
+  rows.innerHTML = (data || []).map(r => `<tr data-id="${esc(r.id)}">
+    <td><select id="bloodCompPA_${esc(r.id)}">${pantheonOptions.map(p => `<option value="${p}"${p === r.pantheon_a ? ' selected' : ''}>${p}</option>`).join('')}</select></td>
+    <td><input type="text" id="bloodCompA_${esc(r.id)}" value="${esc(r.deity_a)}" style="width:100%;min-width:80px;"></td>
+    <td><select id="bloodCompPB_${esc(r.id)}">${pantheonOptions.map(p => `<option value="${p}"${p === r.pantheon_b ? ' selected' : ''}>${p}</option>`).join('')}</select></td>
+    <td><input type="text" id="bloodCompB_${esc(r.id)}" value="${esc(r.deity_b)}" style="width:100%;min-width:80px;"></td>
+    <td><select id="bloodCompKind_${esc(r.id)}"><option value="documented"${r.kind === 'documented' ? ' selected' : ''}>documented</option><option value="thematic"${r.kind === 'thematic' ? ' selected' : ''}>thematic</option></select></td>
+    <td><textarea id="bloodCompNote_${esc(r.id)}" rows="2" style="width:100%;min-width:240px;">${esc(r.note_text)}</textarea></td>
+    <td><input type="checkbox" id="bloodCompActive_${esc(r.id)}" ${r.active !== false ? 'checked' : ''}></td>
+  </tr>`).join('') || '<tr><td colspan="7">No comparisons yet — add one below.</td></tr>';
+}
+
+async function saveBloodlinesComparisons(){
+  const status = document.getElementById('bloodlinesCompStatus');
+  const trs = document.querySelectorAll('#bloodlinesCompRows tr[data-id]');
+  if(!trs.length){ status.className = 'status'; status.textContent = 'Nothing to save.'; return; }
+  const rows = Array.from(trs).map(tr => {
+    const id = tr.getAttribute('data-id');
+    return {
+      id,
+      pantheon_a: document.getElementById('bloodCompPA_' + id).value,
+      deity_a: document.getElementById('bloodCompA_' + id).value.trim(),
+      pantheon_b: document.getElementById('bloodCompPB_' + id).value,
+      deity_b: document.getElementById('bloodCompB_' + id).value.trim(),
+      kind: document.getElementById('bloodCompKind_' + id).value,
+      note_text: document.getElementById('bloodCompNote_' + id).value.trim(),
+      active: document.getElementById('bloodCompActive_' + id).checked
+    };
+  });
+  const badRow = rows.find(r => !r.deity_a || !r.deity_b || !r.note_text);
+  if(badRow){ status.className = 'status err'; status.textContent = 'Every comparison needs both gods and a note.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Saving…';
+  const { error } = await supabaseClient.from('pantheon_comparisons').upsert(rows, { onConflict: 'id' });
+  status.className = error ? 'status err' : 'status ok';
+  status.textContent = error ? ('Failed: ' + error.message) : 'Saved.';
+  if(!error) loadBloodlinesComparisons();
+}
+
+async function addBloodlinesComparison(){
+  const status = document.getElementById('newBloodlinesCompStatus');
+  const pantheonA = document.getElementById('newBloodlinesCompPantheonA').value;
+  const deityA = document.getElementById('newBloodlinesCompA').value.trim();
+  const pantheonB = document.getElementById('newBloodlinesCompPantheonB').value;
+  const deityB = document.getElementById('newBloodlinesCompB').value.trim();
+  const kind = document.getElementById('newBloodlinesCompKind').value;
+  const noteText = document.getElementById('newBloodlinesCompNote').value.trim();
+  if(!deityA || !deityB || !noteText){ status.className = 'status err'; status.textContent = 'Both gods and a note are required.'; return; }
+
+  status.className = 'status';
+  status.textContent = 'Adding…';
+  const { error } = await supabaseClient.from('pantheon_comparisons').insert({
+    pantheon_a: pantheonA, deity_a: deityA, pantheon_b: pantheonB, deity_b: deityB, kind, note_text: noteText
+  });
+  if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
+  status.className = 'status ok';
+  status.textContent = 'Comparison added.';
+  document.getElementById('newBloodlinesCompA').value = '';
+  document.getElementById('newBloodlinesCompB').value = '';
+  document.getElementById('newBloodlinesCompNote').value = '';
+  loadBloodlinesComparisons();
 }
 
 init();
