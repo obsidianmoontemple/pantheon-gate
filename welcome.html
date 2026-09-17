@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>The Long Silence: Divine Realms — a browser narrative RPG you play with the gods</title>
+
+<!-- D5.1 / D5.5 -->
+<meta name="description" content="A free browser-based narrative RPG set in the Divine Realms. Receive an egg from the Gate, speak with AI-voiced gods who remember you, and explore eight pantheons of myth.">
+<link rel="canonical" href="https://gate.obsidianmoontemple.com/welcome.html">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Pantheon Gate">
+<meta property="og:url" content="https://gate.obsidianmoontemple.com/welcome.html">
+<meta property="og:title" content="The Long Silence: Divine Realms — a browser narrative RPG you play with the gods">
+<meta property="og:description" content="A free browser-based narrative RPG set in the Divine Realms. Receive an egg from the Gate, speak with AI-voiced gods who remember you, and explore eight pantheons of myth.">
+<meta property="og:image" content="https://gate.obsidianmoontemple.com/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Gate still standing, with an egg waiting to be claimed.">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Long Silence: Divine Realms — a browser narrative RPG you play with the gods">
+<meta name="twitter:description" content="A free browser-based narrative RPG set in the Divine Realms. Receive an egg from the Gate, speak with AI-voiced gods who remember you, and explore eight pantheons of myth.">
+<meta name="twitter:image" content="https://gate.obsidianmoontemple.com/og-image.jpg">
+<meta name="twitter:image:alt" content="The Gate still standing, with an egg waiting to be claimed.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "The Long Silence: Divine Realms",
+  "alternateName": "The Long Silence",
+  "description": "A free browser-based narrative RPG set in the Divine Realms. Receive an egg from the Gate, speak with AI-voiced gods who remember you, and explore eight pantheons of myth.",
+  "url": "https://gate.obsidianmoontemple.com/welcome.html",
+  "genre": ["Narrative RPG", "Interactive Fiction"],
+  "gamePlatform": "Web browser",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "publisher": { "@type": "Organization", "name": "Temple of the Obsidian Moon", "url": "https://obsidianmoontemple.com/" }
+}
+</script>
+
+<style>
+:root{
+  /* lifted from index.html so the landing page and the game match */
+  --ink:#100e16;
+  --ink-2:#17131f;
+  --parchment:#e9decb;
+  --parchment-dim:#b9ac93;
+  --gold:#c8a24a;
+  --gold-bright:#e6c777;
+  --ember:#a1462a;
+
+  --night:var(--ink);
+  --night-deep:#0a0810;
+  --bone:var(--parchment);
+  --ash:var(--parchment-dim);
+  --rule:rgba(200,162,74,.24);
+  --amethyst:#2a2136;
+  --verdigris:#1e2b2a;
+
+  --measure:64ch;
+}
+
+*{box-sizing:border-box}
+
+html{-webkit-text-size-adjust:100%}
+
+body{
+  margin:0;
+  background:var(--ink);
+  color:var(--bone);
+  font-family:'EB Garamond',Georgia,serif;
+  font-weight:400;
+  font-size:clamp(1.02rem,.96rem + .3vw,1.16rem);
+  line-height:1.72;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* the three washes: amethyst high left, verdigris right, gold at the foot */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  background:
+    radial-gradient(56rem 40rem at 14% -8%, rgba(200,162,74,.10), transparent 62%),
+    radial-gradient(46rem 40rem at 104% 26%, rgba(161,70,42,.12), transparent 60%),
+    radial-gradient(70rem 30rem at 50% 108%, rgba(200,162,74,.13), transparent 68%),
+    linear-gradient(var(--ink),var(--night-deep));
+}
+
+a{color:var(--gold);text-underline-offset:.22em;text-decoration-thickness:.06em}
+a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:2px}
+
+h1,h2,h3{
+  font-family:'Cinzel',serif;
+  font-weight:600;
+  line-height:1.08;
+  margin:0;
+  letter-spacing:-.012em;
+}
+
+p{margin:0 0 1.15em;max-width:var(--measure)}
+
+.wrap{width:min(100% - 2.6rem,66rem);margin-inline:auto}
+
+section{padding-block:clamp(3.6rem,7vw,6.4rem)}
+
+.rule{border:0;border-top:1px solid var(--rule);margin:0}
+
+/* ---------- hero ---------- */
+
+.hero{padding-top:clamp(2.6rem,6vw,4.4rem);padding-bottom:clamp(3rem,6vw,5rem)}
+
+.hero-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1.35fr) minmax(0,.85fr);
+  gap:clamp(2rem,5vw,4.5rem);
+  align-items:center;
+}
+
+/* D1.1 — category label in the positioning slot.
+   Temple credit moved to the footer, where branding belongs. */
+.eyebrow{
+  font-family:'EB Garamond',Georgia,serif;
+  font-size:.92rem;
+  color:var(--gold);
+  letter-spacing:.02em;
+  margin:0 0 1.1rem;
+}
+
+h1{font-size:clamp(3rem,2rem + 6.2vw,6.4rem);font-variation-settings:"SOFT" 0,"WONK" 1;font-weight:500}
+
+/* D1.1 — names category and audience inside the first eight words. */
+.subtitle{
+  font-family:'Cinzel Decorative',serif;
+  font-weight:400;
+  font-size:clamp(1.3rem,1rem + 1.4vw,2.05rem);
+  color:var(--gold);
+  letter-spacing:.06em;
+  margin:.4rem 0 0;
+  line-height:1;
+}
+.positioning{
+  font-family:'Cinzel',serif;
+  font-weight:400;
+  font-size:clamp(1.28rem,1.05rem + .95vw,1.82rem);
+  line-height:1.3;
+  margin:1.6rem 0 1.5rem;
+  max-width:26ch;
+}
+
+/* the existing subhead, unchanged — it does the emotional work (D1.3) */
+.subhead{color:var(--ash);max-width:44ch}
+
+.cta-row{display:flex;flex-wrap:wrap;gap:1rem 1.4rem;align-items:center;margin-top:2rem}
+
+.cta{
+  display:inline-block;
+  background:var(--gold);
+  color:var(--ink);
+  font-family:'EB Garamond',serif;
+  font-weight:600;
+  font-size:1.04rem;
+  padding:.92em 1.7em;
+  border-radius:2px;
+  text-decoration:none;
+  border:1px solid var(--gold);
+}
+.cta:hover{background:var(--gold-bright);border-color:var(--gold-bright)}
+
+.cta-alt{color:var(--bone);font-size:.98rem}
+
+.cta-note{font-size:.9rem;color:var(--ash);margin:1rem 0 0;max-width:38ch}
+
+/* ---------- the gate: one orchestrated moment, then still ---------- */
+
+
+
+
+
+/* ---------- proof strip (D3.1) ---------- */
+
+.proof{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));
+  gap:1.6rem 2.6rem;
+  padding-block:2.4rem;
+}
+.proof-item{display:flex;align-items:baseline;gap:.9rem}
+.count{font-family:'Cinzel',serif;font-size:2.1rem;font-weight:600;color:var(--gold);line-height:1}
+.count-label{color:var(--ash);font-size:.96rem;max-width:24ch;margin:0;line-height:1.45}
+
+/* ---------- content sections ---------- */
+
+h2{font-size:clamp(1.85rem,1.4rem + 1.7vw,2.9rem);max-width:19ch;margin-bottom:1.4rem}
+h3{font-size:1.24rem;font-weight:500;margin-bottom:.5rem;color:var(--bone)}
+
+.lede{font-size:1.1em;color:var(--bone);max-width:56ch}
+
+.cols{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(16.5rem,1fr));
+  gap:clamp(1.8rem,3.4vw,3rem);
+  margin-top:2.8rem;
+}
+.cols p{color:var(--ash);margin-bottom:0;font-size:.99rem}
+
+/* pantheon list — the depth proof (D1.2) */
+.pantheons{
+  list-style:none;margin:2.4rem 0 0;padding:0;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  gap:0;
+  border-top:1px solid var(--rule);
+}
+.pantheons li{
+  border-bottom:1px solid var(--rule);
+  padding:.95rem .2rem;
+  display:flex;justify-content:space-between;gap:1rem;align-items:baseline;
+}
+.pantheons .n{color:var(--gold-dim);font-size:.9rem;font-variant-numeric:tabular-nums}
+
+/* honest status (D1.2 — answers incompleteness rather than echoing it) */
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));gap:2.4rem;margin-top:2.6rem}
+.status h3{color:var(--gold)}
+.status ul{margin:0;padding-left:1.1rem;color:var(--ash)}
+.status li{margin-bottom:.5rem}
+
+/* founder */
+.founder{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2rem;align-items:start}
+.portrait{
+  width:8.5rem;height:8.5rem;border-radius:50%;
+  border:1px solid var(--rule);
+  object-fit:cover;
+  flex:none;
+}
+.founder-name{font-family:'Cinzel',serif;font-weight:600;font-size:1.22rem;margin:0 0 .3rem}
+.founder-role{color:var(--ash);font-size:.95rem;margin:0 0 1.2rem}
+
+
+/* pricing tiers */
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:0;margin-top:2.6rem;border-top:1px solid var(--rule)}
+.tier{padding:1.6rem 1.4rem 1.8rem 0;border-bottom:1px solid var(--rule)}
+.tier h3{color:var(--gold);margin-bottom:.15rem}
+.tier-price{font-family:'Cinzel',serif;font-size:1.6rem;font-weight:600;color:var(--bone);margin:0 0 1rem;line-height:1}
+.tier ul{margin:0;padding-left:1.1rem;color:var(--ash)}
+.tier li{margin-bottom:.45rem;font-size:.97rem}
+.tier-note{color:var(--ash);font-size:.97rem;margin-top:2rem;max-width:58ch}
+
+/* game art */
+.shot{margin:2.8rem 0 0}
+.shot img{width:100%;height:auto;display:block;border:1px solid var(--rule);background:var(--ink-2)}
+.shot figcaption{margin:.8rem 0 0;color:var(--ash);font-size:.93rem;max-width:56ch}
+.hero-art{margin:0}
+.hero-art img{width:100%;height:auto;display:block;border:1px solid var(--rule)}
+
+/* kickstarter pledge list */
+.pledges{list-style:none;margin:2.6rem 0 0;padding:0;border-top:1px solid var(--rule)}
+.pledges li{
+  display:grid;
+  grid-template-columns:5.5rem minmax(7rem,11rem) minmax(0,1fr);
+  gap:.4rem 1.4rem;
+  padding:1.05rem 0;
+  border-bottom:1px solid var(--rule);
+  align-items:baseline;
+}
+.pledge-amt{font-family:'Cinzel',serif;font-size:1.12rem;font-weight:600;color:var(--gold);font-variant-numeric:tabular-nums}
+.pledge-name{color:var(--bone)}
+.pledge-what{color:var(--ash);font-size:.96rem}
+@media (max-width:40rem){
+  .pledges li{grid-template-columns:5.5rem minmax(0,1fr)}
+  .pledge-what{grid-column:2}
+}
+
+footer{padding-block:3.4rem;color:var(--ash);font-size:.93rem}
+footer p{max-width:62ch}
+footer a{color:var(--bone)}
+
+@media (max-width:52rem){
+  .hero-grid{grid-template-columns:1fr}
+  .hero-art{order:-1}
+  .positioning{max-width:none}
+  .founder{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+
+<!-- ============================================================
+     HERO — D1.1, D1.2, D1.3
+     All of this is served as static HTML so crawlers see it
+     without executing JavaScript.
+     ============================================================ -->
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">Free browser-based narrative RPG</p>
+
+      <h1>The Long Silence</h1>
+      <p class="subtitle">Divine Realms</p>
+
+      <p class="positioning">A mythology game for people who want to play the myths, not just read them.</p>
+
+      <p class="subhead">The gods did not leave. They were silenced. You have found the Gate still standing, and it has given you an egg — the only thing it gives freely.</p>
+
+      <div class="cta-row">
+        <!-- TODO: point at your actual entry route if it is not the site root -->
+        <a class="cta" href="https://gate.obsidianmoontemple.com/">Claim your egg — free to play</a>
+        <!-- TODO: replace with your live Kickstarter URL -->
+        <a class="cta-alt" href="#kickstarter">See the Kickstarter</a>
+      </div>
+
+      <p class="cta-note">Open and playable now. Runs in your browser — no download, no account needed to start.</p>
+    </div>
+
+    <figure class="hero-art">
+      <img src="/og-image.jpg" width="1200" height="630"
+           alt="The Long Silence: The Divine Realms — the Gate at the head of a long stair, a mage and a phoenix before it.">
+    </figure>
+  </div>
+</header>
+
+<hr class="rule">
+
+<!-- ============================================================
+     D3.1 — quantity proof. Using the real, verifiable numbers
+     rather than a waitlist count, since the world is open.
+     Add a live player count here when you have one worth showing.
+     ============================================================ -->
+<div class="wrap proof">
+  <div class="proof-item"><span class="count">167</span><p class="count-label">deities, each written by hand</p></div>
+  <div class="proof-item"><span class="count">8</span><p class="count-label">pantheons, from Greek to Yoruba to the Great Dragons</p></div>
+  <div class="proof-item"><span class="count">0</span><p class="count-label">to start playing, today</p></div>
+</div>
+
+<hr class="rule">
+
+<!-- ============================================================
+     D1.2 — the dominant pain is finding a mythology game with
+     enough interactivity and depth. This section answers it
+     with specifics instead of atmosphere.
+     D1.3 — surfaces the functional JTBD (explore mythology
+     through gameplay) and the personal JTBD (deepen knowledge
+     of ancient cultures).
+     ============================================================ -->
+<section>
+  <div class="wrap">
+    <h2>What you actually do here</h2>
+
+    <p class="lede">Most mythology games hand you a name, a weapon and a health bar. This one hands you an egg and a god who will talk to you for as long as you keep asking.</p>
+
+    <div class="cols">
+      <div>
+        <h3>Ask the gods their own stories</h3>
+        <p>Every deity is written out by hand and given a voice. You can ask Hecate about the crossroads, or about her sisters, or about what she thinks of you — and she answers in character, from her own myth. She remembers what you said last time.</p>
+      </div>
+      <div>
+        <h3>Raise what hatches</h3>
+        <p>The egg becomes a Guardian. It grows through trials, through the marks the gods leave on it, and through the affinities you feed it. Two players who start the same week do not end up with the same creature.</p>
+      </div>
+      <div>
+        <h3>Fits the player it has</h3>
+        <p>The old stories are not gentle, and the world knows how old you are. Younger players get the myths with the harshest material held back, so a fourteen-year-old and their mother can both play without either of them getting the wrong version.</p>
+      </div>
+      <div>
+        <h3>Learn the real thing</h3>
+        <p>The entries are researched, not generated — sources, epithets, regional variants, the ugly parts left in. People come for a game and leave knowing which Artemis they were talking to.</p>
+      </div>
+    </div>
+
+    <figure class="shot">
+      <img src="/art-gods.jpg" width="1600" height="872" loading="lazy"
+           alt="Gods of eight pantheons seated around a lit circle in the Gate, questions turning across its surface.">
+      <figcaption>The Gate. Every god here was written out by hand before anything could speak.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- D1.2 — concrete depth proof: the scale of what is written. -->
+<section>
+  <div class="wrap">
+    <h2>167 deities, written one at a time</h2>
+    <p class="lede">Eight pantheons, each entry hand-written with original artwork. This is the map and the strategy guide at once — everything you meet in the game, you can read about first.</p>
+
+    <ul class="pantheons">
+      <li>Greek <span class="n">—</span></li>
+      <li>Norse <span class="n">—</span></li>
+      <li>Egyptian <span class="n">—</span></li>
+      <li>Yoruba <span class="n">—</span></li>
+      <li>Celtic <span class="n">—</span></li>
+      <li>Chinese <span class="n">—</span></li>
+      <li>Great Dragons <span class="n">—</span></li>
+      <li>Left-Hand Path <span class="n">—</span></li>
+    </ul>
+
+    <figure class="shot">
+      <img src="/art-map.jpg" width="1600" height="872" loading="lazy"
+           alt="The world map of The Long Silence — temples, standing stones, pagodas and pyramids drawn across eight regions.">
+      <figcaption>The map is drawn wide. Every marker on it is somewhere you can go.</figcaption>
+    </figure>
+    <!-- TODO: replace each — with that pantheon's entry count if you want the numbers shown -->
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================================================
+     D1.2 — the old footer line, "a Pantheon Gate chapter, still
+     being written", read as an unfinished product. The world is
+     open; this section says what is in it.
+     ============================================================ -->
+<section>
+  <div class="wrap">
+    <h2>What is in the world right now</h2>
+    <p class="lede">All of it is open. You are not joining a waitlist or a beta — you are walking into a finished world that keeps growing.</p>
+
+    <div class="status">
+      <div>
+        <h3>The world</h3>
+        <ul>
+          <li>All 167 deity entries, readable and voiced</li>
+          <li>The Gate, the egg, and the first seven days</li>
+          <li>Guardian raising and the eight-affinity wheel</li>
+          <li>Trials, the Proving, duels and sieges</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Around you</h3>
+        <ul>
+          <li>Circles, and the chat inside them</li>
+          <li>The Reliquary, its fragments and dossiers</li>
+          <li>Petitions and rites gated by the moon</li>
+          <li>Sabbat-timed events through the year</li>
+        </ul>
+      </div>
+    </div>
+
+    <figure class="shot">
+      <img src="/art-familiars.jpg" width="1600" height="872" loading="lazy"
+           alt="Guardians of every affinity — a mossed badger, a fire drake, an ice lion, a phoenix, a starlit moth — gathered around a lantern.">
+      <figcaption>What hatches depends on what you feed it, which gods mark it, and how you play.</figcaption>
+    </figure>
+
+    <figure class="shot">
+      <img src="/art-affinities.jpg" width="1600" height="872" loading="lazy"
+           alt="The Magi's Colosseum — eight affinity thrones around a wheel marked Light, Death, Growth, Ice, Shadow, Storm, Earth and Sea.">
+      <figcaption>Eight affinities. Your Guardian leans toward some and away from others.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================================================
+     Founder presence — the audit noted there is none.
+     No photograph and no location by deliberate choice; see
+     the note in chat before adding either.
+     ============================================================ -->
+<section>
+  <div class="wrap founder">
+    <img class="portrait" src="/founder.jpg" width="640" height="640" loading="lazy"
+         alt="Father Sebastian Nightwell">
+    <div>
+      <p class="founder-name">Father Sebastian Nightwell</p>
+      <p class="founder-role">Writer of the entries · Temple of the Obsidian Moon</p>
+      <p>I wrote all 167 of these by hand over several years, because every mythology game I tried gave me a pantheon as a list of stat blocks. The gods in those games had nothing to say. These ones do.</p>
+      <p>The AI gives the writing a voice — it does not do the writing. If that distinction matters to you, it matters to me too, and I would rather say so on the front page than have you find out later.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================================================
+     Pricing. The audit excluded D4 (Pricing & Paywall) because it
+     read the site as pre-launch. With the shop live, this belongs
+     on the page and should score on the re-run.
+
+     TODO: replace the three tier names, the prices and the bullet
+     lines with your real shop tiers. A page that names real prices
+     scores on D4; a page that gestures at a shop does not.
+     ============================================================ -->
+<section id="pricing">
+  <div class="wrap">
+    <h2>What it costs</h2>
+    <p class="lede">Nothing, to play. The world, the entries, the Gate and your Guardian are free and stay free. The shop is for people who want more of it, faster.</p>
+
+    <!-- When the shop's subscription tiers are settled, the tier table
+         goes here. Until then this section says what is true without
+         naming prices. -->
+    <p>The shop has subscription tiers, one-off unlocks and bundles. Talking to the gods is the part that costs real money to run — every reply is generated live — which is why conversation is where the limits sit. Cancel a subscription and everything you earned by playing stays yours.</p>
+
+    <p class="tier-note">The shop does not open to anyone under 18 — no subscription, unlock or bundle can be bought by a minor.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================================================
+     Local-only storage. This is a genuine differentiator and a
+     real caveat at the same time, so it gets both halves.
+     ============================================================ -->
+<section id="privacy">
+  <div class="wrap">
+    <h2>The gods remember you. We don't.</h2>
+    <p class="lede">Your conversations, your Guardian and your progress are saved in your own browser, on your own device. We do not hold them and we cannot read them.</p>
+    <p>What that buys you: there is no profile of you here. Nothing to leak, nothing to sell, nothing sitting on a server with your name on it.</p>
+    <p>What it costs you, and you should know this before you get attached: the memory lives on the device you played on. Clear your browser data and the gods forget you. Open the game on your phone after playing on your laptop and you start again from the Gate. Your history does not travel, because it never left.</p>
+    <p class="tier-note">To be exact about it: what you type does travel to the model that voices the reply, because that is how a reply gets written. It is not kept there and it is not kept by us. The record of your conversation is on your device only.</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     Kickstarter pledge tiers. These are PLEDGE tiers, not the
+     in-game shop — the shop block above is the one that needs
+     your real subscription pricing.
+     TODO: replace the campaign href in both places below.
+     ============================================================ -->
+<section id="kickstarter">
+  <div class="wrap">
+    <h2>The Kickstarter</h2>
+    <p class="lede">The world is open and free to play. The campaign funds the art and the writing for the pantheons that come next — and backers get into the game early, with their hands on things the shop does not sell.</p>
+
+    <ul class="pledges">
+      <li><span class="pledge-amt">$1</span><span class="pledge-name">Copper</span><span class="pledge-what">Your name in the credits, and early access at the Gate.</span></li>
+      <li><span class="pledge-amt">$10</span><span class="pledge-name">Bronze</span><span class="pledge-what">An expanded starter bundle to open with.</span></li>
+      <li><span class="pledge-amt">$25</span><span class="pledge-name">Silver</span><span class="pledge-what">A Key of Night — unlock the deity of your choosing — plus a currency pack.</span></li>
+      <li><span class="pledge-amt">$50</span><span class="pledge-name">Gold</span><span class="pledge-what">Five Keys of Night and half again your daily conversation with the gods.</span></li>
+      <li><span class="pledge-amt">$100</span><span class="pledge-name">Diamond</span><span class="pledge-what">A full pantheon opened, 50 God Shards, and double conversation.</span></li>
+      <li><span class="pledge-amt">$150</span><span class="pledge-name">Royal</span><span class="pledge-what">Every current pantheon, ten Keys of Night, 75 God Shards, and both volumes of the Topaz Grimoire. Limited to 20.</span></li>
+      <li><span class="pledge-amt">$250</span><span class="pledge-name">Full Current Access</span><span class="pledge-what">Everything above, every deity written so far, 100 God Shards, and the shirt.</span></li>
+      <li><span class="pledge-amt">$500</span><span class="pledge-name">Complete + Early Release</span><span class="pledge-what">Pantheons nobody has seen yet, as they open. 150 God Shards, shirt and tote.</span></li>
+      <li><span class="pledge-amt">$1,000</span><span class="pledge-name">Your own license</span><span class="pledge-what">Run your own copy of the world. Built for schools and museums — see below.</span></li>
+    </ul>
+
+    <p class="tier-note"><a href="https://www.kickstarter.com/projects/obsidianmoontemple/the-long-silence-divine-realms">Back The Long Silence on Kickstarter</a></p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================================================
+     The $1,000 licence tier, given its own room. It is the only
+     thing here aimed at an institution rather than a player, and
+     it is buried at the bottom of a pledge list on Kickstarter.
+     ============================================================ -->
+<section id="license">
+  <div class="wrap">
+    <h2>For schools and museums</h2>
+    <p class="lede">The licence tier gives an institution its own copy of the world to run and to write into.</p>
+    <p>A teacher can program the curriculum into it and have students talk to the figures they are studying. A museum can build its own collection into the world and let visitors walk through it and ask questions of what they find. It is the same engine, with your content in it rather than mine.</p>
+    <p class="tier-note"><a href="https://www.kickstarter.com/projects/obsidianmoontemple/the-long-silence-divine-realms">The licence tier is $1,000 on Kickstarter</a>. If you want to talk about what it would take for your institution, say so before you pledge.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<footer>
+  <div class="wrap">
+    <p>The Long Silence is a chapter of Pantheon Gate, presented by the <a href="https://obsidianmoontemple.com/">Temple of the Obsidian Moon</a>. The world is open, and it keeps growing.</p>
+    <p>Free to play, with subscription tiers, unlocks and bundles in the in-game shop. Your progress and your conversations are stored in your own browser, not on our servers.</p>
+  </div>
+</footer>
+
+</body>
+</html>
