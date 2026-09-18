@@ -3322,6 +3322,17 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <select id="newTierGrantId" style="max-width:200px;"></select>
           </div>
           <div class="field">
+            <label>Messages / month</label>
+            <input type="number" step="1" min="0" id="newTierMessages" placeholder="250" style="max-width:110px;">
+          </div>
+          <div class="field">
+            <label>Unlimited</label>
+            <label style="display:flex;align-items:center;gap:6px;font-weight:normal;">
+              <input type="checkbox" id="newTierUnlimited" style="width:auto;margin:0;">
+              <span class="dim">ignore the number above</span>
+            </label>
+          </div>
+          <div class="field">
             <label>Image URL (optional)</label>
             <input type="text" id="newTierImageUrl" placeholder="https://…" style="max-width:280px;">
           </div>
@@ -3334,8 +3345,8 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
         <div class="status" id="newTierStatus"></div>
         <div class="scroll-table" style="max-height:240px;margin-top:14px;">
           <table>
-            <thead><tr><th>Tier</th><th>Price</th><th>Grants</th><th></th></tr></thead>
-            <tbody id="tierRows"><tr><td colspan="4">Loading…</td></tr></tbody>
+            <thead><tr><th>Tier</th><th>Price</th><th>Grants</th><th>Messages</th><th></th></tr></thead>
+            <tbody id="tierRows"><tr><td colspan="5">Loading…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -6331,21 +6342,22 @@ async function loadSubscriptionTiers(){
   const rows = document.getElementById('tierRows');
   const { data, error } = await supabaseClient
     .from('subscription_tiers')
-    .select('id, name, price_cents, grant_scope_type, grant_scope_id, active')
+    .select('id, name, price_cents, grant_scope_type, grant_scope_id, monthly_messages, unlimited_messages, active')
     .eq('active', true)
     .order('sort_order', { ascending: true });
   if(error){
-    rows.innerHTML = '<tr><td colspan="4">Failed to load: ' + esc(error.message) + '</td></tr>';
+    rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
   if(!data.length){
-    rows.innerHTML = '<tr><td colspan="4">No tiers yet — the flat Full Access plan above is still available on its own.</td></tr>';
+    rows.innerHTML = '<tr><td colspan="5">No tiers yet — the flat Full Access plan above is still available on its own.</td></tr>';
     return;
   }
   rows.innerHTML = data.map(t => `<tr>
     <td>${esc(t.name)}</td>
     <td class="dim">${fmtUsd(t.price_cents)}/mo</td>
     <td class="dim">${esc(grantLabel(t.grant_scope_type, t.grant_scope_id))}</td>
+    <td class="dim">${t.unlimited_messages ? 'Unlimited' : ((t.monthly_messages || 0) + '/mo')}</td>
     <td><button class="small danger" onclick="removeTier('${esc(t.id)}')">Remove</button></td>
   </tr>`).join('');
 }
@@ -6359,6 +6371,9 @@ async function addTier(){
   const grantType = document.getElementById('newTierGrantType').value;
   const grantId = document.getElementById('newTierGrantId').value.trim();
   const imageUrl = document.getElementById('newTierImageUrl').value.trim();
+  const unlimited = document.getElementById('newTierUnlimited').checked;
+  const messagesVal = document.getElementById('newTierMessages').value;
+  const messages = unlimited ? 0 : Math.max(0, parseInt(messagesVal || '0', 10) || 0);
 
   if(!/^[a-z0-9]+$/.test(id)){
     status.className = 'status err';
@@ -6380,13 +6395,16 @@ async function addTier(){
     id, name, description, price_cents: price,
     grant_scope_type: grantType,
     grant_scope_id: (grantType === 'pantheon' || grantType === 'deity') ? grantId : null,
-    image_url: imageUrl || null
+    image_url: imageUrl || null,
+    monthly_messages: messages,
+    unlimited_messages: unlimited
   });
   if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
 
   status.className = 'status ok';
   status.textContent = name + ' tier is live.';
-  ['newTierId','newTierName','newTierPrice','newTierDescription','newTierGrantId','newTierImageUrl'].forEach(fid => { document.getElementById(fid).value = ''; });
+  ['newTierId','newTierName','newTierPrice','newTierDescription','newTierGrantId','newTierImageUrl','newTierMessages'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newTierUnlimited').checked = false;
   document.getElementById('newTierGrantType').value = 'all';
   updateNewTierGrantField();
   loadSubscriptionTiers();
