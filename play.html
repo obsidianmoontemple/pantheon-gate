@@ -97,6 +97,31 @@ footer.notice a:hover{color:var(--gold);}
    edge overflows first with NO way to scroll to it — "safe" tells the
    browser to fall back to start-alignment instead of clipping. */
 body.map-screen{overflow:hidden;}
+
+/* Mage Select, once an admin has positioned the Arts: the artwork is the
+   screen. Same full-bleed treatment as body.map-screen — no page scroll,
+   no mast, no footer, no card chrome — so nothing shows but the art and
+   the hotspots dragged onto it. The name field and Begin sit in a fixed
+   panel over the bottom, like .hub-overlay does on the map. */
+body.mage-screen{overflow:hidden;}
+body.mage-screen .mast, body.mage-screen footer.notice{display:none;}
+body.mage-screen .wrap{max-width:none;margin:0;padding:0;}
+.mage-select-screen{
+  position:fixed;inset:0;z-index:5;
+  display:flex;align-items:safe center;justify-content:safe center;
+  overflow:auto;background:var(--ink);
+}
+.mage-overlay{
+  position:fixed;left:50%;bottom:calc(3dvh + env(safe-area-inset-bottom));
+  transform:translateX(-50%);z-index:6;
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;
+  background:rgba(10,8,16,0.62);backdrop-filter:blur(3px);
+  border:1px solid var(--line);border-radius:4px;
+  padding:8px 12px;max-width:min(94vw,440px);
+}
+.mage-overlay input{margin:0;max-width:280px;}
+.mage-overlay button{margin:0;}
+.mage-overlay .status{flex-basis:100%;text-align:center;margin:0;}
 body.map-screen .mast, body.map-screen footer.notice{display:none;}
 body.map-screen .wrap{max-width:none;margin:0;padding:0;}
 .map-hub-screen{
@@ -123,7 +148,14 @@ body.map-screen .wrap{max-width:none;margin:0;padding:0;}
 .rotate-prompt{display:none;}
 @media (orientation:portrait) and (pointer:coarse){
   body.map-screen .map-hub-screen{display:none;}
-  body.map-screen .rotate-prompt{
+  /* Mage Select is locked to the same 1408:768 art ratio as the map, so
+     it has the same portrait problem — the whole picture shrinks to a
+     thin strip and every hotspot with it. Ask for landscape here too,
+     and hide the control panel while the prompt is up. */
+  body.mage-screen .mage-select-screen,
+  body.mage-screen .mage-overlay{display:none;}
+  body.map-screen .rotate-prompt,
+  body.mage-screen .rotate-prompt{
     display:flex;position:fixed;inset:0;z-index:6;
     flex-direction:column;align-items:center;justify-content:center;
     gap:14px;padding:40px 32px;text-align:center;background:var(--ink);
@@ -187,7 +219,11 @@ body.login-screen .wrap{max-width:none;margin:0;padding:0;}
    left/top/width/height percentages line up the same way for a player as
    they did while the admin was dragging them into place. */
 .mage-select-canvas{
-  position:relative;width:100%;margin-bottom:22px;border-radius:4px;
+  position:relative;border-radius:4px;
+  /* Same sizing as .map-hub: the box is locked to the art's ratio and
+     fits the viewport, because the hotspot percentages are measured
+     against that exact ratio in the admin editor. */
+  width:min(100vw, calc(100dvh * 1408 / 768));
   /* Same fix as .map-hub: lock the box to the art's ratio and cover it,
      so a hotspot dragged at 40%/20% in admin sits on the same part of
      the picture here. Previously this box was min-height:360px with the
@@ -198,15 +234,28 @@ body.login-screen .wrap{max-width:none;margin:0;padding:0;}
   background-size:cover;background-position:center;background-repeat:no-repeat;
 }
 .mage-select-canvas .choice{
-  position:absolute;margin:0;padding:6px;overflow:hidden;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-  background:rgba(0,0,0,0.38);
+  position:absolute;margin:0;padding:2px;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:1px;
+  /* No panel, no border: the hotspot is an invisible region over the
+     artwork. Only the Art's own portrait and its name show, so nothing
+     covers the thrones underneath. */
+  background:none;border:1px solid transparent;border-radius:3px;
+  transition:none;
+}
+.mage-select-canvas .choice:hover{
+  background:rgba(200,162,74,0.10);border-color:var(--gold);transform:none;
+}
+.mage-select-canvas .choice.selected{
+  background:rgba(200,162,74,0.12);border-color:var(--gold-bright);box-shadow:none;
 }
 /* The tile's contents scale down to whatever the hotspot gives them,
    instead of overflowing a fixed 104px image block and scrolling. */
 .mage-select-canvas .choice .art{height:auto;min-height:0;flex:1 1 auto;width:100%;margin:0;}
 .mage-select-canvas .choice .art img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;}
-.mage-select-canvas .choice .label{font-size:clamp(7px,0.8vw,12.5px);line-height:1.15;}
+.mage-select-canvas .choice .label{
+  font-size:clamp(7px,0.8vw,12.5px);line-height:1.15;flex:0 0 auto;
+  text-shadow:0 1px 3px #000,0 0 6px #000;
+}
 .mage-select-canvas .choice .blurb{display:none;}
 
 .swatch-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:22px;}
@@ -3236,6 +3285,7 @@ function render(){
   document.body.classList.remove('map-screen');
   document.body.classList.remove('login-screen');
   document.body.classList.remove('hub-active');
+  document.body.classList.remove('mage-screen');
   if(!bloodlinesView && bloodlinesSim){ bloodlinesSim.stop(); bloodlinesSim = null; }
   if(!circleView || circleView.step !== 'messages') stopMessagesPolling();
   if(!circleView || circleView.step !== 'altar') stopAltarTicking();
@@ -3448,6 +3498,21 @@ function renderMageCreation(){
         return mageArtChoiceHtml(a, `left:${pos.left}%;top:${pos.top}%;width:${pos.width}%;height:${pos.height}%;`);
       }).join('')}</div>`
     : `<div class="choice-row" id="mageArtRow">${MAGE_ARTS.map(a => mageArtChoiceHtml(a)).join('')}</div>`;
+  // Positioned mode is a full-bleed art screen; the plain row keeps the
+  // original card. render() clears mage-screen on the way out, alongside
+  // map-screen/login-screen/hub-active.
+  document.body.classList.toggle('mage-screen', useCanvas);
+  if(useCanvas){
+    app.innerHTML = `
+      <div class="mage-select-screen">${artPickerHtml}</div>
+      <div class="mage-overlay">
+        <input type="text" id="mageName" maxlength="24" placeholder="Name yourself — this is permanent" value="${esc(mageNameDraft)}" oninput="onMageNameInput()">
+        <button id="mageCreateBtn" ${(pickedMageArt && mageNameDraft.trim().length >= 2) ? '' : 'disabled'} onclick="createMage()">Begin</button>
+        <div class="status" id="mageCreateStatus"></div>
+      </div>
+    `;
+    return;
+  }
   app.innerHTML = `
     <div class="card"${bgAttr('mage')}>
       <h2 style="text-align:center;">Who are you?</h2>
