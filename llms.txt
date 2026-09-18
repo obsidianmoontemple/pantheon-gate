@@ -6,9 +6,19 @@ The Long Silence is a chapter of Pantheon Gate, presented by the Temple of the O
 The premise: the gods did not leave, they were silenced. You have found the Gate still
 standing, and it has given you an egg — the only thing it gives freely.
 
-The game is free to play in the browser. There is an in-game shop with subscription
-tiers, one-off unlocks and bundles. Conversations with the gods have a real per-reply
-backend cost, so daily conversation limits apply and the shop is where they are lifted.
+The game is free to play in the browser: the map, all 167 deity entries, Guardians,
+trials, the arena and the campaigns cost nothing. Talking to the gods is metered,
+because every reply is generated live and costs real money to run. A free account gets
+10 messages a month.
+
+Subscription tiers (monthly, via Stripe, 18+ only):
+- Bronze, $10 — one deity of your choosing unlocked in full, plus 20 extra messages
+- Silver, $24.99 — a whole pantheon of your choosing, plus 40 extra messages
+- Gold, $49.99 — every pantheon and unlimited messages
+
+One-off purchases instead of a subscription: individual pantheons (Greek $45,
+Egyptian $45, Norse $40), message packs ($1.50 for 5, $9.99 for 50), God Tokens,
+Keys of Night, and crafting currencies. None of it is required to play or to win.
 
 Player progress and conversation history are stored in the player's own browser, not on
 a server. The deities remember a player only on the device that player used.
@@ -20,8 +30,8 @@ The world is open and fully playable now. This is not a beta or a waitlist.
 
 ## Key URLs
 
-- [The Long Silence — play in browser](https://gate.obsidianmoontemple.com/): The Gate. Claim your egg and begin. Free, no download, no account needed to start.
-- [What The Long Silence is](https://gate.obsidianmoontemple.com/welcome.html): Full description of the game, what it costs, and how the AI deity voices work.
+- [The Long Silence: Divine Realms](https://gate.obsidianmoontemple.com/): What the game is, what it costs, and how the AI deity voices work.
+- [Play in your browser](https://gate.obsidianmoontemple.com/play.html): The Gate. Claim your egg and begin. Free, no download, no account needed to start.
 - [Back it on Kickstarter](https://www.kickstarter.com/projects/obsidianmoontemple/the-long-silence-divine-realms): Pledge tiers from $1 to a $1,000 institutional licence for schools and museums.
 - [Temple of the Obsidian Moon](https://obsidianmoontemple.com/): The Temple that presents Pantheon Gate.
 
