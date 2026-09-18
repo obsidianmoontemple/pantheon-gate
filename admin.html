@@ -3337,6 +3337,7 @@ td.dim{color:var(--parchment-dim);font-size:13px;}
             <input type="text" id="newTierImageUrl" placeholder="https://…" style="max-width:280px;">
           </div>
           <button id="addTierBtn">Add tier</button>
+          <button id="cancelEditTierBtn" class="secondary" type="button" style="display:none;" onclick="cancelEditTier()">Cancel edit</button>
         </div>
         <div class="field" style="max-width:none;">
           <label>Description (shown to players)</label>
@@ -6338,17 +6339,60 @@ function grantLabel(scopeType, scopeId){
   return scopeType === 'all' ? 'Full access' : (scopeType + ': ' + (scopeId || ''));
 }
 
+// Same pattern as store items: Edit repopulates the "add tier" form and
+// flips addTier() into update mode via editingTierId.
+let editingTierId = null;
+let tiersCache = [];
+
+function editTier(id){
+  const t = tiersCache.find(x => x.id === id);
+  if(!t) return;
+  editingTierId = id;
+  document.getElementById('newTierId').value = t.id;
+  document.getElementById('newTierId').disabled = true; // primary key — fixed once created
+  document.getElementById('newTierName').value = t.name || '';
+  document.getElementById('newTierPrice').value = ((t.price_cents || 0) / 100).toFixed(2);
+  document.getElementById('newTierDescription').value = t.description || '';
+  document.getElementById('newTierGrantType').value = t.grant_scope_type || 'all';
+  updateNewTierGrantField();
+  document.getElementById('newTierGrantId').value = t.grant_scope_id || '';
+  document.getElementById('newTierMessages').value = t.monthly_messages ?? '';
+  document.getElementById('newTierUnlimited').checked = !!t.unlimited_messages;
+  document.getElementById('newTierImageUrl').value = t.image_url || '';
+  document.getElementById('addTierBtn').textContent = 'Save changes';
+  document.getElementById('cancelEditTierBtn').style.display = '';
+  const status = document.getElementById('newTierStatus');
+  status.className = 'status';
+  status.textContent = 'Editing "' + t.name + '" — change fields above and Save, or Cancel edit.';
+  document.getElementById('newTierId').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function cancelEditTier(){
+  editingTierId = null;
+  document.getElementById('newTierId').disabled = false;
+  ['newTierId','newTierName','newTierPrice','newTierDescription','newTierGrantId','newTierImageUrl','newTierMessages'].forEach(fid => { document.getElementById(fid).value = ''; });
+  document.getElementById('newTierUnlimited').checked = false;
+  document.getElementById('newTierGrantType').value = 'all';
+  updateNewTierGrantField();
+  document.getElementById('addTierBtn').textContent = 'Add tier';
+  document.getElementById('cancelEditTierBtn').style.display = 'none';
+  const status = document.getElementById('newTierStatus');
+  status.className = 'status';
+  status.textContent = '';
+}
+
 async function loadSubscriptionTiers(){
   const rows = document.getElementById('tierRows');
   const { data, error } = await supabaseClient
     .from('subscription_tiers')
-    .select('id, name, price_cents, grant_scope_type, grant_scope_id, monthly_messages, unlimited_messages, active')
+    .select('id, name, description, price_cents, grant_scope_type, grant_scope_id, monthly_messages, unlimited_messages, image_url, active')
     .eq('active', true)
     .order('sort_order', { ascending: true });
   if(error){
     rows.innerHTML = '<tr><td colspan="5">Failed to load: ' + esc(error.message) + '</td></tr>';
     return;
   }
+  tiersCache = data || [];
   if(!data.length){
     rows.innerHTML = '<tr><td colspan="5">No tiers yet — the flat Full Access plan above is still available on its own.</td></tr>';
     return;
@@ -6358,13 +6402,15 @@ async function loadSubscriptionTiers(){
     <td class="dim">${fmtUsd(t.price_cents)}/mo</td>
     <td class="dim">${esc(grantLabel(t.grant_scope_type, t.grant_scope_id))}</td>
     <td class="dim">${t.unlimited_messages ? 'Unlimited' : ((t.monthly_messages || 0) + '/mo')}</td>
-    <td><button class="small danger" onclick="removeTier('${esc(t.id)}')">Remove</button></td>
+    <td><button class="small" onclick="editTier('${esc(t.id)}')">Edit</button>
+        <button class="small danger" onclick="removeTier('${esc(t.id)}')">Remove</button></td>
   </tr>`).join('');
 }
 
 async function addTier(){
   const status = document.getElementById('newTierStatus');
-  const id = document.getElementById('newTierId').value.trim().toLowerCase();
+  const editingId = editingTierId;
+  const id = editingId || document.getElementById('newTierId').value.trim().toLowerCase();
   const name = document.getElementById('newTierName').value.trim();
   const priceVal = document.getElementById('newTierPrice').value;
   const description = document.getElementById('newTierDescription').value.trim();
@@ -6375,7 +6421,7 @@ async function addTier(){
   const messagesVal = document.getElementById('newTierMessages').value;
   const messages = unlimited ? 0 : Math.max(0, parseInt(messagesVal || '0', 10) || 0);
 
-  if(!/^[a-z0-9]+$/.test(id)){
+  if(!editingId && !/^[a-z0-9]+$/.test(id)){
     status.className = 'status err';
     status.textContent = 'Id must be lowercase letters/numbers only, no spaces (e.g. bronze).';
     return;
@@ -6390,23 +6436,24 @@ async function addTier(){
   }
 
   status.className = 'status';
-  status.textContent = 'Adding…';
-  const { error } = await supabaseClient.from('subscription_tiers').insert({
-    id, name, description, price_cents: price,
+  status.textContent = editingId ? 'Saving…' : 'Adding…';
+  const payload = {
+    name, description, price_cents: price,
     grant_scope_type: grantType,
     grant_scope_id: (grantType === 'pantheon' || grantType === 'deity') ? grantId : null,
     image_url: imageUrl || null,
     monthly_messages: messages,
     unlimited_messages: unlimited
-  });
+  };
+  const { error } = editingId
+    ? await supabaseClient.from('subscription_tiers').update(payload).eq('id', editingId)
+    : await supabaseClient.from('subscription_tiers').insert({ id, ...payload });
   if(error){ status.className = 'status err'; status.textContent = 'Failed: ' + error.message; return; }
 
+  const savedName = name, wasEditing = !!editingId;
+  cancelEditTier();
   status.className = 'status ok';
-  status.textContent = name + ' tier is live.';
-  ['newTierId','newTierName','newTierPrice','newTierDescription','newTierGrantId','newTierImageUrl','newTierMessages'].forEach(fid => { document.getElementById(fid).value = ''; });
-  document.getElementById('newTierUnlimited').checked = false;
-  document.getElementById('newTierGrantType').value = 'all';
-  updateNewTierGrantField();
+  status.textContent = wasEditing ? (savedName + ' saved.') : (savedName + ' tier is live.');
   loadSubscriptionTiers();
 }
 

@@ -15804,7 +15804,13 @@ boot();
   if (seen === PG_DISCLOSURE_VERSION) return;   // already acknowledged this version
 
   el.hidden = false;
-  document.documentElement.style.overflow = 'hidden';
+  // Deliberately does NOT touch documentElement overflow. This page
+  // suppresses scrolling with body.map-screen / body.login-screen /
+  // body.hub-active, which only reach the viewport while <html> stays
+  // visible. Setting overflow on <html> here breaks that propagation
+  // and the mage selector gets its overscroll back. The overlay is
+  // position:fixed inset:0 with its own scrolling, so it covers the
+  // page without needing to lock anything.
 
   ack.addEventListener('change', function () {
     go.disabled = !ack.checked;
@@ -15815,7 +15821,6 @@ boot();
     if (go.disabled) return;
     try { localStorage.setItem(KEY, PG_DISCLOSURE_VERSION); } catch (e) {}
     el.hidden = true;
-    document.documentElement.style.overflow = '';
   });
 
   el.addEventListener('keydown', function (e) {
