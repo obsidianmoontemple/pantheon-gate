@@ -3,6 +3,50 @@
 <head>
 <meta charset="UTF-8">
 <title>The Long Silence: Divine Realms - Browser Mythology RPG</title>
+<!-- ============================================================
+     HeyCatch analytics. Installed per https://heycatch.ai/agents.md
+
+     No build step here, so this is the documented script-module
+     route with the version pinned to the `latest` dist-tag (0.7.0),
+     resolved from registry.npmjs.org/@heycatch/sdk/latest. The
+     newest upload on npm is 0.7.1-dev.1123, an internal dev build
+     whose events never reach the dashboard — do not "update" to it.
+
+     requestBatching is off because this is a multi-page site:
+     index.html, play.html and gate.html are separate page loads,
+     and a batch held at navigation time is lost.
+
+     window.heycatch is the bridge: the game's code runs in a
+     classic script and cannot import from a module. Calls made
+     before the module finishes loading are queued, then drained.
+     ============================================================ -->
+<script>
+  // Queue, so a call that fires before the module lands is not dropped.
+  window.heycatch = window.heycatch || {
+    _q: [],
+    setIdentity:        function(){ this._q.push(['setIdentity', arguments]); },
+    setPersonProperties:function(){ this._q.push(['setPersonProperties', arguments]); },
+    trackEvent:         function(){ this._q.push(['trackEvent', arguments]); },
+    resetIdentity:      function(){ this._q.push(['resetIdentity', arguments]); }
+  };
+</script>
+<script type="module">
+  import { analytics } from 'https://esm.sh/@heycatch/sdk@0.7.0';
+
+  analytics.init({
+    projectKey: 'hck_pk_3Xqj6IXAUco_RZdqESlRxLXsroqkPTNb',
+    install: {
+      framework: 'web',
+      agent: 'other'
+    },
+    requestBatching: false
+  });
+
+  const queued = (window.heycatch && window.heycatch._q) || [];
+  window.heycatch = analytics;
+  for (const [fn, args] of queued) { try { analytics[fn](...args); } catch (e) {} }
+</script>
+
 
 <!-- ---- search + social metadata (audit D5.1 / D5.5) ---- -->
 <meta name="description" content="Play The Long Silence: Divine Realms in your browser. Receive an egg from the Gate, speak with AI-voiced gods who remember you, and explore eight pantheons of myth. Free to play.">
@@ -2873,6 +2917,22 @@ function renderMaintenance(message){
 }
 
 async function afterLogin(){
+  // HeyCatch identity. Every sign-in path — password, magic link, Google
+  // OAuth redirect, and signup — funnels through here, so this is the one
+  // place it needs to go. Stable user id only; email and name belong in
+  // the properties, which is what makes the dashboard show a name instead
+  // of an opaque id.
+  try {
+    const u = session && session.user;
+    if(u){
+      window.heycatch.setIdentity(
+        u.id,
+        { email: u.email, name: (u.user_metadata && u.user_metadata.full_name) || undefined },
+        { signup_date: u.created_at }
+      );
+    }
+  } catch(e) {}
+
   document.body.classList.remove('login-screen');
   document.getElementById('app').innerHTML = '<div class="card"><p class="hint" style="margin:0;text-align:center;">Finding your way through the Gate…</p></div>';
   if(await checkMaintenanceMode().catch(e => { console.error('maintenance check failed', e); return false; })) return;
@@ -3105,6 +3165,11 @@ async function loginWithSignup(){
   if(error){ status.className = 'status err'; status.textContent = error.message; return; }
   if(data.session){
     session = data.session;
+    // HeyCatch: a session is what proves this is a real completed signup —
+    // data.user alone is also returned for an obfuscated existing account.
+    // Supabase Auth is client-only here, so no server route of ours ever
+    // learns this happened; the browser is the only place it can be sent.
+    try { window.heycatch.trackEvent('signup_completed'); } catch(e) {}
     // Signup codes (0116) — a session exists right away (email
     // confirmation is off), so redeem now, while #loginStatus is still
     // on screen, right before afterLogin() replaces the whole page.
@@ -7256,6 +7321,7 @@ function renderProfile(){
 }
 
 async function signOutOfGate(){
+  try { window.heycatch.resetIdentity(); } catch(e) {}
   await supabaseClient.auth.signOut();
   // The onAuthStateChange listener in boot() picks this up (newSession is
   // null) and swaps back to the login screen on its own.

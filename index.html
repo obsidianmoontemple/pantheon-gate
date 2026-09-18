@@ -26,6 +26,50 @@
 <meta name="twitter:image" content="https://gate.obsidianmoontemple.com/og-image.jpg">
 <meta name="twitter:image:alt" content="The Gate still standing, with an egg waiting to be claimed.">
 
+<!-- ============================================================
+     HeyCatch analytics. Installed per https://heycatch.ai/agents.md
+
+     No build step here, so this is the documented script-module
+     route with the version pinned to the `latest` dist-tag (0.7.0),
+     resolved from registry.npmjs.org/@heycatch/sdk/latest. The
+     newest upload on npm is 0.7.1-dev.1123, an internal dev build
+     whose events never reach the dashboard — do not "update" to it.
+
+     requestBatching is off because this is a multi-page site:
+     index.html, play.html and gate.html are separate page loads,
+     and a batch held at navigation time is lost.
+
+     window.heycatch is the bridge: the game's code runs in a
+     classic script and cannot import from a module. Calls made
+     before the module finishes loading are queued, then drained.
+     ============================================================ -->
+<script>
+  // Queue, so a call that fires before the module lands is not dropped.
+  window.heycatch = window.heycatch || {
+    _q: [],
+    setIdentity:        function(){ this._q.push(['setIdentity', arguments]); },
+    setPersonProperties:function(){ this._q.push(['setPersonProperties', arguments]); },
+    trackEvent:         function(){ this._q.push(['trackEvent', arguments]); },
+    resetIdentity:      function(){ this._q.push(['resetIdentity', arguments]); }
+  };
+</script>
+<script type="module">
+  import { analytics } from 'https://esm.sh/@heycatch/sdk@0.7.0';
+
+  analytics.init({
+    projectKey: 'hck_pk_3Xqj6IXAUco_RZdqESlRxLXsroqkPTNb',
+    install: {
+      framework: 'web',
+      agent: 'other'
+    },
+    requestBatching: false
+  });
+
+  const queued = (window.heycatch && window.heycatch._q) || [];
+  window.heycatch = analytics;
+  for (const [fn, args] of queued) { try { analytics[fn](...args); } catch (e) {} }
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">

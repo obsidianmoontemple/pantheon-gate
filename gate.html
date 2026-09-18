@@ -3,6 +3,50 @@
 <head>
 <meta charset="UTF-8">
 <title>The Pantheon Gate — talk with the gods | The Long Silence</title>
+<!-- ============================================================
+     HeyCatch analytics. Installed per https://heycatch.ai/agents.md
+
+     No build step here, so this is the documented script-module
+     route with the version pinned to the `latest` dist-tag (0.7.0),
+     resolved from registry.npmjs.org/@heycatch/sdk/latest. The
+     newest upload on npm is 0.7.1-dev.1123, an internal dev build
+     whose events never reach the dashboard — do not "update" to it.
+
+     requestBatching is off because this is a multi-page site:
+     index.html, play.html and gate.html are separate page loads,
+     and a batch held at navigation time is lost.
+
+     window.heycatch is the bridge: the game's code runs in a
+     classic script and cannot import from a module. Calls made
+     before the module finishes loading are queued, then drained.
+     ============================================================ -->
+<script>
+  // Queue, so a call that fires before the module lands is not dropped.
+  window.heycatch = window.heycatch || {
+    _q: [],
+    setIdentity:        function(){ this._q.push(['setIdentity', arguments]); },
+    setPersonProperties:function(){ this._q.push(['setPersonProperties', arguments]); },
+    trackEvent:         function(){ this._q.push(['trackEvent', arguments]); },
+    resetIdentity:      function(){ this._q.push(['resetIdentity', arguments]); }
+  };
+</script>
+<script type="module">
+  import { analytics } from 'https://esm.sh/@heycatch/sdk@0.7.0';
+
+  analytics.init({
+    projectKey: 'hck_pk_3Xqj6IXAUco_RZdqESlRxLXsroqkPTNb',
+    install: {
+      framework: 'web',
+      agent: 'other'
+    },
+    requestBatching: false
+  });
+
+  const queued = (window.heycatch && window.heycatch._q) || [];
+  window.heycatch = analytics;
+  for (const [fn, args] of queued) { try { analytics[fn](...args); } catch (e) {} }
+</script>
+
 <link rel="canonical" href="https://gate.obsidianmoontemple.com/gate.html">
 <meta name="description" content="The Pantheon Gate: speak with 167 hand-written gods across eight pantheons, each voiced live and remembering what you told them. Part of The Long Silence: Divine Realms.">
 <link rel="icon" id="brandFavicon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%99%3C/text%3E%3C/svg%3E">
