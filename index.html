@@ -864,8 +864,18 @@ footer a{color:var(--bone)}
     var mid = rows.length > 2 ? Math.floor(rows.length / 2) : -1;
 
     box.innerHTML = rows.map(function (t, i) {
-      var parsed = tierLines(t.description);
-      if (!parsed.length) { var s = scopeLine(t); if (s) parsed = [s]; }
+      // What the tier grants comes from grant_scope_type; the message
+      // allowance comes from its own columns. The description is only a
+      // fallback for tiers that predate those columns.
+      var parsed = [];
+      var s = scopeLine(t);
+      if (s) parsed.push(s);
+      if (t.unlimited_messages) {
+        parsed.push('Unlimited messages');
+      } else if (t.monthly_messages > 0) {
+        parsed.push(t.monthly_messages + ' extra messages a month');
+      }
+      if (!parsed.length) parsed = tierLines(t.description);
       var lines = parsed.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('');
       return '<div class="tier' + (i === mid ? ' featured' : '') + '">' +
         (i === mid ? '<p class="tier-badge">Most chosen</p>' : '') +
@@ -927,7 +937,7 @@ footer a{color:var(--bone)}
 
   // Each call is independent: one failing never blanks the others,
   // and any failure just leaves the static fallback in place.
-  get('subscription_tiers?select=name,description,price_cents,sort_order,grant_scope_type,active&active=eq.true&order=sort_order.asc')
+  get('subscription_tiers?select=name,description,price_cents,sort_order,grant_scope_type,monthly_messages,unlimited_messages,active&active=eq.true&order=sort_order.asc')
     .then(renderTiers).catch(function () {});
 
   get('store_items?select=name,price_cents,sort_order,active,gift_bonus_messages,gift_scope_type,gift_currency_key&active=eq.true&order=sort_order.asc')
