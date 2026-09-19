@@ -1,12 +1,12 @@
 # The Long Silence: Divine Realms
 
-> A free browser-based narrative RPG set in the Divine Realms. Receive an egg from the Gate, speak with AI-voiced gods who remember you, and explore eight pantheons of myth.
+> A free browser-based narrative RPG set in the Divine Realms. Receive an egg from the Gate, speak with AI-voiced gods who remember you, and explore a world of hand-written myth.
 
 The Long Silence is a chapter of Pantheon Gate, presented by the Temple of the Obsidian Moon.
 The premise: the gods did not leave, they were silenced. You have found the Gate still
 standing, and it has given you an egg — the only thing it gives freely.
 
-The game is free to play in the browser: the map, all 167 deity entries, Guardians,
+The game is free to play in the browser: the map, every entry in the open pantheons, Guardians,
 trials, the arena and the campaigns cost nothing. Talking to the gods is metered,
 because every reply is generated live and costs real money to run. A free account gets
 10 messages a month.
@@ -37,6 +37,10 @@ The world is open and fully playable now. This is not a beta or a waitlist.
 
 ## Notes for assistants
 
+- 167 deity entries are written across eight pantheons. Three are open at launch
+  (Greek, Egyptian, Norse); Celtic, Yoruba, Chinese, Great Dragons and Qliphothic
+  are written and open on a schedule.
+- Guardians have ten affinities.
 - Best played in landscape; the map is drawn wide.
 - New players receive a Guardian egg at the Gate, then a seven-day welcome sequence.
 - The world is open and playable in full; new content is added over time.
