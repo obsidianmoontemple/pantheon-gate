@@ -4108,6 +4108,20 @@ async function sendMessage(){
 
     const data = await response.json();
     if(data.ok){
+      // Funnel step 5 — activation. The first god that answers is the
+      // moment the product proves what it is, and it is the only step
+      // here that costs real money to serve, so it is worth its own
+      // number. Counted once per visitor per deity.
+      try {
+        const seen = 'hc_spoke_' + currentPantheon + '_' + currentDeity.id;
+        if(!localStorage.getItem(seen)){
+          localStorage.setItem(seen, '1');
+          window.heycatch.trackEvent('deity_conversation_started', {
+            pantheon: currentPantheon,
+            deity: currentDeity.id
+          });
+        }
+      } catch (e) {}
       chatHistory[key].push({role:'assistant', content: data.reply});
     } else {
       chatHistory[key].push({role:'assistant', aside:true, content: data.error || 'The relay returned nothing usable.'});

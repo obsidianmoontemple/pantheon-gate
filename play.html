@@ -3525,6 +3525,10 @@ async function hatchGuardian(){
   }
 
   guardian = data;
+  // Funnel step 3 — the egg is claimed and hatched. The first thing a
+  // player owns, and the first outcome our backend never reports on its
+  // own (this insert goes straight from browser to Supabase).
+  try { window.heycatch.trackEvent('guardian_hatched', { species: data.species }); } catch (e) {}
   render();
   celebrate({ count: 20, distance: 60, duration: 1000, color: '#ffd76a', size: 24, sprite: 'particle-fx/fx_starburst.png' });
   // Signup codes (0116) — a code entered at signup can't be credited
@@ -3627,6 +3631,9 @@ async function createMage(){
   }
 
   mage = data;
+  // Funnel step 4 — onboarding finished: an Art picked and a name taken.
+  // This is the point a visitor becomes a player.
+  try { window.heycatch.trackEvent('mage_created', { art: data.art_key }); } catch (e) {}
   render();
   celebrate({ count: 20, distance: 60, duration: 1000, color: '#e6c777', size: 22, sprite: 'particle-fx/fx_starburst.png' });
 }
@@ -15961,6 +15968,10 @@ boot();
   go.addEventListener('click', function () {
     if (go.disabled) return;
     try { localStorage.setItem(KEY, PG_DISCLOSURE_VERSION); } catch (e) {}
+    // Funnel step 1 — gate entry. Only counted the first time a visitor
+    // acknowledges a given disclosure version, because returning players
+    // never see this panel at all.
+    try { window.heycatch.trackEvent('gate_entered'); } catch (e) {}
     el.hidden = true;
   });
 
